@@ -319,7 +319,7 @@ int bp_to_doc(Doc **pDoc, int fd, off_t bp)
     //couch uncompress
     if(docbody[4] == 1) //Need to unsnappy;
     {
-        error_unless(snappy_uncompressed_length(docbody + 5, jsonlen - 1, &jsonlen_uncompressed) != SNAPPY_OK, ERROR_READ)
+        error_unless(snappy_uncompressed_length(docbody + 5, jsonlen - 1, &jsonlen_uncompressed) == SNAPPY_OK, ERROR_READ)
     }
     //Fill out doc structure.
     char *docbuf = malloc(sizeof(Doc) + (bodylen - 4) + jsonlen_uncompressed); //meta and binary and json
@@ -342,7 +342,8 @@ int bp_to_doc(Doc **pDoc, int fd, off_t bp)
     if(docbody[4] == 1)
     {
         (*pDoc)->json.buf = docbuf + (bodylen -4);
-        error_unless(snappy_uncompress(docbody + 5, jsonlen - 1, (*pDoc)->json.buf, &jsonlen_uncompressed), ERROR_READ);
+        error_unless(
+                snappy_uncompress(docbody + 5, jsonlen - 1, (*pDoc)->json.buf, &jsonlen_uncompressed) == SNAPPY_OK, ERROR_READ);
         (*pDoc)->json.buf += 6;
         (*pDoc)->json.size = jsonlen_uncompressed - 6;
     }

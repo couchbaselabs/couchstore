@@ -34,7 +34,7 @@ int main(int argc, char **argv)
     int errcode;
     int count = 0;
 
-    if(argv < 1)
+    if(argc < 2)
     {
         printf("USAGE: %s <file.couch>\n", argv[0], argv[1]);
         return -1;
