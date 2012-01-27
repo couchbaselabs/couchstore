@@ -26,6 +26,7 @@ int foldprint(Db* db, DocInfo* docinfo, void *ctx)
     printf("   json: "); printsb(&doc->json);
     free_doc(doc);
     (*count)++;
+    return 0;
 }
 
 int main(int argc, char **argv)
@@ -34,18 +35,21 @@ int main(int argc, char **argv)
     int errcode;
     int count = 0;
 
+    int argpos = 1;
     if(argc < 2)
     {
         printf("USAGE: %s <file.couch>\n", argv[0], argv[1]);
         return -1;
     }
-
-    try(open_db(argv[1], 0, &db));
+again:
+    try(open_db(argv[argpos], 0, &db));
     try(changes_since(db, 0, 0, foldprint, &count));
-    printf("\nTotal docs: %d\n", count);
 cleanup:
     if(db)
         close_db(db);
+    argpos++;
+    if(argpos < argc) goto again;
+    printf("\nTotal docs: %d\n", count);
     if(errcode < 0)
         printf("ERROR: %s\n", describe_error(errcode));
     return errcode;

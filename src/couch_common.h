@@ -5,6 +5,8 @@
 
 #define SIZE_BLOCK 4096
 #define LATEST_DISK_VERSION 7
+#define SNAPPY_THRESHOLD 64
+
 typedef struct _sized_buf {
     uint8_t* buf;
     size_t size;

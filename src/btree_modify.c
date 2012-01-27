@@ -248,6 +248,7 @@ int flush_mr(couchfile_modify_result *res)
     int nbufpos = 0;
     long long subtreesize = 0;
     sized_buf reduce_value;
+    sized_buf writebuf;
     //default reduce value []
     reduce_value.buf = "\x6A"; //NIL_EXT
     reduce_value.size = 1;
@@ -306,6 +307,7 @@ int flush_mr(couchfile_modify_result *res)
         else if (res->node_type == KP_NODE) //writing value in a kp_node
         {
             //TODO waitpointer used to live here
+            //
             subtreesize += i->value.pointer->subtreesize;
             ei_encode_tuple_header(nodebuf, &nbufpos, 2); //tuple arity 2
             append_buf(nodebuf, &nbufpos, i->value.pointer->key.buf, i->value.pointer->key.size);
@@ -340,8 +342,9 @@ int flush_mr(couchfile_modify_result *res)
 
     ptr->pointer = 0;
 
-    //TODO this is where nif_write was once called. Finished preparing term,
-    //now assembling pointer.
+    writebuf.buf = nodebuf;
+    writebuf.size = nbufpos;
+    db_write_buf(res->rq->db, &writebuf, &ptr->pointer);
 
     ptr->key.buf = ((char*)ptr) + sizeof(node_pointer);
     ptr->reduce_value.buf = ((char*)ptr) + sizeof(node_pointer) + last_key.size;
@@ -372,6 +375,13 @@ int flush_mr(couchfile_modify_result *res)
     free_nodelist(res->values->next);
     res->values->next = NULL;
 cleanup:
+    if(nodebuf)
+        free(nodebuf);
+    if(errcode < 0)
+    {
+        if(ptr)
+            free(ptr);
+    }
 
     if(reduced)
     {

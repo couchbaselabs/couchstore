@@ -7,13 +7,16 @@ int close_db(Db* db);
 
 /* Save document pointed to by pDoc to db.
  * (not implemented) */
-int save_doc(Db* db, Doc* doc, uint64_t options);
+int save_doc(Db* db, Doc* doc, DocInfo* info, uint64_t options);
 /* Save array of docs to db
  * (not implemented) */
 int save_docs(Db* db, Doc* doc, long numDocs, uint64_t options);
 /* Delete doc by ID
  * (not implemented) */
 int delete_doc(Db* db, uint8_t* id,  size_t idlen);
+
+/* Write header and fsync. */
+int commit_all(Db* db, uint64_t options);
 
 /* Retrieve a doc_info record using the by_id index
  * should be freed with free_docinfo.

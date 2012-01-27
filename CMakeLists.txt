@@ -7,6 +7,7 @@ link_directories(${EI_LIBPATH})
 
 add_library (couchstore
                 src/couch_db.c
+                src/reduces.c
                 src/couch_file_read.c
                 src/couch_file_write.c
                 src/util.c
@@ -21,5 +22,9 @@ add_library (couchstore
 add_executable (dbdump
                     src/dbdump.c)
 
-target_link_libraries (dbdump couchstore ei)
+add_executable (writetest
+                    src/writetest.c)
 
+target_link_libraries (couchstore ei)
+target_link_libraries (dbdump couchstore)
+target_link_libraries (writetest couchstore)

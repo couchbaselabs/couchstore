@@ -1,5 +1,6 @@
 #include "couch_common.h"
-
+#ifndef COUCH_BTREE_H
+#define COUCH_BTREE_H
 typedef struct compare_info {
     //used by find_first_gteq
     int last_cmp_val;
@@ -62,6 +63,7 @@ typedef struct couchfile_modify_action {
 
 typedef struct couchfile_modify_request {
     compare_info cmp;
+    Db* db;
     int fd;
     int num_actions;
     couchfile_modify_action* actions;
@@ -95,3 +97,5 @@ typedef struct couchfile_modify_result {
 
 node_pointer* modify_btree(couchfile_modify_request *rq,
         node_pointer *root, int *errcode);
+
+#endif
