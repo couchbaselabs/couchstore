@@ -16,26 +16,26 @@ sized_buf empty_root = {
 
 int flush_mr(couchfile_modify_result *res);
 
+void append_buf(void* dst, int *dstpos, void* src, int len) {
+    memcpy(dst + *dstpos, src, len);
+    *dstpos += len;
+}
+
 int find_first_gteq(char* buf, int pos, void* key, compare_info* lu, int at_least)
 {
     int list_arity, inner_arity;
     int list_pos = 0, cmp_val;
     off_t pair_pos = 0;
-    if(ei_decode_list_header(buf, &pos, &list_arity) < 0)
-    {
-        return ERROR_PARSE_TERM;
-    }
+    int errcode = 0;
+    error_nonzero(ei_decode_list_header(buf, &pos, &list_arity), ERROR_PARSE_TERM);
     while(list_pos < list_arity)
     {
         //{<<"key", some other term}
         pair_pos = pos; //Save pos of kv/kp pair tuple
 
-        if(ei_decode_tuple_header(buf, &pos, &inner_arity) < 0)
-        {
-            return ERROR_PARSE_TERM;
-        }
+        error_nonzero(ei_decode_tuple_header(buf, &pos, &inner_arity), ERROR_PARSE_TERM)
 
-        lu->last_cmp_key = (*lu->from_ext)(lu, buf,pos);
+        lu->last_cmp_key = (*lu->from_ext)(lu, buf, pos);
         cmp_val = (*lu->compare) (lu->last_cmp_key, key);
         lu->last_cmp_val = cmp_val;
         lu->list_pos = list_pos;
@@ -43,10 +43,13 @@ int find_first_gteq(char* buf, int pos, void* key, compare_info* lu, int at_leas
         {
             break;
         }
-        ei_skip_term(buf, &pos); //skip over the key
-        ei_skip_term(buf, &pos); //skip over the value
+        error_nonzero(ei_skip_term(buf, &pos), ERROR_PARSE_TERM); //skip over the key
+        error_nonzero(ei_skip_term(buf, &pos), ERROR_PARSE_TERM); //skip over the value
         list_pos++;
     }
+cleanup:
+    if(errcode < 0)
+        return errcode;
     return pair_pos;
 }
 
@@ -194,8 +197,8 @@ int mr_push_kv_range(char* buf, int pos, int bound, int end, couchfile_modify_re
 
             dst->node_len += lv->size;
             dst->count++;
-            errcode = maybe_flush(dst);
             lv = NULL;
+            try(maybe_flush(dst));
         }
         current++;
     }
@@ -234,11 +237,6 @@ void mr_push_kp_range(char* buf, int pos, int bound, int end, couchfile_modify_r
         ei_skip_term(buf, &pos);
         current++;
     }
-}
-
-inline void append_buf(void* dst, int *dstpos, void* src, int len) {
-    memcpy(dst + *dstpos, src, len);
-    *dstpos += len;
 }
 
 //Write the current contents of the values list to disk as a node
@@ -292,7 +290,7 @@ int flush_mr(couchfile_modify_result *res)
 
     nodelist* i = res->values->next;
 
-    sized_buf last_key;
+    sized_buf last_key = {NULL, 0};
     while(i != NULL)
     {
         if(res->node_type == KV_NODE) //writing value in a kv_node
@@ -344,7 +342,7 @@ int flush_mr(couchfile_modify_result *res)
 
     writebuf.buf = nodebuf;
     writebuf.size = nbufpos;
-    db_write_buf(res->rq->db, &writebuf, &ptr->pointer);
+    db_write_buf(res->rq->db, &writebuf, (off_t*) &ptr->pointer);
 
     ptr->key.buf = ((char*)ptr) + sizeof(node_pointer);
     ptr->reduce_value.buf = ((char*)ptr) + sizeof(node_pointer) + last_key.size;
@@ -413,10 +411,11 @@ int mr_move_pointers(couchfile_modify_result *src, couchfile_modify_result *dst)
 
         dst->values_end->next = ptr;
         dst->values_end = ptr;
-        errcode = maybe_flush(dst);
         ptr = next;
+        try(maybe_flush(dst));
     }
 
+cleanup:
     src->pointers->next = next;
     src->pointers_end = src->pointers;
     return errcode;
@@ -448,7 +447,7 @@ int modify_node(couchfile_modify_request *rq, node_pointer *nptr,
     {
         if((read_size = pread_bin(rq->fd, nptr->pointer, (char**) &current_node.buf)) < 0)
         {
-            return ERROR_READ;
+            try(ERROR_READ);
         }
         current_node.size = read_size;
         curnode_pos++; //Skip over 131.
@@ -497,11 +496,7 @@ int modify_node(couchfile_modify_request *rq, node_pointer *nptr,
                         rq->actions[start].cmp_key,
                         &rq->cmp, node_bound);
 
-                if(kpos < 0)
-                {
-                    errcode = ERROR_PARSE_TERM;
-                    goto cleanup;
-                }
+                error_unless(kpos >= 0, ERROR_PARSE_TERM);
 
                 //Add items from node_bound up to but not including the current
                 mr_push_kv_range(current_node.buf, list_start_pos, node_bound,
@@ -589,11 +584,7 @@ int modify_node(couchfile_modify_request *rq, node_pointer *nptr,
                     rq->actions[start].cmp_key,
                     &rq->cmp, node_bound);
 
-            if(kpos < 0)
-            {
-                errcode = ERROR_PARSE_TERM;
-                goto cleanup;
-            }
+            error_unless(kpos >= 0, ERROR_PARSE_TERM);
 
             if(rq->cmp.list_pos == (node_len - 1)) //got last item in kp_node
             {
@@ -606,11 +597,7 @@ int modify_node(couchfile_modify_request *rq, node_pointer *nptr,
                 {
                         free(desc);
                 }
-
-                if(errcode < 0)
-                {
-                    goto cleanup;
-                }
+                try(errcode);
                 node_bound = node_len;
                 break;
             }
@@ -636,10 +623,7 @@ int modify_node(couchfile_modify_request *rq, node_pointer *nptr,
                 {
                         free(desc);
                 }
-                if(errcode < 0)
-                {
-                    goto cleanup;
-                }
+                try(errcode);
                 start = range_end;
             }
         }
@@ -657,20 +641,17 @@ int modify_node(couchfile_modify_request *rq, node_pointer *nptr,
         goto cleanup;
     }
     //If we've done modifications, write out the last leaf node.
-    errcode = flush_mr(local_result);
-    if(errcode == 0)
+    try(flush_mr(local_result))
+    if(!local_result->modified && nptr != NULL)
     {
-        if(!local_result->modified && nptr != NULL)
-        {
-            //If we didn't do anything, give back the pointer to the original
-            mr_push_pointerinfo(nptr, dst);
-        }
-        else
-        {
-            //Otherwise, give back the pointers to the nodes we've created.
-            dst->modified = 1;
-            errcode = mr_move_pointers(local_result, dst);
-        }
+        //If we didn't do anything, give back the pointer to the original
+        mr_push_pointerinfo(nptr, dst);
+    }
+    else
+    {
+        //Otherwise, give back the pointers to the nodes we've created.
+        dst->modified = 1;
+        try(mr_move_pointers(local_result, dst));
     }
 cleanup:
     free_modres(local_result);

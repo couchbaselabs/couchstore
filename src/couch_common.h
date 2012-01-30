@@ -8,7 +8,7 @@
 #define SNAPPY_THRESHOLD 64
 
 typedef struct _sized_buf {
-    uint8_t* buf;
+    char* buf;
     size_t size;
 } sized_buf;
 
@@ -58,6 +58,8 @@ typedef struct _db {
 //Don't forget to free when done with the returned value.
 //(If it returns -1 it will not have set ret_ptr, no need to free.)
 int pread_bin(int fd, off_t pos, char **ret_ptr);
+
+int pread_header(int fd, off_t pos, char **ret_ptr);
 
 ssize_t total_read_len(off_t blockoffset, ssize_t finallen);
 

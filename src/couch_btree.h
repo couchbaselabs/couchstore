@@ -47,8 +47,8 @@ typedef struct nodelist {
 } nodelist;
 
 #define ACTION_FETCH  0
-#define ACTION_INSERT 1
-#define ACTION_REMOVE 2
+#define ACTION_REMOVE 1
+#define ACTION_INSERT 2
 
 typedef struct couchfile_modify_action {
     int type;

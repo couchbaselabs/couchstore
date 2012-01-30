@@ -5,7 +5,7 @@
 #include <netinet/in.h>
 #include "snappy-c.h"
 #include "ei.h"
-
+#include "util.h"
 
 #define SIZE_BLOCK 4096
 
@@ -88,20 +88,18 @@ fail:
 
 int pread_bin_int(int fd, off_t pos, char **ret_ptr, int header)
 {
-   char *bufptr, *bufptr_rest, *newbufptr;
+   char *bufptr = NULL, *bufptr_rest = NULL, *newbufptr = NULL;
    char prefix;
    int buf_len;
    uint32_t chunk_len;
    int skip = 0;
+   int errcode = 0;
    buf_len = raw_read(fd, &pos, 2*SIZE_BLOCK - (pos % SIZE_BLOCK), &bufptr);
    //buf_len = raw_read(fd, &pos, 10, &bufptr);
    if(buf_len == -1)
    {
        buf_len = raw_read(fd, &pos, 4, &bufptr);
-       if(buf_len == -1)
-       {
-           goto fail;
-       }
+       error_unless(buf_len > 0, ERROR_READ);
    }
 
    prefix = bufptr[0] & 0x80;
@@ -122,38 +120,35 @@ int pread_bin_int(int fd, off_t pos, char **ret_ptr, int header)
    if(chunk_len <= buf_len)
    {
        newbufptr = (char*) realloc(bufptr, chunk_len);
-       if(!newbufptr)
-       {
-           free(bufptr);
-           goto fail;
-       }
+       error_unless(newbufptr, ERROR_READ);
+
        bufptr = newbufptr;
        *ret_ptr = bufptr;
        return chunk_len;
    }
    else
    {
+       //TODO check btreenif for problems
        int rest_len = raw_read(fd, &pos, chunk_len - buf_len, &bufptr_rest);
-       if(rest_len == -1)
-       {
-           free(bufptr);
-           goto fail;
-       }
-       bufptr = (char*) realloc(bufptr, buf_len + rest_len);
-       if(!newbufptr)
-       {
-           free(bufptr);
-           goto fail;
-       }
+       error_unless(rest_len > 0, ERROR_READ);
+
+       newbufptr = (char*) realloc(bufptr, buf_len + rest_len);
+       error_unless(newbufptr, ERROR_READ);
        bufptr = newbufptr;
+
        memcpy(bufptr + buf_len, bufptr_rest, rest_len);
        free(bufptr_rest);
        *ret_ptr = bufptr;
        return chunk_len;
    }
 
-fail:
-   return -1;
+cleanup:
+   if(errcode < 0)
+   {
+       if(bufptr)
+           free(bufptr);
+   }
+   return errcode;
 }
 
 int pread_header(int fd, off_t pos, char **ret_ptr)

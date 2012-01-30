@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <sys/types.h>
+#include <netinet/in.h>
 
 #include "couch_db.h"
 
@@ -19,13 +21,12 @@ ssize_t raw_write(int fd, sized_buf* buf, off_t pos)
         if(block_remain > (buf->size - buf_pos))
             block_remain = buf->size - buf_pos;
 
-        if(block_remain == SIZE_BLOCK)
+        if(write_pos % SIZE_BLOCK == 0)
         {
             written = pwrite(fd, &blockprefix, 1, write_pos);
             if(written < 0) return ERROR_WRITE;
-
-            block_remain -= 1;
             write_pos += 1;
+            continue;
         }
 
         written = pwrite(fd, buf->buf + buf_pos, block_remain, write_pos);

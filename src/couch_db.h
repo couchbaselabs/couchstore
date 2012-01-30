@@ -5,15 +5,16 @@ int open_db(char* filename, uint64_t options, Db** db);
 //Close a database and free resources
 int close_db(Db* db);
 
-/* Save document pointed to by pDoc to db.
- * (not implemented) */
+/* Save document pointed to by doc and docinfo to db. */
 int save_doc(Db* db, Doc* doc, DocInfo* info, uint64_t options);
-/* Save array of docs to db
- * (not implemented) */
-int save_docs(Db* db, Doc* doc, long numDocs, uint64_t options);
-/* Delete doc by ID
- * (not implemented) */
-int delete_doc(Db* db, uint8_t* id,  size_t idlen);
+/* Save array of docs to db */
+int save_docs(Db* db, Doc* docs, DocInfo* infos, long numDocs, uint64_t options);
+
+/* To delete docuemnts, call save_doc or save_docs with doc or docs set to NULL,
+ * the docs referenced by the docinfos will be deleted.
+ * To intermix deletes and inserts in a bulk update, pass docinfos with the deleted flag
+ * set to save_docs (the Doc at the corresponding array position will be ignored)
+ */
 
 /* Write header and fsync. */
 int commit_all(Db* db, uint64_t options);
@@ -41,7 +42,10 @@ void free_docinfo(DocInfo* docinfo);
 
 /* Get changes since sequence number `since`.
  * the docinfo passed to the callback will be freed after the callback finishes,
- * do not free it. */
+ * do not free it. Return NO_FREE_DOCINFO to prevent freeing of the docinfo
+ * (free it with free_docinfo when you are done with it)
+ * otherwise 0. */
 int changes_since(Db* db, uint64_t since, uint64_t options,
         int(*f)(Db* db, DocInfo* docinfo, void *ctx), void *ctx);
+#define NO_FREE_DOCINFO 1
 

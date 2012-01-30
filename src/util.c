@@ -69,3 +69,40 @@ void ei_x_encode_nodepointer(ei_x_buff* x, node_pointer* node)
         ei_x_encode_ulonglong(x, node->subtreesize);
     }
 }
+
+
+fatbuf* fatbuf_alloc(size_t bytes)
+{
+    fatbuf* fb = malloc(sizeof(fatbuf) + bytes);
+#ifdef DEBUG
+    memset(fb->buf, 0x44, bytes);
+#endif
+    if(!fb)
+        return NULL;
+
+    fb->size = bytes;
+    fb->pos = 0;
+    return fb;
+}
+
+void* fatbuf_get(fatbuf* fb, size_t bytes)
+{
+    if(fb->pos + bytes > fb->size)
+    {
+        return NULL;
+    }
+#ifdef DEBUG
+    if(fb->buf[fb->pos] != 0x44)
+    {
+        fprintf(stderr, "Fatbuf space has been written to before it was taken!\n");
+    }
+#endif
+    void* rptr = fb->buf + fb->pos;
+    fb->pos += bytes;
+    return rptr;
+}
+
+void fatbuf_free(fatbuf* fb)
+{
+    free(fb);
+}

@@ -6,8 +6,8 @@
 int btree_lookup_inner(couchfile_lookup_request *rq, uint64_t diskpos, int current, int end)
 {
     int bufpos = 0, nodebuflen = 0, type_pos = 0,
-        list_pos = 0, list_size = 0;
-    sized_buf k,v;
+        list_size = 0;
+    sized_buf v;
     if(current == end)
         return 0;
     int errcode = 0;
@@ -21,7 +21,6 @@ int btree_lookup_inner(couchfile_lookup_request *rq, uint64_t diskpos, int curre
     error_unless(tuple_check(nodebuf, &bufpos, 2), ERROR_PARSE_TERM);
     type_pos = bufpos;
     ei_skip_term(nodebuf, &bufpos); //node type
-    list_pos = bufpos;
     error_nonzero(ei_decode_list_header(nodebuf, &bufpos, &list_size), ERROR_PARSE_TERM);
 
     if(atom_check(nodebuf + type_pos, "kp_node"))

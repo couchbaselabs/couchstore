@@ -23,6 +23,7 @@
    documentation and/or software.
    */
 
+#include <string.h>
 #include "global.h"
 #include "md5.h"
 
@@ -51,8 +52,6 @@ static void Encode PROTO_LIST
 ((unsigned char *, UINT4 *, unsigned int));
 static void Decode PROTO_LIST
 ((UINT4 *, unsigned char *, unsigned int));
-static void MD5_memcpy PROTO_LIST ((POINTER, POINTER, unsigned int));
-static void MD5_memset PROTO_LIST ((POINTER, int, unsigned int));
 
 static unsigned char PADDING[64] = {
 	0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -134,7 +133,7 @@ void MD5Update (context, input, inputLen)
 	/* Transform as many times as possible.
 	*/
 	if (inputLen >= partLen) {
-		MD5_memcpy
+		memcpy
 			((POINTER)&context->buffer[index], (POINTER)input, partLen);
 		MD5Transform (context->state, context->buffer);
 
@@ -147,7 +146,7 @@ void MD5Update (context, input, inputLen)
 		i = 0;
 
 	/* Buffer remaining input */
-	MD5_memcpy
+	memcpy
 		((POINTER)&context->buffer[index], (POINTER)&input[i],
 		 inputLen-i);
 }
@@ -179,7 +178,7 @@ void MD5Final (digest, context)
 
 	/* Zeroize sensitive information.
 	*/
-	MD5_memset ((POINTER)context, 0, sizeof (*context));
+	memset((POINTER)context, 0, sizeof (*context));
 }
 
 /* MD5 basic transformation. Transforms state based on block.
@@ -271,7 +270,7 @@ static void MD5Transform (state, block)
 
 	/* Zeroize sensitive information.
 	*/
-	MD5_memset ((POINTER)x, 0, sizeof (x));
+	memset ((POINTER)x, 0, sizeof (x));
 }
 
 /* Encodes input (UINT4) into output (unsigned char). Assumes len is
@@ -305,31 +304,4 @@ static void Decode (output, input, len)
 	for (i = 0, j = 0; j < len; i++, j += 4)
 		output[i] = ((UINT4)input[j]) | (((UINT4)input[j+1]) << 8) |
 			(((UINT4)input[j+2]) << 16) | (((UINT4)input[j+3]) << 24);
-}
-
-/* Note: Replace "for loop" with standard memcpy if possible.
-*/
-
-static void MD5_memcpy (output, input, len)
-		POINTER output;
-		POINTER input;
-		unsigned int len;
-{
-	unsigned int i;
-
-	for (i = 0; i < len; i++)
-		output[i] = input[i];
-}
-
-/* Note: Replace "for loop" with standard memset if possible.
-*/
-static void MD5_memset (output, value, len)
-		POINTER output;
-		int value;
-		unsigned int len;
-{
-	unsigned int i;
-
-	for (i = 0; i < len; i++)
-		((char *)output)[i] = (char)value;
 }

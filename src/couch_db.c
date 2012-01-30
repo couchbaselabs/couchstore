@@ -394,7 +394,7 @@ int docinfo_by_id(Db* db, uint8_t* id,  size_t idlen, DocInfo** pInfo)
     if(db->header.by_id_root == NULL)
         return DOC_NOT_FOUND;
 
-    key.buf = id;
+    key.buf = (char*) id;
     key.size = idlen;
 
     rq.cmp.compare = ebin_cmp;
@@ -420,10 +420,11 @@ int open_doc_with_docinfo(Db* db, DocInfo* docinfo, Doc** pDoc, uint64_t options
 {
     int errcode = 0;
     *pDoc = NULL;
+    if(docinfo->deleted == 1)
+        return DOC_NOT_FOUND;
     try(bp_to_doc(pDoc, db->fd, docinfo->bp));
     (*pDoc)->id.buf = docinfo->id.buf;
     (*pDoc)->id.size = docinfo->id.size;
-
 cleanup:
     return errcode;
 }
@@ -436,7 +437,7 @@ int open_doc(Db* db, uint8_t* id,  size_t idlen, Doc** pDoc, uint64_t options)
     *pDoc = NULL;
     try(docinfo_by_id(db, id, idlen, &info));
     try(open_doc_with_docinfo(db, info, pDoc, options));
-    (*pDoc)->id.buf = id;
+    (*pDoc)->id.buf = (char*) id;
     (*pDoc)->id.size = idlen;
 
     free_docinfo(info);
@@ -446,7 +447,6 @@ cleanup:
 
 int byseq_do_callback(couchfile_lookup_request *rq, void *k, sized_buf *v)
 {
-    int vpos = 0;
     int(*real_callback)(Db* db, DocInfo* docinfo, void *ctx) = ((void**)rq->callback_ctx)[0];
     if(v == NULL) return 0;
     sized_buf *seqterm = k;
@@ -454,8 +454,8 @@ int byseq_do_callback(couchfile_lookup_request *rq, void *k, sized_buf *v)
     DocInfo* docinfo;
     docinfo_from_buf(&docinfo, v, 0);
     ei_decode_ulonglong(seqterm->buf, &seqindex, &docinfo->seq);
-    real_callback(((void**)rq->callback_ctx)[1], docinfo, ((void**)rq->callback_ctx)[2]);
-    free_docinfo(docinfo);
+    if(real_callback(((void**)rq->callback_ctx)[1], docinfo, ((void**)rq->callback_ctx)[2]) != NO_FREE_DOCINFO)
+        free_docinfo(docinfo);
     return 0;
 }
 
@@ -529,11 +529,11 @@ int assemble_index_value(DocInfo* docinfo, char* dst, sized_buf* first_term)
     //Size
     ei_encode_ulonglong(dst, &pos, docinfo->rev); //Max 10 bytes
 
-    //Max 52 + first_term.size + meta.size bytes.
+    //Max 42 + first_term.size + meta.size bytes.
     return pos;
 }
 
-int write_doc(Db* db, Doc* doc, off_t* bp)
+int write_doc(Db* db, Doc* doc, uint64_t* bp)
 {
     int errcode = 0;
     int binflag = 0;
@@ -573,13 +573,59 @@ int write_doc(Db* db, Doc* doc, off_t* bp)
     binflag = (doc->binary.size > 0) ? 0x80000000 : 0;
     *((uint32_t*) docbody.buf) = htonl((jsonlen) | binflag);
 
-    try(db_write_buf(db, &docbody, bp));
+    try(db_write_buf(db, &docbody, (off_t*) bp));
 
 cleanup:
     if(docbody.buf)
         free(docbody.buf);
 
     return errcode;
+}
+
+int id_action_compare(const void* actv1, const void* actv2)
+{
+    const couchfile_modify_action *act1, *act2;
+    act1 = actv1;
+    act2 = actv2;
+
+    int cmp = ebin_cmp(act1->cmp_key, act2->cmp_key);
+    if(cmp == 0)
+    {
+        if(act1->type < act2->type)
+            return -1;
+        if(act1->type > act2->type)
+            return 1;
+    }
+    return cmp;
+}
+
+
+int seq_action_compare(const void* actv1, const void* actv2)
+{
+    const couchfile_modify_action *act1, *act2;
+    act1 = actv1;
+    act2 = actv2;
+
+    uint64_t seq1, seq2;
+    int pos = 0;
+
+    ei_decode_ulonglong(act1->key->buf, &pos, &seq1);
+    pos = 0;
+    ei_decode_ulonglong(act2->key->buf, &pos, &seq2);
+
+    if(seq1 < seq2)
+        return -1;
+    if(seq1 == seq2)
+    {
+        if(act1->type < act2->type)
+            return -1;
+        if(act1->type > act2->type)
+            return 1;
+        return 0;
+    }
+    if(seq1 > seq2)
+        return 1;
+    return 0;
 }
 
 typedef struct _idxupdatectx {
@@ -590,19 +636,16 @@ typedef struct _idxupdatectx {
     sized_buf** seqvals;
     int valpos;
 
-    char *deltermbuf;
-    int dtbufpos;
+    fatbuf *deltermbuf;
 } index_update_ctx;
 
 void idfetch_update_cb(couchfile_modify_request* rq, sized_buf* k, sized_buf* v, void *arg)
 {
     //v contains a seq we need to remove ( {Seq,_,_,_,_} )
     int termpos = 0;
-    uint64_t oldseq, insertseq;
-    sized_buf* delbuf;
+    uint64_t oldseq;
+    sized_buf* delbuf = NULL;
     index_update_ctx* ctx = arg;
-
-    printf("Found old seq for doc\n");
 
     if(v == NULL) { //Doc not found
         return;
@@ -611,27 +654,10 @@ void idfetch_update_cb(couchfile_modify_request* rq, sized_buf* k, sized_buf* v,
     ei_decode_tuple_header(v->buf, &termpos, NULL);
     ei_decode_ulonglong(v->buf, &termpos, &oldseq);
 
-another:
-    termpos = 0;
-    ei_decode_tuple_header(ctx->seqs[ctx->valpos]->buf, &termpos, NULL);
-    ei_decode_ulonglong(ctx->seqs[ctx->valpos]->buf, &termpos, &insertseq);
-    if(insertseq < oldseq) {
-        ctx->seqacts[ctx->actpos].type = ACTION_INSERT;
-        ctx->seqacts[ctx->actpos].value.term = ctx->seqvals[ctx->valpos];
-        ctx->seqacts[ctx->actpos].key = ctx->seqs[ctx->valpos];
-        ctx->seqacts[ctx->actpos].cmp_key = ctx->seqs[ctx->valpos];
-        ctx->valpos++;
-        ctx->actpos++;
-        goto another;
-    }
-
-    delbuf = (sized_buf*) (ctx->deltermbuf + ctx->dtbufpos);
-    ctx->dtbufpos += sizeof(sized_buf);
-
-    delbuf->buf = ctx->deltermbuf + ctx->dtbufpos;
+    delbuf = fatbuf_get(ctx->deltermbuf, sizeof(sized_buf));
+    delbuf->buf = fatbuf_get(ctx->deltermbuf, 10);
     delbuf->size = 0;
     ei_encode_ulonglong(delbuf->buf, (int*) &delbuf->size, oldseq);
-    ctx->dtbufpos += delbuf->size;
 
     ctx->seqacts[ctx->actpos].type = ACTION_REMOVE;
     ctx->seqacts[ctx->actpos].value.term = NULL;
@@ -643,55 +669,47 @@ another:
     return;
 }
 
-int update_indexes(Db* db, sized_buf** seqs, sized_buf** seqvals, sized_buf** ids, sized_buf** idvals, int numdocs)
+int update_indexes(Db* db, sized_buf* seqs, sized_buf* seqvals, sized_buf* ids, sized_buf* idvals, int numdocs)
 {
     int errcode = 0;
-    char* actbuf = malloc(sizeof(couchfile_modify_action) * numdocs * 4  //2*numdocs in seqacts/idacts (remove, ins, fetch, ins)
-                       + (sizeof(sized_buf) * numdocs) //for ebin_cmp on the id index
-                       + (sizeof(sized_buf) * numdocs) + 10 * numdocs); //For removed id terms
-    couchfile_modify_action* idacts = (couchfile_modify_action*) actbuf;
-    couchfile_modify_action* seqacts = (couchfile_modify_action*) (actbuf + sizeof(couchfile_modify_action) * 2);
-    sized_buf* idcmps = (sized_buf*) (actbuf + (sizeof(couchfile_modify_action) * 4));
+    fatbuf* actbuf = fatbuf_alloc(numdocs * ( 4 * sizeof(couchfile_modify_action) + // Two action list up to numdocs * 2 in size
+                                              2 * sizeof(sized_buf) + // Compare keys for ids, and compare keys for removed seqs found from id index.
+                                              10)); //Max size of a longlong erlang term (for deleted seqs)
+    sized_buf* idcmps;
+    couchfile_modify_action *idacts, *seqacts;
+    node_pointer *new_id_root, *new_seq_root;
+
+    idacts = (couchfile_modify_action*) fatbuf_get(actbuf, numdocs * sizeof(couchfile_modify_action) * 2);
+    seqacts = (couchfile_modify_action*) fatbuf_get(actbuf, numdocs * sizeof(couchfile_modify_action) * 2);
+    idcmps = fatbuf_get(actbuf, numdocs * sizeof(sized_buf));
 
     couchfile_modify_request seqrq, idrq;
     sized_buf tmpsb;
     index_update_ctx fetcharg = {
-        seqacts, 0, seqs, seqvals, 0,
-        (actbuf + (sizeof(couchfile_modify_action) * 4 + (sizeof(sized_buf) * numdocs))), 0};
+        seqacts, 0, &seqs, &seqvals, 0,
+        actbuf};
 
-    node_pointer *new_id_root, *new_seq_root;
 
     int i;
     for(i = 0; i < numdocs; i++)
     {
-        if(seqvals[i]->buf)
-        {
-            idacts[i * 2].type = ACTION_FETCH;
-            idacts[i * 2].value.arg = &fetcharg;
-            idacts[i * 2 + 1].type = ACTION_INSERT;
-            idacts[i * 2 + 1].value.term = idvals[i];
+        idcmps[i].buf = ids[i].buf + 5;
+        idcmps[i].size = ids[i].size - 5;
 
-            idacts[i * 2].key = ids[i];
-            idacts[i * 2].cmp_key = &idcmps[i];
-            idcmps[i * 2].buf = ids[i]->buf + 5;
-            idcmps[i * 2].size = ids[i]->size - 5;
+        idacts[i * 2].type = ACTION_FETCH;
+        idacts[i * 2].value.arg = &fetcharg;
+        idacts[i * 2 + 1].type = ACTION_INSERT;
+        idacts[i * 2 + 1].value.term = &idvals[i];
 
-            idacts[i * 2 + 1].key = ids[i];
-            idacts[i * 2 + 1].cmp_key = &idcmps[i];
-            idcmps[i * 2 + 1].buf = ids[i]->buf + 5;
-            idcmps[i * 2 + 1].size = ids[i]->size - 5;
-        }
-        else
-        {
-            printf("EVERYTHING PROBABLY JUST BLEW UP\n");
-            //TODO figure out remove (not this)
-            ///seqacts[i].type = ACTION_REMOVE;
-            ///seqacts[i].value.term = NULL;
-            ///idacts[i].type = ACTION_REMOVE;
-            ///idacts[i].value.term = NULL;
-        }
+        idacts[i * 2].key = &ids[i];
+        idacts[i * 2].cmp_key = &idcmps[i];
 
+        idacts[i * 2 + 1].key = &ids[i];
+        idacts[i * 2 + 1].cmp_key = &idcmps[i];
     }
+
+
+    qsort(idacts, numdocs * 2, sizeof(couchfile_modify_action), id_action_compare);
 
     idrq.cmp.compare = ebin_cmp;
     idrq.cmp.from_ext = ebin_from_ext;
@@ -705,18 +723,20 @@ int update_indexes(Db* db, sized_buf** seqs, sized_buf** seqvals, sized_buf** id
     idrq.db = db;
 
     new_id_root = modify_btree(&idrq, db->header.by_id_root, &errcode);
-    if(errcode < 0) goto cleanup;
+    try(errcode);
 
     while(fetcharg.valpos < numdocs)
     {
-        printf("%d seqs remain\n", (numdocs - fetcharg.valpos));
         seqacts[fetcharg.actpos].type = ACTION_INSERT;
-        seqacts[fetcharg.actpos].value.term = seqvals[fetcharg.valpos];
-        seqacts[fetcharg.actpos].key = seqs[fetcharg.valpos];
-        seqacts[fetcharg.actpos].cmp_key = seqs[fetcharg.valpos];
+        seqacts[fetcharg.actpos].value.term = &seqvals[fetcharg.valpos];
+        seqacts[fetcharg.actpos].key = &seqs[fetcharg.valpos];
+        seqacts[fetcharg.actpos].cmp_key = &seqs[fetcharg.valpos];
         fetcharg.valpos++;
         fetcharg.actpos++;
     }
+
+    //printf("Total seq actions: %d\n", fetcharg.actpos);
+    qsort(seqacts, fetcharg.actpos, sizeof(couchfile_modify_action), seq_action_compare);
 
     seqrq.cmp.compare = long_term_cmp;
     seqrq.cmp.from_ext = term_from_ext;
@@ -729,8 +749,7 @@ int update_indexes(Db* db, sized_buf** seqs, sized_buf** seqvals, sized_buf** id
     seqrq.db = db;
 
     new_seq_root = modify_btree(&seqrq, db->header.by_seq_root, &errcode);
-    if(errcode < 0) goto cleanup;
-
+    try(errcode);
 
     if(db->header.by_id_root != new_id_root)
     {
@@ -745,54 +764,102 @@ int update_indexes(Db* db, sized_buf** seqs, sized_buf** seqvals, sized_buf** id
     }
 
 cleanup:
-    free(actbuf);
+    fatbuf_free(actbuf);
+    return errcode;
+}
+
+int add_doc_to_update_list(Db* db, Doc* doc, DocInfo* info, fatbuf* fb,
+        sized_buf* seqterm, sized_buf* idterm, sized_buf* seqval, sized_buf* idval, uint64_t seq)
+{
+    int errcode = 0;
+    DocInfo new = *info;
+    new.seq = seq;
+
+    seqterm->buf = fatbuf_get(fb, 10);
+    seqterm->size = 0;
+
+    error_unless(seqterm->buf, ERROR_ALLOC_FAIL);
+    ei_encode_ulonglong(seqterm->buf, (int*) &seqterm->size, seq);
+
+    if(doc && !info->deleted)
+    {
+        try(write_doc(db, doc, &new.bp));
+    }
+    else
+    {
+        new.deleted = 1;
+        new.bp = 0;
+    }
+
+    idterm->buf = fatbuf_get(fb, new.id.size + 5);
+    error_unless(idterm->buf, ERROR_ALLOC_FAIL);
+    idterm->size = 0;
+    ei_encode_binary(idterm->buf, (int*) &idterm->size, new.id.buf, new.id.size);
+
+    seqval->buf = fatbuf_get(fb, (42 + new.id.size + new.meta.size));
+    error_unless(seqval->buf, ERROR_ALLOC_FAIL);
+    seqval->size = assemble_index_value(&new, seqval->buf, idterm);
+
+    idval->buf = fatbuf_get(fb, (42 + 10 + new.meta.size));
+    error_unless(idval->buf, ERROR_ALLOC_FAIL);
+    idval->size = assemble_index_value(&new, idval->buf, seqterm);
+
+    //Use max of 10 +, id.size + 5 +, 42 + meta.size + id.size, + 52 + meta.size
+    // == id.size *2 + meta.size *2 + 109 bytes
+cleanup:
+    return errcode;
+}
+
+int save_docs(Db* db, Doc* docs, DocInfo* infos, long numdocs, uint64_t options)
+{
+    int errcode = 0, i;
+    sized_buf *seqklist, *idklist, *seqvlist, *idvlist;
+    size_t term_meta_size = 0;
+    Doc* curdoc;
+    uint64_t seq = db->header.update_seq;
+
+    fatbuf* fb;
+
+    for(i = 0; i < numdocs; i++)
+    {
+        //Get additional size for terms to be inserted into indexes
+        term_meta_size += 109 + (2 * (infos[i].id.size + infos[i].meta.size));
+    }
+
+    fb = fatbuf_alloc(term_meta_size +
+                numdocs * (
+                sizeof(sized_buf) * 4)); //seq/id key and value lists
+
+    error_unless(fb, ERROR_ALLOC_FAIL);
+
+    seqklist = fatbuf_get(fb, numdocs * sizeof(sized_buf));
+    idklist = fatbuf_get(fb, numdocs * sizeof(sized_buf));
+    seqvlist = fatbuf_get(fb, numdocs * sizeof(sized_buf));
+    idvlist = fatbuf_get(fb, numdocs * sizeof(sized_buf));
+
+    for(i = 0; i < numdocs; i++)
+    {
+        seq++;
+        if(docs)
+            curdoc = &docs[i];
+        else
+            curdoc = NULL;
+        try(add_doc_to_update_list(db, curdoc, &infos[i], fb,
+                    &seqklist[i], &idklist[i], &seqvlist[i], &idvlist[i], seq));
+    }
+
+    try(update_indexes(db, seqklist, seqvlist, idklist, idvlist, numdocs));
+
+cleanup:
+    if(fb)
+        fatbuf_free(fb);
+    if(errcode == 0)
+        db->header.update_seq = seq;
     return errcode;
 }
 
 int save_doc(Db* db, Doc* doc, DocInfo* info, uint64_t options)
 {
-    // Btree values are {Id/Seq, Rev, Bp, Deleted, Size}
-    int errcode = 0;
-    sized_buf seq_btree_value, id_btree_value, seqnum_term, id_bin_term;
-    sized_buf *seqklist, *idklist, *seqvlist, *idvlist;
-    char* termbuf = NULL;
-    char seqtermbuf[10];
-
-    size_t tbsize = (43 + info->meta.size) * 2 + (info->id.size * 2) + 15;
-
-    DocInfo new = *info;
-    new.rev++;
-    new.seq = db->header.update_seq + 1;
-
-    seqnum_term.buf = seqtermbuf;
-    seqnum_term.size = 0;
-    ei_encode_ulonglong(seqtermbuf, (int*) &seqnum_term.size, new.seq);
-
-    try(write_doc(db, doc, &new.bp));
-
-    termbuf = malloc(tbsize);
-    error_unless(termbuf, ERROR_ALLOC_FAIL);
-
-    id_bin_term.buf = termbuf;
-    id_bin_term.size = 0;
-    ei_encode_binary(termbuf, (int*) &id_bin_term.size, new.id.buf, new.id.size);
-
-    seq_btree_value.buf = termbuf + id_bin_term.size;
-    seq_btree_value.size = assemble_index_value(&new, seq_btree_value.buf, &id_bin_term);
-
-    id_btree_value.buf = termbuf + id_bin_term.size + seq_btree_value.size;
-    id_btree_value.size = assemble_index_value(&new, id_btree_value.buf, &seqnum_term);
-
-    seqklist = &seqnum_term;
-    seqvlist = &seq_btree_value;
-    idklist = &id_bin_term;
-    idvlist = &id_btree_value;
-
-    try(update_indexes(db, &seqklist, &seqvlist, &idklist, &idvlist, 1));
-cleanup:
-    if(termbuf)
-        free(termbuf);
-    db->header.update_seq++;
-    return errcode;
+    return save_docs(db, doc, info, 1, options);
 }
 

@@ -22,8 +22,15 @@ int foldprint(Db* db, DocInfo* docinfo, void *ctx)
     open_doc_with_docinfo(db, docinfo, &doc, 0);
     printf("Doc seq: %llu\n", docinfo->seq);
     printf("     id: "); printsb(&docinfo->id);
-    printf("    bin: "); printsb(&doc->binary);
-    printf("   json: "); printsb(&doc->json);
+    if(docinfo->deleted)
+        printf("     doc deleted, ");
+    if(doc)
+    {
+        printf("    bin: "); printsb(&doc->binary);
+        printf("   json: "); printsb(&doc->json);
+    }
+    else
+        printf("no doc body\n");
     free_doc(doc);
     (*count)++;
     return 0;
@@ -38,12 +45,13 @@ int main(int argc, char **argv)
     int argpos = 1;
     if(argc < 2)
     {
-        printf("USAGE: %s <file.couch>\n", argv[0], argv[1]);
+        printf("USAGE: %s <file.couch>\n", argv[0]);
         return -1;
     }
 again:
     try(open_db(argv[argpos], 0, &db));
     try(changes_since(db, 0, 0, foldprint, &count));
+
 cleanup:
     if(db)
         close_db(db);
