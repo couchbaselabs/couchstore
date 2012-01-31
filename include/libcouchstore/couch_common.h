@@ -83,5 +83,6 @@ const char* describe_error(int errcode);
 #define ERROR_NO_HEADER -6
 #define ERROR_WRITE -7
 #define ERROR_HEADER_VERSION -8
+#define ERROR_CHECKSUM_FAIL -9
 
 #endif

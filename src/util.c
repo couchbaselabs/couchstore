@@ -2,9 +2,9 @@
 #include <libcouchstore/couch_common.h>
 #include "util.h"
 
-#define ERR_MIN -8
+#define ERR_MIN -9
 
-const char* errordescs[8] =
+const char* errordescs[9] =
 {
       "error opening file"        // ERROR_OPEN_FILE
     , "error reading erlang term" // ERROR_PARSE_TERM
@@ -14,6 +14,7 @@ const char* errordescs[8] =
     , "no header in non-empty file" // ERROR_NO_HEADER
     , "error writing to file" // ERROR_WRITE
     , "incorrect version in header" // ERROR_HEADER_VERSION
+    , "checksum fail" // ERROR_CHECKSUM_FAIL
 };
 
 const char* describe_error(int errcode)
@@ -49,6 +50,8 @@ node_pointer* read_root(char* buf, int* endpos)
     pos = 0;
     ptr->key.buf = NULL;
     ptr->key.size = 0;
+    ptr->pointer = 0;
+    ptr->subtreesize = 0;
     ei_decode_tuple_header(buf, &pos, NULL); //arity 3
     ei_decode_ulonglong(buf, &pos, (unsigned long long*) &ptr->pointer);
     term_to_buf(&ptr->reduce_value, buf, &pos);

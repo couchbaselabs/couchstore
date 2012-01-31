@@ -260,7 +260,6 @@ int flush_mr(couchfile_modify_result *res)
     }
 
     res->node_len += 19; //tuple header and node type tuple, list header and tail
-    //TODO WRITE IMPL
     char* nodebuf = malloc(res->node_len);
 
     //External term header; tuple header arity 2;
@@ -304,8 +303,7 @@ int flush_mr(couchfile_modify_result *res)
         }
         else if (res->node_type == KP_NODE) //writing value in a kp_node
         {
-            //TODO waitpointer used to live here
-            //
+            //waitpointer used to live here
             subtreesize += i->value.pointer->subtreesize;
             ei_encode_tuple_header(nodebuf, &nbufpos, 2); //tuple arity 2
             append_buf(nodebuf, &nbufpos, i->value.pointer->key.buf, i->value.pointer->key.size);

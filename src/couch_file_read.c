@@ -91,11 +91,10 @@ int pread_bin_int(int fd, off_t pos, char **ret_ptr, int header)
    char *bufptr = NULL, *bufptr_rest = NULL, *newbufptr = NULL;
    char prefix;
    int buf_len;
-   uint32_t chunk_len;
+   uint32_t chunk_len, crc32 = 0;
    int skip = 0;
    int errcode = 0;
    buf_len = raw_read(fd, &pos, 2*SIZE_BLOCK - (pos % SIZE_BLOCK), &bufptr);
-   //buf_len = raw_read(fd, &pos, 10, &bufptr);
    if(buf_len == -1)
    {
        buf_len = raw_read(fd, &pos, 4, &bufptr);
@@ -113,7 +112,11 @@ int pread_bin_int(int fd, off_t pos, char **ret_ptr, int header)
        skip += 16; //Header is still md5, and the md5 is always present.
    }
    else if(prefix)
-       skip += 4; //Just skip over the crc32. for now.
+   {
+       memcpy(&crc32, bufptr + 4, 4);
+       crc32 = ntohl(crc32);
+       skip += 4;
+   }
 
    buf_len -= skip;
    memmove(bufptr, bufptr+skip, buf_len);
@@ -121,14 +124,16 @@ int pread_bin_int(int fd, off_t pos, char **ret_ptr, int header)
    {
        newbufptr = (char*) realloc(bufptr, chunk_len);
        error_unless(newbufptr, ERROR_READ);
-
        bufptr = newbufptr;
+
+       if(crc32) {
+           error_unless((crc32) == hash_crc32(bufptr, chunk_len), ERROR_CHECKSUM_FAIL);
+       }
        *ret_ptr = bufptr;
        return chunk_len;
    }
    else
    {
-       //TODO check btreenif for problems
        int rest_len = raw_read(fd, &pos, chunk_len - buf_len, &bufptr_rest);
        error_unless(rest_len > 0, ERROR_READ);
 
@@ -138,6 +143,9 @@ int pread_bin_int(int fd, off_t pos, char **ret_ptr, int header)
 
        memcpy(bufptr + buf_len, bufptr_rest, rest_len);
        free(bufptr_rest);
+       if(crc32) {
+           error_unless((crc32) == hash_crc32(bufptr, chunk_len), ERROR_CHECKSUM_FAIL);
+       }
        *ret_ptr = bufptr;
        return chunk_len;
    }

@@ -16,7 +16,7 @@ int save_docs(Db* db, Doc* docs, DocInfo* infos, long numDocs, uint64_t options)
 /* To delete docuemnts, call save_doc or save_docs with doc or docs set to NULL,
  * the docs referenced by the docinfos will be deleted.
  * To intermix deletes and inserts in a bulk update, pass docinfos with the deleted flag
- * set to save_docs (the Doc at the corresponding array position will be ignored)
+ * set to save_docs.
  */
 
 /* Write header and fsync. */
@@ -52,9 +52,15 @@ int changes_since(Db* db, uint64_t since, uint64_t options,
         int(*f)(Db* db, DocInfo* docinfo, void *ctx), void *ctx);
 #define NO_FREE_DOCINFO 1
 
-/* Local docs stuff, unimplemented */
+/* Get a local doc from the DB. ID must include the _local/ prefix. */
 int open_local_doc(Db *db, uint8_t* id, size_t idlen, LocalDoc** lDoc);
+
+/* Save a local doc to the db. ID must include the _local/ prefix.
+ * To delete an existing doc set the deleted flag on the LocalDoc struct. The json buffer
+ * will be ignored for a deletion. */
 int save_local_doc(Db* db, LocalDoc* lDoc);
+
+/* LocalDoc's obtained with open_local_doc must be freed with free_local_doc */
 void free_local_doc(LocalDoc* lDoc);
 
 #endif

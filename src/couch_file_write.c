@@ -82,10 +82,16 @@ int db_write_buf(Db* db, sized_buf* buf, off_t *pos)
     off_t write_pos = db->file_pos;
     off_t end_pos = write_pos;
     ssize_t written;
-    uint32_t size = htonl(buf->size);
+    uint32_t size = htonl(buf->size | 0x80000000);
+    uint32_t crc32 = htonl(hash_crc32(buf->buf, buf->size));
     sized_buf lenbuf = { (char*) &size, 4 };
+    sized_buf crcbuf = { (char*) &crc32, 4 };
 
     written = raw_write(db->fd, &lenbuf, end_pos);
+    if(written < 0) return ERROR_WRITE;
+    end_pos += written;
+
+    written = raw_write(db->fd, &crcbuf, end_pos);
     if(written < 0) return ERROR_WRITE;
     end_pos += written;
 

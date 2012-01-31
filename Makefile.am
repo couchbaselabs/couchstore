@@ -33,6 +33,7 @@ libcouchstore_la_SOURCES = \
                             src/couch_btree.h \
                             src/couch_common.h \
                             src/couch_db.c \
+                            src/crc32.c \
                             src/couch_db.h \
                             src/couch_file_read.c \
                             src/couch_file_write.c \
@@ -51,6 +52,17 @@ couch_dbdump_SOURCES = src/dbdump.c
 couch_dbdump_DEPENDENCIES = libcouchstore.la
 couch_dbdump_LDADD = libcouchstore.la
 
-writetest_SOURCES = src/writetest.c
-writetest_DEPENDENCIES = libcouchstore.la
-writetest_LDADD = libcouchstore.la
+#writetest_SOURCES = src/writetest.c
+#writetest_DEPENDENCIES = libcouchstore.la
+#writetest_LDADD = libcouchstore.la
+
+#tests
+check_PROGRAMS = testapp
+TESTS = ${check_PROGRAMS}
+
+testapp_SOURCES = tests/testapp.c
+testapp_DEPENDENCIES = libcouchstore.la
+testapp_LDADD = libcouchstore.la
+
+test: check-TESTS
+

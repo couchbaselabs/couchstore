@@ -271,6 +271,11 @@ int docinfo_from_buf(DocInfo** pInfo, sized_buf *v, int idBytes)
     (*pInfo)->meta.buf = infobuf + sizeof(DocInfo);
     (*pInfo)->meta.size = metabin_size;
 
+    if(metabin_size > 0)
+    {
+        memcpy((*pInfo)->meta.buf, v->buf + metabin_pos, metabin_size);
+    }
+
     (*pInfo)->id.buf = infobuf + sizeof(DocInfo) + metabin_size;
 
     if(idBytes != 0) //First term is Seq
@@ -873,11 +878,16 @@ int local_doc_fetch(couchfile_lookup_request *rq, void *k, sized_buf *v)
     fatbuf* ldbuf = fatbuf_alloc(sizeof(LocalDoc) + id->size + v->size);
     error_unless(ldbuf, ERROR_ALLOC_FAIL);
     *lDoc = fatbuf_get(ldbuf, sizeof(LocalDoc));
-    (*lDoc)->id.buf = fatbuf_get(ldbuf, id->size);
-    (*lDoc)->json.buf = fatbuf_get(ldbuf, v->size);
+    (*lDoc)->id.buf = fatbuf_get(ldbuf, id->size - 5);
+    (*lDoc)->id.size = id->size - 5;
 
-    memcpy((*lDoc)->id.buf, id->buf, id->size);
-    memcpy((*lDoc)->json.buf, v->buf, v->size);
+    (*lDoc)->json.buf = fatbuf_get(ldbuf, v->size - 5);
+    (*lDoc)->json.size = v->size - 5;
+
+    (*lDoc)->deleted = 0;
+
+    memcpy((*lDoc)->id.buf, id->buf + 5, id->size - 5);
+    memcpy((*lDoc)->json.buf, v->buf + 5, v->size - 5);
 cleanup:
     if(errcode < 0)
     {
@@ -922,12 +932,62 @@ int open_local_doc(Db *db, uint8_t* id, size_t idlen, LocalDoc** pDoc)
 
 int save_local_doc(Db* db, LocalDoc* lDoc)
 {
-    return -99;
+    int errcode = 0;
+    couchfile_modify_action ldupdate;
+    fatbuf* binbufs = fatbuf_alloc(10 + lDoc->id.size + lDoc->json.size);
+    sized_buf idterm;
+    sized_buf jsonterm;
+    sized_buf cmptmp;
+    error_unless(binbufs, ERROR_ALLOC_FAIL);
+
+    if(lDoc->deleted)
+    {
+        ldupdate.type = ACTION_REMOVE;
+    }
+    else
+    {
+        ldupdate.type = ACTION_INSERT;
+    }
+
+    idterm.buf = fatbuf_get(binbufs, lDoc->id.size + 5);
+    idterm.size = 0;
+    ei_encode_binary(idterm.buf, (int*) &idterm.size, lDoc->id.buf, lDoc->id.size);
+
+    jsonterm.buf = fatbuf_get(binbufs, lDoc->json.size + 5);
+    jsonterm.size = 0;
+    ei_encode_binary(jsonterm.buf, (int*) &jsonterm.size, lDoc->json.buf, lDoc->json.size);
+
+    ldupdate.cmp_key = (void*) &lDoc->id;
+    ldupdate.key = &idterm;
+    ldupdate.value.term = &jsonterm;
+
+    couchfile_modify_request rq;
+    rq.cmp.compare = ebin_cmp;
+    rq.cmp.from_ext = ebin_from_ext;
+    rq.cmp.arg = &cmptmp;
+    rq.fd = db->fd;
+    rq.num_actions = 1;
+    rq.actions = &ldupdate;
+    rq.fetch_callback = NULL;
+    rq.reduce = NULL;
+    rq.rereduce = NULL;
+    rq.db = db;
+
+    node_pointer* new_local_docs_root = modify_btree(&rq, db->header.local_docs_root, &errcode);
+    if(errcode == 0 && new_local_docs_root != db->header.local_docs_root)
+    {
+        free(db->header.local_docs_root);
+        db->header.local_docs_root = new_local_docs_root;
+    }
+cleanup:
+    if(binbufs)
+        fatbuf_free(binbufs);
+    return errcode;
 }
 
 void free_local_doc(LocalDoc* lDoc)
 {
-    fatbuf* ldbuf = (fatbuf*) ((char*) lDoc) - sizeof(fatbuf);
-    fatbuf_free(ldbuf);
+    char* offset = (char*) (&((fatbuf*) NULL)->buf);
+    fatbuf_free((fatbuf*) ((char*)lDoc - (char*)offset));
 }
 
