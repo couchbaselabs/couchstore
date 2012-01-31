@@ -1,8 +1,18 @@
 #include <stdio.h>
-#include "couch_db.h"
-#include "util.h"
+#include <string.h>
+#include <libcouchstore/couch_db.h>
+#include "fatbuf.h"
 
 #define setsb(B, V) (B).buf = V; (B).size = strlen(V);
+
+#ifndef DEBUG
+#define try(C) if((errcode = (C)) < 0) { goto cleanup; }
+#else
+#define try(C) if((errcode = (C)) < 0) { \
+                            fprintf(stderr, "Couchstore error `%s' at %s:%d\r\n", \
+                            describe_error(errcode), __FILE__, __LINE__); goto cleanup; }
+#endif
+#define error_unless(C, E) if(!(C)) { try(E); }
 
 int main(int argc, char** argv)
 {
@@ -11,7 +21,7 @@ int main(int argc, char** argv)
 
     if(argc < 3)
     {
-        printf("USE %s <key> <bin> [<key> <bin]+\n", argv[0]);
+        printf("USE %s <key> <bin> [<key> <bin>]+\n", argv[0]);
         return -1;
     }
 

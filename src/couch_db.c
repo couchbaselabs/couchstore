@@ -1,8 +1,8 @@
 #include <fcntl.h>
 #include <string.h>
 #include <stdlib.h>
+#include <libcouchstore/couch_db.h>
 
-#include "couch_db.h"
 #include "couch_btree.h"
 #include "ei.h"
 #include "snappy-c.h"
@@ -16,7 +16,7 @@ sized_buf nil_atom = {
 
 int find_header(Db *db)
 {
-    int block = db->file_pos / SIZE_BLOCK;
+    int block = db->file_pos / COUCH_BLOCK_SIZE;
     int errcode = 0;
     int readsize;
     char* header_buf = NULL;
@@ -24,11 +24,11 @@ int find_header(Db *db)
 
     while(block >= 0)
     {
-        readsize = pread(db->fd, buf, 2, block * SIZE_BLOCK);
+        readsize = pread(db->fd, buf, 2, block * COUCH_BLOCK_SIZE);
         if(readsize == 2 && buf[0] == 1)
         {
             //Found a header block.
-            int header_len = pread_header(db->fd, block * SIZE_BLOCK, &header_buf);
+            int header_len = pread_header(db->fd, block * COUCH_BLOCK_SIZE, &header_buf);
             int arity = 0;
             int purged_docs_index = 0;
             if(header_len > 0)
@@ -46,8 +46,8 @@ int find_header(Db *db)
                 }
                 ei_skip_term(header_buf, &index); //db_header
                 ei_decode_ulong(header_buf, &index, &db->header.disk_version);
+                error_unless(db->header.disk_version == COUCH_DISK_VERSION, ERROR_HEADER_VERSION)
                 ei_decode_ulonglong(header_buf, &index, &db->header.update_seq);
-                ei_skip_term(header_buf, &index); //unused
                 db->header.by_id_root = read_root(header_buf, &index);
                 db->header.by_seq_root = read_root(header_buf, &index);
                 db->header.local_docs_root = read_root(header_buf, &index);
@@ -61,13 +61,12 @@ int find_header(Db *db)
                 db->header.purged_docs->size = index - purged_docs_index;
 
                 ei_skip_term(header_buf, &index); //security ptr
-                ei_skip_term(header_buf, &index); //revs_limit
                 break;
             }
         }
         block--;
     }
-
+cleanup:
     if(header_buf != NULL)
         free(header_buf);
 
@@ -87,18 +86,16 @@ int write_header(Db* db)
     int errcode = 0;
 
     ei_x_new_with_version(&x_header);
-    ei_x_encode_tuple_header(&x_header, 10);
+    ei_x_encode_tuple_header(&x_header, 8);
     ei_x_encode_atom(&x_header, "db_header");
     ei_x_encode_ulonglong(&x_header, db->header.disk_version);
     ei_x_encode_ulonglong(&x_header, db->header.update_seq);
-    ei_x_encode_ulonglong(&x_header, 0); //unused field
     ei_x_encode_nodepointer(&x_header, db->header.by_id_root);
     ei_x_encode_nodepointer(&x_header, db->header.by_seq_root);
     ei_x_encode_nodepointer(&x_header, db->header.local_docs_root);
     ei_x_encode_ulonglong(&x_header, db->header.purge_seq);
     ei_x_append_buf(&x_header, db->header.purged_docs->buf, db->header.purged_docs->size);
     ei_x_encode_atom(&x_header, "nil"); //security_ptr;
-    ei_x_encode_ulonglong(&x_header, 1); //revs_limit
     writebuf.buf = x_header.buff;
     writebuf.size = x_header.index;
     errcode = db_write_header(db, &writebuf);
@@ -129,7 +126,7 @@ int open_db(char* filename, uint64_t options, Db** pDb)
     if(db->file_pos == 0)
     {
         //Our file is empty, create and write a new empty db header.
-        db->header.disk_version = LATEST_DISK_VERSION;
+        db->header.disk_version = COUCH_DISK_VERSION;
         db->header.update_seq = 0;
         db->header.by_id_root = NULL;
         db->header.by_seq_root = NULL;
@@ -420,7 +417,7 @@ int open_doc_with_docinfo(Db* db, DocInfo* docinfo, Doc** pDoc, uint64_t options
 {
     int errcode = 0;
     *pDoc = NULL;
-    if(docinfo->deleted == 1)
+    if(docinfo->bp == 0)
         return DOC_NOT_FOUND;
     try(bp_to_doc(pDoc, db->fd, docinfo->bp));
     (*pDoc)->id.buf = docinfo->id.buf;
@@ -545,7 +542,7 @@ int write_doc(Db* db, Doc* doc, uint64_t* bp)
     docbody.buf = malloc(max_size);
     error_unless(docbody.buf, ERROR_ALLOC_FAIL);
 
-    if(doc->json.size > SNAPPY_THRESHOLD)
+    if(doc->json.size > COUCH_SNAPPY_THRESHOLD)
     {
         int jbinpos = 0;
         char* jbinbuf = malloc(doc->json.size + 6);
@@ -781,7 +778,7 @@ int add_doc_to_update_list(Db* db, Doc* doc, DocInfo* info, fatbuf* fb,
     error_unless(seqterm->buf, ERROR_ALLOC_FAIL);
     ei_encode_ulonglong(seqterm->buf, (int*) &seqterm->size, seq);
 
-    if(doc && !info->deleted)
+    if(doc)
     {
         try(write_doc(db, doc, &new.bp));
     }
@@ -861,5 +858,76 @@ cleanup:
 int save_doc(Db* db, Doc* doc, DocInfo* info, uint64_t options)
 {
     return save_docs(db, doc, info, 1, options);
+}
+
+int local_doc_fetch(couchfile_lookup_request *rq, void *k, sized_buf *v)
+{
+    int errcode = 0;
+    sized_buf *id = k;
+    LocalDoc** lDoc = rq->callback_ctx;
+    if(!v)
+    {
+        *lDoc = NULL;
+        return 0;
+    }
+    fatbuf* ldbuf = fatbuf_alloc(sizeof(LocalDoc) + id->size + v->size);
+    error_unless(ldbuf, ERROR_ALLOC_FAIL);
+    *lDoc = fatbuf_get(ldbuf, sizeof(LocalDoc));
+    (*lDoc)->id.buf = fatbuf_get(ldbuf, id->size);
+    (*lDoc)->json.buf = fatbuf_get(ldbuf, v->size);
+
+    memcpy((*lDoc)->id.buf, id->buf, id->size);
+    memcpy((*lDoc)->json.buf, v->buf, v->size);
+cleanup:
+    if(errcode < 0)
+    {
+        if(ldbuf)
+            fatbuf_free(ldbuf);
+    }
+    return errcode;
+}
+
+int open_local_doc(Db *db, uint8_t* id, size_t idlen, LocalDoc** pDoc)
+{
+    sized_buf key;
+    void *keylist = &key;
+    couchfile_lookup_request rq;
+    sized_buf cmptmp;
+    int errcode = 0;
+
+    if(db->header.local_docs_root == NULL)
+        return DOC_NOT_FOUND;
+
+    key.buf = (char*) id;
+    key.size = idlen;
+
+    rq.cmp.compare = ebin_cmp;
+    rq.cmp.from_ext = ebin_from_ext;
+    rq.cmp.arg = &cmptmp;
+    rq.fd = db->fd;
+    rq.num_keys = 1;
+    rq.keys = &keylist;
+    rq.callback_ctx = pDoc;
+    rq.fetch_callback = local_doc_fetch;
+    rq.fold = 0;
+
+    errcode = btree_lookup(&rq, db->header.local_docs_root->pointer);
+    if(errcode == 0)
+    {
+        if(*pDoc == NULL)
+            errcode = DOC_NOT_FOUND;
+    }
+    return errcode;
+}
+
+int save_local_doc(Db* db, LocalDoc* lDoc)
+{
+    return -99;
+}
+
+void free_local_doc(LocalDoc* lDoc)
+{
+    fatbuf* ldbuf = (fatbuf*) ((char*) lDoc) - sizeof(fatbuf);
+    fatbuf_free(ldbuf);
 }
 

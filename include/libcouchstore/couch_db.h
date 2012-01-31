@@ -1,3 +1,6 @@
+#ifndef COUCHSTORE_COUCH_DB_H
+#define COUCHSTORE_COUCH_DB_H
+
 #include "couch_common.h"
 
 //Open a database, should be closed with close_db
@@ -27,7 +30,7 @@ int docinfo_by_id(Db* db, uint8_t* id,  size_t idlen, DocInfo** pInfo);
 /* Retrieve a doc from the db.
  * doc.id.buf will be the same buffer as id
  * Should be freed with free_doc. */
-int open_doc(Db* db, uint8_t* id,  size_t idlen, Doc** pDoc, uint64_t options);
+int open_doc(Db* db, uint8_t* id, size_t idlen, Doc** pDoc, uint64_t options);
 
 /* Retrieve a doc from the using a docinfo.
  * Do not free the docinfo before freeing the doc.
@@ -49,3 +52,9 @@ int changes_since(Db* db, uint64_t since, uint64_t options,
         int(*f)(Db* db, DocInfo* docinfo, void *ctx), void *ctx);
 #define NO_FREE_DOCINFO 1
 
+/* Local docs stuff, unimplemented */
+int open_local_doc(Db *db, uint8_t* id, size_t idlen, LocalDoc** lDoc);
+int save_local_doc(Db* db, LocalDoc* lDoc);
+void free_local_doc(LocalDoc* lDoc);
+
+#endif

@@ -1,5 +1,4 @@
 #include <stdlib.h>
-#include "couch_common.h"
 #include "couch_btree.h"
 #include "util.h"
 

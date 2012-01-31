@@ -1,9 +1,16 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <libcouchstore/couch_db.h>
 
-#include "couch_db.h"
-#include "util.h"
+#ifndef DEBUG
+#define try(C) if((errcode = (C)) < 0) { goto cleanup; }
+#else
+#define try(C) if((errcode = (C)) < 0) { \
+                            fprintf(stderr, "Couchstore error `%s' at %s:%d\r\n", \
+                            describe_error(errcode), __FILE__, __LINE__); goto cleanup; }
+#endif
+#define error_unless(C, E) if(!(C)) { try(E); }
 
 void printsb(sized_buf *sb)
 {
@@ -23,7 +30,7 @@ int foldprint(Db* db, DocInfo* docinfo, void *ctx)
     printf("Doc seq: %llu\n", docinfo->seq);
     printf("     id: "); printsb(&docinfo->id);
     if(docinfo->deleted)
-        printf("     doc deleted, ");
+        printf("     doc deleted\n");
     if(doc)
     {
         printf("    bin: "); printsb(&doc->binary);
@@ -51,7 +58,6 @@ int main(int argc, char **argv)
 again:
     try(open_db(argv[argpos], 0, &db));
     try(changes_since(db, 0, 0, foldprint, &count));
-
 cleanup:
     if(db)
         close_db(db);

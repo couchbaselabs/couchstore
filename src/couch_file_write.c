@@ -2,8 +2,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include <netinet/in.h>
-
-#include "couch_db.h"
+#include <libcouchstore/couch_db.h>
 
 #include "rfc1321/global.h"
 #include "rfc1321/md5.h"
@@ -17,11 +16,11 @@ ssize_t raw_write(int fd, sized_buf* buf, off_t pos)
     size_t block_remain;
     while(buf_pos < buf->size)
     {
-        block_remain = SIZE_BLOCK - (write_pos % SIZE_BLOCK);
+        block_remain = COUCH_BLOCK_SIZE - (write_pos % COUCH_BLOCK_SIZE);
         if(block_remain > (buf->size - buf_pos))
             block_remain = buf->size - buf_pos;
 
-        if(write_pos % SIZE_BLOCK == 0)
+        if(write_pos % COUCH_BLOCK_SIZE == 0)
         {
             written = pwrite(fd, &blockprefix, 1, write_pos);
             if(written < 0) return ERROR_WRITE;
@@ -49,8 +48,8 @@ int db_write_header(Db* db, sized_buf* buf)
     char hash[16];
     sized_buf hashbuf = { hash, 16 };
 
-    if(write_pos % SIZE_BLOCK != 0)
-        write_pos += SIZE_BLOCK - (write_pos % SIZE_BLOCK); //Move to next block boundary.
+    if(write_pos % COUCH_BLOCK_SIZE != 0)
+        write_pos += COUCH_BLOCK_SIZE - (write_pos % COUCH_BLOCK_SIZE); //Move to next block boundary.
 
     written = pwrite(db->fd, &blockheader, 1, write_pos);
     if(written < 0) return ERROR_WRITE;

@@ -3,8 +3,11 @@
 
 #include <string.h>
 #include <signal.h>
-#include "couch_common.h"
+#include <libcouchstore/couch_common.h>
+
 #include "ei.h"
+#include "fatbuf.h"
+
 #ifndef DEBUG
 #define try(C) if((errcode = (C)) < 0) { goto cleanup; }
 #else
@@ -16,6 +19,7 @@
 #define error_nonzero(C, E) if((C) != 0) { try(E); }
 
 #define atom_check(B, A) do_atom_check(B, A, sizeof(A) - 1)
+
 static inline int do_atom_check(char* buf, char *atomname, int len)
 {
     //quick atom check for < 255 in len
@@ -42,16 +46,6 @@ static inline int tuple_check(char* buf, int *index, int tuplelen)
     }
     return 1;
 }
-
-typedef struct _fat_buffer {
-    size_t pos;
-    size_t size;
-    char buf[1];
-} fatbuf;
-
-fatbuf* fatbuf_alloc(size_t bytes);
-void* fatbuf_get(fatbuf* fb, size_t bytes);
-void fatbuf_free(fatbuf* fb);
 
 node_pointer* read_root(char* buf, int* endpos);
 void ei_x_encode_nodepointer(ei_x_buff* x, node_pointer* node);

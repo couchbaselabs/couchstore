@@ -1,10 +1,10 @@
 #include <stdlib.h>
-#include "couch_common.h"
+#include <libcouchstore/couch_common.h>
 #include "util.h"
 
-#define ERR_MIN -7
+#define ERR_MIN -8
 
-const char* errordescs[7] =
+const char* errordescs[8] =
 {
       "error opening file"        // ERROR_OPEN_FILE
     , "error reading erlang term" // ERROR_PARSE_TERM
@@ -13,6 +13,7 @@ const char* errordescs[7] =
     , "document not found"        // DOC_NOT_FOUND
     , "no header in non-empty file" // ERROR_NO_HEADER
     , "error writing to file" // ERROR_WRITE
+    , "incorrect version in header" // ERROR_HEADER_VERSION
 };
 
 const char* describe_error(int errcode)
