@@ -53,9 +53,9 @@ node_pointer* read_root(char* buf, int* endpos)
     ptr->pointer = 0;
     ptr->subtreesize = 0;
     ei_decode_tuple_header(buf, &pos, NULL); //arity 3
-    ei_decode_uint64(buf, &pos, (unsigned long long*) &ptr->pointer);
+    ei_decode_uint64(buf, &pos, &ptr->pointer);
     term_to_buf(&ptr->reduce_value, buf, &pos);
-    ei_decode_uint64(buf, &pos, (unsigned long long*) &ptr->subtreesize);
+    ei_decode_uint64(buf, &pos, &ptr->subtreesize);
     return ptr;
 }
 
