@@ -121,7 +121,7 @@ void test_save_docs()
     SETDOC(3, "doc4", "{\"test_doc_index\":4}", "test binary 4", zerometa);
     unlink("test.couch");
     Db* db;
-    try(open_db("test.couch", 0, &db));
+    try(open_db("test.couch", COUCH_CREATE_FILES, &db));
     try(save_docs(db, testdocset.docs, testdocset.infos, 4, 0));
     try(commit_all(db, 0));
     close_db(db);
@@ -146,7 +146,7 @@ void test_save_doc()
     SETDOC(3, "doc4", "{\"test_doc_index\":4}", "test binary 4", zerometa);
     unlink("test.couch");
     Db* db;
-    try(open_db("test.couch", 0, &db));
+    try(open_db("test.couch", COUCH_CREATE_FILES, &db));
     try(save_doc(db, &testdocset.docs[0], &testdocset.infos[0], 0));
     try(save_doc(db, &testdocset.docs[1], &testdocset.infos[1], 0));
     try(save_doc(db, &testdocset.docs[2], &testdocset.infos[2], 0));
@@ -168,7 +168,7 @@ void test_dump_empty_db()
     fprintf(stderr, "dump_empty_db... "); fflush(stderr);
     unlink("test.couch");
     Db* db;
-    open_db("test.couch", 0, &db);
+    open_db("test.couch", COUCH_CREATE_FILES, &db);
     close_db(db);
     open_db("test.couch", 0, &db);
     dump_count(db);
@@ -180,11 +180,12 @@ void test_dump_empty_db()
 void test_local_docs()
 {
     fprintf(stderr, "local docs... "); fflush(stderr);
+    int errcode = 0;
     Db* db;
     LocalDoc lDocWrite;
     LocalDoc *lDocRead = NULL;
     unlink("test.couch");
-    open_db("test.couch", 0, &db);
+    try(open_db("test.couch", COUCH_CREATE_FILES, &db));
     lDocWrite.id.buf = "_local/testlocal";
     lDocWrite.id.size = 16;
     lDocWrite.json.buf = "{\"test\":true}";
@@ -200,6 +201,8 @@ void test_local_docs()
     assert(memcmp(lDocRead->json.buf, "{\"test\":true}", 13) == 0);
     free_local_doc(lDocRead);
     close_db(db);
+cleanup:
+    assert(errcode == 0);
 }
 
 int main(void)

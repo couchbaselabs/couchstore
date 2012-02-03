@@ -7,6 +7,10 @@ extern "C" {
 #endif
 //Open a database, should be closed with close_db
 int open_db(char* filename, uint64_t options, Db** db);
+//Flags passable to open_db options parameter
+/* Create a new empty .couch file if file doesn't exist. */
+#define COUCH_CREATE_FILES 1
+
 //Close a database and free resources
 int close_db(Db* db);
 
