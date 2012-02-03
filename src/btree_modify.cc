@@ -217,9 +217,9 @@ node_pointer* read_pointer(char* buf, int pos)
     ei_decode_tuple_header(buf, &pos, NULL); //arity 2
     term_to_buf(&p->key, buf, &pos);
     ei_decode_tuple_header(buf, &pos, NULL); //arity 3
-    ei_decode_ulonglong(buf, &pos, (unsigned long long*) &p->pointer);
+    ei_decode_uint64(buf, &pos, (unsigned long long*) &p->pointer);
     term_to_buf(&p->reduce_value, buf, &pos);
-    ei_decode_ulonglong(buf, &pos, (unsigned long long*) &p->subtreesize);
+    ei_decode_uint64(buf, &pos, (unsigned long long*) &p->subtreesize);
 
     return p;
 }

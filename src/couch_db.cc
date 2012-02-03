@@ -47,11 +47,11 @@ int find_header(Db *db)
                 ei_skip_term(header_buf, &index); //db_header
                 ei_decode_ulong(header_buf, &index, &db->header.disk_version);
                 error_unless(db->header.disk_version == COUCH_DISK_VERSION, ERROR_HEADER_VERSION)
-                ei_decode_ulonglong(header_buf, &index, &db->header.update_seq);
+                ei_decode_uint64(header_buf, &index, &db->header.update_seq);
                 db->header.by_id_root = read_root(header_buf, &index);
                 db->header.by_seq_root = read_root(header_buf, &index);
                 db->header.local_docs_root = read_root(header_buf, &index);
-                ei_decode_ulonglong(header_buf, &index, &db->header.purge_seq);
+                ei_decode_uint64(header_buf, &index, &db->header.purge_seq);
 
                 purged_docs_index = index;
                 ei_skip_term(header_buf, &index); //purged_docs
@@ -222,9 +222,9 @@ int long_term_cmp(void *k1, void *k2) {
     sized_buf *e2 = (sized_buf*)k2;
     int pos = 0;
     uint64_t e1val, e2val;
-    ei_decode_ulonglong(e1->buf, &pos, &e1val);
+    ei_decode_uint64(e1->buf, &pos, &e1val);
     pos = 0;
-    ei_decode_ulonglong(e2->buf, &pos, &e2val);
+    ei_decode_uint64(e2->buf, &pos, &e2val);
     if(e1val == e2val)
     {
         return 0;
@@ -255,16 +255,16 @@ int docinfo_from_buf(DocInfo** pInfo, sized_buf *v, int idBytes)
 
     //Rev = {RevNum, MetaBin}
     error_unless(tuple_check(v->buf, &term_index, 2), ERROR_PARSE_TERM);
-    error_nonzero(ei_decode_ulonglong(v->buf, &term_index, &rev), ERROR_PARSE_TERM);
+    error_nonzero(ei_decode_uint64(v->buf, &term_index, &rev), ERROR_PARSE_TERM);
     metabin_pos = term_index + 5; //Save position of meta term
                                   //We know it's an ERL_BINARY_EXT, so the contents are from
                                   //5 bytes in to the end of the term.
     ei_skip_term(v->buf, &term_index);
     metabin_size = term_index - metabin_pos; //and size.
 
-    error_nonzero(ei_decode_ulonglong(v->buf, &term_index, &bp), ERROR_PARSE_TERM);
+    error_nonzero(ei_decode_uint64(v->buf, &term_index, &bp), ERROR_PARSE_TERM);
     error_nonzero(ei_decode_ulong(v->buf, &term_index, &deleted), ERROR_PARSE_TERM);
-    error_nonzero(ei_decode_ulonglong(v->buf, &term_index, &size), ERROR_PARSE_TERM);
+    error_nonzero(ei_decode_uint64(v->buf, &term_index, &size), ERROR_PARSE_TERM);
 
     //If first term is seq, we don't need to include it in the buffer
     if(idBytes != 0) fterm_size = 0;
@@ -285,7 +285,7 @@ int docinfo_from_buf(DocInfo** pInfo, sized_buf *v, int idBytes)
     {
 
         (*pInfo)->id.size = idBytes;
-        ei_decode_ulonglong(v->buf, &fterm_pos, &seq);
+        ei_decode_uint64(v->buf, &fterm_pos, &seq);
         //Let the caller fill in the Id.
     }
     else //First term is Id
@@ -459,7 +459,7 @@ int byseq_do_callback(couchfile_lookup_request *rq, void *k, sized_buf *v)
     int seqindex = 0;
     DocInfo* docinfo;
     docinfo_from_buf(&docinfo, v, 0);
-    ei_decode_ulonglong(seqterm->buf, &seqindex, &docinfo->seq);
+    ei_decode_uint64(seqterm->buf, &seqindex, &docinfo->seq);
     if(real_callback((Db*) ((void**)rq->callback_ctx)[1], docinfo, ((void**)rq->callback_ctx)[2]) != NO_FREE_DOCINFO)
         free_docinfo(docinfo);
     return 0;
@@ -615,9 +615,9 @@ int seq_action_compare(const void* actv1, const void* actv2)
     uint64_t seq1, seq2;
     int pos = 0;
 
-    ei_decode_ulonglong(act1->key->buf, &pos, &seq1);
+    ei_decode_uint64(act1->key->buf, &pos, &seq1);
     pos = 0;
-    ei_decode_ulonglong(act2->key->buf, &pos, &seq2);
+    ei_decode_uint64(act2->key->buf, &pos, &seq2);
 
     if(seq1 < seq2)
         return -1;
@@ -658,7 +658,7 @@ void idfetch_update_cb(couchfile_modify_request* rq, sized_buf* k, sized_buf* v,
     }
 
     ei_decode_tuple_header(v->buf, &termpos, NULL);
-    ei_decode_ulonglong(v->buf, &termpos, &oldseq);
+    ei_decode_uint64(v->buf, &termpos, &oldseq);
 
     delbuf = (sized_buf*) fatbuf_get(ctx->deltermbuf, sizeof(sized_buf));
     delbuf->buf = (char*) fatbuf_get(ctx->deltermbuf, 10);

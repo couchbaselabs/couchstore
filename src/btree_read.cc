@@ -45,7 +45,7 @@ int btree_lookup_inner(couchfile_lookup_request *rq, uint64_t diskpos, int curre
                 while(last_item < end && rq->cmp.compare(cmp_key, rq->keys[last_item]) >= 0);
 
                 error_unless(tuple_check(nodebuf, &bufpos, 3), ERROR_PARSE_TERM);
-                ei_decode_ulonglong(nodebuf, &bufpos, &pointer);
+                ei_decode_uint64(nodebuf, &bufpos, &pointer);
                 ei_skip_term(nodebuf, &bufpos); //Skip reduce
                 ei_skip_term(nodebuf, &bufpos); //Skip subtreesize
                 error_pass(btree_lookup_inner(rq, pointer, current, last_item));
