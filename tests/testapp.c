@@ -165,7 +165,7 @@ cleanup:
 
 void test_dump_empty_db()
 {
-    fprintf(stderr, "dump_empty_db... "); fflush(stderr);
+    fprintf(stderr, "dump empty db... "); fflush(stderr);
     unlink("test.couch");
     Db* db;
     open_db("test.couch", COUCH_CREATE_FILES, &db);
@@ -205,8 +205,19 @@ cleanup:
     assert(errcode == 0);
 }
 
+void test_open_file_error()
+{
+    fprintf(stderr, "opening nonexistent file errors... "); fflush(stderr);
+    unlink("test.couch");
+    Db* db;
+    int errcode = open_db("test.couch", 0, &db);
+    assert(errcode == ERROR_OPEN_FILE);
+}
+
+
 int main(void)
 {
+    test_open_file_error(); fprintf(stderr, "OK \n");
     test_dump_empty_db(); fprintf(stderr," OK\n");
     test_save_doc(); fprintf(stderr," OK\n");
     test_save_docs(); fprintf(stderr," OK\n");

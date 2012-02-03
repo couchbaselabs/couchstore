@@ -141,6 +141,11 @@ int open_db(char* filename, uint64_t options, Db** pDb)
     else
         error_pass(find_header(db));
 cleanup:
+    if(errcode < 0)
+    {
+        if(db)
+            free(db);
+    }
     return errcode;
 }
 
