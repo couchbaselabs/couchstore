@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include <libcouchstore/couch_common.h>
+#include <libcouchstore/couch_db.h>
 #include "util.h"
 
 #define ERR_MIN -9
@@ -45,8 +45,8 @@ node_pointer* read_root(char* buf, int* endpos)
         return NULL;
     size = *endpos - pos;
     //Copy the erlang term into the buffer.
-    ptr = malloc(sizeof(node_pointer) + size);
-    buf = memcpy(((char*)ptr) + sizeof(node_pointer), buf + pos, size);
+    ptr = (node_pointer*) malloc(sizeof(node_pointer) + size);
+    buf = (char*) memcpy(((char*)ptr) + sizeof(node_pointer), buf + pos, size);
     pos = 0;
     ptr->key.buf = NULL;
     ptr->key.size = 0;
@@ -77,7 +77,7 @@ void ei_x_encode_nodepointer(ei_x_buff* x, node_pointer* node)
 
 fatbuf* fatbuf_alloc(size_t bytes)
 {
-    fatbuf* fb = malloc(sizeof(fatbuf) + bytes);
+    fatbuf* fb = (fatbuf*) malloc(sizeof(fatbuf) + bytes);
 #ifdef DEBUG
     memset(fb->buf, 0x44, bytes);
 #endif

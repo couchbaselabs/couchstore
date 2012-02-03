@@ -48,7 +48,7 @@ int btree_lookup_inner(couchfile_lookup_request *rq, uint64_t diskpos, int curre
                 ei_decode_ulonglong(nodebuf, &bufpos, &pointer);
                 ei_skip_term(nodebuf, &bufpos); //Skip reduce
                 ei_skip_term(nodebuf, &bufpos); //Skip subtreesize
-                try(btree_lookup_inner(rq, pointer, current, last_item));
+                error_pass(btree_lookup_inner(rq, pointer, current, last_item));
                 if(!rq->in_fold)
                     current = last_item + 1;
             }
@@ -90,7 +90,7 @@ int btree_lookup_inner(couchfile_lookup_request *rq, uint64_t diskpos, int curre
                //Found
                term_to_buf(&key_term, nodebuf, &keypos);
                term_to_buf(&v, nodebuf, &bufpos); //Read value
-               try(rq->fetch_callback(rq, &key_term, &v));
+               error_pass(rq->fetch_callback(rq, &key_term, &v));
                if(!rq->in_fold)
                    current++;
             }
@@ -103,7 +103,7 @@ int btree_lookup_inner(couchfile_lookup_request *rq, uint64_t diskpos, int curre
     //Any remaining items are not found.
     while(current < end)
     {
-        try(rq->fetch_callback(rq, rq->keys[current], NULL));
+        error_pass(rq->fetch_callback(rq, rq->keys[current], NULL));
         current++;
     }
 

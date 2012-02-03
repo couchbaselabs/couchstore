@@ -10,14 +10,14 @@
 
 sized_buf empty_root = {
     // {kv_node, []}
-    "\x68\x02\x64\x00\x07kv_node\x6A",
+    (char*) "\x68\x02\x64\x00\x07kv_node\x6A",
     13
 };
 
 int flush_mr(couchfile_modify_result *res);
 
 void append_buf(void* dst, int *dstpos, void* src, int len) {
-    memcpy(dst + *dstpos, src, len);
+    memcpy((char*) dst + *dstpos, src, len);
     *dstpos += len;
 }
 
@@ -79,7 +79,7 @@ void free_nodelist(nodelist* nl)
 
 nodelist* make_nodelist()
 {
-    nodelist* r = malloc(sizeof(nodelist));
+    nodelist* r = (nodelist*) malloc(sizeof(nodelist));
     if(!r)
         return NULL;
     r->next = NULL;
@@ -88,7 +88,7 @@ nodelist* make_nodelist()
 }
 
 couchfile_modify_result *make_modres(couchfile_modify_request *rq) {
-    couchfile_modify_result *res = malloc(sizeof(couchfile_modify_result));
+    couchfile_modify_result *res = (couchfile_modify_result*) malloc(sizeof(couchfile_modify_result));
     if(!res)
         return NULL;
     res->values = make_nodelist();
@@ -123,7 +123,7 @@ void free_modres(couchfile_modify_result* mr)
 int mr_push_action(couchfile_modify_action *act, couchfile_modify_result *dst)
 {
     //For ACTION_INSERT
-    sized_buf* lv = malloc(sizeof(sized_buf) +
+    sized_buf* lv = (sized_buf*) malloc(sizeof(sized_buf) +
            act->key->size + act->value.term->size + 2);
     if(!lv)
         return ERROR_ALLOC_FAIL;
@@ -183,7 +183,7 @@ int mr_push_kv_range(char* buf, int pos, int bound, int end, couchfile_modify_re
         if(current >= bound)
         { //Parse KV pair into a leaf_value
             nodelist* n;
-            lv = malloc(sizeof(sized_buf));
+            lv = (sized_buf*) malloc(sizeof(sized_buf));
             error_unless(lv, ERROR_ALLOC_FAIL);
 
             lv->buf = buf+term_begin_pos;
@@ -198,7 +198,7 @@ int mr_push_kv_range(char* buf, int pos, int bound, int end, couchfile_modify_re
             dst->node_len += lv->size;
             dst->count++;
             lv = NULL;
-            try(maybe_flush(dst));
+            error_pass(maybe_flush(dst));
         }
         current++;
     }
@@ -211,7 +211,7 @@ cleanup:
 node_pointer* read_pointer(char* buf, int pos)
 {
 //Parse KP pair into a node_pointer {K, {ptr, reduce_value, subtreesize}}
-    node_pointer *p = malloc(sizeof(node_pointer));
+    node_pointer *p = (node_pointer*) malloc(sizeof(node_pointer));
     if(!p)
         return NULL;
     ei_decode_tuple_header(buf, &pos, NULL); //arity 2
@@ -248,10 +248,11 @@ int flush_mr(couchfile_modify_result *res)
     sized_buf reduce_value;
     sized_buf writebuf;
     //default reduce value []
-    reduce_value.buf = "\x6A"; //NIL_EXT
+    reduce_value.buf = (char*) "\x6A"; //NIL_EXT
     reduce_value.size = 1;
     int reduced = 0;
     int errcode = 0;
+    nodelist* pel = NULL;
 
     if(res->values_end == res->values || !res->modified)
     {
@@ -260,7 +261,7 @@ int flush_mr(couchfile_modify_result *res)
     }
 
     res->node_len += 19; //tuple header and node type tuple, list header and tail
-    char* nodebuf = malloc(res->node_len);
+    char* nodebuf = (char*) malloc(res->node_len);
 
     //External term header; tuple header arity 2;
     ei_encode_version(nodebuf, &nbufpos);
@@ -328,7 +329,7 @@ int flush_mr(couchfile_modify_result *res)
     //NIL_EXT (list tail)
     ei_encode_empty_list(nodebuf, &nbufpos);
 
-    node_pointer* ptr = malloc(sizeof(node_pointer) +
+    node_pointer* ptr = (node_pointer*) malloc(sizeof(node_pointer) +
             last_key.size + reduce_value.size);
     if(!ptr)
     {
@@ -353,7 +354,7 @@ int flush_mr(couchfile_modify_result *res)
 
     ptr->subtreesize = subtreesize;
 
-    nodelist* pel = make_nodelist();
+    pel = make_nodelist();
     if(!pel)
     {
         errcode = ERROR_ALLOC_FAIL;
@@ -410,7 +411,7 @@ int mr_move_pointers(couchfile_modify_result *src, couchfile_modify_result *dst)
         dst->values_end->next = ptr;
         dst->values_end = ptr;
         ptr = next;
-        try(maybe_flush(dst));
+        error_pass(maybe_flush(dst));
     }
 
 cleanup:
@@ -431,6 +432,7 @@ int modify_node(couchfile_modify_request *rq, node_pointer *nptr,
     int errcode = 0;
     int kpos = 0;
     int node_type_pos = 0;
+    couchfile_modify_result* local_result = NULL;
 
     if(start == end)
     {
@@ -445,13 +447,13 @@ int modify_node(couchfile_modify_request *rq, node_pointer *nptr,
     {
         if((read_size = pread_bin(rq->fd, nptr->pointer, (char**) &current_node.buf)) < 0)
         {
-            try(ERROR_READ);
+            error_pass(ERROR_READ);
         }
         current_node.size = read_size;
         curnode_pos++; //Skip over 131.
     }
 
-    couchfile_modify_result *local_result = make_modres(rq);
+    local_result = make_modres(rq);
     error_unless(local_result, ERROR_ALLOC_FAIL);
 
     ei_decode_tuple_header(current_node.buf, &curnode_pos, NULL);
@@ -595,7 +597,7 @@ int modify_node(couchfile_modify_request *rq, node_pointer *nptr,
                 {
                         free(desc);
                 }
-                try(errcode);
+                error_pass(errcode);
                 node_bound = node_len;
                 break;
             }
@@ -621,7 +623,7 @@ int modify_node(couchfile_modify_request *rq, node_pointer *nptr,
                 {
                         free(desc);
                 }
-                try(errcode);
+                error_pass(errcode);
                 start = range_end;
             }
         }
@@ -639,7 +641,7 @@ int modify_node(couchfile_modify_request *rq, node_pointer *nptr,
         goto cleanup;
     }
     //If we've done modifications, write out the last leaf node.
-    try(flush_mr(local_result))
+    error_pass(flush_mr(local_result))
     if(!local_result->modified && nptr != NULL)
     {
         //If we didn't do anything, give back the pointer to the original
@@ -649,7 +651,7 @@ int modify_node(couchfile_modify_request *rq, node_pointer *nptr,
     {
         //Otherwise, give back the pointers to the nodes we've created.
         dst->modified = 1;
-        try(mr_move_pointers(local_result, dst));
+        error_pass(mr_move_pointers(local_result, dst));
     }
 cleanup:
     free_modres(local_result);

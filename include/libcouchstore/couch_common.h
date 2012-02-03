@@ -73,7 +73,6 @@ int db_write_header(Db* db, sized_buf* buf);
 int db_write_buf(Db* db, sized_buf* buf, off_t *pos);
 
 /* Errors */
-const char* describe_error(int errcode);
 
 #define ERROR_OPEN_FILE -1
 #define ERROR_PARSE_TERM -2

@@ -2,7 +2,9 @@
 #define COUCHSTORE_COUCH_DB_H
 
 #include "couch_common.h"
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 //Open a database, should be closed with close_db
 int open_db(char* filename, uint64_t options, Db** db);
 //Close a database and free resources
@@ -63,4 +65,9 @@ int save_local_doc(Db* db, LocalDoc* lDoc);
 /* LocalDoc's obtained with open_local_doc must be freed with free_local_doc */
 void free_local_doc(LocalDoc* lDoc);
 
+/* Description of errcodes returned by couchstore functions */
+const char* describe_error(int errcode);
+#ifdef __cplusplus
+}
+#endif
 #endif

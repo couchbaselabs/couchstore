@@ -6,6 +6,7 @@
 
 #include "rfc1321/global.h"
 #include "rfc1321/md5.h"
+#include "util.h"
 
 ssize_t raw_write(int fd, sized_buf* buf, off_t pos)
 {
@@ -62,8 +63,8 @@ int db_write_header(Db* db, sized_buf* buf)
 
     //Write MD5
     MD5Init(&hashctx);
-    MD5Update(&hashctx, buf->buf, buf->size);
-    MD5Final(hash, &hashctx);
+    MD5Update(&hashctx, (uint8_t*) buf->buf, buf->size);
+    MD5Final((uint8_t*) hash, &hashctx);
 
     written = raw_write(db->fd, &hashbuf, write_pos);
     if(written < 0) return ERROR_WRITE;

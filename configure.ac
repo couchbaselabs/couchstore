@@ -17,12 +17,13 @@
 AC_PREREQ(2.59)
 m4_include([m4/version.m4])
 AC_INIT(libcouchstore, VERSION_NUMBER, support@couchbase.com)
-AC_CONFIG_SRCDIR([src/couch_db.c])
+AC_CONFIG_SRCDIR([src/couch_db.cc])
 AC_CONFIG_AUX_DIR(config)
 AC_USE_SYSTEM_EXTENSIONS
 AM_INIT_AUTOMAKE(subdir-objects)
 AC_PROG_CC
 AM_PROG_CC_C_O
+AC_PROG_CXX
 AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
 AM_CONFIG_HEADER([config.h])
