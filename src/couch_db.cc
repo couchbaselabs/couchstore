@@ -45,7 +45,7 @@ int find_header(Db *db)
                     break;
                 }
                 ei_skip_term(header_buf, &index); //db_header
-                ei_decode_ulong(header_buf, &index, &db->header.disk_version);
+                ei_decode_uint64(header_buf, &index, &db->header.disk_version);
                 error_unless(db->header.disk_version == COUCH_DISK_VERSION, ERROR_HEADER_VERSION)
                 ei_decode_uint64(header_buf, &index, &db->header.update_seq);
                 db->header.by_id_root = read_root(header_buf, &index);
@@ -236,7 +236,7 @@ int docinfo_from_buf(DocInfo** pInfo, sized_buf *v, int idBytes)
 {
     int errcode = 0,term_index = 0, fterm_pos = 0, fterm_size = 0;
     int metabin_pos = 0, metabin_size = 0;
-    unsigned long deleted;
+    uint64_t deleted;
     uint64_t seq = 0, rev = 0, bp = 0;
     uint64_t size;
     char* infobuf = NULL;
@@ -263,7 +263,7 @@ int docinfo_from_buf(DocInfo** pInfo, sized_buf *v, int idBytes)
     metabin_size = term_index - metabin_pos; //and size.
 
     error_nonzero(ei_decode_uint64(v->buf, &term_index, &bp), ERROR_PARSE_TERM);
-    error_nonzero(ei_decode_ulong(v->buf, &term_index, &deleted), ERROR_PARSE_TERM);
+    error_nonzero(ei_decode_uint64(v->buf, &term_index, &deleted), ERROR_PARSE_TERM);
     error_nonzero(ei_decode_uint64(v->buf, &term_index, &size), ERROR_PARSE_TERM);
 
     //If first term is seq, we don't need to include it in the buffer
@@ -680,7 +680,7 @@ int update_indexes(Db* db, sized_buf* seqs, sized_buf* seqvals, sized_buf* ids, 
     int errcode = 0;
     fatbuf* actbuf = fatbuf_alloc(numdocs * ( 4 * sizeof(couchfile_modify_action) + // Two action list up to numdocs * 2 in size
                                               2 * sizeof(sized_buf) + // Compare keys for ids, and compare keys for removed seqs found from id index.
-                                              10)); //Max size of a longlong erlang term (for deleted seqs)
+                                              10)); //Max size of a int64 erlang term (for deleted seqs)
     sized_buf* idcmps;
     couchfile_modify_action *idacts, *seqacts;
     node_pointer *new_id_root, *new_seq_root;

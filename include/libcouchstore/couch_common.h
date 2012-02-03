@@ -28,7 +28,7 @@ typedef struct _doc {
 typedef struct _docinfo {
     sized_buf id;
     sized_buf meta;
-    int deleted;
+    uint64_t deleted;
     uint64_t seq;
     uint64_t rev;
     uint64_t bp;
@@ -43,7 +43,7 @@ typedef struct _local_doc {
 
 typedef struct _db_header
 {
-    unsigned long disk_version;
+    uint64_t disk_version;
     uint64_t update_seq;
     node_pointer* by_id_root;
     node_pointer* by_seq_root;

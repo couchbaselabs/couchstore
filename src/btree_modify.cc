@@ -217,9 +217,9 @@ node_pointer* read_pointer(char* buf, int pos)
     ei_decode_tuple_header(buf, &pos, NULL); //arity 2
     term_to_buf(&p->key, buf, &pos);
     ei_decode_tuple_header(buf, &pos, NULL); //arity 3
-    ei_decode_uint64(buf, &pos, (unsigned long long*) &p->pointer);
+    ei_decode_uint64(buf, &pos, &p->pointer);
     term_to_buf(&p->reduce_value, buf, &pos);
-    ei_decode_uint64(buf, &pos, (unsigned long long*) &p->subtreesize);
+    ei_decode_uint64(buf, &pos, &p->subtreesize);
 
     return p;
 }
@@ -244,7 +244,7 @@ void mr_push_kp_range(char* buf, int pos, int bound, int end, couchfile_modify_r
 int flush_mr(couchfile_modify_result *res)
 {
     int nbufpos = 0;
-    long long subtreesize = 0;
+    uint64_t subtreesize = 0;
     sized_buf reduce_value;
     sized_buf writebuf;
     //default reduce value []
