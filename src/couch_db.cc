@@ -117,7 +117,7 @@ int open_db(char* filename, uint64_t options, Db** pDb)
     int openflags = 0;
     if(options & COUCH_CREATE_FILES) openflags |= O_CREAT;
     db->fd = open(filename, openflags | O_RDWR, 0744);
-    error_unless(db->fd, ERROR_OPEN_FILE);
+    error_unless(db->fd > 0, ERROR_OPEN_FILE);
     //TODO Not totally up on how to handle large files.
     //     Should we be using pread64 and the off64_t accepting functions?
     //     They don't seem to be available everywhere.
