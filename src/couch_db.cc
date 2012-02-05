@@ -326,6 +326,7 @@ int bp_to_doc(Doc **pDoc, int fd, off_t bp)
 
     bodylen = pread_bin(fd, bp, &docbody);
     error_unless(bodylen > 0, ERROR_READ);
+    error_unless(docbody, ERROR_READ);
 
     memcpy(&jsonlen, docbody, 4);
     jsonlen = ntohl(jsonlen);
@@ -387,8 +388,8 @@ int docinfo_fetch(couchfile_lookup_request *rq, void *k, sized_buf *v)
     int errcode = 0;
     sized_buf *id = (sized_buf*) k;
     DocInfo** pInfo = (DocInfo**) rq->callback_ctx;
-    error_pass(docinfo_from_buf(pInfo, v, id->size));
-    memcpy((*pInfo)->id.buf, id->buf, id->size);
+    error_pass(docinfo_from_buf(pInfo, v, id->size - 5));
+    memcpy((*pInfo)->id.buf, id->buf + 5, id->size - 5);
 cleanup:
     return errcode;
 }

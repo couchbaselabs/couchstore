@@ -83,6 +83,7 @@ int raw_read(int fd, off_t *pos, ssize_t len, char** dst)
 
 fail:
     free(*dst);
+    *dst = NULL;
     return -1;
 }
 
