@@ -6,8 +6,8 @@
 #include "macros.h"
 
 #define ZERO(V) memset(&(V), 0, sizeof(V))
-#define SETDOC(N, I, J, B, M) setdoc(&testdocset.docs[N], &testdocset.infos[N], I, sizeof(I) - 1, \
-                                  J, sizeof(J) - 1, B, sizeof(B) - 1, M, sizeof(M))
+#define SETDOC(N, I, D, M) setdoc(&testdocset.docs[N], &testdocset.infos[N], I, sizeof(I) - 1, \
+                                  D, sizeof(D) - 1, M, sizeof(M))
 
 typedef struct _counterset
 {
@@ -28,17 +28,15 @@ counterset counters;
 docset testdocset;
 fatbuf* docsetbuf = NULL;
 
-void setdoc(Doc* doc, DocInfo* info, char* id, int idlen, char* json, int jsonlen, char* bin, int binlen, char* meta, int metalen)
+void setdoc(Doc* doc, DocInfo* info, char* id, int idlen, char* data, int datalen, char* meta, int metalen)
 {
     doc->id.buf = id;
     doc->id.size = idlen;
-    doc->json.buf = json;
-    doc->json.size = jsonlen;
-    doc->binary.buf = bin;
-    doc->binary.size = binlen;
-    info->meta.buf = meta;
-    info->meta.size = metalen;
-    info->rev = 1;
+    doc->data.buf = data;
+    doc->data.size = datalen;
+    info->rev_meta.buf = meta;
+    info->rev_meta.size = metalen;
+    info->rev_seq = 1;
     info->size = 0;
     info->deleted = 0;
     info->id = doc->id;
@@ -80,18 +78,14 @@ int docset_check(Db* db, DocInfo* info, void *ctx)
     if(info->deleted)
         ctr->deleted++;
     EQUAL_INFO_BUF(id);
-    EQUAL_INFO_BUF(meta);
+    EQUAL_INFO_BUF(rev_meta);
     Doc* doc;
     try(open_doc_with_docinfo(db, info, &doc, 0));
-    if(testdocset.docs[testdocset.pos].json.size > 0)
+    if(testdocset.docs[testdocset.pos].data.size > 0)
     {
         assert(doc);
-        EQUAL_DOC_BUF(json);
+        EQUAL_DOC_BUF(data);
         EQUAL_DOC_BUF(id);
-        if(testdocset.docs[testdocset.pos].binary.size > 0)
-            EQUAL_DOC_BUF(binary);
-        else
-            assert(doc->binary.size == 0);
     }
     testdocset.pos++;
     free_doc(doc);
@@ -115,10 +109,10 @@ void test_save_docs()
     fprintf(stderr, "save_docs... "); fflush(stderr);
     int errcode = 0;
     docset_init(4);
-    SETDOC(0, "doc1", "{\"test_doc_index\":1}", "test binary 1", zerometa);
-    SETDOC(1, "doc2", "{\"test_doc_index\":2}", "test binary 2", zerometa);
-    SETDOC(2, "doc3", "{\"test_doc_index\":3}", "test binary 3", zerometa);
-    SETDOC(3, "doc4", "{\"test_doc_index\":4}", "test binary 4", zerometa);
+    SETDOC(0, "doc1", "{\"test_doc_index\":1}", zerometa);
+    SETDOC(1, "doc2", "{\"test_doc_index\":2}", zerometa);
+    SETDOC(2, "doc3", "{\"test_doc_index\":3}", zerometa);
+    SETDOC(3, "doc4", "{\"test_doc_index\":4}", zerometa);
     unlink("test.couch");
     Db* db;
     try(open_db("test.couch", COUCH_CREATE_FILES, &db));
@@ -140,10 +134,10 @@ void test_save_doc()
     fprintf(stderr, "save_doc... "); fflush(stderr);
     int errcode = 0;
     docset_init(4);
-    SETDOC(0, "doc1", "{\"test_doc_index\":1}", "test binary 1", zerometa);
-    SETDOC(1, "doc2", "{\"test_doc_index\":2}", "test binary 2", zerometa);
-    SETDOC(2, "doc3", "{\"test_doc_index\":3}", "test binary 3", zerometa);
-    SETDOC(3, "doc4", "{\"test_doc_index\":4}", "test binary 4", zerometa);
+    SETDOC(0, "doc1", "{\"test_doc_index\":1}", zerometa);
+    SETDOC(1, "doc2", "{\"test_doc_index\":2}", zerometa);
+    SETDOC(2, "doc3", "{\"test_doc_index\":3}", zerometa);
+    SETDOC(3, "doc4", "{\"test_doc_index\":4}", zerometa);
     unlink("test.couch");
     Db* db;
     try(open_db("test.couch", COUCH_CREATE_FILES, &db));

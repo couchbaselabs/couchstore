@@ -242,6 +242,7 @@ int docinfo_from_buf(DocInfo** pInfo, sized_buf *v, int idBytes)
     int errcode = 0,term_index = 0, fterm_pos = 0, fterm_size = 0;
     int metabin_pos = 0, metabin_size = 0;
     uint64_t deleted;
+    uint64_t content_meta;
     uint64_t seq = 0, rev = 0, bp = 0;
     uint64_t size;
     char* infobuf = NULL;
@@ -253,7 +254,7 @@ int docinfo_from_buf(DocInfo** pInfo, sized_buf *v, int idBytes)
     }
 
     //Id/Seq
-    error_unless(tuple_check(v->buf, &term_index, 5), ERROR_PARSE_TERM);
+    error_unless(tuple_check(v->buf, &term_index, 6), ERROR_PARSE_TERM);
     fterm_pos = term_index; //Save position of first term
     ei_skip_term(v->buf, &term_index);
     fterm_size = term_index - fterm_pos; //and size.
@@ -269,19 +270,21 @@ int docinfo_from_buf(DocInfo** pInfo, sized_buf *v, int idBytes)
 
     error_nonzero(ei_decode_uint64(v->buf, &term_index, &bp), ERROR_PARSE_TERM);
     error_nonzero(ei_decode_uint64(v->buf, &term_index, &deleted), ERROR_PARSE_TERM);
+    error_nonzero(ei_decode_uint64(v->buf, &term_index, &content_meta), ERROR_PARSE_TERM);
     error_nonzero(ei_decode_uint64(v->buf, &term_index, &size), ERROR_PARSE_TERM);
 
     //If first term is seq, we don't need to include it in the buffer
     if(idBytes != 0) fterm_size = 0;
     infobuf = (char*) malloc(sizeof(DocInfo) + metabin_size + fterm_size + idBytes);
+    error_unless(infobuf, ERROR_ALLOC_FAIL);
     *pInfo = (DocInfo*) infobuf;
 
-    (*pInfo)->meta.buf = infobuf + sizeof(DocInfo);
-    (*pInfo)->meta.size = metabin_size;
+    (*pInfo)->rev_meta.buf = infobuf + sizeof(DocInfo);
+    (*pInfo)->rev_meta.size = metabin_size;
 
     if(metabin_size > 0)
     {
-        memcpy((*pInfo)->meta.buf, v->buf + metabin_pos, metabin_size);
+        memcpy((*pInfo)->rev_meta.buf, v->buf + metabin_pos, metabin_size);
     }
 
     (*pInfo)->id.buf = infobuf + sizeof(DocInfo) + metabin_size;
@@ -300,11 +303,12 @@ int docinfo_from_buf(DocInfo** pInfo, sized_buf *v, int idBytes)
         //Let the caller fill in the Seq
     }
 
-    (*pInfo)->seq = seq;
-    (*pInfo)->rev = rev;
+    (*pInfo)->db_seq = seq;
+    (*pInfo)->rev_seq = rev;
     (*pInfo)->bp = bp;
     (*pInfo)->size = size;
     (*pInfo)->deleted = deleted;
+    (*pInfo)->content_meta = content_meta;
 
 cleanup:
     if(errcode < 0 && (*pInfo))
@@ -322,63 +326,24 @@ int bp_to_doc(Doc **pDoc, int fd, off_t bp)
     uint32_t jsonlen, hasbin;
     size_t jsonlen_uncompressed = 0;
     size_t bodylen = 0;
-    char *docbody = NULL, *docbuf = NULL;
+    char *docbody = NULL;
+    fatbuf *docbuf = NULL;
 
     bodylen = pread_bin(fd, bp, &docbody);
     error_unless(bodylen > 0, ERROR_READ);
     error_unless(docbody, ERROR_READ);
+    error_unless(docbuf = fatbuf_alloc(sizeof(Doc) + bodylen), ERROR_ALLOC_FAIL);
+    *pDoc = (Doc*) fatbuf_get(docbuf, sizeof(Doc));
+    (*pDoc)->data.buf = (char*) fatbuf_get(docbuf, bodylen);
+    (*pDoc)->data.size = bodylen;
+    memcpy((*pDoc)->data.buf, docbody, bodylen);
 
-    memcpy(&jsonlen, docbody, 4);
-    jsonlen = ntohl(jsonlen);
-    hasbin = jsonlen & 0x80000000;
-    jsonlen = jsonlen & ~0x80000000;
-    if(!hasbin)
-        jsonlen = bodylen - 4; //Should be true anyway..
-
-    //couch uncompress
-    if(docbody[4] == 1) //Need to unsnappy;
-    {
-        error_unless(snappy_uncompressed_length(docbody + 5, jsonlen - 1, &jsonlen_uncompressed) == SNAPPY_OK, ERROR_READ)
-    }
-    //Fill out doc structure.
-    docbuf = (char*) malloc(sizeof(Doc) + (bodylen - 4) + jsonlen_uncompressed); //meta and binary and json
-    error_unless(docbuf, ERROR_ALLOC_FAIL);
-
-    *pDoc = (Doc*) docbuf;
-    docbuf += sizeof(Doc);
-
-    memcpy(docbuf, docbody + 4, bodylen - 4);
-    if(hasbin)
-    {
-        (*pDoc)->binary.buf = docbuf + jsonlen;
-    }
-    else
-    {
-        (*pDoc)->binary.buf = NULL;
-    }
-    (*pDoc)->binary.size = (bodylen - 4) - jsonlen;
-
-    if(docbody[4] == 1)
-    {
-        (*pDoc)->json.buf = docbuf + (bodylen -4);
-        error_unless(
-                snappy_uncompress(docbody + 5, jsonlen - 1, (*pDoc)->json.buf, &jsonlen_uncompressed) == SNAPPY_OK, ERROR_READ);
-        (*pDoc)->json.buf += 6;
-        (*pDoc)->json.size = jsonlen_uncompressed - 6;
-    }
-    else
-    {
-        (*pDoc)->binary.size = (bodylen - 4) - jsonlen;
-        (*pDoc)->json.buf = docbuf + 6;
-        (*pDoc)->json.size = jsonlen - 6;
-    }
-
-    free(docbody);
 cleanup:
-    if(errcode < 0 && (*pDoc))
+    if(docbody) free(docbody);
+    if(errcode < 0)
     {
-        free(*pDoc);
-        (*pDoc) = NULL;
+        if(docbuf)
+            fatbuf_free(docbuf);
     }
     return errcode;
 }
@@ -465,7 +430,7 @@ int byseq_do_callback(couchfile_lookup_request *rq, void *k, sized_buf *v)
     int seqindex = 0;
     DocInfo* docinfo;
     docinfo_from_buf(&docinfo, v, 0);
-    ei_decode_uint64(seqterm->buf, &seqindex, &docinfo->seq);
+    ei_decode_uint64(seqterm->buf, &seqindex, &docinfo->db_seq);
     if(real_callback((Db*) ((void**)rq->callback_ctx)[1], docinfo, ((void**)rq->callback_ctx)[2]) != NO_FREE_DOCINFO)
         free_docinfo(docinfo);
     return 0;
@@ -509,7 +474,8 @@ int changes_since(Db* db, uint64_t since, uint64_t options,
 
 void free_doc(Doc* doc)
 {
-    free(doc);
+    char* offset = (char*) (&((fatbuf*) NULL)->buf);
+    fatbuf_free((fatbuf*) ((char*)doc - (char*)offset));
 }
 
 void free_docinfo(DocInfo* docinfo)
@@ -526,71 +492,32 @@ void copy_term(char* dst, int *index, sized_buf* term)
 int assemble_index_value(DocInfo* docinfo, char* dst, sized_buf* first_term)
 {
     int pos = 0;
-    ei_encode_tuple_header(dst, &pos, 5); //2 bytes.
+    ei_encode_tuple_header(dst, &pos, 6); //2 bytes.
 
     //Id or Seq (possibly encoded as a binary)
     copy_term(dst, &pos, first_term); //first_term.size
     //Rev
     ei_encode_tuple_header(dst, &pos, 2); //3 bytes.
-    ei_encode_ulonglong(dst, &pos, docinfo->rev); //Max 10 bytes
-    ei_encode_binary(dst, &pos, docinfo->meta.buf, docinfo->meta.size); //meta.size + 5
+    ei_encode_ulonglong(dst, &pos, docinfo->rev_seq); //Max 10 bytes
+    ei_encode_binary(dst, &pos, docinfo->rev_meta.buf, docinfo->rev_meta.size); //meta.size + 5
     //Bp
     ei_encode_ulonglong(dst, &pos, docinfo->bp); //Max 10 bytes
     //Deleted
     ei_encode_ulonglong(dst, &pos, docinfo->deleted); //2 bytes
+    //
+    ei_encode_ulonglong(dst, &pos, docinfo->content_meta); //2 bytes
     //Size
-    ei_encode_ulonglong(dst, &pos, docinfo->rev); //Max 10 bytes
+    ei_encode_ulonglong(dst, &pos, docinfo->size); //Max 10 bytes
 
-    //Max 42 + first_term.size + meta.size bytes.
+    //Max 44 + first_term.size + meta.size bytes.
     return pos;
 }
 
 int write_doc(Db* db, Doc* doc, uint64_t* bp)
 {
     int errcode = 0;
-    int binflag = 0;
-    size_t jsonlen = snappy_max_compressed_length(doc->json.size + 6);
-    size_t max_size = 10 + doc->binary.size + jsonlen;
-
-    sized_buf docbody;
-    docbody.size = 4; //Set up space for size prefix;
-    docbody.buf = (char*) malloc(max_size);
-    error_unless(docbody.buf, ERROR_ALLOC_FAIL);
-
-    if(doc->json.size > COUCH_SNAPPY_THRESHOLD)
-    {
-        int jbinpos = 0;
-        char* jbinbuf = (char*) malloc(doc->json.size + 6);
-        error_unless(jbinbuf, ERROR_ALLOC_FAIL);
-        ei_encode_version(jbinbuf, (int*) &jbinpos);
-        ei_encode_binary(jbinbuf, (int*) &jbinpos, doc->json.buf, doc->json.size);
-
-        docbody.buf[4] = 1;
-        error_unless(snappy_compress(jbinbuf, jbinpos, docbody.buf + 5, &jsonlen) == SNAPPY_OK, ERROR_WRITE);
-
-        jsonlen += 1;
-        docbody.size += jsonlen;
-        free(jbinbuf);
-    }
-    else
-    {
-        ei_encode_version(docbody.buf, (int*) &docbody.size);
-        ei_encode_binary(docbody.buf, (int*) &docbody.size, doc->json.buf, doc->json.size);
-        jsonlen = doc->json.size + 6;
-    }
-
-    memcpy(docbody.buf + docbody.size, doc->binary.buf, doc->binary.size);
-    docbody.size += doc->binary.size;
-
-    binflag = (doc->binary.size > 0) ? 0x80000000 : 0;
-    *((uint32_t*) docbody.buf) = htonl((jsonlen) | binflag);
-
-    error_pass(db_write_buf(db, &docbody, (off_t*) bp));
-
+    error_pass(db_write_buf(db, &doc->data, (off_t*) bp));
 cleanup:
-    if(docbody.buf)
-        free(docbody.buf);
-
     return errcode;
 }
 
@@ -785,7 +712,7 @@ int add_doc_to_update_list(Db* db, Doc* doc, DocInfo* info, fatbuf* fb,
 {
     int errcode = 0;
     DocInfo updated = *info;
-    updated.seq = seq;
+    updated.db_seq = seq;
 
     seqterm->buf = (char*) fatbuf_get(fb, 10);
     seqterm->size = 0;
@@ -808,16 +735,16 @@ int add_doc_to_update_list(Db* db, Doc* doc, DocInfo* info, fatbuf* fb,
     idterm->size = 0;
     ei_encode_binary(idterm->buf, (int*) &idterm->size, updated.id.buf, updated.id.size);
 
-    seqval->buf = (char*) fatbuf_get(fb, (42 + updated.id.size + updated.meta.size));
+    seqval->buf = (char*) fatbuf_get(fb, (44 + updated.id.size + updated.rev_meta.size));
     error_unless(seqval->buf, ERROR_ALLOC_FAIL);
     seqval->size = assemble_index_value(&updated, seqval->buf, idterm);
 
-    idval->buf = (char*) fatbuf_get(fb, (42 + 10 + updated.meta.size));
+    idval->buf = (char*) fatbuf_get(fb, (44 + 10 + updated.rev_meta.size));
     error_unless(idval->buf, ERROR_ALLOC_FAIL);
     idval->size = assemble_index_value(&updated, idval->buf, seqterm);
 
-    //Use max of 10 +, id.size + 5 +, 42 + meta.size + id.size, + 52 + meta.size
-    // == id.size *2 + meta.size *2 + 109 bytes
+    //Use max of 10 +, id.size + 5 +, 42 + rev_meta.size + id.size, + 52 + rev_meta.size
+    // == id.size *2 + rev_meta.size *2 + 109 bytes
 cleanup:
     return errcode;
 }
@@ -835,7 +762,7 @@ int save_docs(Db* db, Doc* docs, DocInfo* infos, long numdocs, uint64_t options)
     for(i = 0; i < numdocs; i++)
     {
         //Get additional size for terms to be inserted into indexes
-        term_meta_size += 109 + (2 * (infos[i].id.size + infos[i].meta.size));
+        term_meta_size += 113 + (2 * (infos[i].id.size + infos[i].rev_meta.size));
     }
 
     fb = fatbuf_alloc(term_meta_size +

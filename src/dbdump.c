@@ -27,17 +27,11 @@ int foldprint(Db* db, DocInfo* docinfo, void *ctx)
     int *count = ctx;
     Doc* doc;
     open_doc_with_docinfo(db, docinfo, &doc, 0);
-    printf("Doc seq: %llu\n", docinfo->seq);
+    printf("Doc seq: %llu\n", docinfo->db_seq);
     printf("     id: "); printsb(&docinfo->id);
     if(docinfo->deleted)
         printf("     doc deleted\n");
-    if(doc)
-    {
-        printf("    bin: "); printsb(&doc->binary);
-        printf("   json: "); printsb(&doc->json);
-    }
-    else
-        printf("no doc body\n");
+    printf("   data: "); printsb(&doc->data);
     free_doc(doc);
     (*count)++;
     return 0;
@@ -59,10 +53,10 @@ again:
     try(open_db(argv[argpos], 0, &db));
     try(changes_since(db, 0, 0, foldprint, &count));
 cleanup:
-    if(db)
+    if(errcode == 0 && db)
         close_db(db);
     argpos++;
-    if(argpos < argc) goto again;
+    if(errcode == 0 && argpos < argc) goto again;
     printf("\nTotal docs: %d\n", count);
     if(errcode < 0)
         printf("ERROR: %s\n", describe_error(errcode));

@@ -72,7 +72,7 @@ void by_id_rereduce(sized_buf *dst, nodelist* leaflist, int count)
 
 void by_id_reduce(sized_buf *dst, nodelist* leaflist, int count)
 {
-    //Source term {Key, {Seq, Rev, Bp, Deleted, Size}}
+    //Source term {Key, {Seq, Rev, Bp, Deleted, ContentMeta, Size}}
     //Result term {NotDeleted, Deleted, Size}
     dst->buf = (char*) malloc(30);
     if(!dst->buf)
@@ -93,6 +93,7 @@ void by_id_reduce(sized_buf *dst, nodelist* leaflist, int count)
         ei_skip_term(i->value.leaf->buf, &srcpos); //skip rev
         ei_skip_term(i->value.leaf->buf, &srcpos); //skip bp
         ei_decode_long(i->value.leaf->buf, &srcpos, &src_deleted);
+        ei_skip_term(i->value.leaf->buf, &srcpos); //skip ContentMeta
         ei_decode_longlong(i->value.leaf->buf, &srcpos, &src_size);
         if(src_deleted == 1)
             deleted++;

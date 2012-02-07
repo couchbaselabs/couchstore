@@ -21,16 +21,16 @@ typedef struct _nodepointer {
 
 typedef struct _doc {
     sized_buf id;
-    sized_buf json;
-    sized_buf binary;
+    sized_buf data;
 } Doc;
 
 typedef struct _docinfo {
     sized_buf id;
-    sized_buf meta;
+    uint64_t db_seq;
+    uint64_t rev_seq;
+    sized_buf rev_meta;
     uint64_t deleted;
-    uint64_t seq;
-    uint64_t rev;
+    uint8_t content_meta;
     uint64_t bp;
     size_t size;
 } DocInfo;
@@ -71,6 +71,7 @@ ssize_t total_read_len(off_t blockoffset, ssize_t finallen);
 
 int db_write_header(Db* db, sized_buf* buf);
 int db_write_buf(Db* db, sized_buf* buf, off_t *pos);
+int db_write_buf_compressed(Db* db, sized_buf* buf, off_t *pos);
 
 /* Errors */
 

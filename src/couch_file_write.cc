@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <netinet/in.h>
+#include <snappy-c.h>
 #include <libcouchstore/couch_db.h>
 
 #include "rfc1321/global.h"
@@ -106,3 +108,23 @@ int db_write_buf(Db* db, sized_buf* buf, off_t *pos)
     db->file_pos = end_pos;
     return 0;
 }
+
+int db_write_buf_compressed(Db* db, sized_buf* buf, off_t *pos)
+{
+    int errcode = 0;
+    sized_buf to_write;
+    size_t max_size = snappy_max_compressed_length(buf->size) + 1;
+
+    to_write.buf = (char*) malloc(max_size);
+    to_write.size = max_size;
+    error_unless(to_write.buf, ERROR_ALLOC_FAIL);
+    to_write.buf[0] = 1;
+    error_unless(snappy_compress(buf->buf, buf->size, to_write.buf + 1, &to_write.size) == SNAPPY_OK, ERROR_WRITE);
+
+    error_pass(db_write_buf(db, &to_write, pos));
+cleanup:
+    if(to_write.buf)
+        free(to_write.buf);
+    return errcode;
+}
+
