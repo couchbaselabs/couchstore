@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #define COUCH_BLOCK_SIZE 4096
-#define COUCH_DISK_VERSION 8
+#define COUCH_DISK_VERSION 9
 #define COUCH_SNAPPY_THRESHOLD 64
 
 typedef struct _sized_buf {

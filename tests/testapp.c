@@ -87,7 +87,7 @@ int docset_check(Db* db, DocInfo* info, void *ctx)
     EQUAL_INFO_BUF(id);
     EQUAL_INFO_BUF(rev_meta);
     Doc* doc;
-    try(open_doc_with_docinfo(db, info, &doc, 0));
+    try(open_doc_with_docinfo(db, info, &doc, DECOMPRESS_DOC_BODIES));
     if(testdocset.docs[testdocset.pos].data.size > 0)
     {
         assert(doc);
@@ -187,6 +187,30 @@ cleanup:
     assert(errcode == 0);
 }
 
+void test_compressed_doc_body()
+{
+    fprintf(stderr, "compressed bodies... "); fflush(stderr);
+    int errcode = 0;
+    docset_init(2);
+    SETDOC(0, "doc1", "{\"test_doc_index\":1, \"val\":\"blah blah blah blah blah blah\"}", zerometa);
+    SETDOC(1, "doc2", "{\"test_doc_index\":2, \"val\":\"blah blah blah blah blah blah\"}", zerometa);
+    testdocset.infos[1].content_meta = 128; //Mark doc2 as to be snappied.
+    unlink("test.couch");
+    Db* db;
+    try(open_db("test.couch", COUCH_CREATE_FILES, &db));
+    try(save_docs(db, testdocset.docs, testdocset.infos, 2, COMPRESS_DOC_BODIES));
+    try(commit_all(db, 0));
+    close_db(db);
+    //Read back
+    try(open_db("test.couch", 0, &db));
+    try(changes_since(db, 0, 0, docset_check, &testdocset));
+    assert(testdocset.counters.totaldocs == 2);
+    assert(testdocset.counters.deleted == 0);
+    close_db(db);
+cleanup:
+    assert(errcode == 0);
+}
+
 void test_dump_empty_db()
 {
     fprintf(stderr, "dump empty db... "); fflush(stderr);
@@ -246,6 +270,7 @@ int main(void)
     test_save_doc(); fprintf(stderr," OK\n");
     test_save_docs(); fprintf(stderr," OK\n");
     test_local_docs(); fprintf(stderr," OK\n");
+    test_compressed_doc_body(); fprintf(stderr," OK\n");
 
     return 0;
 }

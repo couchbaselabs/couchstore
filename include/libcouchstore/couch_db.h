@@ -19,6 +19,13 @@ int save_doc(Db* db, Doc* doc, DocInfo* info, uint64_t options);
 /* Save array of docs to db */
 int save_docs(Db* db, Doc* docs, DocInfo* infos, long numDocs, uint64_t options);
 
+//Options flags for save_doc and save_docs
+/* Snappy compress document data if the high bit of the content_meta field
+ * of the DocInfo is set.
+ * This is NOT the default, and if this is not set the data field of the Doc
+ * will be written to disk as-is, regardless of the content_meta flags. */
+#define COMPRESS_DOC_BODIES 1
+
 /* To delete docuemnts, call save_doc or save_docs with doc or docs set to NULL,
  * the docs referenced by the docinfos will be deleted.
  * To intermix deletes and inserts in a bulk update, pass docinfos with the deleted flag
@@ -42,6 +49,13 @@ int open_doc(Db* db, uint8_t* id, size_t idlen, Doc** pDoc, uint64_t options);
  * Do not free the docinfo before freeing the doc.
  * Should be freed with free_doc. */
 int open_doc_with_docinfo(Db* db, DocInfo* docinfo, Doc** pDoc, uint64_t options);
+
+//Options flags for open_doc and open_doc_with_docinfo
+/* Snappy decompress document data if the high bit of the content_meta field
+ * of the DocInfo is set.
+ * This is NOT the default, and if this is not set the data field of the Doc
+ * will be read from disk as-is, regardless of the content_meta flags. */
+#define DECOMPRESS_DOC_BODIES 1
 
 /* Free a doc returned from open_doc. */
 void free_doc(Doc* doc);

@@ -9,6 +9,8 @@
 #include "util.h"
 #include "reduces.h"
 
+#define SNAPPY_META_FLAG 128
+
 sized_buf nil_atom = {
     (char*) "\x64\x00\x03nil",
     6
@@ -319,8 +321,9 @@ cleanup:
     return errcode;
 }
 
+#define COMPRESSED_BODY 1
 //Fill in doc from reading file.
-int bp_to_doc(Doc **pDoc, int fd, off_t bp)
+int bp_to_doc(Doc **pDoc, int fd, off_t bp, uint64_t options)
 {
     int errcode = 0;
     uint32_t jsonlen, hasbin;
@@ -329,7 +332,11 @@ int bp_to_doc(Doc **pDoc, int fd, off_t bp)
     char *docbody = NULL;
     fatbuf *docbuf = NULL;
 
-    bodylen = pread_bin(fd, bp, &docbody);
+    if(options & COMPRESSED_BODY)
+        bodylen = pread_compressed(fd, bp, &docbody);
+    else
+        bodylen = pread_bin(fd, bp, &docbody);
+
     error_unless(bodylen > 0, ERROR_READ);
     error_unless(docbody, ERROR_READ);
     error_unless(docbuf = fatbuf_alloc(sizeof(Doc) + bodylen), ERROR_ALLOC_FAIL);
@@ -398,7 +405,10 @@ int open_doc_with_docinfo(Db* db, DocInfo* docinfo, Doc** pDoc, uint64_t options
     *pDoc = NULL;
     if(docinfo->bp == 0)
         return DOC_NOT_FOUND;
-    error_pass(bp_to_doc(pDoc, db->fd, docinfo->bp));
+    int readopts = 0;
+    if((options & DECOMPRESS_DOC_BODIES) && (docinfo->content_meta & SNAPPY_META_FLAG))
+        readopts = COMPRESSED_BODY;
+    error_pass(bp_to_doc(pDoc, db->fd, docinfo->bp, readopts));
     (*pDoc)->id.buf = docinfo->id.buf;
     (*pDoc)->id.size = docinfo->id.size;
 cleanup:
@@ -513,10 +523,17 @@ int assemble_index_value(DocInfo* docinfo, char* dst, sized_buf* first_term)
     return pos;
 }
 
-int write_doc(Db* db, Doc* doc, uint64_t* bp)
+int write_doc(Db* db, Doc* doc, uint64_t* bp, uint64_t writeopts)
 {
     int errcode = 0;
-    error_pass(db_write_buf(db, &doc->data, (off_t*) bp));
+    if(writeopts & COMPRESSED_BODY)
+    {
+        error_pass(db_write_buf_compressed(db, &doc->data, (off_t*) bp));
+    }
+    else
+    {
+        error_pass(db_write_buf(db, &doc->data, (off_t*) bp));
+    }
 cleanup:
     return errcode;
 }
@@ -708,7 +725,7 @@ cleanup:
 }
 
 int add_doc_to_update_list(Db* db, Doc* doc, DocInfo* info, fatbuf* fb,
-        sized_buf* seqterm, sized_buf* idterm, sized_buf* seqval, sized_buf* idval, uint64_t seq)
+        sized_buf* seqterm, sized_buf* idterm, sized_buf* seqval, sized_buf* idval, uint64_t seq, uint64_t options)
 {
     int errcode = 0;
     DocInfo updated = *info;
@@ -722,7 +739,14 @@ int add_doc_to_update_list(Db* db, Doc* doc, DocInfo* info, fatbuf* fb,
 
     if(doc)
     {
-        error_pass(write_doc(db, doc, &updated.bp));
+        if((options & COMPRESS_DOC_BODIES) && (info->content_meta & SNAPPY_META_FLAG))
+        {
+            error_pass(write_doc(db, doc, &updated.bp, COMPRESSED_BODY));
+        }
+        else
+        {
+            error_pass(write_doc(db, doc, &updated.bp, 0));
+        }
         updated.size = doc->data.size;
     }
     else
@@ -786,7 +810,7 @@ int save_docs(Db* db, Doc* docs, DocInfo* infos, long numdocs, uint64_t options)
         else
             curdoc = NULL;
         error_pass(add_doc_to_update_list(db, curdoc, &infos[i], fb,
-                    &seqklist[i], &idklist[i], &seqvlist[i], &idvlist[i], seq));
+                    &seqklist[i], &idklist[i], &seqvlist[i], &idvlist[i], seq, options));
     }
 
     error_pass(update_indexes(db, seqklist, seqvlist, idklist, idvlist, numdocs));

@@ -27,6 +27,15 @@ Couchstore uses `sized_buf`s to point to data buffers.
 * `deleted` - 1 if document should be considered "deleted" and not subject to indexing, otherwise 0.
 * `content_meta` - Number field used to store flags indicating metadata about the document content (is it JSON, etc.)
 
+#### The content_meta field
+
+* The least-significant two bits are used to encode why/whether the body is or is not JSON
+  * 0 - Document body *is* JSON
+  * 1 - Inserted data was not valid JSON
+  * 2 - Inserted data was valid JSON, but contained a key reserved for internal use, such as one with a `$` prefix.
+  * 3 - The document was inserted in non-JSON mode.
+* If the most-significant bit is set the document body data has been compressed with snappy. 
+
 When saving documents with `save_doc` or `save_docs`, `id`, `rev_seq`, `rev_meta`, `deleted`, and `content_meta` must be set on the `DocInfo`s passed to Couchstore. The `db_seq` is determined at insert time.
 
 
