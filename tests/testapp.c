@@ -4,10 +4,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include "macros.h"
+#include "ei.h"
 
 #define ZERO(V) memset(&(V), 0, sizeof(V))
 #define SETDOC(N, I, D, M) setdoc(&testdocset.docs[N], &testdocset.infos[N], I, sizeof(I) - 1, \
-                                  D, sizeof(D) - 1, M, sizeof(M))
+                                  D, sizeof(D) - 1, M, sizeof(M)); testdocset.datasize += sizeof(D) - 1;
+
+//Wrapper in couchstore.
+int ei_decode_uint64(char* buf, int* index, uint64_t* val);
 
 typedef struct _counterset
 {
@@ -21,6 +25,7 @@ typedef struct _docset
     DocInfo* infos;
     int size;
     int pos;
+    uint64_t datasize;
     counterset counters;
 } docset;
 
@@ -36,6 +41,7 @@ void setdoc(Doc* doc, DocInfo* info, char* id, int idlen, char* data, int datale
     doc->data.size = datalen;
     info->rev_meta.buf = meta;
     info->rev_meta.size = metalen;
+    info->content_meta = 0;
     info->rev_seq = 1;
     info->size = 0;
     info->deleted = 0;
@@ -46,6 +52,7 @@ void docset_init(int numdocs)
 {
     testdocset.size = numdocs;
     testdocset.pos = 0;
+    testdocset.datasize = 0;
     if(docsetbuf)
     {
         fatbuf_free(docsetbuf);
@@ -94,6 +101,28 @@ cleanup:
     return 0;
 }
 
+void assert_id_rv(char* buf, uint64_t deleted, uint64_t notdeleted, uint64_t size)
+{
+    uint64_t r_deleted, r_notdeleted, r_size;
+    int pos = 0;
+    assert(ei_decode_tuple_header(buf, &pos, NULL) == 0);
+    ei_decode_uint64(buf, &pos, &r_notdeleted);
+    ei_decode_uint64(buf, &pos, &r_deleted);
+    ei_decode_uint64(buf, &pos, &r_size);
+    //fprintf(stderr,"notdeleted, deleted, size = %llu, %llu, %llu\n", notdeleted, deleted, size);
+    //fprintf(stderr,"notdeleted, deleted, size = %llu, %llu, %llu\n", r_notdeleted, r_deleted, r_size);
+    assert(notdeleted == r_notdeleted);
+    assert(deleted == r_deleted);
+    assert(size == r_size);
+
+}
+//Check the toplevel reduces on the db headers.
+void check_reductions(Db* db)
+{
+    assert_id_rv(db->header.by_id_root->reduce_value.buf,
+            testdocset.counters.deleted, testdocset.counters.totaldocs - testdocset.counters.deleted, testdocset.datasize);
+}
+
 int dump_count(Db* db)
 {
     int errcode = 0;
@@ -124,6 +153,7 @@ void test_save_docs()
     try(changes_since(db, 0, 0, docset_check, &testdocset));
     assert(testdocset.counters.totaldocs == 4);
     assert(testdocset.counters.deleted == 0);
+    check_reductions(db);
     close_db(db);
 cleanup:
     assert(errcode == 0);

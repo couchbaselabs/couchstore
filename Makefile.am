@@ -62,6 +62,8 @@ check_PROGRAMS = testapp
 TESTS = ${check_PROGRAMS}
 
 testapp_SOURCES = tests/testapp.c
+testapp_CFLAGS = $(ERL_INTERFACE_DIR_INCLUDE)
+testapp_LDFLAGS = $(ERL_INTERFACE_DIR_LIB) -lei
 testapp_DEPENDENCIES = libcouchstore.la
 testapp_LDADD = libcouchstore.la
 

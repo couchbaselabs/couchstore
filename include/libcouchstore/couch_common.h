@@ -29,7 +29,7 @@ typedef struct _docinfo {
     uint64_t db_seq;
     uint64_t rev_seq;
     sized_buf rev_meta;
-    uint64_t deleted;
+    int deleted;
     uint8_t content_meta;
     uint64_t bp;
     size_t size;
@@ -64,6 +64,7 @@ typedef struct _db {
 //Don't forget to free when done with the returned value.
 //(If it returns -1 it will not have set ret_ptr, no need to free.) */
 int pread_bin(int fd, off_t pos, char **ret_ptr);
+int pread_compressed(int fd, off_t pos, char **ret_ptr);
 
 int pread_header(int fd, off_t pos, char **ret_ptr);
 

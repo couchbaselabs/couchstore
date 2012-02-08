@@ -50,9 +50,9 @@ static inline int tuple_check(char* buf, int *index, int tuplelen)
 node_pointer* read_root(char* buf, int* endpos);
 void ei_x_encode_nodepointer(ei_x_buff* x, node_pointer* node);
 void term_to_buf(sized_buf *dst, char* buf, int *pos);
-int ei_decode_uint64(char* buf, int* index, uint64_t* val);
 
 extern "C" {
+int ei_decode_uint64(char* buf, int* index, uint64_t* val);
 uint32_t hash_crc32(const char *key, size_t key_length);
 }
 #endif

@@ -723,11 +723,13 @@ int add_doc_to_update_list(Db* db, Doc* doc, DocInfo* info, fatbuf* fb,
     if(doc)
     {
         error_pass(write_doc(db, doc, &updated.bp));
+        updated.size = doc->data.size;
     }
     else
     {
         updated.deleted = 1;
         updated.bp = 0;
+        updated.size = 0;
     }
 
     idterm->buf = (char*) fatbuf_get(fb, updated.id.size + 5);

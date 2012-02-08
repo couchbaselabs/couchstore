@@ -341,7 +341,7 @@ int flush_mr(couchfile_modify_result *res)
 
     writebuf.buf = nodebuf;
     writebuf.size = nbufpos;
-    db_write_buf(res->rq->db, &writebuf, (off_t*) &ptr->pointer);
+    db_write_buf_compressed(res->rq->db, &writebuf, (off_t*) &ptr->pointer);
 
     ptr->key.buf = ((char*)ptr) + sizeof(node_pointer);
     ptr->reduce_value.buf = ((char*)ptr) + sizeof(node_pointer) + last_key.size;
@@ -445,7 +445,7 @@ int modify_node(couchfile_modify_request *rq, node_pointer *nptr,
     }
     else
     {
-        if((read_size = pread_bin(rq->fd, nptr->pointer, (char**) &current_node.buf)) < 0)
+        if((read_size = pread_compressed(rq->fd, nptr->pointer, (char**) &current_node.buf)) < 0)
         {
             error_pass(ERROR_READ);
         }

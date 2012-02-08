@@ -165,7 +165,7 @@ int pread_header(int fd, off_t pos, char **ret_ptr)
     return pread_bin_int(fd, pos + 1, ret_ptr, 1);
 }
 
-int pread_bin(int fd, off_t pos, char **ret_ptr)
+int pread_compressed(int fd, off_t pos, char **ret_ptr)
 {
     char *new_buf;
     int len = pread_bin_int(fd, pos, ret_ptr, 0);
@@ -174,38 +174,35 @@ int pread_bin(int fd, off_t pos, char **ret_ptr)
         return len;
     }
     size_t new_len;
-    if((*ret_ptr)[0] == 1) //Snappy
+    if(snappy_uncompressed_length((*ret_ptr), len, &new_len)
+            != SNAPPY_OK)
     {
-        if(snappy_uncompressed_length((*ret_ptr) + 1, len - 1, &new_len)
-                != SNAPPY_OK)
-        {
-            //marked as compressed but snappy doesn't see it as valid.
-            free(*ret_ptr);
-            return -1;
-        }
+        //should be compressed but snappy doesn't see it as valid.
+        free(*ret_ptr);
+        return -1;
+    }
 
-        new_buf = (char*) malloc(new_len);
-        if(!new_buf)
-        {
-            free(*ret_ptr);
-            return -1;
-        }
-        snappy_status ss = (snappy_uncompress((*ret_ptr) + 1, len - 1, new_buf, &new_len));
-        if(ss == SNAPPY_OK)
-        {
-            free(*ret_ptr);
-            *ret_ptr = new_buf;
-            return new_len;
-        }
-        else
-        {
-            free(*ret_ptr);
-            return -1;
-        }
+    new_buf = (char*) malloc(new_len);
+    if(!new_buf)
+    {
+        free(*ret_ptr);
+        return -1;
+    }
+    snappy_status ss = (snappy_uncompress((*ret_ptr), len, new_buf, &new_len));
+    if(ss == SNAPPY_OK)
+    {
+        free(*ret_ptr);
+        *ret_ptr = new_buf;
+        return new_len;
     }
     else
     {
-        return len;
+        free(*ret_ptr);
+        return -1;
     }
 }
 
+int pread_bin(int fd, off_t pos, char **ret_ptr)
+{
+    return pread_bin_int(fd, pos, ret_ptr, 0);
+}

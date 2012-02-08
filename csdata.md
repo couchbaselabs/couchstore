@@ -1,0 +1,57 @@
+## Couchstore Data Types
+
+Struct members not listed should be considered internal to Couchstore.
+
+### sized_buf
+    struct sized_buf {
+        char* buf;
+        size_t size;
+    }
+
+Couchstore uses `sized_buf`s to point to data buffers. 
+
+### DocInfo
+    struct DocInfo {
+        sized_buf id;
+        uint64_t db_seq;
+        uint64_t rev_seq;
+        sized_buf rev_meta;
+        int deleted;
+        uint8_t content_meta;
+    }
+
+* `id` - Document ID
+* `db_seq` - Change sequence number the document was inserted at.
+* `rev_seq` - The version number of the document
+* `rev_meta` - Revision metadata. Used by ep-engine to store CAS value, expiry time, and flags
+* `deleted` - 1 if document should be considered "deleted" and not subject to indexing, otherwise 0.
+* `content_meta` - Number field used to store flags indicating metadata about the document content (is it JSON, etc.)
+
+When saving documents with `save_doc` or `save_docs`, `id`, `rev_seq`, `rev_meta`, `deleted`, and `content_meta` must be set on the `DocInfo`s passed to Couchstore. The `db_seq` is determined at insert time.
+
+
+### Doc
+    struct Doc {
+        sized_buf id;
+        sized_buf data;
+    }
+
+`id` contains the document ID, `data` contains the document body data. Couchstore does not compress or modify the body data in any way.
+
+### LocalDoc
+    struct LocalDoc {
+        sized_buf id;
+        sized_buf json;
+        int deleted;
+    }
+
+* `id`  - The local document ID, it must start with `_local/`
+* `json` - The local document body.
+* `deleted` - if set to 1 on a LocalDoc passed to save_local_doc, `json` will be ignored, and the local document with the ID in `id` will be removed, if it exists.
+
+
+## C API
+
+Documented in `include/libcouchstore/couch_db.h`
+
+

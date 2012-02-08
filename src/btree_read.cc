@@ -13,7 +13,7 @@ int btree_lookup_inner(couchfile_lookup_request *rq, uint64_t diskpos, int curre
 
     char *nodebuf = NULL;
 
-    nodebuflen = pread_bin(rq->fd, diskpos, &nodebuf);
+    nodebuflen = pread_compressed(rq->fd, diskpos, &nodebuf);
     error_unless(nodebuflen > 0, ERROR_READ);
 
     bufpos++; //Skip over term version
