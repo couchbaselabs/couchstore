@@ -45,7 +45,7 @@ When saving documents with `save_doc` or `save_docs`, `id`, `rev_seq`, `rev_meta
         sized_buf data;
     }
 
-`id` contains the document ID, `data` contains the document body data. Couchstore does not compress or modify the body data in any way.
+`id` contains the document ID, `data` contains the document body data. Couchstore does not compress or modify the body data in any way, unless the COMPRESS_DOC_BODIES or DECOMPRESS_DOC_BODIES flags are passed to the read and write functions, then it will check the `content_meta` of the corresponding doc info to see if it should compress or decompress the doc data.
 
 ### LocalDoc
     struct LocalDoc {
