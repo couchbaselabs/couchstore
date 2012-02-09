@@ -822,7 +822,7 @@ cleanup:
     return errcode;
 }
 
-int save_docs(Db* db, Doc* docs, DocInfo* infos, long numdocs, uint64_t options)
+int save_docs(Db* db, Doc** docs, DocInfo** infos, long numdocs, uint64_t options)
 {
     int errcode = 0, i;
     sized_buf *seqklist, *idklist, *seqvlist, *idvlist;
@@ -835,7 +835,7 @@ int save_docs(Db* db, Doc* docs, DocInfo* infos, long numdocs, uint64_t options)
     for(i = 0; i < numdocs; i++)
     {
         //Get additional size for terms to be inserted into indexes
-        term_meta_size += 109 + (2 * (infos[i].id.size + infos[i].meta.size));
+        term_meta_size += 109 + (2 * (infos[i]->id.size + infos[i]->meta.size));
     }
 
     fb = fatbuf_alloc(term_meta_size +
@@ -853,10 +853,10 @@ int save_docs(Db* db, Doc* docs, DocInfo* infos, long numdocs, uint64_t options)
     {
         seq++;
         if(docs)
-            curdoc = &docs[i];
+            curdoc = docs[i];
         else
             curdoc = NULL;
-        error_pass(add_doc_to_update_list(db, curdoc, &infos[i], fb,
+        error_pass(add_doc_to_update_list(db, curdoc, infos[i], fb,
                     &seqklist[i], &idklist[i], &seqvlist[i], &idvlist[i], seq));
     }
 
@@ -872,7 +872,7 @@ cleanup:
 
 int save_doc(Db* db, Doc* doc, DocInfo* info, uint64_t options)
 {
-    return save_docs(db, doc, info, 1, options);
+    return save_docs(db, &doc, &info, 1, options);
 }
 
 int local_doc_fetch(couchfile_lookup_request *rq, void *k, sized_buf *v)

@@ -16,8 +16,8 @@ int close_db(Db* db);
 
 /* Save document pointed to by doc and docinfo to db. */
 int save_doc(Db* db, Doc* doc, DocInfo* info, uint64_t options);
-/* Save array of docs to db */
-int save_docs(Db* db, Doc* docs, DocInfo* infos, long numDocs, uint64_t options);
+/* Save array of docs to db, expects arrays of Doc and DocInfo pointers */
+int save_docs(Db* db, Doc** docs, DocInfo** infos, long numDocs, uint64_t options);
 
 /* To delete docuemnts, call save_doc or save_docs with doc or docs set to NULL,
  * the docs referenced by the docinfos will be deleted.
