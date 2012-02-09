@@ -142,10 +142,18 @@ void test_save_docs()
     SETDOC(1, "doc2", "{\"test_doc_index\":2}", zerometa);
     SETDOC(2, "doc3", "{\"test_doc_index\":3}", zerometa);
     SETDOC(3, "doc4", "{\"test_doc_index\":4}", zerometa);
+    Doc* docptrs [4] =  { &testdocset.docs[0],
+                          &testdocset.docs[1],
+                          &testdocset.docs[2],
+                          &testdocset.docs[3]};
+    DocInfo* nfoptrs [4] =  { &testdocset.infos[0],
+                              &testdocset.infos[1],
+                              &testdocset.infos[2],
+                              &testdocset.infos[3]};
     unlink("test.couch");
     Db* db;
     try(open_db("test.couch", COUCH_CREATE_FILES, &db));
-    try(save_docs(db, testdocset.docs, testdocset.infos, 4, 0));
+    try(save_docs(db, docptrs, nfoptrs, 4, 0));
     try(commit_all(db, 0));
     close_db(db);
     //Read back
@@ -194,11 +202,15 @@ void test_compressed_doc_body()
     docset_init(2);
     SETDOC(0, "doc1", "{\"test_doc_index\":1, \"val\":\"blah blah blah blah blah blah\"}", zerometa);
     SETDOC(1, "doc2", "{\"test_doc_index\":2, \"val\":\"blah blah blah blah blah blah\"}", zerometa);
+    Doc* docptrs [2] =  { &testdocset.docs[0],
+                          &testdocset.docs[1]};
+    DocInfo* nfoptrs [2] =  { &testdocset.infos[0],
+                              &testdocset.infos[1]};
     testdocset.infos[1].content_meta = 128; //Mark doc2 as to be snappied.
     unlink("test.couch");
     Db* db;
     try(open_db("test.couch", COUCH_CREATE_FILES, &db));
-    try(save_docs(db, testdocset.docs, testdocset.infos, 2, COMPRESS_DOC_BODIES));
+    try(save_docs(db, docptrs, nfoptrs, 2, COMPRESS_DOC_BODIES));
     try(commit_all(db, 0));
     close_db(db);
     //Read back
