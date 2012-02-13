@@ -132,7 +132,7 @@ cleanup:
     assert(errcode == 0);
     return errcode;
 }
-char zerometa[] = {1, 2, 3, 4};
+char zerometa[] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3};
 void test_save_docs()
 {
     fprintf(stderr, "save_docs... "); fflush(stderr);

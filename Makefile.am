@@ -49,7 +49,7 @@ libcouchstore_la_LDFLAGS = -version-info $(LIBCOUCHSTORE_API_CURRENT):$(LIBCOUCH
 libcouchstore_la_CFLAGS = $(ERL_INTERFACE_DIR_INCLUDE)
 libcouchstore_la_CXXFLAGS = $(ERL_INTERFACE_DIR_INCLUDE)
 
-couch_dbdump_SOURCES = src/dbdump.c
+couch_dbdump_SOURCES = src/dbdump.cc
 couch_dbdump_DEPENDENCIES = libcouchstore.la
 couch_dbdump_LDADD = libcouchstore.la
 

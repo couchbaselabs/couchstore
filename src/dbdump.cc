@@ -3,15 +3,16 @@
 #include <stdlib.h>
 #include <libcouchstore/couch_db.h>
 #include <snappy-c.h>
+#include "endian.h"
 
 #ifndef DEBUG
-#define try(C) if((errcode = (C)) < 0) { goto cleanup; }
+#define error_pass(C) if((errcode = (C)) < 0) { goto cleanup; }
 #else
-#define try(C) if((errcode = (C)) < 0) { \
+#define error_pass(C) if((errcode = (C)) < 0) { \
                             fprintf(stderr, "Couchstore error `%s' at %s:%d\r\n", \
                             describe_error(errcode), __FILE__, __LINE__); goto cleanup; }
 #endif
-#define error_unless(C, E) if(!(C)) { try(E); }
+#define error_unless(C, E) if(!(C)) { error_pass(E); }
 #define SNAPPY_FLAG 128
 
 
@@ -27,12 +28,18 @@ void printsb(sized_buf *sb)
 
 int foldprint(Db* db, DocInfo* docinfo, void *ctx)
 {
-    int *count = ctx;
+    int *count = (int*) ctx;
     Doc* doc;
+    uint64_t cas;
+    uint32_t expiry, flags;
+    cas = endianSwap(*((uint64_t*) docinfo->rev_meta.buf));
+    expiry = endianSwap(*((uint32_t*) (docinfo->rev_meta.buf + 8)));
+    flags = endianSwap(*((uint32_t*) (docinfo->rev_meta.buf + 12)));
     open_doc_with_docinfo(db, docinfo, &doc, 0);
     printf("Doc seq: %llu\n", docinfo->db_seq);
     printf("     id: "); printsb(&docinfo->id);
     printf("     content_meta: %d\n", docinfo->content_meta);
+    printf("     cas: %llu, expiry: %lu, flags: %lu\n", cas, expiry, flags);
     if(docinfo->deleted)
         printf("     doc deleted\n");
 
@@ -40,7 +47,7 @@ int foldprint(Db* db, DocInfo* docinfo, void *ctx)
     {
         size_t rlen;
         snappy_uncompressed_length(doc->data.buf, doc->data.size, &rlen);
-        char *decbuf = malloc(rlen);
+        char *decbuf = (char*) malloc(rlen);
         size_t uncompr_len;
         snappy_uncompress(doc->data.buf, doc->data.size, decbuf, &uncompr_len);
         printf("     data: (snappy) %.*s\n", (int) uncompr_len, decbuf);
@@ -68,8 +75,8 @@ int main(int argc, char **argv)
         return -1;
     }
 again:
-    try(open_db(argv[argpos], 0, &db));
-    try(changes_since(db, 0, 0, foldprint, &count));
+    error_pass(open_db(argv[argpos], 0, &db));
+    error_pass(changes_since(db, 0, 0, foldprint, &count));
 cleanup:
     if(errcode == 0 && db)
         close_db(db);
