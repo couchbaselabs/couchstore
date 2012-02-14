@@ -39,7 +39,7 @@ int foldprint(Db* db, DocInfo* docinfo, void *ctx)
     printf("Doc seq: %llu\n", docinfo->db_seq);
     printf("     id: "); printsb(&docinfo->id);
     printf("     content_meta: %d\n", docinfo->content_meta);
-    printf("     cas: %llu, expiry: %lu, flags: %lu\n", cas, expiry, flags);
+    printf("     cas: %llu, expiry: %llu, flags: %llu\n", (long long unsigned int) cas, (long long unsigned int) expiry, (long long unsigned int) flags);
     if(docinfo->deleted)
         printf("     doc deleted\n");
 

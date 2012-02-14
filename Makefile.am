@@ -15,7 +15,7 @@
 #   limitations under the License.
 ACLOCAL_AMFLAGS = -I m4 --force
 
-bin_PROGRAMS = couch_dbdump
+bin_PROGRAMS = couch_dbdump couch_dbinfo
 EXTRA_DIST = LICENSE README.md src/rfc1321
 
 pkginclude_HEADERS = \
@@ -53,6 +53,10 @@ couch_dbdump_SOURCES = src/dbdump.cc
 couch_dbdump_DEPENDENCIES = libcouchstore.la
 couch_dbdump_LDADD = libcouchstore.la
 
+couch_dbinfo_SOURCES = src/dbinfo.cc
+couch_dbinfo_CXXFLAGS = $(ERL_INTERFACE_DIR_INCLUDE)
+couch_dbinfo_DEPENDENCIES = libcouchstore.la
+couch_dbinfo_LDADD = libcouchstore.la
 #writetest_SOURCES = src/writetest.c
 #writetest_DEPENDENCIES = libcouchstore.la
 #writetest_LDADD = libcouchstore.la

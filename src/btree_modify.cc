@@ -352,7 +352,7 @@ int flush_mr(couchfile_modify_result *res)
     memcpy(ptr->key.buf, last_key.buf, last_key.size);
     memcpy(ptr->reduce_value.buf, reduce_value.buf, reduce_value.size);
 
-    ptr->subtreesize = subtreesize;
+    ptr->subtreesize = subtreesize + nbufpos;
 
     pel = make_nodelist();
     if(!pel)
