@@ -40,7 +40,7 @@ ssize_t raw_write(int fd, sized_buf* buf, off_t pos)
     return write_pos - pos;
 }
 
-int db_write_header(Db* db, sized_buf* buf)
+int db_write_header(Db* db, sized_buf* buf, off_t *pos)
 {
     off_t write_pos = db->file_pos;
     ssize_t written;
@@ -50,7 +50,7 @@ int db_write_header(Db* db, sized_buf* buf)
     MD5_CTX hashctx;
     char hash[16];
     sized_buf hashbuf = { hash, 16 };
-
+    *pos = write_pos;
     if(write_pos % COUCH_BLOCK_SIZE != 0)
         write_pos += COUCH_BLOCK_SIZE - (write_pos % COUCH_BLOCK_SIZE); //Move to next block boundary.
 

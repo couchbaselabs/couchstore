@@ -34,6 +34,17 @@ typedef struct _docinfo {
     uint64_t bp;
     size_t size;
 } DocInfo;
+//Content Meta Flags
+#define COUCH_DOC_IS_COMPRESSED 128
+//Content Type Reasons (content_meta & 0x0F)
+//Document is valid JSON data
+#define COUCH_DOC_IS_JSON 0
+//Document was checked, and was not valid JSON
+#define COUCH_DOC_INVALID_JSON 1
+//Document was checked, and contained reserved keys, was not inserted as JSON.
+#define COUCH_DOC_INVALID_JSON_KEY 2
+//Document was not checked (DB running in non-JSON mode)
+#define COUCH_DOC_NON_JSON_MODE
 
 typedef struct _local_doc {
     sized_buf id;
@@ -50,6 +61,7 @@ typedef struct _db_header
     node_pointer* local_docs_root;
     uint64_t purge_seq;
     sized_buf *purged_docs;
+    uint64_t position;
 } db_header;
 
 typedef struct _db {
@@ -70,7 +82,7 @@ int pread_header(int fd, off_t pos, char **ret_ptr);
 
 ssize_t total_read_len(off_t blockoffset, ssize_t finallen);
 
-int db_write_header(Db* db, sized_buf* buf);
+int db_write_header(Db* db, sized_buf* buf, off_t *pos);
 int db_write_buf(Db* db, sized_buf* buf, off_t *pos);
 int db_write_buf_compressed(Db* db, sized_buf* buf, off_t *pos);
 

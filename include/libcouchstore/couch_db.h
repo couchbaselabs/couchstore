@@ -11,9 +11,15 @@ int open_db(char* filename, uint64_t options, Db** db);
 /* Create a new empty .couch file if file doesn't exist. */
 #define COUCH_CREATE_FILES 1
 
-//Close a database and free resources
+/* Close a database and free resources */
 int close_db(Db* db);
 
+/* Get the position in the file of the mostly recently written database header. */
+uint64_t get_header_position(Db* db);
+
+/* When saving documents you should only set the
+ * id, rev_meta, rev_seq, deleted, and content_meta fields on the
+ * DocInfo. */
 /* Save document pointed to by doc and docinfo to db. */
 int save_doc(Db* db, Doc* doc, DocInfo* info, uint64_t options);
 /* Save array of docs to db, expects arrays of Doc and DocInfo pointers */

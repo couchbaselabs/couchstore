@@ -63,6 +63,7 @@ int find_header(Db *db)
                 db->header.purged_docs->size = index - purged_docs_index;
 
                 ei_skip_term(header_buf, &index); //security ptr
+                db->header.position = block * COUCH_BLOCK_SIZE;
                 break;
             }
         }
@@ -100,9 +101,17 @@ int write_header(Db* db)
     ei_x_encode_atom(&x_header, "nil"); //security_ptr;
     writebuf.buf = x_header.buff;
     writebuf.size = x_header.index;
-    errcode = db_write_header(db, &writebuf);
+    off_t pos;
+    errcode = db_write_header(db, &writebuf, &pos);
+    if(errcode == 0)
+      db->header.position = pos;
     ei_x_free(&x_header);
     return errcode;
+}
+
+uint64_t get_header_position(Db* db)
+{
+  return db->header.position;
 }
 
 int commit_all(Db* db, uint64_t options) {
@@ -137,6 +146,7 @@ int open_db(char* filename, uint64_t options, Db** pDb)
         db->header.local_docs_root = NULL;
         db->header.purge_seq = 0;
         db->header.purged_docs = &nil_atom;
+        db->header.position = 0;
         write_header(db);
         return 0;
     }
