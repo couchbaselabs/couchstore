@@ -44,7 +44,7 @@ typedef struct _docinfo {
 //Document was checked, and contained reserved keys, was not inserted as JSON.
 #define COUCH_DOC_INVALID_JSON_KEY 2
 //Document was not checked (DB running in non-JSON mode)
-#define COUCH_DOC_NON_JSON_MODE
+#define COUCH_DOC_NON_JSON_MODE 3
 
 typedef struct _local_doc {
     sized_buf id;
