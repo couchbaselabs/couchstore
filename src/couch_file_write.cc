@@ -50,9 +50,9 @@ int db_write_header(Db* db, sized_buf* buf, off_t *pos)
     MD5_CTX hashctx;
     char hash[16];
     sized_buf hashbuf = { hash, 16 };
-    *pos = write_pos;
     if(write_pos % COUCH_BLOCK_SIZE != 0)
         write_pos += COUCH_BLOCK_SIZE - (write_pos % COUCH_BLOCK_SIZE); //Move to next block boundary.
+    *pos = write_pos;
 
     written = pwrite(db->fd, &blockheader, 1, write_pos);
     if(written < 0) return ERROR_WRITE;
