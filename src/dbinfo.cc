@@ -1,8 +1,10 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include <libcouchstore/couch_db.h>
 #include <snappy-c.h>
+#include "util.h"
 #include "endian.h"
 #include "ei.h"
 
@@ -48,11 +50,11 @@ uint64_t id_reduce_info(node_pointer* root)
       return 0;
     }
     ei_decode_tuple_header(root->reduce_value.buf, &pos, NULL);
-    ei_decode_ulonglong(root->reduce_value.buf, &pos, &total);
-    ei_decode_ulonglong(root->reduce_value.buf, &pos, &deleted);
-    ei_decode_ulonglong(root->reduce_value.buf, &pos, &size);
-    printf("   doc count: %llu\n", total);
-    printf("   deleted doc count: %llu\n", deleted);
+    ei_decode_uint64(root->reduce_value.buf, &pos, &total);
+    ei_decode_uint64(root->reduce_value.buf, &pos, &deleted);
+    ei_decode_uint64(root->reduce_value.buf, &pos, &size);
+    printf("   doc count: %"PRIu64"\n", total);
+    printf("   deleted doc count: %"PRIu64"\n", deleted);
     printf("   data size: %s\n", size_str(size));
     return size;
 }
@@ -75,8 +77,8 @@ again:
     btreesize = 0;
     error_pass(open_db(argv[argpos], 0, &db));
     printf("DB Info (%s)\n", argv[argpos]);
-    printf("   file format version: %llu\n", db->header.disk_version);
-    printf("   update_seq: %llu\n", db->header.update_seq);
+    printf("   file format version: %"PRIu64"\n", db->header.disk_version);
+    printf("   update_seq: %"PRIu64"\n", db->header.update_seq);
     datasize = id_reduce_info(db->header.by_id_root);
     if(db->header.by_id_root)
       btreesize += db->header.by_id_root->subtreesize;

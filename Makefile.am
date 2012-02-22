@@ -51,10 +51,11 @@ libcouchstore_la_CXXFLAGS = $(ERL_INTERFACE_DIR_INCLUDE)
 
 couch_dbdump_SOURCES = src/dbdump.cc
 couch_dbdump_DEPENDENCIES = libcouchstore.la
+couch_dbdump_CXXFLAGS = -D__STDC_FORMAT_MACROS
 couch_dbdump_LDADD = libcouchstore.la
 
 couch_dbinfo_SOURCES = src/dbinfo.cc
-couch_dbinfo_CXXFLAGS = $(ERL_INTERFACE_DIR_INCLUDE)
+couch_dbinfo_CXXFLAGS = $(ERL_INTERFACE_DIR_INCLUDE) -D__STDC_FORMAT_MACROS
 couch_dbinfo_DEPENDENCIES = libcouchstore.la
 couch_dbinfo_LDADD = libcouchstore.la
 #writetest_SOURCES = src/writetest.c

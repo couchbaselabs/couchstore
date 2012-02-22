@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include <libcouchstore/couch_db.h>
 #include <snappy-c.h>
 #include "endian.h"
@@ -36,10 +37,10 @@ int foldprint(Db* db, DocInfo* docinfo, void *ctx)
     expiry = endianSwap(*((uint32_t*) (docinfo->rev_meta.buf + 8)));
     flags = endianSwap(*((uint32_t*) (docinfo->rev_meta.buf + 12)));
     open_doc_with_docinfo(db, docinfo, &doc, 0);
-    printf("Doc seq: %llu\n", docinfo->db_seq);
+    printf("Doc seq: %"PRIu64"\n", docinfo->db_seq);
     printf("     id: "); printsb(&docinfo->id);
     printf("     content_meta: %d\n", docinfo->content_meta);
-    printf("     cas: %llu, expiry: %llu, flags: %llu\n", (long long unsigned int) cas, (long long unsigned int) expiry, (long long unsigned int) flags);
+    printf("     cas: %"PRIu64", expiry: %"PRIu64", flags: %"PRIu64"\n", (long long unsigned int) cas, (long long unsigned int) expiry, (long long unsigned int) flags);
     if(docinfo->deleted)
         printf("     doc deleted\n");
 
