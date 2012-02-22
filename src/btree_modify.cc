@@ -2,7 +2,7 @@
 #include <string.h>
 #include <signal.h>
 
-#include "couch_btree.h"
+#include <libcouchstore/couch_btree.h>
 #include "ei.h"
 #include "util.h"
 

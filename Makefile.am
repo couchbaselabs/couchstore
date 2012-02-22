@@ -20,7 +20,8 @@ EXTRA_DIST = LICENSE README.md src/rfc1321
 
 pkginclude_HEADERS = \
                      include/libcouchstore/couch_db.h \
-                     include/libcouchstore/couch_common.h
+                     include/libcouchstore/couch_common.h \
+                     include/libcouchstore/couch_btree.h
 
 lib_LTLIBRARIES = libcouchstore.la
 

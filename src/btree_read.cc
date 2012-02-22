@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include "couch_btree.h"
+#include <libcouchstore/couch_btree.h>
 #include "util.h"
 
 int btree_lookup_inner(couchfile_lookup_request *rq, uint64_t diskpos, int current, int end)

@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include "couch_btree.h"
+#include <libcouchstore/couch_btree.h>
 #include "ei.h"
 
 void by_seq_reduce (sized_buf* dst, nodelist* leaflist, int count)

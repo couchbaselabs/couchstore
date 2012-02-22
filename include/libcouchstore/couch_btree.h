@@ -97,5 +97,7 @@ typedef struct couchfile_modify_result {
 
 node_pointer* modify_btree(couchfile_modify_request *rq,
         node_pointer *root, int *errcode);
+int ebin_cmp(void* k1, void* k2);
+void* ebin_from_ext(compare_info* c, char* buf, int pos);
 
 #endif

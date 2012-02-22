@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <libcouchstore/couch_db.h>
 
-#include "couch_btree.h"
+#include <libcouchstore/couch_btree.h>
 #include "ei.h"
 #include "snappy-c.h"
 #include "util.h"
