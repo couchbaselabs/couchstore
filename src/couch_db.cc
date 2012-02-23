@@ -950,7 +950,8 @@ int save_local_doc(Db* db, LocalDoc* lDoc)
     new_local_docs_root = modify_btree(&rq, db->header.local_docs_root, &errcode);
     if(errcode == 0 && new_local_docs_root != db->header.local_docs_root)
     {
-        free(db->header.local_docs_root);
+        if (db->header.local_docs_root)
+            free(db->header.local_docs_root);
         db->header.local_docs_root = new_local_docs_root;
     }
 cleanup:
