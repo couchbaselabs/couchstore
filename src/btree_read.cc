@@ -101,7 +101,7 @@ int btree_lookup_inner(couchfile_lookup_request *rq, uint64_t diskpos, int curre
     }
 
     //Any remaining items are not found.
-    while(current < end)
+    while(current < end && !rq->fold)
     {
         error_pass(rq->fetch_callback(rq, rq->keys[current], NULL));
         current++;
