@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <libcouchstore/couch_btree.h>
-#include "ei.h"
+#include <ei.h>
 
 void by_seq_reduce (sized_buf* dst, nodelist* leaflist, int count)
 {

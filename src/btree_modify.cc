@@ -3,7 +3,7 @@
 #include <signal.h>
 
 #include <libcouchstore/couch_btree.h>
-#include "ei.h"
+#include <ei.h>
 #include "util.h"
 
 #define CHUNK_THRESHOLD 1279

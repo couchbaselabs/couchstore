@@ -4,9 +4,9 @@
 #include <inttypes.h>
 #include <libcouchstore/couch_db.h>
 #include <snappy-c.h>
+#include <ei.h>
 #include "util.h"
 #include "endian.h"
-#include "ei.h"
 
 #ifndef DEBUG
 #define error_pass(C) if((errcode = (C)) < 0) { goto cleanup; }

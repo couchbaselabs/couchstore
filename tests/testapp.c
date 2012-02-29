@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ei.h>
 #include "macros.h"
-#include "ei.h"
 
 #define ZERO(V) memset(&(V), 0, sizeof(V))
 #define SETDOC(N, I, D, M) setdoc(&testdocset.docs[N], &testdocset.infos[N], I, sizeof(I) - 1, \

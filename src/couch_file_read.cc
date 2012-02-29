@@ -3,8 +3,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <netinet/in.h>
-#include "snappy-c.h"
-#include "ei.h"
+#include <snappy-c.h>
+#include <ei.h>
 #include "util.h"
 
 #define SIZE_BLOCK 4096
