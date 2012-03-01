@@ -131,7 +131,7 @@ int commit_all(Db* db, uint64_t options) {
     return 0;
 }
 
-int open_db(char* filename, uint64_t options, couch_file_ops *ops, Db** pDb)
+int open_db(const char* filename, uint64_t options, couch_file_ops *ops, Db** pDb)
 {
     int errcode = 0;
     Db* db = (Db*) malloc(sizeof(Db));

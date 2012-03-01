@@ -7,7 +7,7 @@ extern "C" {
 #endif
 
 //Open a database, should be closed with close_db
-int open_db(char* filename, uint64_t options, couch_file_ops *ops, Db** db);
+int open_db(const char* filename, uint64_t options, couch_file_ops *ops, Db** db);
 
 //Flags passable to open_db options parameter
 /* Create a new empty .couch file if file doesn't exist. */
