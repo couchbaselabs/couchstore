@@ -10,7 +10,7 @@
 #include "rfc1321/md5.h"
 #include "util.h"
 
-ssize_t raw_write(int fd, sized_buf* buf, off_t pos)
+ssize_t raw_write(Db *db, sized_buf* buf, off_t pos)
 {
     off_t write_pos = pos;
     off_t buf_pos = 0;
@@ -25,13 +25,13 @@ ssize_t raw_write(int fd, sized_buf* buf, off_t pos)
 
         if(write_pos % COUCH_BLOCK_SIZE == 0)
         {
-            written = pwrite(fd, &blockprefix, 1, write_pos);
+            written = db->file_ops->pwrite(db, &blockprefix, 1, write_pos);
             if(written < 0) return ERROR_WRITE;
             write_pos += 1;
             continue;
         }
 
-        written = pwrite(fd, buf->buf + buf_pos, block_remain, write_pos);
+        written = db->file_ops->pwrite(db, buf->buf + buf_pos, block_remain, write_pos);
         if(written < 0) return ERROR_WRITE;
         buf_pos += written;
         write_pos += written;
@@ -54,12 +54,12 @@ int db_write_header(Db* db, sized_buf* buf, off_t *pos)
         write_pos += COUCH_BLOCK_SIZE - (write_pos % COUCH_BLOCK_SIZE); //Move to next block boundary.
     *pos = write_pos;
 
-    written = pwrite(db->fd, &blockheader, 1, write_pos);
+    written = db->file_ops->pwrite(db, &blockheader, 1, write_pos);
     if(written < 0) return ERROR_WRITE;
     write_pos += written;
 
     //Write length
-    written = raw_write(db->fd, &lenbuf, write_pos);
+    written = raw_write(db, &lenbuf, write_pos);
     if(written < 0) return ERROR_WRITE;
     write_pos += written;
 
@@ -68,12 +68,12 @@ int db_write_header(Db* db, sized_buf* buf, off_t *pos)
     MD5Update(&hashctx, (uint8_t*) buf->buf, buf->size);
     MD5Final((uint8_t*) hash, &hashctx);
 
-    written = raw_write(db->fd, &hashbuf, write_pos);
+    written = raw_write(db, &hashbuf, write_pos);
     if(written < 0) return ERROR_WRITE;
     write_pos += written;
 
     //Write actual header
-    written = raw_write(db->fd, buf, write_pos);
+    written = raw_write(db, buf, write_pos);
     if(written < 0) return ERROR_WRITE;
     write_pos += written;
     db->file_pos = write_pos;
@@ -90,15 +90,15 @@ int db_write_buf(Db* db, sized_buf* buf, off_t *pos)
     sized_buf lenbuf = { (char*) &size, 4 };
     sized_buf crcbuf = { (char*) &crc32, 4 };
 
-    written = raw_write(db->fd, &lenbuf, end_pos);
+    written = raw_write(db, &lenbuf, end_pos);
     if(written < 0) return ERROR_WRITE;
     end_pos += written;
 
-    written = raw_write(db->fd, &crcbuf, end_pos);
+    written = raw_write(db, &crcbuf, end_pos);
     if(written < 0) return ERROR_WRITE;
     end_pos += written;
 
-    written = raw_write(db->fd, buf, end_pos);
+    written = raw_write(db, buf, end_pos);
     if(written < 0) return ERROR_WRITE;
     end_pos += written;
 

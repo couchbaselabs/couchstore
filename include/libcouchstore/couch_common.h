@@ -64,21 +64,36 @@ typedef struct _db_header
     uint64_t position;
 } db_header;
 
-typedef struct _db {
+typedef struct _db Db;
+
+typedef struct {
+    ssize_t (*pread)(Db *db, void *buf, size_t nbyte, off_t offset);
+    ssize_t (*pwrite)(Db *db, const void *buf, size_t nbyte, off_t offset);
+    int (*open)(const char *path, int oflag, int mode);
+    int (*close)(Db *db);
+
+    off_t (*goto_eof)(Db *db);
+
+    int (*sync)(Db *db);
+} couch_file_ops;
+
+struct _db {
     int fd;
     uint64_t file_pos;
+    couch_file_ops *file_ops;
     db_header header;
-} Db;
+    void *userdata;
+};
 
 /* File ops
 
 //Read a chunk from file, remove block prefixes, and decompress.
 //Don't forget to free when done with the returned value.
 //(If it returns -1 it will not have set ret_ptr, no need to free.) */
-int pread_bin(int fd, off_t pos, char **ret_ptr);
-int pread_compressed(int fd, off_t pos, char **ret_ptr);
+int pread_bin(Db *db, off_t pos, char **ret_ptr);
+int pread_compressed(Db *db, off_t pos, char **ret_ptr);
 
-int pread_header(int fd, off_t pos, char **ret_ptr);
+int pread_header(Db *db, off_t pos, char **ret_ptr);
 
 ssize_t total_read_len(off_t blockoffset, ssize_t finallen);
 

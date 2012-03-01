@@ -5,6 +5,7 @@
 #include <netinet/in.h>
 #include <snappy-c.h>
 #include <ei.h>
+
 #include "util.h"
 
 #define SIZE_BLOCK 4096
@@ -67,14 +68,14 @@ int remove_block_prefixes(char* buf, off_t offset, ssize_t len)
 
 // Sets *dst to returned buffer, returns end size.
 // Increases pos by read len.
-int raw_read(int fd, off_t *pos, ssize_t len, char** dst)
+int raw_read(Db *db, off_t *pos, ssize_t len, char** dst)
 {
     off_t blockoffs = *pos % SIZE_BLOCK;
     ssize_t total = total_read_len(blockoffs, len);
     *dst = (char*) malloc(total);
     if(!*dst)
         return -1;
-    ssize_t got_bytes = pread(fd, *dst, total, *pos);
+    ssize_t got_bytes = db->file_ops->pread(db, *dst, total, *pos);
     if(got_bytes <= 0)
         goto fail;
 
@@ -87,7 +88,7 @@ fail:
     return -1;
 }
 
-int pread_bin_int(int fd, off_t pos, char **ret_ptr, int header)
+int pread_bin_int(Db *db, off_t pos, char **ret_ptr, int header)
 {
    char *bufptr = NULL, *bufptr_rest = NULL, *newbufptr = NULL;
    char prefix;
@@ -95,10 +96,10 @@ int pread_bin_int(int fd, off_t pos, char **ret_ptr, int header)
    uint32_t chunk_len, crc32 = 0;
    int skip = 0;
    int errcode = 0;
-   buf_len = raw_read(fd, &pos, 2*SIZE_BLOCK - (pos % SIZE_BLOCK), &bufptr);
+   buf_len = raw_read(db, &pos, 2*SIZE_BLOCK - (pos % SIZE_BLOCK), &bufptr);
    if(buf_len == -1)
    {
-       buf_len = raw_read(fd, &pos, 4, &bufptr);
+       buf_len = raw_read(db, &pos, 4, &bufptr);
        error_unless(buf_len > 0, ERROR_READ);
    }
 
@@ -135,7 +136,7 @@ int pread_bin_int(int fd, off_t pos, char **ret_ptr, int header)
    }
    else
    {
-       int rest_len = raw_read(fd, &pos, chunk_len - buf_len, &bufptr_rest);
+       int rest_len = raw_read(db, &pos, chunk_len - buf_len, &bufptr_rest);
        error_unless(rest_len > 0, ERROR_READ);
 
        newbufptr = (char*) realloc(bufptr, buf_len + rest_len);
@@ -160,15 +161,15 @@ cleanup:
    return errcode;
 }
 
-int pread_header(int fd, off_t pos, char **ret_ptr)
+int pread_header(Db *db, off_t pos, char **ret_ptr)
 {
-    return pread_bin_int(fd, pos + 1, ret_ptr, 1);
+    return pread_bin_int(db, pos + 1, ret_ptr, 1);
 }
 
-int pread_compressed(int fd, off_t pos, char **ret_ptr)
+int pread_compressed(Db *db, off_t pos, char **ret_ptr)
 {
     char *new_buf;
-    int len = pread_bin_int(fd, pos, ret_ptr, 0);
+    int len = pread_bin_int(db, pos, ret_ptr, 0);
     if(len < 0)
     {
         return len;
@@ -202,7 +203,7 @@ int pread_compressed(int fd, off_t pos, char **ret_ptr)
     }
 }
 
-int pread_bin(int fd, off_t pos, char **ret_ptr)
+int pread_bin(Db *db, off_t pos, char **ret_ptr)
 {
-    return pread_bin_int(fd, pos, ret_ptr, 0);
+    return pread_bin_int(db, pos, ret_ptr, 0);
 }

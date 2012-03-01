@@ -6,14 +6,25 @@
 #include <libcouchstore/couch_btree.h>
 #include <ei.h>
 #include <snappy-c.h>
+
 #include "util.h"
 #include "reduces.h"
+#include "os.h"
 
 #define SNAPPY_META_FLAG 128
 
 sized_buf nil_atom = {
     (char*) "\x64\x00\x03nil",
     6
+};
+
+static couch_file_ops default_file_ops = {
+    couch_pread,
+    couch_pwrite,
+    couch_open,
+    couch_close,
+    couch_goto_eof,
+    couch_sync
 };
 
 int find_header(Db *db)
@@ -26,11 +37,11 @@ int find_header(Db *db)
 
     while(block >= 0)
     {
-        readsize = pread(db->fd, buf, 2, block * COUCH_BLOCK_SIZE);
+        readsize = db->file_ops->pread(db, buf, 2, block * COUCH_BLOCK_SIZE);
         if(readsize == 2 && buf[0] == 1)
         {
             //Found a header block.
-            int header_len = pread_header(db->fd, block * COUCH_BLOCK_SIZE, &header_buf);
+            int header_len = pread_header(db, block * COUCH_BLOCK_SIZE, &header_buf);
             int arity = 0;
             int purged_docs_index = 0;
             if(header_len > 0)
@@ -116,7 +127,7 @@ uint64_t get_header_position(Db* db)
 
 int commit_all(Db* db, uint64_t options) {
     write_header(db);
-    fsync(db->fd);
+    db->file_ops->sync(db);
     return 0;
 }
 
@@ -124,15 +135,13 @@ int open_db(char* filename, uint64_t options, Db** pDb)
 {
     int errcode = 0;
     Db* db = (Db*) malloc(sizeof(Db));
+    db->file_ops = &default_file_ops;
     *pDb = db;
     int openflags = 0;
     if(options & COUCH_CREATE_FILES) openflags |= O_CREAT;
-    db->fd = open(filename, openflags | O_RDWR, 0744);
+    db->fd = db->file_ops->open(filename, openflags | O_RDWR, 0744);
     error_unless(db->fd > 0, ERROR_OPEN_FILE);
-    //TODO Not totally up on how to handle large files.
-    //     Should we be using pread64 and the off64_t accepting functions?
-    //     They don't seem to be available everywhere.
-    db->file_pos = lseek(db->fd, 0, SEEK_END);
+    db->file_pos = db->file_ops->goto_eof(db);
     //TODO are there some cases where we should blow up?
     //     such as not finding a header in a file that we didn't
     //     just create? (Possibly not a couch file?)
@@ -165,7 +174,7 @@ int close_db(Db* db)
 {
     int errcode = 0;
     if(db->fd)
-        close(db->fd);
+        db->file_ops->close(db);
     db->fd = 0;
 
     if(db->header.by_id_root)
@@ -333,7 +342,7 @@ cleanup:
 
 #define COMPRESSED_BODY 1
 //Fill in doc from reading file.
-int bp_to_doc(Doc **pDoc, int fd, off_t bp, uint64_t options)
+int bp_to_doc(Doc **pDoc, Db *db, off_t bp, uint64_t options)
 {
     int errcode = 0;
     uint32_t jsonlen, hasbin;
@@ -343,9 +352,9 @@ int bp_to_doc(Doc **pDoc, int fd, off_t bp, uint64_t options)
     fatbuf *docbuf = NULL;
 
     if(options & COMPRESSED_BODY)
-        bodylen = pread_compressed(fd, bp, &docbody);
+        bodylen = pread_compressed(db, bp, &docbody);
     else
-        bodylen = pread_bin(fd, bp, &docbody);
+        bodylen = pread_bin(db, bp, &docbody);
 
     error_unless(bodylen > 0, ERROR_READ);
     error_unless(docbody, ERROR_READ);
@@ -393,7 +402,7 @@ int docinfo_by_id(Db* db, uint8_t* id,  size_t idlen, DocInfo** pInfo)
     rq.cmp.compare = ebin_cmp;
     rq.cmp.from_ext = ebin_from_ext;
     rq.cmp.arg = &cmptmp;
-    rq.fd = db->fd;
+    rq.db = db;
     rq.num_keys = 1;
     rq.keys = &keylist;
     rq.callback_ctx = pInfo;
@@ -418,7 +427,7 @@ int open_doc_with_docinfo(Db* db, DocInfo* docinfo, Doc** pDoc, uint64_t options
     int readopts = 0;
     if((options & DECOMPRESS_DOC_BODIES) && (docinfo->content_meta & SNAPPY_META_FLAG))
         readopts = COMPRESSED_BODY;
-    error_pass(bp_to_doc(pDoc, db->fd, docinfo->bp, readopts));
+    error_pass(bp_to_doc(pDoc, db, docinfo->bp, readopts));
     (*pDoc)->id.buf = docinfo->id.buf;
     (*pDoc)->id.size = docinfo->id.size;
 cleanup:
@@ -481,7 +490,7 @@ int changes_since(Db* db, uint64_t since, uint64_t options,
     rq.cmp.compare = long_term_cmp;
     rq.cmp.from_ext = term_from_ext;
     rq.cmp.arg = &cmptmp;
-    rq.fd = db->fd;
+    rq.db = db;
     rq.num_keys = 1;
     rq.keys = &keylist;
     rq.callback_ctx = cbctx;
@@ -680,7 +689,7 @@ int update_indexes(Db* db, sized_buf* seqs, sized_buf* seqvals, sized_buf* ids, 
     idrq.cmp.compare = ebin_cmp;
     idrq.cmp.from_ext = ebin_from_ext;
     idrq.cmp.arg = &tmpsb;
-    idrq.fd = db->fd;
+    idrq.db = db;
     idrq.actions = idacts;
     idrq.num_actions = numdocs * 2;
     idrq.reduce = by_id_reduce;
@@ -707,7 +716,6 @@ int update_indexes(Db* db, sized_buf* seqs, sized_buf* seqvals, sized_buf* ids, 
     seqrq.cmp.compare = long_term_cmp;
     seqrq.cmp.from_ext = term_from_ext;
     seqrq.cmp.arg = &tmpsb;
-    seqrq.fd = db->fd;
     seqrq.actions = seqacts;
     seqrq.num_actions = fetcharg.actpos;
     seqrq.reduce = by_seq_reduce;
@@ -887,7 +895,7 @@ int open_local_doc(Db *db, uint8_t* id, size_t idlen, LocalDoc** pDoc)
     rq.cmp.compare = ebin_cmp;
     rq.cmp.from_ext = ebin_from_ext;
     rq.cmp.arg = &cmptmp;
-    rq.fd = db->fd;
+    rq.db = db;
     rq.num_keys = 1;
     rq.keys = &keylist;
     rq.callback_ctx = pDoc;
@@ -939,7 +947,6 @@ int save_local_doc(Db* db, LocalDoc* lDoc)
     rq.cmp.compare = ebin_cmp;
     rq.cmp.from_ext = ebin_from_ext;
     rq.cmp.arg = &cmptmp;
-    rq.fd = db->fd;
     rq.num_actions = 1;
     rq.actions = &ldupdate;
     rq.fetch_callback = NULL;

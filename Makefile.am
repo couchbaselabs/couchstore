@@ -43,6 +43,7 @@ libcouchstore_la_SOURCES = \
                             src/rfc1321/md5c.c \
                             src/rfc1321/md5.h \
                             src/rfc1321/global.h \
+                            src/os.cc src/os.h \
                             src/util.cc \
                             src/util.h
 

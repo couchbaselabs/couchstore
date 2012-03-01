@@ -19,7 +19,7 @@ typedef struct compare_info {
 
 typedef struct couchfile_lookup_request {
     compare_info cmp;
-    int fd;
+    Db *db;
     int num_keys;
     /* If nonzero, calls fetch_callback for all keys between and including key 0 and key 1
        in the keys array, or all keys after key 0 if it contains only one key.
@@ -64,7 +64,6 @@ typedef struct couchfile_modify_action {
 typedef struct couchfile_modify_request {
     compare_info cmp;
     Db* db;
-    int fd;
     int num_actions;
     couchfile_modify_action* actions;
     void (*fetch_callback) (struct couchfile_modify_request *rq, sized_buf* k, sized_buf* v, void *arg);

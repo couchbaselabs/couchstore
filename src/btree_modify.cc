@@ -445,7 +445,7 @@ int modify_node(couchfile_modify_request *rq, node_pointer *nptr,
     }
     else
     {
-        if((read_size = pread_compressed(rq->fd, nptr->pointer, (char**) &current_node.buf)) < 0)
+        if((read_size = pread_compressed(rq->db, nptr->pointer, (char**) &current_node.buf)) < 0)
         {
             error_pass(ERROR_READ);
         }
