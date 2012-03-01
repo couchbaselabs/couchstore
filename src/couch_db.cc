@@ -139,7 +139,7 @@ int open_db(char* filename, uint64_t options, couch_file_ops *ops, Db** pDb)
     *pDb = db;
     int openflags = 0;
     if(options & COUCH_CREATE_FILES) openflags |= O_CREAT;
-    db->fd = db->file_ops->open(filename, openflags | O_RDWR, 0744);
+    db->fd = db->file_ops->open(filename, openflags | O_RDWR, 0666);
     error_unless(db->fd > 0, ERROR_OPEN_FILE);
     db->file_pos = db->file_ops->goto_eof(db);
     //TODO are there some cases where we should blow up?
