@@ -75,7 +75,7 @@ int main(int argc, char **argv)
 again:
     datasize = 0;
     btreesize = 0;
-    error_pass(open_db(argv[argpos], 0, &db));
+    error_pass(open_db(argv[argpos], 0, NULL, &db));
     printf("DB Info (%s)\n", argv[argpos]);
     printf("   file format version: %"PRIu64"\n", db->header.disk_version);
     printf("   update_seq: %"PRIu64"\n", db->header.update_seq);

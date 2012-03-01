@@ -76,7 +76,7 @@ int main(int argc, char **argv)
         return -1;
     }
 again:
-    error_pass(open_db(argv[argpos], 0, &db));
+    error_pass(open_db(argv[argpos], 0, NULL, &db));
     error_pass(changes_since(db, 0, 0, foldprint, &count));
 cleanup:
     if(errcode == 0 && db)

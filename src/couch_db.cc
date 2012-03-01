@@ -131,11 +131,11 @@ int commit_all(Db* db, uint64_t options) {
     return 0;
 }
 
-int open_db(char* filename, uint64_t options, Db** pDb)
+int open_db(char* filename, uint64_t options, couch_file_ops *ops, Db** pDb)
 {
     int errcode = 0;
     Db* db = (Db*) malloc(sizeof(Db));
-    db->file_ops = &default_file_ops;
+    db->file_ops = ops == NULL ? &default_file_ops : ops;
     *pDb = db;
     int openflags = 0;
     if(options & COUCH_CREATE_FILES) openflags |= O_CREAT;
