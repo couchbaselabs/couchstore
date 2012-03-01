@@ -35,6 +35,8 @@ ac_cv_func_realloc_0_nonnull=yes
 
 COUCHBASE_GENERIC_COMPILER(c99)
 
+PANDORA_HAVE_LIBLUA
+
 AC_SEARCH_LIBS(floor, m)
 AC_SEARCH_LIBS(pow, m)
 AC_SEARCH_LIBS(fabs, m)

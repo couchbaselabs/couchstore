@@ -64,6 +64,14 @@ couch_dbinfo_LDADD = libcouchstore.la
 #writetest_DEPENDENCIES = libcouchstore.la
 #writetest_LDADD = libcouchstore.la
 
+if HAVE_LIBLUA
+bin_PROGRAMS += couchscript
+
+couchscript_SOURCES = src/couchscript.cc
+couchscript_LDADD = libcouchstore.la $(LTLIBLUA)
+couchscript_DEPENDENCIES = libcouchstore.la
+endif
+
 #tests
 check_PROGRAMS = testapp
 TESTS = ${check_PROGRAMS}

@@ -32,6 +32,7 @@
 /configure
 /couch_dbdump
 /couch_dbinfo
+/couchscript
 /docs/doxy
 /libcouchstore*.changes
 /libcouchstore*.deb
