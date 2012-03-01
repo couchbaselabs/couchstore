@@ -34,6 +34,9 @@ typedef struct _docinfo {
     uint64_t bp;
     size_t size;
 } DocInfo;
+
+#define DOC_INFO_INITIALIZER { {0, 0}, 0, 0, {0, 0}, 0, 0, 0, 0 }
+
 //Content Meta Flags
 #define COUCH_DOC_IS_COMPRESSED 128
 //Content Type Reasons (content_meta & 0x0F)
