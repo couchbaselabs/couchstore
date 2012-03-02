@@ -33,6 +33,8 @@ function localtest()
    db = couch.open(dbname)
    check_doc(db, value2)
 
+   db:changes(0, function(db, di) error("Unexpectedly got a doc: " .. di:id()) end)
+
    db:delete_local(key)
    db:commit()
 
