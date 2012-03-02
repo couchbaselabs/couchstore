@@ -1,17 +1,10 @@
-local dbname = os.tmpname()
+package.path = package.path .. ";tests/?.lua"
+local testlib = require("testlib")
 
-function localtest()
+function localtest(dbname)
    local key = "a_local_key"
    local value = "the local value"
    local value2 = "an updated value"
-
-   local function check_doc(db, expected_value)
-      local doc = db:get_local(key)
-      if doc ~= expected_value then
-         error(string.format("Expected '%s' (%d bytes), got '%s' (%d bytes)",
-                             expected_value, #expected_value, doc, #doc))
-      end
-   end
 
    local db = couch.open(dbname, true)
 
@@ -21,17 +14,17 @@ function localtest()
 
    db = couch.open(dbname)
 
-   check_doc(db, value)
+   testlib.check_doc(db, key, value)
 
    db:save_local(key, value2)
-   check_doc(db, value2)
+   testlib.check_doc(db, key, value2)
    db:commit()
-   check_doc(db, value2)
+   testlib.check_doc(db, key, value2)
 
    db:close()
 
    db = couch.open(dbname)
-   check_doc(db, value2)
+   testlib.check_doc(db, key, value2)
 
    db:changes(0, function(db, di) error("Unexpectedly got a doc: " .. di:id()) end)
 
@@ -45,12 +38,4 @@ function localtest()
 
 end
 
-local succeeded, result = pcall(localtest)
-
-if succeeded then
-   print("Local doc test: PASS")
-else
-   print("Local doc test: FAIL (" .. result .. ")")
-end
-
-os.remove(dbname)
+testlib.run_test("Local doc test", localtest)
