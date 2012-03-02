@@ -185,6 +185,36 @@ extern "C" {
         return 2;
     }
 
+    // couch:truncate(length)
+    static int couch_truncate(lua_State *ls) {
+        if (lua_gettop(ls) < 1) {
+            lua_pushstring(ls, "couch:truncate takes one argument: length");
+            lua_error(ls);
+            return 1;
+        }
+
+        Db *db = getDb(ls);
+
+        ssize_t arg = static_cast<ssize_t>(luaL_checknumber(ls, 2));
+        off_t location(0);
+        if (location < 1) {
+            location = db->file_pos + arg;
+        } else {
+            location = static_cast<off_t>(arg);
+        }
+
+        int rv = ftruncate(db->fd, location);
+        if (rv != 0) {
+            char buf[256];
+            snprintf(buf, sizeof(buf), "error truncating DB: %d", rv);
+            lua_pushstring(ls, buf);
+            lua_error(ls);
+            return 1;
+        }
+
+        return 0;
+    }
+
     // couch:delete(key, [rev])
     static int couch_delete(lua_State *ls) {
         if (lua_gettop(ls) < 1) {
@@ -451,6 +481,7 @@ extern "C" {
         {"get_local", couch_get_local},
         {"commit", couch_commit},
         {"close", couch_close},
+        {"truncate", couch_truncate},
         {NULL, NULL}
     };
 
@@ -567,7 +598,6 @@ static void initDocInfo(lua_State *ls) {
 
     luaL_openlib(ls, NULL, docinfo_methods, 0);
 }
-
 
 int main(int argc, char **argv) {
     if (argc < 2) {

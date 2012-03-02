@@ -46,7 +46,7 @@ end
 function M.run_test(name, fun)
    local dbname = os.tmpname()
 
-   local succeeded, result = pcall(localtest, dbname)
+   local succeeded, result = pcall(fun, dbname)
 
    os.remove(dbname)
 
