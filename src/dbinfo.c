@@ -6,10 +6,10 @@
 #include <inttypes.h>
 #include <libcouchstore/couch_db.h>
 #include <snappy-c.h>
-#include <ei.h>
 
 #include "internal.h"
 #include "util.h"
+#include "bitfield.h"
 
 static char *size_str(double size)
 {
@@ -26,16 +26,14 @@ static char *size_str(double size)
 
 static uint64_t id_reduce_info(node_pointer *root)
 {
-    int pos = 0;
     uint64_t total, deleted, size;
     if (root == NULL) {
         printf("   no documents\n");
         return 0;
     }
-    ei_decode_tuple_header(root->reduce_value.buf, &pos, NULL);
-    ei_decode_uint64(root->reduce_value.buf, &pos, &total);
-    ei_decode_uint64(root->reduce_value.buf, &pos, &deleted);
-    ei_decode_uint64(root->reduce_value.buf, &pos, &size);
+    total = get_40(root->reduce_value.buf);
+    deleted = get_40(root->reduce_value.buf + 5);
+    size = get_48(root->reduce_value.buf + 10);
     printf("   doc count: %"PRIu64"\n", total);
     printf("   deleted doc count: %"PRIu64"\n", deleted);
     printf("   data size: %s\n", size_str(size));

@@ -8,11 +8,11 @@
 extern "C" {
 #endif
 
-    void by_seq_reduce (sized_buf *dst, nodelist *leaflist, int count);
-    void by_seq_rereduce (sized_buf *dst, nodelist *leaflist, int count);
+    void by_seq_reduce(char *dst, size_t *size_r, nodelist *leaflist, int count);
+    void by_seq_rereduce(char *dst, size_t *size_r, nodelist *leaflist, int count);
 
-    void by_id_reduce(sized_buf *dst, nodelist *leaflist, int count);
-    void by_id_rereduce(sized_buf *dst, nodelist *leaflist, int count);
+    void by_id_rereduce(char *dst, size_t *size_r, nodelist *leaflist, int count);
+    void by_id_reduce(char *dst, size_t *size_r, nodelist *leaflist, int count);
 
 #ifdef __cplusplus
 }

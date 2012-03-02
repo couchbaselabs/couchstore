@@ -7,16 +7,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ei.h>
 #include "macros.h"
 
 #define ZERO(V) memset(&(V), 0, sizeof(V))
 #define SETDOC(N, I, D, M)  \
    setdoc(&testdocset.docs[N], &testdocset.infos[N], I, sizeof(I) - 1, \
          D, sizeof(D) - 1, M, sizeof(M)); testdocset.datasize += sizeof(D) - 1;
-
-//Wrapper in couchstore.
-int ei_decode_uint64(char *buf, int *index, uint64_t *val);
 
 typedef struct _counterset {
     int totaldocs;
@@ -70,7 +66,7 @@ static void docset_init(int numdocs)
 
 static int counter_inc(Db *db, DocInfo *info, void *ctx)
 {
-   (void)db;
+    (void)db;
     counterset *ctr = ctx;
     ctr->totaldocs++;
     if (info->deleted) {
@@ -104,28 +100,6 @@ static int docset_check(Db *db, DocInfo *info, void *ctx)
 cleanup:
     assert(errcode == 0);
     return 0;
-}
-
-static void assert_id_rv(char *buf, uint64_t deleted, uint64_t notdeleted, uint64_t size)
-{
-    uint64_t r_deleted, r_notdeleted, r_size;
-    int pos = 0;
-    assert(ei_decode_tuple_header(buf, &pos, NULL) == 0);
-    ei_decode_uint64(buf, &pos, &r_notdeleted);
-    ei_decode_uint64(buf, &pos, &r_deleted);
-    ei_decode_uint64(buf, &pos, &r_size);
-    //fprintf(stderr,"notdeleted, deleted, size = %llu, %llu, %llu\n", notdeleted, deleted, size);
-    //fprintf(stderr,"notdeleted, deleted, size = %llu, %llu, %llu\n", r_notdeleted, r_deleted, r_size);
-    assert(notdeleted == r_notdeleted);
-    assert(deleted == r_deleted);
-    assert(size == r_size);
-
-}
-//Check the toplevel reduces on the db headers.
-static void check_reductions(Db *db)
-{
-    assert_id_rv(db->header.by_id_root->reduce_value.buf,
-                 testdocset.counters.deleted, testdocset.counters.totaldocs - testdocset.counters.deleted, testdocset.datasize);
 }
 
 static int dump_count(Db *db)
@@ -169,7 +143,6 @@ static void test_save_docs(void)
     try(couchstore_changes_since(db, 0, 0, docset_check, &testdocset));
     assert(testdocset.counters.totaldocs == 4);
     assert(testdocset.counters.deleted == 0);
-    check_reductions(db);
     couchstore_close_db(db);
 cleanup:
     assert(errcode == 0);
@@ -189,13 +162,13 @@ static void test_save_doc(void)
     Db *db;
     try(couchstore_open_db("test.couch", COUCHSTORE_OPEN_FLAG_CREATE, &db));
     try(couchstore_save_document(db, &testdocset.docs[0],
-                                 &testdocset.infos[0], 0));
+                                     &testdocset.infos[0], 0));
     try(couchstore_save_document(db, &testdocset.docs[1],
-                                 &testdocset.infos[1], 0));
+                                     &testdocset.infos[1], 0));
     try(couchstore_save_document(db, &testdocset.docs[2],
-                                 &testdocset.infos[2], 0));
+                                     &testdocset.infos[2], 0));
     try(couchstore_save_document(db, &testdocset.docs[3],
-                                 &testdocset.infos[3], 0));
+                                     &testdocset.infos[3], 0));
     try(couchstore_commit(db));
     couchstore_close_db(db);
     //Read back
@@ -227,7 +200,7 @@ static void test_compressed_doc_body(void)
     Db *db;
     try(couchstore_open_db("test.couch", COUCHSTORE_OPEN_FLAG_CREATE, &db));
     try(couchstore_save_documents(db, docptrs, nfoptrs, 2,
-                                  COMPRESS_DOC_BODIES));
+                                      COMPRESS_DOC_BODIES));
     try(couchstore_commit(db));
     couchstore_close_db(db);
     //Read back

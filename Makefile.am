@@ -59,8 +59,8 @@ libcouchstore_la_SOURCES = \
                             src/util.c \
                             src/util.h
 
-libcouchstore_la_LDFLAGS = $(AM_LDFLAGS) -version-info $(LIBCOUCHSTORE_API_CURRENT):$(LIBCOUCHSTORE_API_REVISION):$(LIBCOUCHSTORE_API_AGE) -no-undefined $(ERL_INTERFACE_DIR_LIB) -lei -lsnappy
-libcouchstore_la_CFLAGS = $(AM_CFLAGS) -DLIBCOUCHSTORE_INTERNAL=1 $(ERL_INTERFACE_DIR_INCLUDE)
+libcouchstore_la_LDFLAGS = $(AM_LDFLAGS) -version-info $(LIBCOUCHSTORE_API_CURRENT):$(LIBCOUCHSTORE_API_REVISION):$(LIBCOUCHSTORE_API_AGE) -no-undefined -lsnappy
+libcouchstore_la_CFLAGS = $(AM_CFLAGS) -DLIBCOUCHSTORE_INTERNAL=1
 libcouchstore_la_LIBADD = librfc1321.la libbyteswap.la
 
 couch_dbdump_SOURCES = src/dbdump.c
@@ -69,7 +69,7 @@ couch_dbdump_CFLAGS = $(AM_CFLAGS) -D__STDC_FORMAT_MACROS
 couch_dbdump_LDADD = libcouchstore.la libbyteswap.la -lsnappy
 
 couch_dbinfo_SOURCES = src/dbinfo.c src/util.c
-couch_dbinfo_CFLAGS = $(AM_CFLAGS) $(ERL_INTERFACE_DIR_INCLUDE) -D__STDC_FORMAT_MACROS
+couch_dbinfo_CFLAGS = $(AM_CFLAGS) -D__STDC_FORMAT_MACROS
 couch_dbinfo_DEPENDENCIES = libcouchstore.la libbyteswap.la
 couch_dbinfo_LDADD = libcouchstore.la libbyteswap.la
 #writetest_SOURCES = src/writetest.c
@@ -110,10 +110,9 @@ check_PROGRAMS = testapp
 TESTS = ${check_PROGRAMS}
 
 testapp_SOURCES = tests/testapp.c src/util.c tests/macros.h
-testapp_CFLAGS = $(AM_CFLAGS) $(ERL_INTERFACE_DIR_INCLUDE)
-testapp_LDFLAGS = $(ERL_INTERFACE_DIR_LIB) -lei
-testapp_DEPENDENCIES = libcouchstore.la
-testapp_LDADD = libcouchstore.la
+testapp_CFLAGS = $(AM_CFLAGS)
+testapp_DEPENDENCIES = libcouchstore.la libbyteswap.la
+testapp_LDADD = libcouchstore.la libbyteswap.la
 
 test: check-TESTS $(extra_tests)
 

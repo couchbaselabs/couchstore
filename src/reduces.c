@@ -1,119 +1,72 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+#include "config.h"
 #include <stdlib.h>
-#include <ei.h>
+#include <string.h>
 #include "reduces.h"
+#include "bitfield.h"
 
-void by_seq_reduce (sized_buf *dst, nodelist *leaflist, int count)
+void by_seq_reduce (char *dst, size_t *size_r, nodelist *leaflist, int count)
 {
     (void)leaflist;
-    //will be freed by flush_mr
-    dst->buf = (char *) malloc(12);
-    if (!dst->buf) {
-        return;
-    }
-    int pos = 0;
-    ei_encode_long(dst->buf, &pos, count);
-    dst->size = pos;
+    memset(dst, 0, 5);
+    set_bits(dst, 0, 40, count);
+    *size_r = 5;
 }
 
-void by_seq_rereduce (sized_buf *dst, nodelist *leaflist, int count)
+void by_seq_rereduce (char *dst, size_t *size_r, nodelist *ptrlist, int count)
 {
     (void)count;
-    long total = 0;
-    long current = 0;
-    int r_pos = 0;
-    int pos = 0;
-
-    //will be freed by flush_mr
-    dst->buf = (char *) malloc(12);
-    if (!dst->buf) {
-        return;
-    }
-    nodelist *i = leaflist;
+    uint64_t total = 0;
+    nodelist *i = ptrlist;
     while (i != NULL) {
-        r_pos = 0;
-        ei_decode_long(i->value.pointer->reduce_value.buf, &r_pos, &current);
-        total += current;
+        total += get_40(i->pointer->reduce_value.buf);
         i = i->next;
     }
-    ei_encode_long(dst->buf, &pos, total);
-    dst->size = pos;
+    memset(dst, 0, 5);
+    set_bits(dst, 0, 40, total);
+    *size_r = 5;
 }
 
-void by_id_rereduce(sized_buf *dst, nodelist *leaflist, int count)
+void by_id_reduce(char *dst, size_t *size_r, nodelist *leaflist, int count)
 {
     (void)count;
-    //Source term {NotDeleted, Deleted, Size}
-    //Result term {NotDeleted, Deleted, Size}
-    dst->buf = (char *) malloc(30);
-    if (!dst->buf) {
-        return;
-    }
-    int dstpos = 0;
-    int srcpos = 0;
-    long notdeleted = 0, deleted = 0, size = 0;
+    uint64_t notdeleted = 0, deleted = 0, size = 0;
     nodelist *i = leaflist;
     while (i != NULL) {
-        srcpos = 0;
-        long long src_deleted = 0;
-        long long src_notdeleted = 0;
-        long long src_size = 0;
-        ei_decode_tuple_header(i->value.pointer->reduce_value.buf, &srcpos, NULL);
-        ei_decode_longlong(i->value.pointer->reduce_value.buf, &srcpos, &src_notdeleted);
-        ei_decode_longlong(i->value.pointer->reduce_value.buf, &srcpos, &src_deleted);
-        ei_decode_longlong(i->value.pointer->reduce_value.buf, &srcpos, &src_size);
-        size += src_size;
-        deleted += src_deleted;
-        notdeleted += src_notdeleted;
-        i = i->next;
-    }
-
-    ei_encode_tuple_header(dst->buf, &dstpos, 3);
-    ei_encode_longlong(dst->buf, &dstpos, notdeleted);
-    ei_encode_longlong(dst->buf, &dstpos, deleted);
-    ei_encode_longlong(dst->buf, &dstpos, size);
-    dst->size = dstpos;
-}
-
-void by_id_reduce(sized_buf *dst, nodelist *leaflist, int count)
-{
-    (void)count;
-    //Source term {Key, {Seq, Rev, Bp, Deleted, ContentMeta, Size}}
-    //Result term {NotDeleted, Deleted, Size}
-    dst->buf = (char *) malloc(30);
-    if (!dst->buf) {
-        return;
-    }
-    int dstpos = 0;
-    int srcpos = 0;
-    long notdeleted = 0, deleted = 0, size = 0;
-    nodelist *i = leaflist;
-    while (i != NULL) {
-        srcpos = 0;
-        long src_deleted = 0;
-        long long src_size = 0;
-        ei_decode_tuple_header(i->value.leaf->buf, &srcpos, NULL);
-        ei_skip_term(i->value.leaf->buf, &srcpos); //skip key
-        ei_decode_tuple_header(i->value.leaf->buf, &srcpos, NULL);
-        ei_skip_term(i->value.leaf->buf, &srcpos); //skip seq
-        ei_skip_term(i->value.leaf->buf, &srcpos); //skip rev
-        ei_skip_term(i->value.leaf->buf, &srcpos); //skip bp
-        ei_decode_long(i->value.leaf->buf, &srcpos, &src_deleted);
-        ei_skip_term(i->value.leaf->buf, &srcpos); //skip ContentMeta
-        ei_decode_longlong(i->value.leaf->buf, &srcpos, &src_size);
-        if (src_deleted == 1) {
-            deleted++;
-        } else {
+        int isdeleted = i->data.buf[10] >> 7;
+        deleted += isdeleted;
+        if (!isdeleted) {
             notdeleted++;
         }
+        size += get_32(i->data.buf + 6);
 
-        size += src_size;
         i = i->next;
     }
 
-    ei_encode_tuple_header(dst->buf, &dstpos, 3);
-    ei_encode_long(dst->buf, &dstpos, notdeleted);
-    ei_encode_long(dst->buf, &dstpos, deleted);
-    ei_encode_longlong(dst->buf, &dstpos, size);
-    dst->size = dstpos;
+    memset(dst, 0, 16);
+    set_bits(dst, 0, 40, notdeleted);
+    set_bits(dst + 5, 0, 40, deleted);
+    set_bits(dst + 10, 0, 48, size);
+    *size_r = 16;
+}
+
+void by_id_rereduce(char *dst, size_t *size_r, nodelist *ptrlist, int count)
+{
+    (void)count;
+    uint64_t notdeleted = 0, deleted = 0, size = 0;
+
+    nodelist *i = ptrlist;
+    while (i != NULL) {
+        notdeleted += get_40(i->pointer->reduce_value.buf);
+        deleted += get_40(i->pointer->reduce_value.buf + 5);
+        size += get_48(i->pointer->reduce_value.buf + 10);
+
+        i = i->next;
+    }
+
+    memset(dst, 0, 16);
+    set_bits(dst, 0, 40, notdeleted);
+    set_bits(dst + 5, 0, 40, deleted);
+    set_bits(dst + 10, 0, 48, size);
+    *size_r = 16;
 }

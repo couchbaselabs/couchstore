@@ -3,62 +3,34 @@
 #include <stdlib.h>
 #include <libcouchstore/couch_db.h>
 #include "util.h"
+#include "bitfield.h"
 
-void term_to_buf(sized_buf *dst, char *buf, int *pos)
+node_pointer *read_root(char *buf, int size)
 {
-    int start = *pos;
-    ei_skip_term(buf, pos);
-    dst->buf = buf + start;
-    dst->size = *pos - start;
-}
-
-node_pointer *read_root(char *buf, int *endpos)
-{
-    //Parse {ptr, reduce_value, subtreesize} into a node_pointer with no key.
     node_pointer *ptr;
-    int size, type;
-    int pos = *endpos;
-    ei_get_type(buf, &pos, &type, &size);
-    ei_skip_term(buf, endpos);
-    if (type == ERL_ATOM_EXT) {
-        return NULL;
-    }
-    size = *endpos - pos;
-    //Copy the erlang term into the buffer.
-    ptr = (node_pointer *) malloc(sizeof(node_pointer) + size);
-    buf = (char *) memcpy(((char *)ptr) + sizeof(node_pointer), buf + pos, size);
-    pos = 0;
+    uint64_t position = get_48(buf);
+    uint64_t subtreesize = get_48(buf + 6);
+    int redsize = size - 12;
+    ptr = (node_pointer *) malloc(sizeof(node_pointer) + redsize);
+    buf = (char *) memcpy(((char *)ptr) + sizeof(node_pointer), buf + 12, redsize);
     ptr->key.buf = NULL;
     ptr->key.size = 0;
-    ptr->pointer = 0;
-    ptr->subtreesize = 0;
-    ei_decode_tuple_header(buf, &pos, NULL); //arity 3
-    ei_decode_uint64(buf, &pos, &ptr->pointer);
-    term_to_buf(&ptr->reduce_value, buf, &pos);
-    ei_decode_uint64(buf, &pos, &ptr->subtreesize);
+    ptr->pointer = position;
+    ptr->subtreesize = subtreesize;
+    ptr->reduce_value.buf = buf;
+    ptr->reduce_value.size = redsize;
     return ptr;
 }
 
-int ei_decode_uint64(char *buf, int *idx, uint64_t *val)
+void encode_root(char *buf, node_pointer *node)
 {
-    unsigned long long ulval;
-    int rv = ei_decode_ulonglong(buf, idx, &ulval);
-    *val = ulval;
-    return rv;
-}
-
-void ei_x_encode_nodepointer(ei_x_buff *x, node_pointer *node)
-{
-    if (node == NULL) {
-        ei_x_encode_atom(x, "nil");
-    } else {
-        ei_x_encode_tuple_header(x, 3);
-        ei_x_encode_ulonglong(x, node->pointer);
-        ei_x_append_buf(x, node->reduce_value.buf, node->reduce_value.size);
-        ei_x_encode_ulonglong(x, node->subtreesize);
+    if (node) {
+        memset(buf, 0, 12);
+        set_bits(buf, 0, 48, node->pointer);
+        set_bits(buf + 6, 0, 48, node->subtreesize);
+        memcpy(buf + 12, node->reduce_value.buf, node->reduce_value.size);
     }
 }
-
 
 fatbuf *fatbuf_alloc(size_t bytes)
 {

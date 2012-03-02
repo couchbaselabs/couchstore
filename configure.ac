@@ -55,17 +55,6 @@ AC_SEARCH_LIBS(floor, m)
 AC_SEARCH_LIBS(pow, m)
 AC_SEARCH_LIBS(fabs, m)
 
-AC_PATH_PROG([ERL], [erl])
-AS_IF([test x${ERL} = x], [
-    AC_MSG_ERROR([Could not find the erl executable. Is Erlang installed?])
-    ])
-
-ERL_INTERFACE_DIR_INCLUDE="-I`${ERL} -eval 'io:put_chars(code:lib_dir(erl_interface) ++ "/include"), erlang:halt().' -noshell -noinput`"
-AC_SUBST(ERL_INTERFACE_DIR_INCLUDE)
-ERL_INTERFACE_DIR_LIB="-L`${ERL} -eval 'io:put_chars(code:lib_dir(erl_interface) ++ "/lib"), erlang:halt().' -noshell -noinput`"
-AC_SUBST(ERL_INTERFACE_DIR_LIB)
-
-
 AC_ARG_WITH([docs],
   [AS_HELP_STRING([--with-docs],
     [Generate documentation (yes|no) @<:@default=yes@:>@])],

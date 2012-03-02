@@ -6,6 +6,7 @@
 #include <inttypes.h>
 #include <libcouchstore/couch_db.h>
 #include <snappy-c.h>
+#include "bitfield.h"
 
 #define SNAPPY_FLAG 128
 
@@ -24,15 +25,18 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
     Doc *doc;
     uint64_t cas;
     uint32_t expiry, flags;
-    cas = htonll(*((uint64_t *) docinfo->rev_meta.buf));
-    expiry = htonl(*((uint32_t *) (docinfo->rev_meta.buf + 8)));
-    flags = htonl(*((uint32_t *) (docinfo->rev_meta.buf + 12)));
     couchstore_open_doc_with_docinfo(db, docinfo, &doc, 0);
     printf("Doc seq: %"PRIu64"\n", docinfo->db_seq);
     printf("     id: ");
     printsb(&docinfo->id);
+    printf("     rev: %"PRIu64"\n", docinfo->rev_seq);
     printf("     content_meta: %d\n", docinfo->content_meta);
-    printf("     cas: %"PRIu64", expiry: %"PRIu32", flags: %"PRIu32"\n", cas, expiry, flags);
+    if (docinfo->rev_meta.size == 16) {
+        cas = ntohll(*((uint64_t *)docinfo->rev_meta.buf));
+        expiry = get_32(docinfo->rev_meta.buf + 8);
+        flags = get_32(docinfo->rev_meta.buf + 12);
+        printf("     cas: %"PRIu64", expiry: %"PRIu32", flags: %"PRIu32"\n", cas, expiry, flags);
+    }
     if (docinfo->deleted) {
         printf("     doc deleted\n");
     }

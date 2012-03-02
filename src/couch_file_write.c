@@ -52,11 +52,10 @@ couchstore_error_t db_write_header(Db *db, sized_buf *buf, off_t *pos)
     off_t write_pos = db->file_pos;
     ssize_t written;
     char blockheader = 1;
-    uint32_t size = htonl(buf->size + 16); //Len before header includes hash len.
+    uint32_t size = htonl(buf->size + 4); //Len before header includes hash len.
+    uint32_t crc32 = htonl(hash_crc32(buf->buf, buf->size));
     sized_buf lenbuf = { (char *) &size, 4 };
-    MD5_CTX hashctx;
-    char hash[16];
-    sized_buf hashbuf = { hash, 16 };
+    sized_buf crcbuf = { (char *) &crc32, 4 };
     if (write_pos % COUCH_BLOCK_SIZE != 0) {
         write_pos += COUCH_BLOCK_SIZE - (write_pos % COUCH_BLOCK_SIZE);    //Move to next block boundary.
     }
@@ -75,12 +74,8 @@ couchstore_error_t db_write_header(Db *db, sized_buf *buf, off_t *pos)
     }
     write_pos += written;
 
-    //Write MD5
-    MD5Init(&hashctx);
-    MD5Update(&hashctx, (uint8_t *) buf->buf, buf->size);
-    MD5Final((uint8_t *) hash, &hashctx);
-
-    written = raw_write(db, &hashbuf, write_pos);
+    //Write CRC32
+    written = raw_write(db, &crcbuf, write_pos);
     if (written < 0) {
         return COUCHSTORE_ERROR_WRITE;
     }
@@ -144,7 +139,7 @@ int db_write_buf_compressed(Db *db, sized_buf *buf, off_t *pos)
     error_unless(to_write.buf, COUCHSTORE_ERROR_ALLOC_FAIL);
     error_unless(snappy_compress(buf->buf, buf->size, to_write.buf,
                                  &to_write.size) == SNAPPY_OK,
-                COUCHSTORE_ERROR_WRITE);
+                 COUCHSTORE_ERROR_WRITE);
 
     error_pass(db_write_buf(db, &to_write, pos));
 cleanup:

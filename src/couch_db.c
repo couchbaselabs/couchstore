@@ -1,12 +1,13 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+#include "config.h"
 #include <fcntl.h>
 #include <string.h>
 #include <stdlib.h>
-#include <ei.h>
 #include <snappy-c.h>
 
 #include "internal.h"
 #include "couch_btree.h"
+#include "bitfield.h"
 #include "util.h"
 #include "reduces.h"
 
@@ -17,10 +18,13 @@ sized_buf nil_atom = {
     6
 };
 
+int by_id_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v);
+int assemble_id_index_value(DocInfo *docinfo, char *dst);
+
 static couchstore_error_t find_header(Db *db)
 {
     uint64_t block = db->file_pos / COUCH_BLOCK_SIZE;
-    int errcode = 0;
+    int errcode = COUCHSTORE_SUCCESS;
     int readsize;
     char *header_buf = NULL;
     uint8_t buf[2];
@@ -30,40 +34,33 @@ static couchstore_error_t find_header(Db *db)
         if (readsize == 2 && buf[0] == 1) {
             //Found a header block.
             int header_len = pread_header(db, block * COUCH_BLOCK_SIZE, &header_buf);
-            int arity = 0;
-            int purged_docs_index = 0;
             if (header_len > 0) {
-                int idx = 0;
-                if (ei_decode_version(header_buf, &idx, &arity) < 0) {
-                    errcode = COUCHSTORE_ERROR_PARSE_TERM;
-                    break;
+                db->header.disk_version = header_buf[0];
+                error_unless(db->header.disk_version == COUCH_DISK_VERSION, COUCHSTORE_ERROR_HEADER_VERSION)
+                db->header.update_seq = get_48(header_buf + 1);
+                db->header.purge_seq = get_48(header_buf + 7);
+                db->header.purge_ptr = get_48(header_buf + 13);
+                int seqrootsize = get_16(header_buf + 19);
+                int idrootsize = get_16(header_buf + 21);
+                int localrootsize = get_16(header_buf + 23);
+                int rootpos = 25;
+                if (seqrootsize > 0) {
+                    db->header.by_seq_root = read_root(header_buf + rootpos, seqrootsize);
+                } else {
+                    db->header.by_seq_root = NULL;
                 }
-                if (ei_decode_tuple_header(header_buf, &idx, &arity) < 0) {
-                    errcode = COUCHSTORE_ERROR_PARSE_TERM;
-                    break;
+                rootpos += seqrootsize;
+                if (idrootsize > 0) {
+                    db->header.by_id_root = read_root(header_buf + rootpos, idrootsize);
+                } else {
+                    db->header.by_id_root = NULL;
                 }
-                ei_skip_term(header_buf, &idx); //db_header
-                ei_decode_uint64(header_buf, &idx, &db->header.disk_version);
-
-                if (db->header.disk_version != COUCH_DISK_VERSION) {
-                    errcode = COUCHSTORE_ERROR_HEADER_VERSION;
-                    break;
+                rootpos += idrootsize;
+                if (localrootsize > 0) {
+                    db->header.local_docs_root = read_root(header_buf + rootpos, localrootsize);
+                } else {
+                    db->header.local_docs_root = NULL;
                 }
-
-                ei_decode_uint64(header_buf, &idx, &db->header.update_seq);
-                db->header.by_id_root = read_root(header_buf, &idx);
-                db->header.by_seq_root = read_root(header_buf, &idx);
-                db->header.local_docs_root = read_root(header_buf, &idx);
-                ei_decode_uint64(header_buf, &idx, &db->header.purge_seq);
-
-                purged_docs_index = idx;
-                ei_skip_term(header_buf, &idx); //purged_docs
-                db->header.purged_docs = malloc(sizeof(sized_buf) + (idx - purged_docs_index));
-                db->header.purged_docs->buf = ((char *)db->header.purged_docs) + sizeof(sized_buf);
-                memcpy(db->header.purged_docs->buf, header_buf + purged_docs_index, idx - purged_docs_index);
-                db->header.purged_docs->size = idx - purged_docs_index;
-
-                ei_skip_term(header_buf, &idx); //security ptr
                 db->header.position = block * COUCH_BLOCK_SIZE;
                 break;
             }
@@ -79,34 +76,43 @@ static couchstore_error_t find_header(Db *db)
         block--;
     }
 
+cleanup:
     free(header_buf);
     return errcode;
 }
 
 static couchstore_error_t write_header(Db *db)
 {
-    ei_x_buff x_header;
     sized_buf writebuf;
-
-    ei_x_new_with_version(&x_header);
-    ei_x_encode_tuple_header(&x_header, 8);
-    ei_x_encode_atom(&x_header, "db_header");
-    ei_x_encode_ulonglong(&x_header, db->header.disk_version);
-    ei_x_encode_ulonglong(&x_header, db->header.update_seq);
-    ei_x_encode_nodepointer(&x_header, db->header.by_id_root);
-    ei_x_encode_nodepointer(&x_header, db->header.by_seq_root);
-    ei_x_encode_nodepointer(&x_header, db->header.local_docs_root);
-    ei_x_encode_ulonglong(&x_header, db->header.purge_seq);
-    ei_x_append_buf(&x_header, db->header.purged_docs->buf, db->header.purged_docs->size);
-    ei_x_encode_atom(&x_header, "nil"); //security_ptr;
-    writebuf.buf = x_header.buff;
-    writebuf.size = x_header.index;
+    int seqrootsize = 0, idrootsize = 0, localrootsize = 0;
+    if (db->header.by_seq_root) {
+        seqrootsize = 12 + db->header.by_seq_root->reduce_value.size;
+    }
+    if (db->header.by_id_root) {
+        idrootsize = 12 + db->header.by_id_root->reduce_value.size;
+    }
+    if (db->header.local_docs_root) {
+        localrootsize = 12 + db->header.local_docs_root->reduce_value.size;
+    }
+    writebuf.size = 25 + seqrootsize + idrootsize + localrootsize;
+    writebuf.buf = (char *) calloc(1, writebuf.size);
+    writebuf.buf[0] = COUCH_DISK_VERSION;
+    set_bits(writebuf.buf + 1, 0, 48, db->header.update_seq);
+    set_bits(writebuf.buf + 7, 0, 48, db->header.purge_seq);
+    set_bits(writebuf.buf + 13, 0, 48, db->header.purge_ptr);
+    set_bits(writebuf.buf + 19, 0, 16, seqrootsize);
+    set_bits(writebuf.buf + 21, 0, 16, idrootsize);
+    set_bits(writebuf.buf + 23, 0, 16, localrootsize);
+    encode_root(writebuf.buf + 25, db->header.by_seq_root);
+    encode_root(writebuf.buf + 25 + seqrootsize, db->header.by_id_root);
+    encode_root(writebuf.buf + 25 + seqrootsize + idrootsize,
+                db->header.local_docs_root);
     off_t pos;
     couchstore_error_t errcode = db_write_header(db, &writebuf, &pos);
     if (errcode == COUCHSTORE_SUCCESS) {
         db->header.position = pos;
     }
-    ei_x_free(&x_header);
+    free(writebuf.buf);
     return errcode;
 }
 
@@ -118,7 +124,7 @@ static couchstore_error_t create_header(Db *db)
     db->header.by_seq_root = NULL;
     db->header.local_docs_root = NULL;
     db->header.purge_seq = 0;
-    db->header.purged_docs = &nil_atom;
+    db->header.purge_ptr = 0;
     db->header.position = 0;
     return write_header(db);
 }
@@ -161,12 +167,12 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
 
     /* Sanity check input parameters */
     if (filename == NULL || pDb == NULL || ops == NULL ||
-        ops->version != 1 || ops->open == NULL ||
-        ops->close == NULL || ops->pread == NULL ||
-        ops->pwrite == NULL || ops->goto_eof == NULL ||
-        ops->sync == NULL || ops->destructor == NULL ||
-        ((flags & COUCHSTORE_OPEN_FLAG_RDONLY) &&
-         (flags & COUCHSTORE_OPEN_FLAG_CREATE))) {
+            ops->version != 1 || ops->open == NULL ||
+            ops->close == NULL || ops->pread == NULL ||
+            ops->pwrite == NULL || ops->goto_eof == NULL ||
+            ops->sync == NULL || ops->destructor == NULL ||
+            ((flags & COUCHSTORE_OPEN_FLAG_RDONLY) &&
+             (flags & COUCHSTORE_OPEN_FLAG_CREATE))) {
         return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
     }
 
@@ -226,19 +232,14 @@ couchstore_error_t couchstore_close_db(Db *db)
     free(db->header.by_seq_root);
     free(db->header.local_docs_root);
 
-    if (db->header.purged_docs != &nil_atom) {
-        free(db->header.purged_docs);
-    }
     memset(db, 0xa5, sizeof(*db));
     free(db);
 
     return COUCHSTORE_SUCCESS;
 }
 
-static int ebin_cmp(void *k1, void *k2)
+static int ebin_cmp(sized_buf *e1, sized_buf *e2)
 {
-    sized_buf *e1 = (sized_buf *)k1;
-    sized_buf *e2 = (sized_buf *)k2;
     size_t size;
     if (e2->size < e1->size) {
         size = e2->size;
@@ -257,121 +258,75 @@ static int ebin_cmp(void *k1, void *k2)
     return cmp;
 }
 
-static void *ebin_from_ext(compare_info *c, char *buf, int pos)
+static int seq_cmp(sized_buf *k1, sized_buf *k2)
 {
-    int binsize;
-    int type;
-    sized_buf *ebcmp = (sized_buf *) c->arg;
-    ei_get_type(buf, &pos, &type, &binsize);
-    ebcmp->buf = buf + pos + 5;
-    ebcmp->size = binsize;
-    return ebcmp;
-}
-
-static void *term_from_ext(compare_info *c, char *buf, int pos)
-{
-    int endpos = pos;
-    sized_buf *ebcmp = (sized_buf *) c->arg;
-    ei_skip_term(buf, &endpos);
-    ebcmp->buf = buf + pos;
-    ebcmp->size = endpos - pos;
-    return ebcmp;
-}
-
-static int long_term_cmp(void *k1, void *k2)
-{
-    sized_buf *e1 = (sized_buf *)k1;
-    sized_buf *e2 = (sized_buf *)k2;
-    int pos = 0;
-    uint64_t e1val, e2val;
-    ei_decode_uint64(e1->buf, &pos, &e1val);
-    pos = 0;
-    ei_decode_uint64(e2->buf, &pos, &e2val);
+    uint64_t e1val = get_48(k1->buf);
+    uint64_t e2val = get_48(k2->buf);
     if (e1val == e2val) {
         return 0;
     }
     return (e1val < e2val ? -1 : 1);
 }
 
-static couchstore_error_t docinfo_from_buf(DocInfo **pInfo,
-                                           sized_buf *v,
-                                           int idBytes)
+static int by_seq_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
 {
-    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
-    int term_index = 0, fterm_pos = 0, fterm_size = 0;
-    int metabin_pos = 0, metabin_size = 0;
-    uint64_t deleted;
-    uint64_t content_meta;
-    uint64_t seq = 0, rev = 0, bp = 0;
-    uint64_t size;
-    char *infobuf = NULL;
-    *pInfo = NULL;
-
-    if (v == NULL) {
-        return COUCHSTORE_ERROR_DOC_NOT_FOUND;
+    uint32_t idsize, datasize, deleted, revnum;
+    uint8_t content_meta;
+    uint64_t bp, seq;
+    get_kvlen(v->buf, &idsize, &datasize);
+    deleted = v->buf[5] >> 7;
+    bp = get_48(v->buf + 5) &~ 0x800000000000;
+    content_meta = v->buf[11];
+    revnum = get_32(v->buf + 12);
+    seq = get_48(k->buf);
+    char *rbuf = (char *) malloc(sizeof(DocInfo) + (v->size - 16));
+    if (!rbuf) {
+        return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
-
-    //Id/Seq
-    error_unless(tuple_check(v->buf, &term_index, 6), COUCHSTORE_ERROR_PARSE_TERM);
-    fterm_pos = term_index; //Save position of first term
-    ei_skip_term(v->buf, &term_index);
-    fterm_size = term_index - fterm_pos; //and size.
-
-    //Rev = {RevNum, MetaBin}
-    error_unless(tuple_check(v->buf, &term_index, 2), COUCHSTORE_ERROR_PARSE_TERM);
-    error_nonzero(ei_decode_uint64(v->buf, &term_index, &rev), COUCHSTORE_ERROR_PARSE_TERM);
-    metabin_pos = term_index + 5; //Save position of meta term
-    //We know it's an ERL_BINARY_EXT, so the contents are from
-    //5 bytes in to the end of the term.
-    ei_skip_term(v->buf, &term_index);
-    metabin_size = term_index - metabin_pos; //and size.
-
-    error_nonzero(ei_decode_uint64(v->buf, &term_index, &bp), COUCHSTORE_ERROR_PARSE_TERM);
-    error_nonzero(ei_decode_uint64(v->buf, &term_index, &deleted), COUCHSTORE_ERROR_PARSE_TERM);
-    error_nonzero(ei_decode_uint64(v->buf, &term_index, &content_meta), COUCHSTORE_ERROR_PARSE_TERM);
-    error_nonzero(ei_decode_uint64(v->buf, &term_index, &size), COUCHSTORE_ERROR_PARSE_TERM);
-
-    //If first term is seq, we don't need to include it in the buffer
-    if (idBytes != 0) {
-        fterm_size = 0;
-    }
-    infobuf = (char *) malloc(sizeof(DocInfo) + metabin_size + fterm_size + idBytes);
-    error_unless(infobuf, COUCHSTORE_ERROR_ALLOC_FAIL);
-    *pInfo = (DocInfo *) infobuf;
-
-    (*pInfo)->rev_meta.buf = infobuf + sizeof(DocInfo);
-    (*pInfo)->rev_meta.size = metabin_size;
-
-    if (metabin_size > 0) {
-        memcpy((*pInfo)->rev_meta.buf, v->buf + metabin_pos, metabin_size);
-    }
-
-    (*pInfo)->id.buf = infobuf + sizeof(DocInfo) + metabin_size;
-
-    if (idBytes != 0) { //First term is Seq
-
-        (*pInfo)->id.size = idBytes;
-        ei_decode_uint64(v->buf, &fterm_pos, &seq);
-        //Let the caller fill in the Id.
-    } else { //First term is Id
-        (*pInfo)->id.size = fterm_size - 5; //Id will be a binary.
-        memcpy((*pInfo)->id.buf, v->buf + fterm_pos + 5, fterm_size);
-        //Let the caller fill in the Seq
-    }
-
+    memcpy(rbuf + sizeof(DocInfo), v->buf + 16, v->size - 16);
+    *pInfo = (DocInfo *) rbuf;
     (*pInfo)->db_seq = seq;
-    (*pInfo)->rev_seq = rev;
-    (*pInfo)->bp = bp;
-    (*pInfo)->size = size;
+    (*pInfo)->rev_seq = revnum;
     (*pInfo)->deleted = deleted;
+    (*pInfo)->bp = bp;
+    (*pInfo)->size = datasize;
     (*pInfo)->content_meta = content_meta;
+    (*pInfo)->id.buf = rbuf + sizeof(DocInfo);
+    (*pInfo)->id.size = idsize;
+    (*pInfo)->rev_meta.buf = rbuf + sizeof(DocInfo) + idsize;
+    (*pInfo)->rev_meta.size = v->size - 16 - idsize;
+    return 0;
+}
 
-cleanup:
-    if (errcode < 0) {
-        free(*pInfo);
-        *pInfo = NULL;
+int by_id_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
+{
+    uint32_t datasize, deleted, revnum;
+    uint8_t content_meta;
+    uint64_t bp, seq;
+    seq = get_48(v->buf);
+    datasize = get_32(v->buf + 6);
+    deleted = v->buf[10] >> 7;
+    bp = get_48(v->buf + 10) &~ 0x800000000000;
+    content_meta = v->buf[16];
+    revnum = get_32(v->buf + 17);
+    char *rbuf = (char *) malloc(sizeof(DocInfo) + (v->size - 21) + k->size);
+    if (!rbuf) {
+        return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
-    return errcode;
+    memcpy(rbuf + sizeof(DocInfo), v->buf + 21, v->size - 21);
+    *pInfo = (DocInfo *) rbuf;
+    (*pInfo)->db_seq = seq;
+    (*pInfo)->rev_seq = revnum;
+    (*pInfo)->deleted = deleted;
+    (*pInfo)->bp = bp;
+    (*pInfo)->size = datasize;
+    (*pInfo)->content_meta = content_meta;
+    (*pInfo)->rev_meta.buf = rbuf + sizeof(DocInfo);
+    (*pInfo)->rev_meta.size = v->size - 21;
+    (*pInfo)->id.buf = (*pInfo)->rev_meta.buf + (*pInfo)->rev_meta.size;
+    (*pInfo)->id.size = k->size;
+    memcpy((*pInfo)->id.buf, k->buf, k->size);
+    return 0;
 }
 
 #define COMPRESSED_BODY 1
@@ -418,12 +373,10 @@ static couchstore_error_t docinfo_fetch(couchfile_lookup_request *rq,
 {
     sized_buf *id = (sized_buf *) k;
     DocInfo **pInfo = (DocInfo **) rq->callback_ctx;
-    int errcode = docinfo_from_buf(pInfo, v, id->size - 5);
-    if (errcode == COUCHSTORE_SUCCESS) {
-        memcpy((*pInfo)->id.buf, id->buf + 5, id->size - 5);
+    if (v == NULL) {
+        return COUCHSTORE_ERROR_DOC_NOT_FOUND;
     }
-
-    return errcode;
+    return by_id_read_docinfo(pInfo, id, v);
 }
 
 LIBCOUCHSTORE_API
@@ -433,7 +386,7 @@ couchstore_error_t couchstore_docinfo_by_id(Db *db,
                                             DocInfo **pInfo)
 {
     sized_buf key;
-    void *keylist = &key;
+    sized_buf *keylist = &key;
     couchfile_lookup_request rq;
     sized_buf cmptmp;
     couchstore_error_t errcode;
@@ -446,7 +399,6 @@ couchstore_error_t couchstore_docinfo_by_id(Db *db,
     key.size = idlen;
 
     rq.cmp.compare = ebin_cmp;
-    rq.cmp.from_ext = ebin_from_ext;
     rq.cmp.arg = &cmptmp;
     rq.db = db;
     rq.num_keys = 1;
@@ -533,17 +485,15 @@ static couchstore_error_t byseq_do_callback(couchfile_lookup_request *rq,
     }
 
     sized_buf *seqterm = (sized_buf *) k;
-    int seqindex = 0;
-    DocInfo *docinfo;
-    docinfo_from_buf(&docinfo, v, 0);
-    ei_decode_uint64(seqterm->buf, &seqindex, &docinfo->db_seq);
+    DocInfo *docinfo = NULL;
+    by_seq_read_docinfo(&docinfo, seqterm, v);
 
     union c99hack hack;
     hack.voidptr = ((void **)rq->callback_ctx)[0];
-    Db *db =  ((void **)rq->callback_ctx)[1];
+    Db *db = ((void **)rq->callback_ctx)[1];
     void *ctx = ((void **)rq->callback_ctx)[2];
 
-    if (hack.callback(db, docinfo, ctx)  == 0) {
+    if (hack.callback(db, docinfo, ctx) == 0) {
         couchstore_free_docinfo(docinfo);
     }
 
@@ -557,10 +507,10 @@ couchstore_error_t couchstore_changes_since(Db *db,
                                             couchstore_changes_callback_fn callback,
                                             void *ctx)
 {
-    (void)options;
-    char since_termbuf[10];
+    (void) options;
+    char since_termbuf[6];
     sized_buf since_term;
-    void *keylist = &since_term;
+    sized_buf *keylist = &since_term;
     void *cbctx[3];
     couchfile_lookup_request rq;
     sized_buf cmptmp;
@@ -573,15 +523,15 @@ couchstore_error_t couchstore_changes_since(Db *db,
     }
 
     since_term.buf = since_termbuf;
-    since_term.size = 0;
-    ei_encode_ulonglong(since_termbuf, (int *) &since_term.size, since);
+    since_term.size = 6;
+    memset(since_term.buf, 0, 6);
+    set_bits(since_term.buf, 0, 48, since);
 
     cbctx[0] = hack.voidptr;
     cbctx[1] = db;
     cbctx[2] = ctx;
 
-    rq.cmp.compare = long_term_cmp;
-    rq.cmp.from_ext = term_from_ext;
+    rq.cmp.compare = seq_cmp;
     rq.cmp.arg = &cmptmp;
     rq.db = db;
     rq.num_keys = 1;
@@ -609,35 +559,32 @@ void couchstore_free_docinfo(DocInfo *docinfo)
     free(docinfo);
 }
 
-static void copy_term(char *dst, int *idx, sized_buf *term)
+static int assemble_seq_index_value(DocInfo *docinfo, char *dst)
 {
-    memcpy(dst + *idx, term->buf, term->size);
-    *idx += term->size;
+    memset(dst, 0, 16);
+    set_bits(dst, 0, 12, docinfo->id.size);
+    set_bits(dst + 1, 4, 28, docinfo->size);
+    set_bits(dst + 5, 0, 1, docinfo->deleted);
+    set_bits(dst + 5, 1, 47, docinfo->bp);
+    dst[11] = docinfo->content_meta;
+    set_bits(dst + 12, 0, 32, docinfo->rev_seq); //16 bytes in.
+    memcpy(dst + 16, docinfo->id.buf, docinfo->id.size);
+    memcpy(dst + 16 + docinfo->id.size, docinfo->rev_meta.buf,
+           docinfo->rev_meta.size);
+    return 16 + docinfo->id.size + docinfo->rev_meta.size;
 }
 
-static int assemble_index_value(DocInfo *docinfo, char *dst,
-                                sized_buf *first_term)
+int assemble_id_index_value(DocInfo *docinfo, char *dst)
 {
-    int pos = 0;
-    ei_encode_tuple_header(dst, &pos, 6); //2 bytes.
-
-    //Id or Seq (possibly encoded as a binary)
-    copy_term(dst, &pos, first_term); //first_term.size
-    //Rev
-    ei_encode_tuple_header(dst, &pos, 2); //3 bytes.
-    ei_encode_ulonglong(dst, &pos, docinfo->rev_seq); //Max 10 bytes
-    ei_encode_binary(dst, &pos, docinfo->rev_meta.buf, docinfo->rev_meta.size); //meta.size + 5
-    //Bp
-    ei_encode_ulonglong(dst, &pos, docinfo->bp); //Max 10 bytes
-    //Deleted
-    ei_encode_ulonglong(dst, &pos, docinfo->deleted); //2 bytes
-    //
-    ei_encode_ulonglong(dst, &pos, docinfo->content_meta); //2 bytes
-    //Size
-    ei_encode_ulonglong(dst, &pos, docinfo->size); //Max 10 bytes
-
-    //Max 44 + first_term.size + meta.size bytes.
-    return pos;
+    memset(dst, 0, 21);
+    set_bits(dst, 0, 48, docinfo->db_seq);
+    set_bits(dst + 6, 0, 32, docinfo->size);
+    set_bits(dst + 10, 0, 1, docinfo->deleted);
+    set_bits(dst + 10, 1, 47, docinfo->bp);
+    dst[16] = docinfo->content_meta;
+    set_bits(dst + 17, 0, 32, docinfo->rev_seq); //21 bytes in
+    memcpy(dst + 21, docinfo->rev_meta.buf, docinfo->rev_meta.size);
+    return 21 + docinfo->rev_meta.size;
 }
 
 static couchstore_error_t write_doc(Db *db, Doc *doc, uint64_t *bp,
@@ -659,7 +606,7 @@ static int id_action_compare(const void *actv1, const void *actv2)
     act1 = (const couchfile_modify_action *) actv1;
     act2 = (const couchfile_modify_action *) actv2;
 
-    int cmp = ebin_cmp(act1->cmp_key, act2->cmp_key);
+    int cmp = ebin_cmp(act1->key, act2->key);
     if (cmp == 0) {
         if (act1->type < act2->type) {
             return -1;
@@ -678,11 +625,9 @@ static int seq_action_compare(const void *actv1, const void *actv2)
     act2 = (const couchfile_modify_action *) actv2;
 
     uint64_t seq1, seq2;
-    int pos = 0;
 
-    ei_decode_uint64(act1->key->buf, &pos, &seq1);
-    pos = 0;
-    ei_decode_uint64(act2->key->buf, &pos, &seq2);
+    seq1 = get_48(act1->key->buf);
+    seq2 = get_48(act2->key->buf);
 
     if (seq1 < seq2) {
         return -1;
@@ -716,9 +661,9 @@ typedef struct _idxupdatectx {
 static void idfetch_update_cb(couchfile_modify_request *rq,
                               sized_buf *k, sized_buf *v, void *arg)
 {
-    (void)k; (void)rq;
+    (void)k;
+    (void)rq;
     //v contains a seq we need to remove ( {Seq,_,_,_,_} )
-    int termpos = 0;
     uint64_t oldseq;
     sized_buf *delbuf = NULL;
     index_update_ctx *ctx = (index_update_ctx *) arg;
@@ -727,16 +672,16 @@ static void idfetch_update_cb(couchfile_modify_request *rq,
         return;
     }
 
-    ei_decode_tuple_header(v->buf, &termpos, NULL);
-    ei_decode_uint64(v->buf, &termpos, &oldseq);
+    oldseq = get_48(v->buf);
 
     delbuf = (sized_buf *) fatbuf_get(ctx->deltermbuf, sizeof(sized_buf));
-    delbuf->buf = (char *) fatbuf_get(ctx->deltermbuf, 10);
-    delbuf->size = 0;
-    ei_encode_ulonglong(delbuf->buf, (int *) &delbuf->size, oldseq);
+    delbuf->buf = (char *) fatbuf_get(ctx->deltermbuf, 6);
+    delbuf->size = 6;
+    memset(delbuf->buf, 0, 6);
+    set_bits(delbuf->buf, 0, 48, oldseq);
 
     ctx->seqacts[ctx->actpos].type = ACTION_REMOVE;
-    ctx->seqacts[ctx->actpos].value.term = NULL;
+    ctx->seqacts[ctx->actpos].value.data = NULL;
     ctx->seqacts[ctx->actpos].key = delbuf;
     ctx->seqacts[ctx->actpos].cmp_key = delbuf;
 
@@ -793,7 +738,7 @@ static couchstore_error_t update_indexes(Db *db,
         idacts[ii * 2].type = ACTION_FETCH;
         idacts[ii * 2].value.arg = &fetcharg;
         idacts[ii * 2 + 1].type = ACTION_INSERT;
-        idacts[ii * 2 + 1].value.term = &idvals[ii];
+        idacts[ii * 2 + 1].value.data = &idvals[ii];
 
         idacts[ii * 2].key = &ids[ii];
         idacts[ii * 2].cmp_key = &idcmps[ii];
@@ -806,7 +751,6 @@ static couchstore_error_t update_indexes(Db *db,
           id_action_compare);
 
     idrq.cmp.compare = ebin_cmp;
-    idrq.cmp.from_ext = ebin_from_ext;
     idrq.cmp.arg = &tmpsb;
     idrq.db = db;
     idrq.actions = idacts;
@@ -824,7 +768,7 @@ static couchstore_error_t update_indexes(Db *db,
 
     while (fetcharg.valpos < numdocs) {
         seqacts[fetcharg.actpos].type = ACTION_INSERT;
-        seqacts[fetcharg.actpos].value.term = &seqvals[fetcharg.valpos];
+        seqacts[fetcharg.actpos].value.data = &seqvals[fetcharg.valpos];
         seqacts[fetcharg.actpos].key = &seqs[fetcharg.valpos];
         seqacts[fetcharg.actpos].cmp_key = &seqs[fetcharg.valpos];
         fetcharg.valpos++;
@@ -835,8 +779,7 @@ static couchstore_error_t update_indexes(Db *db,
     qsort(seqacts, fetcharg.actpos, sizeof(couchfile_modify_action),
           seq_action_compare);
 
-    seqrq.cmp.compare = long_term_cmp;
-    seqrq.cmp.from_ext = term_from_ext;
+    seqrq.cmp.compare = seq_cmp;
     seqrq.cmp.arg = &tmpsb;
     seqrq.actions = seqacts;
     seqrq.num_actions = fetcharg.actpos;
@@ -879,17 +822,11 @@ static couchstore_error_t add_doc_to_update_list(Db *db,
     DocInfo updated = *info;
     updated.db_seq = seq;
 
-    seqterm->buf = fatbuf_get(fb, 10);
-    idterm->buf = fatbuf_get(fb, updated.id.size + 5);
-    seqval->buf = fatbuf_get(fb, (44 + updated.id.size + updated.rev_meta.size));
-    idval->buf = fatbuf_get(fb, (44 + 10 + updated.rev_meta.size));
-
-    if (!(seqterm->buf && idterm->buf && seqval->buf && idval->buf)) {
-        return COUCHSTORE_ERROR_ALLOC_FAIL;
-    }
-    seqterm->size = 0;
-    idterm->size = 0;
-    ei_encode_ulonglong(seqterm->buf, (int *) &seqterm->size, seq);
+    seqterm->buf = (char *) fatbuf_get(fb, 6);
+    seqterm->size = 6;
+    error_unless(seqterm->buf, COUCHSTORE_ERROR_ALLOC_FAIL);
+    memset(seqterm->buf, 0, 6);
+    set_bits(seqterm->buf, 0, 48, seq);
 
     if (doc) {
         if ((options & COMPRESS_DOC_BODIES) && (info->content_meta & SNAPPY_META_FLAG)) {
@@ -908,13 +845,18 @@ static couchstore_error_t add_doc_to_update_list(Db *db,
         updated.size = 0;
     }
 
-    ei_encode_binary(idterm->buf, (int *) &idterm->size, updated.id.buf, updated.id.size);
-    seqval->size = assemble_index_value(&updated, seqval->buf, idterm);
-    idval->size = assemble_index_value(&updated, idval->buf, seqterm);
+    *idterm = updated.id;
 
-    //Use max of 10 +, id.size + 5 +, 42 + rev_meta.size + id.size, + 52 + rev_meta.size
-    // == id.size *2 + rev_meta.size *2 + 109 bytes
+    seqval->buf = (char *) fatbuf_get(fb, (44 + updated.id.size + updated.rev_meta.size));
+    error_unless(seqval->buf, COUCHSTORE_ERROR_ALLOC_FAIL);
+    seqval->size = assemble_seq_index_value(&updated, seqval->buf);
 
+    idval->buf = (char *) fatbuf_get(fb, (44 + 10 + updated.rev_meta.size));
+    error_unless(idval->buf, COUCHSTORE_ERROR_ALLOC_FAIL);
+    idval->size = assemble_id_index_value(&updated, idval->buf);
+
+    //We use 37 + id.size + 2 * rev_meta.size bytes
+cleanup:
     return errcode;
 }
 
@@ -936,8 +878,8 @@ couchstore_error_t couchstore_save_documents(Db *db,
 
     for (ii = 0; ii < numdocs; ii++) {
         // Get additional size for terms to be inserted into indexes
-        size_t size = infos[ii]->id.size + infos[ii]->rev_meta.size;
-        term_meta_size += 113 + (2 * size);
+        size_t size = 37 + infos[ii]->id.size + 2 * infos[ii]->rev_meta.size;
+        term_meta_size += (2 * size);
     }
 
     fb = fatbuf_alloc(term_meta_size +
@@ -1008,16 +950,16 @@ static couchstore_error_t local_doc_fetch(couchfile_lookup_request *rq,
     }
 
     dp = *lDoc = (LocalDoc *) fatbuf_get(ldbuf, sizeof(LocalDoc));
-    dp->id.buf = (char *) fatbuf_get(ldbuf, id->size - 5);
-    dp->id.size = id->size - 5;
+    dp->id.buf = (char *) fatbuf_get(ldbuf, id->size);
+    dp->id.size = id->size;
 
-    dp->json.buf = (char *) fatbuf_get(ldbuf, v->size - 5);
-    dp->json.size = v->size - 5;
+    dp->json.buf = (char *) fatbuf_get(ldbuf, v->size);
+    dp->json.size = v->size;
 
     dp->deleted = 0;
 
-    memcpy(dp->id.buf, id->buf + 5, id->size - 5);
-    memcpy(dp->json.buf, v->buf + 5, v->size - 5);
+    memcpy(dp->id.buf, id->buf, id->size);
+    memcpy(dp->json.buf, v->buf, v->size);
 
     return COUCHSTORE_SUCCESS;
 }
@@ -1029,7 +971,7 @@ couchstore_error_t couchstore_open_local_document(Db *db,
                                                   LocalDoc **pDoc)
 {
     sized_buf key;
-    void *keylist = &key;
+    sized_buf *keylist = &key;
     couchfile_lookup_request rq;
     sized_buf cmptmp;
     couchstore_error_t errcode;
@@ -1042,7 +984,6 @@ couchstore_error_t couchstore_open_local_document(Db *db,
     key.size = idlen;
 
     rq.cmp.compare = ebin_cmp;
-    rq.cmp.from_ext = ebin_from_ext;
     rq.cmp.arg = &cmptmp;
     rq.db = db;
     rq.num_keys = 1;
@@ -1065,15 +1006,8 @@ couchstore_error_t couchstore_save_local_document(Db *db, LocalDoc *lDoc)
 {
     couchstore_error_t errcode;
     couchfile_modify_action ldupdate;
-    fatbuf *binbufs = fatbuf_alloc(10 + lDoc->id.size + lDoc->json.size);
-    sized_buf idterm;
-    sized_buf jsonterm;
     sized_buf cmptmp;
     node_pointer *nroot = NULL;
-
-    if (binbufs == NULL) {
-        return COUCHSTORE_ERROR_ALLOC_FAIL;
-    }
 
     if (lDoc->deleted) {
         ldupdate.type = ACTION_REMOVE;
@@ -1081,23 +1015,12 @@ couchstore_error_t couchstore_save_local_document(Db *db, LocalDoc *lDoc)
         ldupdate.type = ACTION_INSERT;
     }
 
-    idterm.buf = (char *) fatbuf_get(binbufs, lDoc->id.size + 5);
-    idterm.size = 0;
-    ei_encode_binary(idterm.buf, (int *) &idterm.size, lDoc->id.buf,
-                     lDoc->id.size);
-
-    jsonterm.buf = (char *) fatbuf_get(binbufs, lDoc->json.size + 5);
-    jsonterm.size = 0;
-    ei_encode_binary(jsonterm.buf, (int *) &jsonterm.size,
-                     lDoc->json.buf, lDoc->json.size);
-
-    ldupdate.cmp_key = (void *) &lDoc->id;
-    ldupdate.key = &idterm;
-    ldupdate.value.term = &jsonterm;
+    ldupdate.cmp_key = &lDoc->id;
+    ldupdate.key = &lDoc->id;
+    ldupdate.value.data = &lDoc->json;
 
     couchfile_modify_request rq;
     rq.cmp.compare = ebin_cmp;
-    rq.cmp.from_ext = ebin_from_ext;
     rq.cmp.arg = &cmptmp;
     rq.num_actions = 1;
     rq.actions = &ldupdate;
@@ -1112,7 +1035,6 @@ couchstore_error_t couchstore_save_local_document(Db *db, LocalDoc *lDoc)
         db->header.local_docs_root = nroot;
     }
 
-    fatbuf_free(binbufs);
     return errcode;
 }
 

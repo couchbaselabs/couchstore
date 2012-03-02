@@ -12,7 +12,7 @@
 #include <libcouchstore/couch_db.h>
 
 #define COUCH_BLOCK_SIZE 4096
-#define COUCH_DISK_VERSION 9
+#define COUCH_DISK_VERSION 10
 #define COUCH_SNAPPY_THRESHOLD 64
 
 #ifdef __cplusplus
@@ -33,7 +33,7 @@ extern "C" {
         node_pointer *by_seq_root;
         node_pointer *local_docs_root;
         uint64_t purge_seq;
-        sized_buf *purged_docs;
+        uint64_t purge_ptr;
         uint64_t position;
     } db_header;
 
@@ -62,6 +62,9 @@ extern "C" {
     couchstore_error_t db_write_header(Db *db, sized_buf *buf, off_t *pos);
     int db_write_buf(Db *db, sized_buf *buf, off_t *pos);
     int db_write_buf_compressed(Db *db, sized_buf *buf, off_t *pos);
+
+    node_pointer *read_root(char *buf, int size);
+    void encode_root(char *buf, node_pointer *node);
 
 #ifdef __cplusplus
 }

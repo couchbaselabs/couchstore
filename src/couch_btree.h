@@ -10,13 +10,10 @@ extern "C" {
     typedef struct compare_info {
         /* used by find_first_gteq */
         int last_cmp_val;
-        void *last_cmp_key;
+        sized_buf *last_cmp_key;
         int list_pos;
         /* Compare function */
-        int (*compare)(void *k1, void *k2);
-        /* Given an erlang term, return a pointer accepted by the compare function */
-        void *(*from_ext)(struct compare_info *ci, char *buf, int pos);
-        /* Use to set up any context needed by from_ext */
+        int (*compare)(sized_buf *k1, sized_buf *k2);
         void *arg;
     } compare_info;
 
@@ -33,7 +30,7 @@ extern "C" {
         int fold;
         /*  v-- Flag used during lookup, do not set. */
         int in_fold;
-        void **keys;
+        sized_buf **keys;
         void *callback_ctx;
         couchstore_error_t (*fetch_callback) (struct couchfile_lookup_request *rq, void *k, sized_buf *v);
         node_pointer *root;
@@ -45,11 +42,9 @@ extern "C" {
     /* Modify */
 
     typedef struct nodelist {
-        union _nl_value {
-            sized_buf *leaf;
-            node_pointer *pointer;
-            void *mem;
-        } value;
+        sized_buf data;
+        sized_buf key;
+        node_pointer *pointer;
         struct nodelist *next;
     } nodelist;
 
@@ -60,9 +55,9 @@ extern "C" {
     typedef struct couchfile_modify_action {
         int type;
         sized_buf *key;
-        void *cmp_key;
+        sized_buf *cmp_key;
         union _act_value {
-            sized_buf *term;
+            sized_buf *data;
             void *arg;
         } value;
     } couchfile_modify_action;
@@ -74,13 +69,13 @@ extern "C" {
         couchfile_modify_action *actions;
         void (*fetch_callback) (struct couchfile_modify_request *rq, sized_buf *k, sized_buf *v, void *arg);
         /* Put result term into the sized_buf. */
-        void (*reduce) (sized_buf *dst, nodelist *leaflist, int count);
-        void (*rereduce) (sized_buf *dst, nodelist *ptrlist, int count);
+        void (*reduce) (char *dst, size_t *size_r, nodelist *leaflist, int count);
+        void (*rereduce) (char *dst, size_t *size_r, nodelist *ptrlist, int count);
         node_pointer root;
     } couchfile_modify_request;
 
-#define KV_NODE 0
-#define KP_NODE 1
+#define KP_NODE 0
+#define KV_NODE 1
 
     /* Used to build and chunk modified nodes */
     typedef struct couchfile_modify_result {

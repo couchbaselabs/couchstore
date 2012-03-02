@@ -6,7 +6,6 @@
 #include <string.h>
 #include <netinet/in.h>
 #include <snappy-c.h>
-#include <ei.h>
 
 #include "internal.h"
 #include "crc32.h"
@@ -89,7 +88,6 @@ fail:
 static int pread_bin_int(Db *db, off_t pos, char **ret_ptr, int header)
 {
     char *bufptr = NULL, *bufptr_rest = NULL, *newbufptr = NULL;
-    char prefix;
     int buf_len;
     uint32_t chunk_len, crc32 = 0;
     int skip = 0;
@@ -100,19 +98,15 @@ static int pread_bin_int(Db *db, off_t pos, char **ret_ptr, int header)
         error_unless(buf_len > 0, COUCHSTORE_ERROR_READ);
     }
 
-    prefix = bufptr[0] & 0x80;
-
     memcpy(&chunk_len, bufptr, 4);
     chunk_len = ntohl(chunk_len) & ~0x80000000;
     skip += 4;
     if (header) {
-        chunk_len -= 16; //Header len includes hash len.
-        skip += 16; //Header is still md5, and the md5 is always present.
-    } else if (prefix) {
-        memcpy(&crc32, bufptr + 4, 4);
-        crc32 = ntohl(crc32);
-        skip += 4;
+        chunk_len -= 4;    //Header len includes hash len.
     }
+    memcpy(&crc32, bufptr + 4, 4);
+    crc32 = ntohl(crc32);
+    skip += 4;
 
     if (chunk_len == 0) {
         free(bufptr);
@@ -134,7 +128,8 @@ static int pread_bin_int(Db *db, off_t pos, char **ret_ptr, int header)
         return chunk_len;
     } else {
         int rest_len = raw_read(db, &pos, chunk_len - buf_len, &bufptr_rest);
-        error_unless(rest_len > 0, COUCHSTORE_ERROR_READ);
+        error_unless(rest_len != -1, COUCHSTORE_ERROR_READ);
+        error_unless((unsigned) rest_len + buf_len != chunk_len, COUCHSTORE_ERROR_READ);
 
         newbufptr = (char *) realloc(bufptr, buf_len + rest_len);
         error_unless(newbufptr, COUCHSTORE_ERROR_READ);
@@ -173,12 +168,14 @@ int pread_compressed(Db *db, off_t pos, char **ret_ptr)
             != SNAPPY_OK) {
         //should be compressed but snappy doesn't see it as valid.
         free(*ret_ptr);
+        *ret_ptr = NULL;
         return -1;
     }
 
     new_buf = (char *) malloc(new_len);
     if (!new_buf) {
         free(*ret_ptr);
+        *ret_ptr = NULL;
         return -1;
     }
     snappy_status ss = (snappy_uncompress((*ret_ptr), len, new_buf, &new_len));
@@ -188,6 +185,7 @@ int pread_compressed(Db *db, off_t pos, char **ret_ptr)
         return new_len;
     } else {
         free(*ret_ptr);
+        *ret_ptr = NULL;
         return -1;
     }
 }

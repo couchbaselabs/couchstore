@@ -2,6 +2,7 @@
 #include "config.h"
 #include <iostream>
 #include <cassert>
+#include <string.h>
 #include <sysexits.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -341,6 +342,7 @@ extern "C" {
                 assert(docinfo);
                 ++offset;
                 revbuf_t revbuf;
+                memset(&revbuf, 0, sizeof(revbuf));
 
                 lua_rawgeti(ls, -1, 1);
                 doc->id.buf = const_cast<char *>(luaL_checklstring(ls, -1, &doc->id.size));
@@ -418,6 +420,7 @@ extern "C" {
         DocInfo docinfo = DOC_INFO_INITIALIZER;
 
         revbuf_t revbuf;
+        memset(&revbuf, 0, sizeof(revbuf));
 
         // These really should be const char*
         doc.id.buf = const_cast<char *>(luaL_checklstring(ls, 2, &doc.id.size));

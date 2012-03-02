@@ -11,8 +11,8 @@ const char *couchstore_strerror(couchstore_error_t errcode)
         return "success";
     case COUCHSTORE_ERROR_OPEN_FILE:
         return "error opening file";
-    case COUCHSTORE_ERROR_PARSE_TERM:
-        return "error reading erlang term";
+    case COUCHSTORE_ERROR_CORRUPT:
+        return "malformed data in file";
     case COUCHSTORE_ERROR_ALLOC_FAIL:
         return "failed to allocate buffer";
     case COUCHSTORE_ERROR_READ:
