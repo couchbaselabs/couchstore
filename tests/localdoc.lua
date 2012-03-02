@@ -8,33 +8,41 @@ function localtest(dbname)
 
    local db = couch.open(dbname, true)
 
+   testlib.assert_no_local_doc(key)
+
    db:save_local(key, value)
    db:commit()
+
+   testlib.assert_no_doc(key)
+
    db:close()
 
    db = couch.open(dbname)
 
-   testlib.check_doc(db, key, value)
+   testlib.check_local_doc(db, key, value)
 
    db:save_local(key, value2)
-   testlib.check_doc(db, key, value2)
+   testlib.check_local_doc(db, key, value2)
    db:commit()
-   testlib.check_doc(db, key, value2)
+   testlib.check_local_doc(db, key, value2)
 
    db:close()
 
    db = couch.open(dbname)
-   testlib.check_doc(db, key, value2)
+   testlib.check_local_doc(db, key, value2)
 
    db:changes(0, function(db, di) error("Unexpectedly got a doc: " .. di:id()) end)
+
+   -- Store a non-local document and verify it doesn't collide
+   db:save(key, "non local", 1)
+   testlib.check_local_doc(db, key, value2)
+   testlib.check_doc(db, key, "non local")
 
    db:delete_local(key)
    db:commit()
 
-   local succeeded, result = pcall(db['get_local'], db, key)
-   if succeeded then
-      error("Unexpectedly read a deleted document.")
-   end
+   testlib.check_doc(db, key, "non local")
+   testlib.assert_no_local_doc(key)
 
 end
 
