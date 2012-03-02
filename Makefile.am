@@ -64,12 +64,18 @@ couch_dbinfo_LDADD = libcouchstore.la
 #writetest_DEPENDENCIES = libcouchstore.la
 #writetest_LDADD = libcouchstore.la
 
+extra_tests=
 if HAVE_LIBLUA
 bin_PROGRAMS += couchscript
 
 couchscript_SOURCES = src/couchscript.cc
 couchscript_LDADD = libcouchstore.la $(LTLIBLUA)
 couchscript_DEPENDENCIES = libcouchstore.la
+extra_tests += lua_tests
+
+lua_tests: couchscript tests/localdoc.lua
+	@echo "Running lua tests."
+	@./couchscript tests/localdoc.lua
 endif
 
 #tests
@@ -82,5 +88,4 @@ testapp_LDFLAGS = $(ERL_INTERFACE_DIR_LIB) -lei
 testapp_DEPENDENCIES = libcouchstore.la
 testapp_LDADD = libcouchstore.la
 
-test: check-TESTS
-
+test: check-TESTS $(extra_tests)
