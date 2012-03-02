@@ -278,6 +278,92 @@ extern "C" {
         return 0;
     }
 
+    static int couch_save_local(lua_State *ls) {
+        if (lua_gettop(ls) < 3) {
+            lua_pushstring(ls, "couch:save_local takes two arguments: "
+                           "\"key\" \"value\"");
+            lua_error(ls);
+            return 1;
+        }
+
+        LocalDoc doc;
+        doc.id.buf = const_cast<char*>(luaL_checklstring(ls, 2, &doc.id.size));
+        doc.json.buf = const_cast<char*>(luaL_checklstring(ls, 3, &doc.json.size));
+        doc.deleted = 0;
+
+        Db *db = getDb(ls);
+
+        int rc = save_local_doc(db, &doc);
+        if (rc < 0) {
+            char buf[256];
+            snprintf(buf, sizeof(buf), "error storing local document: %s",
+                     describe_error(rc));
+            lua_pushstring(ls, buf);
+            lua_error(ls);
+            return 1;
+        }
+        return 0;
+    }
+
+    static int couch_delete_local(lua_State *ls) {
+        if (lua_gettop(ls) < 2) {
+            lua_pushstring(ls, "couch:delete_local takes one argument: \"key\"");
+            lua_error(ls);
+            return 1;
+        }
+
+        LocalDoc doc;
+        doc.id.buf = const_cast<char*>(luaL_checklstring(ls, 2, &doc.id.size));
+        doc.json.size = 0;
+        doc.deleted = 1;
+
+        Db *db = getDb(ls);
+
+        int rc = save_local_doc(db, &doc);
+        if (rc < 0) {
+            char buf[256];
+            snprintf(buf, sizeof(buf), "error deleting local document: %s",
+                     describe_error(rc));
+            lua_pushstring(ls, buf);
+            lua_error(ls);
+            return 1;
+        }
+        return 0;
+    }
+
+    // couch:get_local(key) -> val
+    static int couch_get_local(lua_State *ls) {
+        if (lua_gettop(ls) < 1) {
+            lua_pushstring(ls, "couch:get_local takes one argument: \"key\"");
+            lua_error(ls);
+            return 1;
+        }
+
+        LocalDoc *doc;
+        Db *db = getDb(ls);
+
+        size_t klen;
+        // Should be const :/
+        char *key = const_cast<char*>(luaL_checklstring(ls, 2, &klen));
+
+
+        int rc = open_local_doc(db, reinterpret_cast<uint8_t*>(key), klen, &doc);
+        if (rc < 0) {
+            char buf[256];
+            snprintf(buf, sizeof(buf), "error getting local doc: %s",
+                     describe_error(rc));
+            lua_pushstring(ls, buf);
+            lua_error(ls);
+            return 1;
+        }
+
+        lua_pushlstring(ls, doc->json.buf, doc->json.size);
+
+        free_local_doc(doc);
+
+        return 1;
+    }
+
     static int luaStringWriter(lua_State *,
                                const void* p,
                                size_t sz,
@@ -360,9 +446,9 @@ extern "C" {
         {"get", couch_get},
         {"get_from_docinfo", couch_get_from_docinfo},
         {"changes", couch_changes},
-        // TODO:  save_local(...)
-        // TODO:  delete_local(...)
-        // TODO:  get_local(...)
+        {"save_local", couch_save_local},
+        {"delete_local", couch_delete_local},
+        {"get_local", couch_get_local},
         {"commit", couch_commit},
         {"close", couch_close},
         {NULL, NULL}
