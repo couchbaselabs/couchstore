@@ -31,7 +31,7 @@ function localtest(dbname)
    db = couch.open(dbname)
    testlib.check_local_doc(db, key, value2)
 
-   db:changes(0, function(db, di) error("Unexpectedly got a doc: " .. di:id()) end)
+   db:changes(0, function(di) error("Unexpectedly got a doc: " .. di:id()) end)
 
    -- Store a non-local document and verify it doesn't collide
    db:save(key, "non local", 1)

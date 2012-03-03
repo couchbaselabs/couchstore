@@ -403,29 +403,42 @@ extern "C" {
         return 0;
     }
 
-    typedef struct {
+    class ChangesState {
+    public:
+        ChangesState(lua_State *s, const char *f) : ls(s), fun_name(f) {
+            assert(lua_isfunction(ls, -1));
+            lua_setfield(ls, LUA_REGISTRYINDEX, fun_name);
+        }
+
+        ~ChangesState() {
+            lua_pushnil(ls);
+            lua_setfield(ls, LUA_REGISTRYINDEX, fun_name);
+        }
+
+        void invoke(DocInfo *di) {
+            lua_getfield(ls, LUA_REGISTRYINDEX, fun_name);
+            push_docinfo(ls, di);
+            if (lua_pcall(ls, 1, 0, 0) != 0) {
+                // Not *exactly* sure what to do here.
+                std::cerr << "Error running function: "
+                          << lua_tostring(ls, -1) << std::endl;
+            }
+        }
+
+    private:
         lua_State *ls;
-        std::string fun;
-    } changes_state_t;
+        const char *fun_name;
+    };
 
     static int couch_changes_each(Db *db, DocInfo *di, void *ctx) {
-        changes_state_t *changes_state(static_cast<changes_state_t*>(ctx));
-        luaL_loadbuffer(changes_state->ls,
-                        changes_state->fun.data(),
-                        changes_state->fun.size(),
-                        "changes_lambda");
-
-        push_db(changes_state->ls, db);
-        push_docinfo(changes_state->ls, di);
-        if (lua_pcall(changes_state->ls, 2, 0, 0) != 0) {
-            // Not *exactly* sure what to do here.
-            std::cerr << "Error running function: "
-                      << lua_tostring(changes_state->ls, -1) << std::endl;
-        }
+        ChangesState *st(static_cast<ChangesState*>(ctx));
+        st->invoke(di);
         return NO_FREE_DOCINFO;
     }
 
-    // db:changes(function(docinfo) something end, [since])
+    static int couch_func_id(0);
+
+    // db:changes(since, function(docinfo) something end)
     static int couch_changes(lua_State *ls) {
                 if (lua_gettop(ls) < 3) {
             lua_pushstring(ls, "couch:changes takes two arguments: "
@@ -436,9 +449,6 @@ extern "C" {
 
         Db *db = getDb(ls);
 
-        changes_state_t changes_state;
-        changes_state.ls = ls;
-
         uint64_t since(luaL_checknumber(ls, 2));
 
         if (!lua_isfunction(ls, 3)) {
@@ -447,11 +457,9 @@ extern "C" {
             return 1;
         }
 
-        if (lua_dump(ls, luaStringWriter, &changes_state.fun)) {
-            size_t rlen;
-            const char *m = lua_tolstring(ls, 1, &rlen);
-            throw std::string(m, rlen);
-        }
+        char fun_buf[64];
+        snprintf(fun_buf, sizeof(fun_buf), "couch_fun_%d", ++couch_func_id);
+        ChangesState changes_state(ls, fun_buf);
 
         int rc = changes_since(db, since, 0, couch_changes_each, &changes_state);
         if (rc != 0) {
