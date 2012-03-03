@@ -108,8 +108,7 @@ int btree_lookup_inner(couchfile_lookup_request *rq, uint64_t diskpos, int curre
     }
 
 cleanup:
-    if(nodebuf)
-        free(nodebuf);
+    free(nodebuf);
 
     return errcode;
 }

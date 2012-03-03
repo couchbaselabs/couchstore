@@ -155,8 +155,7 @@ int pread_bin_int(Db *db, off_t pos, char **ret_ptr, int header)
 cleanup:
    if(errcode < 0)
    {
-       if(bufptr)
-           free(bufptr);
+       free(bufptr);
    }
    return errcode;
 }

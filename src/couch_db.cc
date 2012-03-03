@@ -81,8 +81,7 @@ int find_header(Db *db)
         block--;
     }
 cleanup:
-    if(header_buf != NULL)
-        free(header_buf);
+    free(header_buf);
 
     if(block == -1)
     {
@@ -162,10 +161,8 @@ int open_db(const char* filename, uint64_t options, couch_file_ops *ops, Db** pD
     else
         error_pass(find_header(db));
 cleanup:
-    if(errcode < 0)
-    {
-        if(db)
-            free(db);
+    if(errcode < 0) {
+        free(db);
     }
     return errcode;
 }
@@ -177,20 +174,18 @@ int close_db(Db* db)
         db->file_ops->close(db);
     db->fd = 0;
 
-    if(db->header.by_id_root)
-        free(db->header.by_id_root);
+    free(db->header.by_id_root);
     db->header.by_id_root = NULL;
 
-    if(db->header.by_seq_root)
-        free(db->header.by_seq_root);
+    free(db->header.by_seq_root);
     db->header.by_seq_root = NULL;
 
-    if(db->header.local_docs_root)
-        free(db->header.local_docs_root);
+    free(db->header.local_docs_root);
     db->header.local_docs_root = NULL;
 
-    if(db->header.purged_docs && db->header.purged_docs != &nil_atom)
+    if(db->header.purged_docs != &nil_atom) {
         free(db->header.purged_docs);
+    }
     db->header.purged_docs = NULL;
     free(db);
     return errcode;
@@ -332,8 +327,7 @@ int docinfo_from_buf(DocInfo** pInfo, sized_buf *v, int idBytes)
     (*pInfo)->content_meta = content_meta;
 
 cleanup:
-    if(errcode < 0 && (*pInfo))
-    {
+    if (errcode < 0) {
         free(*pInfo);
         *pInfo = NULL;
     }
@@ -365,11 +359,9 @@ int bp_to_doc(Doc **pDoc, Db *db, off_t bp, uint64_t options)
     memcpy((*pDoc)->data.buf, docbody, bodylen);
 
 cleanup:
-    if(docbody) free(docbody);
-    if(errcode < 0)
-    {
-        if(docbuf)
-            fatbuf_free(docbuf);
+    free(docbody);
+    if (errcode < 0) {
+        fatbuf_free(docbuf);
     }
     return errcode;
 }
@@ -503,8 +495,10 @@ int changes_since(Db* db, uint64_t since, uint64_t options,
 
 void free_doc(Doc* doc)
 {
-    char* offset = (char*) (&((fatbuf*) NULL)->buf);
-    fatbuf_free((fatbuf*) ((char*)doc - (char*)offset));
+    if (doc) {
+        char* offset = (char*) (&((fatbuf*) NULL)->buf);
+        fatbuf_free((fatbuf*) ((char*)doc - (char*)offset));
+    }
 }
 
 void free_docinfo(DocInfo* docinfo)
@@ -834,8 +828,7 @@ int save_docs(Db* db, Doc** docs, DocInfo** infos, long numdocs, uint64_t option
     error_pass(update_indexes(db, seqklist, seqvlist, idklist, idvlist, numdocs));
 
 cleanup:
-    if(fb)
-        fatbuf_free(fb);
+    fatbuf_free(fb);
     if(errcode == 0)
         db->header.update_seq = seq;
     return errcode;
@@ -870,10 +863,8 @@ int local_doc_fetch(couchfile_lookup_request *rq, void *k, sized_buf *v)
     memcpy((*lDoc)->id.buf, id->buf + 5, id->size - 5);
     memcpy((*lDoc)->json.buf, v->buf + 5, v->size - 5);
 cleanup:
-    if(errcode < 0)
-    {
-        if(ldbuf)
-            fatbuf_free(ldbuf);
+    if(errcode < 0) {
+        fatbuf_free(ldbuf);
     }
     return errcode;
 }
@@ -955,21 +946,20 @@ int save_local_doc(Db* db, LocalDoc* lDoc)
     rq.db = db;
 
     new_local_docs_root = modify_btree(&rq, db->header.local_docs_root, &errcode);
-    if(errcode == 0 && new_local_docs_root != db->header.local_docs_root)
-    {
-        if (db->header.local_docs_root)
-            free(db->header.local_docs_root);
+    if(errcode == 0 && new_local_docs_root != db->header.local_docs_root) {
+        free(db->header.local_docs_root);
         db->header.local_docs_root = new_local_docs_root;
     }
 cleanup:
-    if(binbufs)
-        fatbuf_free(binbufs);
+    fatbuf_free(binbufs);
     return errcode;
 }
 
 void free_local_doc(LocalDoc* lDoc)
 {
-    char* offset = (char*) (&((fatbuf*) NULL)->buf);
-    fatbuf_free((fatbuf*) ((char*)lDoc - (char*)offset));
+    if (lDoc) {
+        char* offset = (char*) (&((fatbuf*) NULL)->buf);
+        fatbuf_free((fatbuf*) ((char*)lDoc - (char*)offset));
+    }
 }
 

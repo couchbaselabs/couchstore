@@ -65,13 +65,9 @@ int maybe_flush(couchfile_modify_result *mr)
 
 void free_nodelist(nodelist* nl)
 {
-    while(nl != NULL)
-    {
+    while(nl) {
         nodelist* next = nl->next;
-        if(nl->value.mem != NULL)
-        {
-           free(nl->value.mem);
-        }
+        free(nl->value.mem);
         free(nl);
         nl = next;
     }
@@ -203,8 +199,7 @@ int mr_push_kv_range(char* buf, int pos, int bound, int end, couchfile_modify_re
         current++;
     }
 cleanup:
-    if(lv)
-        free(lv);
+    free(lv);
     return errcode;
 }
 
@@ -372,12 +367,9 @@ int flush_mr(couchfile_modify_result *res)
     free_nodelist(res->values->next);
     res->values->next = NULL;
 cleanup:
-    if(nodebuf)
-        free(nodebuf);
-    if(errcode < 0)
-    {
-        if(ptr)
-            free(ptr);
+    free(nodebuf);
+    if (errcode < 0) {
+        free(ptr);
     }
 
     if(reduced)
