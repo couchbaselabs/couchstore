@@ -250,6 +250,124 @@ extern "C" {
         return 0;
     }
 
+    class BulkData {
+    public:
+        BulkData(size_t n) : size(n),
+                             docs(static_cast<Doc**>(calloc(size, sizeof(Doc*)))),
+                             infos(static_cast<DocInfo**>(calloc(size, sizeof(DocInfo*)))) {
+            assert(docs);
+            assert(infos);
+
+            for (size_t i = 0; i < size; ++i) {
+                docs[i] = static_cast<Doc*>(calloc(1, sizeof(Doc)));
+                assert(docs[i]);
+                infos[i] = static_cast<DocInfo*>(calloc(1, sizeof(DocInfo)));
+                assert(infos[i]);
+            }
+        }
+
+        ~BulkData() {
+            for (size_t i = 0; i < size; ++i) {
+                free(docs[i]);
+                free(infos[i]);
+            }
+            free(docs);
+            free(infos);
+        }
+
+        size_t size;
+        Doc **docs;
+        DocInfo **infos;
+    };
+
+    static int couch_save_bulk(lua_State *ls) {
+        if (lua_gettop(ls) < 2) {
+            lua_pushstring(ls, "couch:save_bulk requires a table full of docs to save");
+            lua_error(ls);
+            return 1;
+        }
+
+        if (!lua_istable(ls, -1)) {
+            lua_pushstring(ls, "argument must be a table.");
+            lua_error(ls);
+            return 1;
+        }
+
+        BulkData bs(lua_objlen(ls, -1));
+
+        int offset(0);
+        for (lua_pushnil(ls); lua_next(ls, -2); lua_pop(ls, 1)) {
+
+            int n(lua_objlen(ls, -1));
+
+            if (n > 2) {
+                Doc *doc(bs.docs[offset]);
+                assert(doc);
+                DocInfo *docinfo(bs.infos[offset]);
+                assert(docinfo);
+                ++offset;
+                revbuf_t revbuf;
+
+                lua_rawgeti(ls, -1, 1);
+                doc->id.buf = const_cast<char*>(luaL_checklstring(ls, -1, &doc->id.size));
+                lua_pop(ls, 1);
+
+                lua_rawgeti(ls, -1, 2);
+                doc->data.buf = const_cast<char*>(luaL_checklstring(ls, -1, &doc->data.size));
+                docinfo->id = doc->id;
+                lua_pop(ls, 1);
+
+                lua_rawgeti(ls, -1, 3);
+                docinfo->content_meta = static_cast<uint8_t>(luaL_checkint(ls, -1));
+                lua_pop(ls, 1);
+
+                if (n > 3) {
+                    lua_rawgeti(ls, -1, 4);
+                    docinfo->rev_seq = luaL_checknumber(ls, -1);
+                    lua_pop(ls, 1);
+                }
+
+                if (n > 4) {
+                    lua_rawgeti(ls, -1, 5);
+                    revbuf.fields.cas =luaL_checknumber(ls, -1);
+                    revbuf.fields.cas = endianSwap(revbuf.fields.cas);
+                    lua_pop(ls, 1);
+                }
+
+                if (n > 5) {
+                    lua_rawgeti(ls, -1, 6);
+                    revbuf.fields.exp = luaL_checklong(ls, -1);
+                    revbuf.fields.exp = endianSwap(revbuf.fields.exp);
+                    lua_pop(ls, 1);
+                }
+
+                if (n > 6) {
+                    lua_rawgeti(ls, -1, 7);
+                    revbuf.fields.flags = luaL_checklong(ls, 8);
+                    revbuf.fields.flags = endianSwap(revbuf.fields.flags);
+                    lua_pop(ls, 1);
+                }
+
+                docinfo->rev_meta.size = sizeof(revbuf);
+                docinfo->rev_meta.buf = revbuf.bytes;
+
+            }
+        }
+
+        Db *db = getDb(ls);
+
+        int rc = save_docs(db, bs.docs, bs.infos, bs.size, COMPRESS_DOC_BODIES);
+        if (rc < 0) {
+            char buf[256];
+            snprintf(buf, sizeof(buf), "error storing document: %s", describe_error(rc));
+            lua_pushstring(ls, buf);
+            lua_error(ls);
+            return 1;
+        }
+
+        return 0;
+    }
+
     // couch:save(key, value, content_meta, [rev_seq], [cas], [exp], [flags]
     static int couch_save(lua_State *ls) {
 
@@ -480,6 +598,7 @@ extern "C" {
 
     static const luaL_Reg couch_methods[] = {
         {"save", couch_save},
+        {"save_bulk", couch_save_bulk},
         {"delete", couch_delete},
         {"get", couch_get},
         {"get_from_docinfo", couch_get_from_docinfo},

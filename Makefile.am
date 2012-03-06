@@ -77,6 +77,7 @@ lua_tests: couchscript tests/localdoc.lua
 	@echo "Running lua tests."
 	@./couchscript tests/localdoc.lua
 	@./couchscript tests/corrupt.lua
+	@./couchscript tests/bulk.lua
 endif
 
 #tests
