@@ -350,10 +350,18 @@ int bp_to_doc(Doc **pDoc, Db *db, off_t bp, uint64_t options)
     else
         bodylen = pread_bin(db, bp, &docbody);
 
-    error_unless(bodylen > 0, ERROR_READ);
-    error_unless(docbody, ERROR_READ);
     error_unless(docbuf = fatbuf_alloc(sizeof(Doc) + bodylen), ERROR_ALLOC_FAIL);
     *pDoc = (Doc*) fatbuf_get(docbuf, sizeof(Doc));
+
+    if(bodylen == 0) //Empty doc
+    {
+      (*pDoc)->data.buf = "";
+      (*pDoc)->data.size = 0;
+      return 0;
+    }
+
+    error_unless(bodylen > 0, ERROR_READ);
+    error_unless(docbody, ERROR_READ);
     (*pDoc)->data.buf = (char*) fatbuf_get(docbuf, bodylen);
     (*pDoc)->data.size = bodylen;
     memcpy((*pDoc)->data.buf, docbody, bodylen);

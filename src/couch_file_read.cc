@@ -120,6 +120,13 @@ int pread_bin_int(Db *db, off_t pos, char **ret_ptr, int header)
        skip += 4;
    }
 
+   if(chunk_len == 0)
+   {
+       free(bufptr);
+       *ret_ptr = NULL;
+       return 0;
+   }
+
    buf_len -= skip;
    memmove(bufptr, bufptr+skip, buf_len);
    if(chunk_len <= buf_len)
