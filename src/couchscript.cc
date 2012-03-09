@@ -197,7 +197,7 @@ extern "C" {
 
         ssize_t arg = static_cast<ssize_t>(luaL_checknumber(ls, 2));
         off_t location(0);
-        if (location < 1) {
+        if (arg < 1) {
             location = db->file_pos + arg;
         } else {
             location = static_cast<off_t>(arg);
@@ -211,6 +211,8 @@ extern "C" {
             lua_error(ls);
             return 1;
         }
+
+        db->file_pos = location;
 
         return 0;
     }
