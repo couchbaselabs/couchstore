@@ -29,7 +29,7 @@ static couch_file_ops default_file_ops = {
 
 int find_header(Db *db)
 {
-    int block = db->file_pos / COUCH_BLOCK_SIZE;
+    uint64_t block = db->file_pos / COUCH_BLOCK_SIZE;
     int errcode = 0;
     int readsize;
     char* header_buf = NULL;
