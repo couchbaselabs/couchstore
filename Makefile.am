@@ -71,6 +71,7 @@ slow_tests=
 if HAVE_LIBLUA
 bin_PROGRAMS += couchscript
 
+couchscript_CXXFLAGS = $(lua_CFLAGS)
 couchscript_SOURCES = src/couchscript.cc
 couchscript_LDADD = libcouchstore.la $(LTLIBLUA)
 couchscript_DEPENDENCIES = libcouchstore.la

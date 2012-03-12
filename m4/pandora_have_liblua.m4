@@ -25,9 +25,18 @@ AC_DEFUN([_PANDORA_SEARCH_LIBLUA],[
       lua_State *l;
       l = lua_newstate(NULL, NULL);
     ])
+    AC_LANG_POP([C++])
+    ifdef([PKG_CHECK_MODULES],[
+        AS_IF([test "x$ac_cv_liblua" = "xno"], [
+            PKG_CHECK_MODULES([lua], [lua5.1],
+                [ac_cv_liblua="yes"])
+            AS_IF([test "x$ac_cv_liblua" = "xyes"], [
+                LTLIBLUA=$lua_LIBS
+            ])
+        ])
+    ],)
   ],[
     ac_cv_liblua="no"
-    AC_LANG_POP([C++])
   ])
 
   AM_CONDITIONAL(HAVE_LIBLUA, [test "x${ac_cv_liblua}" = "xyes"])
