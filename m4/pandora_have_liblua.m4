@@ -19,7 +19,7 @@ AC_DEFUN([_PANDORA_SEARCH_LIBLUA],[
   AS_IF([test "x$ac_enable_liblua" = "xyes"],[
     AC_LIB_HAVE_LINKFLAGS(lua,,[
       #include <stdio.h>
-      #include <lua.h>
+      #include <lua.hpp>
     ],[
       lua_State *l;
       l = lua_newstate(NULL, NULL);
