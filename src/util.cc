@@ -1,3 +1,4 @@
+#include "config.h"
 #include <stdlib.h>
 #include <libcouchstore/couch_db.h>
 #include "util.h"
@@ -118,3 +119,17 @@ void fatbuf_free(fatbuf* fb)
 {
     free(fb);
 }
+
+#if !defined(HAVE_HTONLL) && !defined(WORDS_BIGENDIAN)
+extern uint64_t couchstore_byteswap64(uint64_t val)
+{
+   size_t ii;
+   uint64_t ret = 0;
+   for (ii = 0; ii < sizeof(uint64_t); ii++) {
+      ret <<= 8;
+      ret |= val & 0xff;
+      val >>= 8;
+   }
+   return ret;
+}
+#endif

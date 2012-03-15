@@ -1,3 +1,4 @@
+#include "config.h"
 #include <iostream>
 #include <cassert>
 #include <sysexits.h>
@@ -5,8 +6,6 @@
 #include <libcouchstore/couch_db.h>
 
 #include <lua.hpp>
-
-#include "endian.h"
 
 typedef union {
     struct {
@@ -332,21 +331,21 @@ extern "C" {
                 if (n > 4) {
                     lua_rawgeti(ls, -1, 5);
                     revbuf.fields.cas =luaL_checknumber(ls, -1);
-                    revbuf.fields.cas = endianSwap(revbuf.fields.cas);
+                    revbuf.fields.cas = ntohll(revbuf.fields.cas);
                     lua_pop(ls, 1);
                 }
 
                 if (n > 5) {
                     lua_rawgeti(ls, -1, 6);
                     revbuf.fields.exp = luaL_checklong(ls, -1);
-                    revbuf.fields.exp = endianSwap(revbuf.fields.exp);
+                    revbuf.fields.exp = ntohl(revbuf.fields.exp);
                     lua_pop(ls, 1);
                 }
 
                 if (n > 6) {
                     lua_rawgeti(ls, -1, 7);
                     revbuf.fields.flags = luaL_checklong(ls, 8);
-                    revbuf.fields.flags = endianSwap(revbuf.fields.flags);
+                    revbuf.fields.flags = ntohl(revbuf.fields.flags);
                     lua_pop(ls, 1);
                 }
 
@@ -398,17 +397,17 @@ extern "C" {
 
         if (lua_gettop(ls) > 5) {
             revbuf.fields.cas =luaL_checknumber(ls, 6);
-            revbuf.fields.cas = endianSwap(revbuf.fields.cas);
+            revbuf.fields.cas = ntohll(revbuf.fields.cas);
         }
 
         if (lua_gettop(ls) > 6) {
             revbuf.fields.exp = luaL_checklong(ls, 7);
-            revbuf.fields.exp = endianSwap(revbuf.fields.exp);
+            revbuf.fields.exp = ntohl(revbuf.fields.exp);
         }
 
         if (lua_gettop(ls) > 7) {
             revbuf.fields.flags = luaL_checklong(ls, 8);
-            revbuf.fields.flags = endianSwap(revbuf.fields.flags);
+            revbuf.fields.flags = ntohl(revbuf.fields.flags);
         }
 
         docinfo.rev_meta.size = sizeof(revbuf);
@@ -654,7 +653,7 @@ extern "C" {
         DocInfo *di = getDocInfo(ls);
         if (di->rev_meta.size >= sizeof(revbuf_t)) {
             revbuf_t *rbt(reinterpret_cast<revbuf_t*>(di->rev_meta.buf));
-            lua_pushnumber(ls, endianSwap(rbt->fields.cas));
+            lua_pushnumber(ls, ntohll(rbt->fields.cas));
         } else {
             lua_pushnumber(ls, 0);
         }
@@ -665,7 +664,7 @@ extern "C" {
         DocInfo *di = getDocInfo(ls);
         if (di->rev_meta.size >= sizeof(revbuf_t)) {
             revbuf_t *rbt(reinterpret_cast<revbuf_t*>(di->rev_meta.buf));
-            lua_pushnumber(ls, endianSwap(rbt->fields.exp));
+            lua_pushnumber(ls, ntohl(rbt->fields.exp));
         } else {
             lua_pushnumber(ls, 0);
         }
@@ -676,7 +675,7 @@ extern "C" {
         DocInfo *di = getDocInfo(ls);
         if (di->rev_meta.size >= sizeof(revbuf_t)) {
             revbuf_t *rbt(reinterpret_cast<revbuf_t*>(di->rev_meta.buf));
-            lua_pushnumber(ls, endianSwap(rbt->fields.flags));
+            lua_pushnumber(ls, ntohl(rbt->fields.flags));
         } else {
             lua_pushnumber(ls, 0);
         }

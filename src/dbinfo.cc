@@ -1,3 +1,4 @@
+#include "config.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,7 +7,6 @@
 #include <snappy-c.h>
 #include <ei.h>
 #include "util.h"
-#include "endian.h"
 
 #ifndef DEBUG
 #define error_pass(C) if((errcode = (C)) < 0) { goto cleanup; }

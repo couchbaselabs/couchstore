@@ -31,6 +31,7 @@ pkgconfig_DATA = libcouchstore.pc
 libcouchstore_la_SOURCES = \
                             src/btree_modify.cc \
                             src/btree_read.cc \
+                            src/config_static.h \
                             src/couch_btree.h \
                             src/couch_common.h \
                             src/couch_db.cc \

@@ -1,10 +1,10 @@
+#include "config.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
 #include <libcouchstore/couch_db.h>
 #include <snappy-c.h>
-#include "endian.h"
 
 #ifndef DEBUG
 #define error_pass(C) if((errcode = (C)) < 0) { goto cleanup; }
@@ -33,9 +33,9 @@ extern "C" int foldprint(Db* db, DocInfo* docinfo, void *ctx)
     Doc* doc;
     uint64_t cas;
     uint32_t expiry, flags;
-    cas = endianSwap(*((uint64_t*) docinfo->rev_meta.buf));
-    expiry = endianSwap(*((uint32_t*) (docinfo->rev_meta.buf + 8)));
-    flags = endianSwap(*((uint32_t*) (docinfo->rev_meta.buf + 12)));
+    cas = htonll(*((uint64_t*) docinfo->rev_meta.buf));
+    expiry = htonl(*((uint32_t*) (docinfo->rev_meta.buf + 8)));
+    flags = htonl(*((uint32_t*) (docinfo->rev_meta.buf + 12)));
     open_doc_with_docinfo(db, docinfo, &doc, 0);
     printf("Doc seq: %"PRIu64"\n", docinfo->db_seq);
     printf("     id: "); printsb(&docinfo->id);
