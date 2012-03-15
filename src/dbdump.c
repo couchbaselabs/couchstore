@@ -27,7 +27,7 @@ void printsb(sized_buf *sb)
     printf("%.*s\n", (int) sb->size, sb->buf);
 }
 
-extern "C" int foldprint(Db* db, DocInfo* docinfo, void *ctx)
+int foldprint(Db* db, DocInfo* docinfo, void *ctx)
 {
     int *count = (int*) ctx;
     Doc* doc;
@@ -88,4 +88,3 @@ cleanup:
         printf("ERROR: %s\n", describe_error(errcode));
     return errcode;
 }
-
