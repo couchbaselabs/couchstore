@@ -22,6 +22,13 @@ AC_DEFUN([COUCHBASE_GENERIC_COMPILER], [
     [ac_cv_enable_debug="yes"],
     [ac_cv_enable_debug="no"])
 
+  AC_CACHE_CHECK([whether the C++ compiler works], [ac_cv_prog_cxx_works], [
+    AC_LANG_PUSH([C++])
+    AC_LINK_IFELSE([AC_LANG_PROGRAM([], [])],
+      [ac_cv_prog_cxx_works=yes],
+      [ac_cv_prog_cxx_works=no])
+    AC_LANG_POP([C++])])
+
   C_LANGUAGE_SPEC=c99
   m4_foreach([arg], [$*],
              [
@@ -34,10 +41,10 @@ AC_DEFUN([COUCHBASE_GENERIC_COMPILER], [
   GCC_WERROR="-Werror"
   GCC_C_OPTIMIZE="-O3"
   GCC_CXX_OPTIMIZE="-O3"
-  GCC_C_DEBUG="-g"
-  GCC_CXX_DEBUG="-g"
-  GCC_VISIBILITY=-fvisibility=hidden
-  GCC_CPPFLAGS="-pipe -D_THREAD_SAFE -D_GNU_SOURCE"
+  GCC_C_DEBUG="-O0 -g3"
+  GCC_CXX_DEBUG="-O0 -g3"
+#  GCC_VISIBILITY="-DHAVE_VISIBILITY=1 -fvisibility=hidden"
+  GCC_CPPFLAGS="-pipe"
   GCC_CFLAGS="-std=gnu99"
   GCC_CXXFLAGS=""
   GCC_C89=-std=c89
@@ -53,14 +60,14 @@ AC_DEFUN([COUCHBASE_GENERIC_COMPILER], [
   SPRO_CXX_OPTIMIZE="-O -xbuiltin=%default"
   SPRO_C_DEBUG="-g3 -traceback=common -xcheck=%all"
   SPRO_CXX_DEBUG="-g3 -traceback=common -xcheck=%all"
-  SPRO_VISIBILITY="-xldscope=hidden"
+ # SPRO_VISIBILITY="-xldscope=hidden"
   SPRO_CPPFLAGS="-mt=yes -D_THREAD_SAFE"
   SPRO_CXXFLAGS="-xlang=c99 -compat=5 -library=stlport4 -template=no%extdef"
   SPRO_C89="-Xt -xc99=none"
   SPRO_C99="-D_XOPEN_SOURCE=600 -xc99=all"
   SPRO_CFLAGS=""
-  SPRO_CPP_WARNINGS="-errhdr=%user -errfmt=error -errshort=full -errtags -v "
-  SPRO_C_COMPILER_WARNINGS=""
+  SPRO_CPP_WARNINGS="-errhdr=%user -errfmt=error -errshort=full -errtags "
+  SPRO_C_COMPILER_WARNINGS="-v"
   SPRO_CXX_COMPILER_WARNINGS="+w +w2"
   SPRO_LDFLAGS="-mt=yes"
 
@@ -113,7 +120,7 @@ AC_DEFUN([COUCHBASE_GENERIC_COMPILER], [
         CXX_COMPILER_WARNINGS="$SPRO_CXX_COMPILER_WARNINGS"
       ])
 
-  AM_CPPFLAGS="$AM_CPPFLAGS -I\${top_srcdir}/include"
+  AM_CPPFLAGS="$AM_CPPFLAGS -I\${top_srcdir}/include $VISIBILITY"
   AM_LDFLAGS="$AM_LDFLAGS $VISIBILITY"
 
 
