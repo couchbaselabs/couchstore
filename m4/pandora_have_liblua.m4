@@ -17,6 +17,7 @@ AC_DEFUN([_PANDORA_SEARCH_LIBLUA],[
     [ac_enable_liblua="yes"])
 
   AS_IF([test "x$ac_enable_liblua" = "xyes"],[
+    AC_LANG_PUSH([C++])
     AC_LIB_HAVE_LINKFLAGS(lua,,[
       #include <stdio.h>
       #include <lua.hpp>
@@ -26,6 +27,7 @@ AC_DEFUN([_PANDORA_SEARCH_LIBLUA],[
     ])
   ],[
     ac_cv_liblua="no"
+    AC_LANG_POP([C++])
   ])
 
   AM_CONDITIONAL(HAVE_LIBLUA, [test "x${ac_cv_liblua}" = "xyes"])
