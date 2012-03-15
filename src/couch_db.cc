@@ -355,7 +355,7 @@ int bp_to_doc(Doc **pDoc, Db *db, off_t bp, uint64_t options)
 
     if(bodylen == 0) //Empty doc
     {
-      (*pDoc)->data.buf = "";
+       (*pDoc)->data.buf = NULL;
       (*pDoc)->data.size = 0;
       return 0;
     }
@@ -465,7 +465,7 @@ int byseq_do_callback(couchfile_lookup_request *rq, void *k, sized_buf *v)
     return 0;
 }
 
-int changes_since(Db* db, uint64_t since, uint64_t options,
+extern "C" int changes_since(Db* db, uint64_t since, uint64_t options,
         int(*f)(Db* db, DocInfo* docinfo, void *ctx), void *ctx)
 {
     char since_termbuf[10];
