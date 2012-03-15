@@ -77,10 +77,11 @@ static const uint32_t crc32tab[256] = {
 uint32_t hash_crc32(const char *key, size_t key_length)
 {
     uint64_t x;
-    uint32_t crc= UINT32_MAX;
+    uint32_t crc = UINT32_MAX;
 
-    for (x= 0; x < key_length; x++)
-        crc= (crc >> 8) ^ crc32tab[(crc ^ (uint64_t)key[x]) & 0xff];
+    for (x = 0; x < key_length; x++) {
+        crc = (crc >> 8) ^ crc32tab[(crc ^ (uint64_t)key[x]) & 0xff];
+    }
 
     return (crc ^ 0xFFFFFFFF);
 }

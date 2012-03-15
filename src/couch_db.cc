@@ -14,7 +14,7 @@
 #define SNAPPY_META_FLAG 128
 
 sized_buf nil_atom = {
-    (char*) "\x64\x00\x03nil",
+    (char *) "\x64\x00\x03nil",
     6
 };
 
@@ -32,28 +32,23 @@ int find_header(Db *db)
     uint64_t block = db->file_pos / COUCH_BLOCK_SIZE;
     int errcode = 0;
     int readsize;
-    char* header_buf = NULL;
+    char *header_buf = NULL;
     uint8_t buf[2];
 
-    while(block >= 0)
-    {
+    while (block >= 0) {
         readsize = db->file_ops->pread(db, buf, 2, block * COUCH_BLOCK_SIZE);
-        if(readsize == 2 && buf[0] == 1)
-        {
+        if (readsize == 2 && buf[0] == 1) {
             //Found a header block.
             int header_len = pread_header(db, block * COUCH_BLOCK_SIZE, &header_buf);
             int arity = 0;
             int purged_docs_index = 0;
-            if(header_len > 0)
-            {
+            if (header_len > 0) {
                 int index = 0;
-                if(ei_decode_version(header_buf, &index, &arity) < 0)
-                {
+                if (ei_decode_version(header_buf, &index, &arity) < 0) {
                     errcode = ERROR_PARSE_TERM;
                     break;
                 }
-                if(ei_decode_tuple_header(header_buf, &index, &arity) < 0)
-                {
+                if (ei_decode_tuple_header(header_buf, &index, &arity) < 0) {
                     errcode = ERROR_PARSE_TERM;
                     break;
                 }
@@ -68,8 +63,8 @@ int find_header(Db *db)
 
                 purged_docs_index = index;
                 ei_skip_term(header_buf, &index); //purged_docs
-                db->header.purged_docs = (sized_buf*) malloc(sizeof(sized_buf) + (index - purged_docs_index));
-                db->header.purged_docs->buf = ((char*)db->header.purged_docs) + sizeof(sized_buf);
+                db->header.purged_docs = (sized_buf *) malloc(sizeof(sized_buf) + (index - purged_docs_index));
+                db->header.purged_docs->buf = ((char *)db->header.purged_docs) + sizeof(sized_buf);
                 memcpy(db->header.purged_docs->buf, header_buf + purged_docs_index, index - purged_docs_index);
                 db->header.purged_docs->size = index - purged_docs_index;
 
@@ -83,8 +78,7 @@ int find_header(Db *db)
 cleanup:
     free(header_buf);
 
-    if(block == -1)
-    {
+    if (block == -1) {
         //Didn't find a header block
         //TODO what do we do here?
         return ERROR_NO_HEADER;
@@ -92,7 +86,7 @@ cleanup:
     return errcode;
 }
 
-int write_header(Db* db)
+int write_header(Db *db)
 {
     ei_x_buff x_header;
     sized_buf writebuf;
@@ -113,39 +107,42 @@ int write_header(Db* db)
     writebuf.size = x_header.index;
     off_t pos;
     errcode = db_write_header(db, &writebuf, &pos);
-    if(errcode == 0)
-      db->header.position = pos;
+    if (errcode == 0) {
+        db->header.position = pos;
+    }
     ei_x_free(&x_header);
     return errcode;
 }
 
-uint64_t get_header_position(Db* db)
+uint64_t get_header_position(Db *db)
 {
-  return db->header.position;
+    return db->header.position;
 }
 
-int commit_all(Db* db, uint64_t options) {
+int commit_all(Db *db, uint64_t options)
+{
     write_header(db);
     db->file_ops->sync(db);
     return 0;
 }
 
-int open_db(const char* filename, uint64_t options, couch_file_ops *ops, Db** pDb)
+int open_db(const char *filename, uint64_t options, couch_file_ops *ops, Db **pDb)
 {
     int errcode = 0;
-    Db* db = (Db*) malloc(sizeof(Db));
+    Db *db = (Db *) malloc(sizeof(Db));
     db->file_ops = ops == NULL ? &default_file_ops : ops;
     *pDb = db;
     int openflags = 0;
-    if(options & COUCH_CREATE_FILES) openflags |= O_CREAT;
+    if (options & COUCH_CREATE_FILES) {
+        openflags |= O_CREAT;
+    }
     db->fd = db->file_ops->open(filename, openflags | O_RDWR, 0666);
     error_unless(db->fd > 0, ERROR_OPEN_FILE);
     db->file_pos = db->file_ops->goto_eof(db);
     //TODO are there some cases where we should blow up?
     //     such as not finding a header in a file that we didn't
     //     just create? (Possibly not a couch file?)
-    if(db->file_pos == 0)
-    {
+    if (db->file_pos == 0) {
         //Our file is empty, create and write a new empty db header.
         db->header.disk_version = COUCH_DISK_VERSION;
         db->header.update_seq = 0;
@@ -157,21 +154,22 @@ int open_db(const char* filename, uint64_t options, couch_file_ops *ops, Db** pD
         db->header.position = 0;
         write_header(db);
         return 0;
-    }
-    else
+    } else {
         error_pass(find_header(db));
+    }
 cleanup:
-    if(errcode < 0) {
+    if (errcode < 0) {
         free(db);
     }
     return errcode;
 }
 
-int close_db(Db* db)
+int close_db(Db *db)
 {
     int errcode = 0;
-    if(db->fd)
+    if (db->fd) {
         db->file_ops->close(db);
+    }
     db->fd = 0;
 
     free(db->header.by_id_root);
@@ -183,7 +181,7 @@ int close_db(Db* db)
     free(db->header.local_docs_root);
     db->header.local_docs_root = NULL;
 
-    if(db->header.purged_docs != &nil_atom) {
+    if (db->header.purged_docs != &nil_atom) {
         free(db->header.purged_docs);
     }
     db->header.purged_docs = NULL;
@@ -191,81 +189,76 @@ int close_db(Db* db)
     return errcode;
 }
 
-int ebin_cmp(void* k1, void* k2) {
-    sized_buf *e1 = (sized_buf*)k1;
-    sized_buf *e2 = (sized_buf*)k2;
+int ebin_cmp(void *k1, void *k2)
+{
+    sized_buf *e1 = (sized_buf *)k1;
+    sized_buf *e2 = (sized_buf *)k2;
     int size;
-    if(e2->size < e1->size)
-    {
+    if (e2->size < e1->size) {
         size = e2->size;
-    }
-    else
-    {
+    } else {
         size = e1->size;
     }
 
     int cmp = memcmp(e1->buf, e2->buf, size);
-    if(cmp == 0)
-    {
-        if(size < e2->size)
-        {
+    if (cmp == 0) {
+        if (size < e2->size) {
             return -1;
-        }
-        else if (size < e1->size)
-        {
+        } else if (size < e1->size) {
             return 1;
         }
     }
     return cmp;
 }
 
-void* ebin_from_ext(compare_info* c, char* buf, int pos) {
+void *ebin_from_ext(compare_info *c, char *buf, int pos)
+{
     int binsize;
     int type;
-    sized_buf* ebcmp = (sized_buf*) c->arg;
+    sized_buf *ebcmp = (sized_buf *) c->arg;
     ei_get_type(buf, &pos, &type, &binsize);
     ebcmp->buf = buf + pos + 5;
     ebcmp->size = binsize;
     return ebcmp;
 }
 
-void* term_from_ext(compare_info* c, char* buf, int pos) {
+void *term_from_ext(compare_info *c, char *buf, int pos)
+{
     int endpos = pos;
-    sized_buf* ebcmp = (sized_buf*) c->arg;
+    sized_buf *ebcmp = (sized_buf *) c->arg;
     ei_skip_term(buf, &endpos);
     ebcmp->buf = buf + pos;
     ebcmp->size = endpos - pos;
     return ebcmp;
 }
 
-int long_term_cmp(void *k1, void *k2) {
-    sized_buf *e1 = (sized_buf*)k1;
-    sized_buf *e2 = (sized_buf*)k2;
+int long_term_cmp(void *k1, void *k2)
+{
+    sized_buf *e1 = (sized_buf *)k1;
+    sized_buf *e2 = (sized_buf *)k2;
     int pos = 0;
     uint64_t e1val, e2val;
     ei_decode_uint64(e1->buf, &pos, &e1val);
     pos = 0;
     ei_decode_uint64(e2->buf, &pos, &e2val);
-    if(e1val == e2val)
-    {
+    if (e1val == e2val) {
         return 0;
     }
     return (e1val < e2val ? -1 : 1);
 }
 
-int docinfo_from_buf(DocInfo** pInfo, sized_buf *v, int idBytes)
+int docinfo_from_buf(DocInfo **pInfo, sized_buf *v, int idBytes)
 {
-    int errcode = 0,term_index = 0, fterm_pos = 0, fterm_size = 0;
+    int errcode = 0, term_index = 0, fterm_pos = 0, fterm_size = 0;
     int metabin_pos = 0, metabin_size = 0;
     uint64_t deleted;
     uint64_t content_meta;
     uint64_t seq = 0, rev = 0, bp = 0;
     uint64_t size;
-    char* infobuf = NULL;
+    char *infobuf = NULL;
     *pInfo = NULL;
 
-    if(v == NULL)
-    {
+    if (v == NULL) {
         return DOC_NOT_FOUND;
     }
 
@@ -279,8 +272,8 @@ int docinfo_from_buf(DocInfo** pInfo, sized_buf *v, int idBytes)
     error_unless(tuple_check(v->buf, &term_index, 2), ERROR_PARSE_TERM);
     error_nonzero(ei_decode_uint64(v->buf, &term_index, &rev), ERROR_PARSE_TERM);
     metabin_pos = term_index + 5; //Save position of meta term
-                                  //We know it's an ERL_BINARY_EXT, so the contents are from
-                                  //5 bytes in to the end of the term.
+    //We know it's an ERL_BINARY_EXT, so the contents are from
+    //5 bytes in to the end of the term.
     ei_skip_term(v->buf, &term_index);
     metabin_size = term_index - metabin_pos; //and size.
 
@@ -290,30 +283,28 @@ int docinfo_from_buf(DocInfo** pInfo, sized_buf *v, int idBytes)
     error_nonzero(ei_decode_uint64(v->buf, &term_index, &size), ERROR_PARSE_TERM);
 
     //If first term is seq, we don't need to include it in the buffer
-    if(idBytes != 0) fterm_size = 0;
-    infobuf = (char*) malloc(sizeof(DocInfo) + metabin_size + fterm_size + idBytes);
+    if (idBytes != 0) {
+        fterm_size = 0;
+    }
+    infobuf = (char *) malloc(sizeof(DocInfo) + metabin_size + fterm_size + idBytes);
     error_unless(infobuf, ERROR_ALLOC_FAIL);
-    *pInfo = (DocInfo*) infobuf;
+    *pInfo = (DocInfo *) infobuf;
 
     (*pInfo)->rev_meta.buf = infobuf + sizeof(DocInfo);
     (*pInfo)->rev_meta.size = metabin_size;
 
-    if(metabin_size > 0)
-    {
+    if (metabin_size > 0) {
         memcpy((*pInfo)->rev_meta.buf, v->buf + metabin_pos, metabin_size);
     }
 
     (*pInfo)->id.buf = infobuf + sizeof(DocInfo) + metabin_size;
 
-    if(idBytes != 0) //First term is Seq
-    {
+    if (idBytes != 0) { //First term is Seq
 
         (*pInfo)->id.size = idBytes;
         ei_decode_uint64(v->buf, &fterm_pos, &seq);
         //Let the caller fill in the Id.
-    }
-    else //First term is Id
-    {
+    } else { //First term is Id
         (*pInfo)->id.size = fterm_size - 5; //Id will be a binary.
         memcpy((*pInfo)->id.buf, v->buf + fterm_pos + 5, fterm_size);
         //Let the caller fill in the Seq
@@ -345,24 +336,24 @@ int bp_to_doc(Doc **pDoc, Db *db, off_t bp, uint64_t options)
     char *docbody = NULL;
     fatbuf *docbuf = NULL;
 
-    if(options & COMPRESSED_BODY)
+    if (options & COMPRESSED_BODY) {
         bodylen = pread_compressed(db, bp, &docbody);
-    else
+    } else {
         bodylen = pread_bin(db, bp, &docbody);
+    }
 
     error_unless(docbuf = fatbuf_alloc(sizeof(Doc) + bodylen), ERROR_ALLOC_FAIL);
-    *pDoc = (Doc*) fatbuf_get(docbuf, sizeof(Doc));
+    *pDoc = (Doc *) fatbuf_get(docbuf, sizeof(Doc));
 
-    if(bodylen == 0) //Empty doc
-    {
-       (*pDoc)->data.buf = NULL;
-      (*pDoc)->data.size = 0;
-      return 0;
+    if (bodylen == 0) { //Empty doc
+        (*pDoc)->data.buf = NULL;
+        (*pDoc)->data.size = 0;
+        return 0;
     }
 
     error_unless(bodylen > 0, ERROR_READ);
     error_unless(docbody, ERROR_READ);
-    (*pDoc)->data.buf = (char*) fatbuf_get(docbuf, bodylen);
+    (*pDoc)->data.buf = (char *) fatbuf_get(docbuf, bodylen);
     (*pDoc)->data.size = bodylen;
     memcpy((*pDoc)->data.buf, docbody, bodylen);
 
@@ -377,15 +368,15 @@ cleanup:
 int docinfo_fetch(couchfile_lookup_request *rq, void *k, sized_buf *v)
 {
     int errcode = 0;
-    sized_buf *id = (sized_buf*) k;
-    DocInfo** pInfo = (DocInfo**) rq->callback_ctx;
+    sized_buf *id = (sized_buf *) k;
+    DocInfo **pInfo = (DocInfo **) rq->callback_ctx;
     error_pass(docinfo_from_buf(pInfo, v, id->size - 5));
     memcpy((*pInfo)->id.buf, id->buf + 5, id->size - 5);
 cleanup:
     return errcode;
 }
 
-int docinfo_by_id(Db* db, uint8_t* id,  size_t idlen, DocInfo** pInfo)
+int docinfo_by_id(Db *db, uint8_t *id,  size_t idlen, DocInfo **pInfo)
 {
     sized_buf key;
     void *keylist = &key;
@@ -393,10 +384,11 @@ int docinfo_by_id(Db* db, uint8_t* id,  size_t idlen, DocInfo** pInfo)
     sized_buf cmptmp;
     int errcode = 0;
 
-    if(db->header.by_id_root == NULL)
+    if (db->header.by_id_root == NULL) {
         return DOC_NOT_FOUND;
+    }
 
-    key.buf = (char*) id;
+    key.buf = (char *) id;
     key.size = idlen;
 
     rq.cmp.compare = ebin_cmp;
@@ -410,23 +402,25 @@ int docinfo_by_id(Db* db, uint8_t* id,  size_t idlen, DocInfo** pInfo)
     rq.fold = 0;
 
     errcode = btree_lookup(&rq, db->header.by_id_root->pointer);
-    if(errcode == 0)
-    {
-        if(*pInfo == NULL)
+    if (errcode == 0) {
+        if (*pInfo == NULL) {
             errcode = DOC_NOT_FOUND;
+        }
     }
     return errcode;
 }
 
-int open_doc_with_docinfo(Db* db, DocInfo* docinfo, Doc** pDoc, uint64_t options)
+int open_doc_with_docinfo(Db *db, DocInfo *docinfo, Doc **pDoc, uint64_t options)
 {
     int errcode = 0;
     *pDoc = NULL;
-    if(docinfo->bp == 0)
+    if (docinfo->bp == 0) {
         return DOC_NOT_FOUND;
+    }
     int readopts = 0;
-    if((options & DECOMPRESS_DOC_BODIES) && (docinfo->content_meta & SNAPPY_META_FLAG))
+    if ((options & DECOMPRESS_DOC_BODIES) && (docinfo->content_meta & SNAPPY_META_FLAG)) {
         readopts = COMPRESSED_BODY;
+    }
     error_pass(bp_to_doc(pDoc, db, docinfo->bp, readopts));
     (*pDoc)->id.buf = docinfo->id.buf;
     (*pDoc)->id.size = docinfo->id.size;
@@ -434,7 +428,7 @@ cleanup:
     return errcode;
 }
 
-int open_doc(Db* db, uint8_t* id,  size_t idlen, Doc** pDoc, uint64_t options)
+int open_doc(Db *db, uint8_t *id,  size_t idlen, Doc **pDoc, uint64_t options)
 {
     int errcode = 0;
     DocInfo *info;
@@ -442,7 +436,7 @@ int open_doc(Db* db, uint8_t* id,  size_t idlen, Doc** pDoc, uint64_t options)
     *pDoc = NULL;
     error_pass(docinfo_by_id(db, id, idlen, &info));
     error_pass(open_doc_with_docinfo(db, info, pDoc, options));
-    (*pDoc)->id.buf = (char*) id;
+    (*pDoc)->id.buf = (char *) id;
     (*pDoc)->id.size = idlen;
 
     free_docinfo(info);
@@ -452,21 +446,24 @@ cleanup:
 
 int byseq_do_callback(couchfile_lookup_request *rq, void *k, sized_buf *v)
 {
-    int(*real_callback)(Db* db, DocInfo* docinfo, void *ctx) =
-        (int (*)(Db*, DocInfo*, void*)) ((void**)rq->callback_ctx)[0];
-    if(v == NULL) return 0;
-    sized_buf *seqterm = (sized_buf*) k;
+    int(*real_callback)(Db * db, DocInfo * docinfo, void * ctx) =
+        (int ( *)(Db *, DocInfo *, void *)) ((void **)rq->callback_ctx)[0];
+    if (v == NULL) {
+        return 0;
+    }
+    sized_buf *seqterm = (sized_buf *) k;
     int seqindex = 0;
-    DocInfo* docinfo;
+    DocInfo *docinfo;
     docinfo_from_buf(&docinfo, v, 0);
     ei_decode_uint64(seqterm->buf, &seqindex, &docinfo->db_seq);
-    if(real_callback((Db*) ((void**)rq->callback_ctx)[1], docinfo, ((void**)rq->callback_ctx)[2]) != NO_FREE_DOCINFO)
+    if (real_callback((Db *) ((void **)rq->callback_ctx)[1], docinfo, ((void **)rq->callback_ctx)[2]) != NO_FREE_DOCINFO) {
         free_docinfo(docinfo);
+    }
     return 0;
 }
 
-extern "C" int changes_since(Db* db, uint64_t since, uint64_t options,
-        int(*f)(Db* db, DocInfo* docinfo, void *ctx), void *ctx)
+extern "C" int changes_since(Db *db, uint64_t since, uint64_t options,
+                             int(*f)(Db *db, DocInfo *docinfo, void *ctx), void *ctx)
 {
     char since_termbuf[10];
     sized_buf since_term;
@@ -476,14 +473,15 @@ extern "C" int changes_since(Db* db, uint64_t since, uint64_t options,
     sized_buf cmptmp;
     int errcode = 0;
 
-    if(db->header.by_seq_root == NULL)
+    if (db->header.by_seq_root == NULL) {
         return 0;
+    }
 
     since_term.buf = since_termbuf;
     since_term.size = 0;
-    ei_encode_ulonglong(since_termbuf, (int*) &since_term.size, since);
+    ei_encode_ulonglong(since_termbuf, (int *) &since_term.size, since);
 
-    cbctx[0] = (void*) f;
+    cbctx[0] = (void *) f;
     cbctx[1] = db;
     cbctx[2] = ctx;
 
@@ -501,26 +499,26 @@ extern "C" int changes_since(Db* db, uint64_t since, uint64_t options,
     return errcode;
 }
 
-void free_doc(Doc* doc)
+void free_doc(Doc *doc)
 {
     if (doc) {
-        char* offset = (char*) (&((fatbuf*) NULL)->buf);
-        fatbuf_free((fatbuf*) ((char*)doc - (char*)offset));
+        char *offset = (char *) (&((fatbuf *) NULL)->buf);
+        fatbuf_free((fatbuf *) ((char *)doc - (char *)offset));
     }
 }
 
-void free_docinfo(DocInfo* docinfo)
+void free_docinfo(DocInfo *docinfo)
 {
     free(docinfo);
 }
 
-void copy_term(char* dst, int *index, sized_buf* term)
+void copy_term(char *dst, int *index, sized_buf *term)
 {
     memcpy(dst + *index, term->buf, term->size);
     *index += term->size;
 }
 
-int assemble_index_value(DocInfo* docinfo, char* dst, sized_buf* first_term)
+int assemble_index_value(DocInfo *docinfo, char *dst, sized_buf *first_term)
 {
     int pos = 0;
     ei_encode_tuple_header(dst, &pos, 6); //2 bytes.
@@ -544,44 +542,42 @@ int assemble_index_value(DocInfo* docinfo, char* dst, sized_buf* first_term)
     return pos;
 }
 
-int write_doc(Db* db, Doc* doc, uint64_t* bp, uint64_t writeopts)
+int write_doc(Db *db, Doc *doc, uint64_t *bp, uint64_t writeopts)
 {
     int errcode = 0;
-    if(writeopts & COMPRESSED_BODY)
-    {
-        error_pass(db_write_buf_compressed(db, &doc->data, (off_t*) bp));
-    }
-    else
-    {
-        error_pass(db_write_buf(db, &doc->data, (off_t*) bp));
+    if (writeopts & COMPRESSED_BODY) {
+        error_pass(db_write_buf_compressed(db, &doc->data, (off_t *) bp));
+    } else {
+        error_pass(db_write_buf(db, &doc->data, (off_t *) bp));
     }
 cleanup:
     return errcode;
 }
 
-int id_action_compare(const void* actv1, const void* actv2)
+int id_action_compare(const void *actv1, const void *actv2)
 {
     const couchfile_modify_action *act1, *act2;
-    act1 = (const couchfile_modify_action*) actv1;
-    act2 = (const couchfile_modify_action*) actv2;
+    act1 = (const couchfile_modify_action *) actv1;
+    act2 = (const couchfile_modify_action *) actv2;
 
     int cmp = ebin_cmp(act1->cmp_key, act2->cmp_key);
-    if(cmp == 0)
-    {
-        if(act1->type < act2->type)
+    if (cmp == 0) {
+        if (act1->type < act2->type) {
             return -1;
-        if(act1->type > act2->type)
+        }
+        if (act1->type > act2->type) {
             return 1;
+        }
     }
     return cmp;
 }
 
 
-int seq_action_compare(const void* actv1, const void* actv2)
+int seq_action_compare(const void *actv1, const void *actv2)
 {
     const couchfile_modify_action *act1, *act2;
-    act1 = (const couchfile_modify_action*) actv1;
-    act2 = (const couchfile_modify_action*) actv2;
+    act1 = (const couchfile_modify_action *) actv1;
+    act2 = (const couchfile_modify_action *) actv2;
 
     uint64_t seq1, seq2;
     int pos = 0;
@@ -590,51 +586,54 @@ int seq_action_compare(const void* actv1, const void* actv2)
     pos = 0;
     ei_decode_uint64(act2->key->buf, &pos, &seq2);
 
-    if(seq1 < seq2)
+    if (seq1 < seq2) {
         return -1;
-    if(seq1 == seq2)
-    {
-        if(act1->type < act2->type)
+    }
+    if (seq1 == seq2) {
+        if (act1->type < act2->type) {
             return -1;
-        if(act1->type > act2->type)
+        }
+        if (act1->type > act2->type) {
             return 1;
+        }
         return 0;
     }
-    if(seq1 > seq2)
+    if (seq1 > seq2) {
         return 1;
+    }
     return 0;
 }
 
 typedef struct _idxupdatectx {
-    couchfile_modify_action* seqacts;
+    couchfile_modify_action *seqacts;
     int actpos;
 
-    sized_buf** seqs;
-    sized_buf** seqvals;
+    sized_buf **seqs;
+    sized_buf **seqvals;
     int valpos;
 
     fatbuf *deltermbuf;
 } index_update_ctx;
 
-void idfetch_update_cb(couchfile_modify_request* rq, sized_buf* k, sized_buf* v, void *arg)
+void idfetch_update_cb(couchfile_modify_request *rq, sized_buf *k, sized_buf *v, void *arg)
 {
     //v contains a seq we need to remove ( {Seq,_,_,_,_} )
     int termpos = 0;
     uint64_t oldseq;
-    sized_buf* delbuf = NULL;
-    index_update_ctx* ctx = (index_update_ctx*) arg;
+    sized_buf *delbuf = NULL;
+    index_update_ctx *ctx = (index_update_ctx *) arg;
 
-    if(v == NULL) { //Doc not found
+    if (v == NULL) { //Doc not found
         return;
     }
 
     ei_decode_tuple_header(v->buf, &termpos, NULL);
     ei_decode_uint64(v->buf, &termpos, &oldseq);
 
-    delbuf = (sized_buf*) fatbuf_get(ctx->deltermbuf, sizeof(sized_buf));
-    delbuf->buf = (char*) fatbuf_get(ctx->deltermbuf, 10);
+    delbuf = (sized_buf *) fatbuf_get(ctx->deltermbuf, sizeof(sized_buf));
+    delbuf->buf = (char *) fatbuf_get(ctx->deltermbuf, 10);
     delbuf->size = 0;
-    ei_encode_ulonglong(delbuf->buf, (int*) &delbuf->size, oldseq);
+    ei_encode_ulonglong(delbuf->buf, (int *) &delbuf->size, oldseq);
 
     ctx->seqacts[ctx->actpos].type = ACTION_REMOVE;
     ctx->seqacts[ctx->actpos].value.term = NULL;
@@ -646,30 +645,30 @@ void idfetch_update_cb(couchfile_modify_request* rq, sized_buf* k, sized_buf* v,
     return;
 }
 
-int update_indexes(Db* db, sized_buf* seqs, sized_buf* seqvals, sized_buf* ids, sized_buf* idvals, int numdocs)
+int update_indexes(Db *db, sized_buf *seqs, sized_buf *seqvals, sized_buf *ids, sized_buf *idvals, int numdocs)
 {
     int errcode = 0;
-    fatbuf* actbuf = fatbuf_alloc(numdocs * ( 4 * sizeof(couchfile_modify_action) + // Two action list up to numdocs * 2 in size
+    fatbuf *actbuf = fatbuf_alloc(numdocs * ( 4 * sizeof(couchfile_modify_action) + // Two action list up to numdocs * 2 in size
                                               2 * sizeof(sized_buf) + // Compare keys for ids, and compare keys for removed seqs found from id index.
                                               10)); //Max size of a int64 erlang term (for deleted seqs)
-    sized_buf* idcmps;
+    sized_buf *idcmps;
     couchfile_modify_action *idacts, *seqacts;
     node_pointer *new_id_root, *new_seq_root;
 
-    idacts = (couchfile_modify_action*) fatbuf_get(actbuf, numdocs * sizeof(couchfile_modify_action) * 2);
-    seqacts = (couchfile_modify_action*) fatbuf_get(actbuf, numdocs * sizeof(couchfile_modify_action) * 2);
-    idcmps = (sized_buf*) fatbuf_get(actbuf, numdocs * sizeof(sized_buf));
+    idacts = (couchfile_modify_action *) fatbuf_get(actbuf, numdocs * sizeof(couchfile_modify_action) * 2);
+    seqacts = (couchfile_modify_action *) fatbuf_get(actbuf, numdocs * sizeof(couchfile_modify_action) * 2);
+    idcmps = (sized_buf *) fatbuf_get(actbuf, numdocs * sizeof(sized_buf));
 
     couchfile_modify_request seqrq, idrq;
     sized_buf tmpsb;
     index_update_ctx fetcharg = {
         seqacts, 0, &seqs, &seqvals, 0,
-        actbuf};
+        actbuf
+    };
 
 
     int i;
-    for(i = 0; i < numdocs; i++)
-    {
+    for (i = 0; i < numdocs; i++) {
         idcmps[i].buf = ids[i].buf + 5;
         idcmps[i].size = ids[i].size - 5;
 
@@ -702,8 +701,7 @@ int update_indexes(Db* db, sized_buf* seqs, sized_buf* seqvals, sized_buf* ids, 
     new_id_root = modify_btree(&idrq, db->header.by_id_root, &errcode);
     error_pass(errcode);
 
-    while(fetcharg.valpos < numdocs)
-    {
+    while (fetcharg.valpos < numdocs) {
         seqacts[fetcharg.actpos].type = ACTION_INSERT;
         seqacts[fetcharg.actpos].value.term = &seqvals[fetcharg.valpos];
         seqacts[fetcharg.actpos].key = &seqs[fetcharg.valpos];
@@ -727,14 +725,12 @@ int update_indexes(Db* db, sized_buf* seqs, sized_buf* seqvals, sized_buf* ids, 
     new_seq_root = modify_btree(&seqrq, db->header.by_seq_root, &errcode);
     error_pass(errcode);
 
-    if(db->header.by_id_root != new_id_root)
-    {
+    if (db->header.by_id_root != new_id_root) {
         free(db->header.by_id_root);
         db->header.by_id_root = new_id_root;
     }
 
-    if(db->header.by_seq_root != new_seq_root)
-    {
+    if (db->header.by_seq_root != new_seq_root) {
         free(db->header.by_seq_root);
         db->header.by_seq_root = new_seq_root;
     }
@@ -744,48 +740,42 @@ cleanup:
     return errcode;
 }
 
-int add_doc_to_update_list(Db* db, Doc* doc, DocInfo* info, fatbuf* fb,
-        sized_buf* seqterm, sized_buf* idterm, sized_buf* seqval, sized_buf* idval, uint64_t seq, uint64_t options)
+int add_doc_to_update_list(Db *db, Doc *doc, DocInfo *info, fatbuf *fb,
+                           sized_buf *seqterm, sized_buf *idterm, sized_buf *seqval, sized_buf *idval, uint64_t seq, uint64_t options)
 {
     int errcode = 0;
     DocInfo updated = *info;
     updated.db_seq = seq;
 
-    seqterm->buf = (char*) fatbuf_get(fb, 10);
+    seqterm->buf = (char *) fatbuf_get(fb, 10);
     seqterm->size = 0;
 
     error_unless(seqterm->buf, ERROR_ALLOC_FAIL);
-    ei_encode_ulonglong(seqterm->buf, (int*) &seqterm->size, seq);
+    ei_encode_ulonglong(seqterm->buf, (int *) &seqterm->size, seq);
 
-    if(doc)
-    {
-        if((options & COMPRESS_DOC_BODIES) && (info->content_meta & SNAPPY_META_FLAG))
-        {
+    if (doc) {
+        if ((options & COMPRESS_DOC_BODIES) && (info->content_meta & SNAPPY_META_FLAG)) {
             error_pass(write_doc(db, doc, &updated.bp, COMPRESSED_BODY));
-        }
-        else
-        {
+        } else {
             error_pass(write_doc(db, doc, &updated.bp, 0));
         }
         updated.size = doc->data.size;
-    }
-    else
-    {
+    } else {
         updated.deleted = 1;
         updated.bp = 0;
         updated.size = 0;
     }
 
-    idterm->buf = (char*) fatbuf_get(fb, updated.id.size + 5);
+    idterm->buf = (char *) fatbuf_get(fb, updated.id.size + 5);
     error_unless(idterm->buf, ERROR_ALLOC_FAIL);
     idterm->size = 0;
-    ei_encode_binary(idterm->buf, (int*) &idterm->size, updated.id.buf, updated.id.size);
+    ei_encode_binary(idterm->buf, (int *) &idterm->size, updated.id.buf, updated.id.size);
 
-    seqval->buf = (char*) fatbuf_get(fb, (44 + updated.id.size + updated.rev_meta.size));
+    seqval->buf = (char *) fatbuf_get(fb, (44 + updated.id.size + updated.rev_meta.size));
     error_unless(seqval->buf, ERROR_ALLOC_FAIL);
     seqval->size = assemble_index_value(&updated, seqval->buf, idterm);
 
-    idval->buf = (char*) fatbuf_get(fb, (44 + 10 + updated.rev_meta.size));
+    idval->buf = (char *) fatbuf_get(fb, (44 + 10 + updated.rev_meta.size));
     error_unless(idval->buf, ERROR_ALLOC_FAIL);
     idval->size = assemble_index_value(&updated, idval->buf, seqterm);
 
@@ -795,54 +785,54 @@ cleanup:
     return errcode;
 }
 
-int save_docs(Db* db, Doc** docs, DocInfo** infos, long numdocs, uint64_t options)
+int save_docs(Db *db, Doc **docs, DocInfo **infos, long numdocs, uint64_t options)
 {
     int errcode = 0, i;
     sized_buf *seqklist, *idklist, *seqvlist, *idvlist;
     size_t term_meta_size = 0;
-    Doc* curdoc;
+    Doc *curdoc;
     uint64_t seq = db->header.update_seq;
 
-    fatbuf* fb;
+    fatbuf *fb;
 
-    for(i = 0; i < numdocs; i++)
-    {
+    for (i = 0; i < numdocs; i++) {
         //Get additional size for terms to be inserted into indexes
         term_meta_size += 113 + (2 * (infos[i]->id.size + infos[i]->rev_meta.size));
     }
 
     fb = fatbuf_alloc(term_meta_size +
-                numdocs * (
-                sizeof(sized_buf) * 4)); //seq/id key and value lists
+                      numdocs * (
+                          sizeof(sized_buf) * 4)); //seq/id key and value lists
 
     error_unless(fb, ERROR_ALLOC_FAIL);
 
-    seqklist = (sized_buf*) fatbuf_get(fb, numdocs * sizeof(sized_buf));
-    idklist = (sized_buf*) fatbuf_get(fb, numdocs * sizeof(sized_buf));
-    seqvlist = (sized_buf*) fatbuf_get(fb, numdocs * sizeof(sized_buf));
-    idvlist = (sized_buf*) fatbuf_get(fb, numdocs * sizeof(sized_buf));
+    seqklist = (sized_buf *) fatbuf_get(fb, numdocs * sizeof(sized_buf));
+    idklist = (sized_buf *) fatbuf_get(fb, numdocs * sizeof(sized_buf));
+    seqvlist = (sized_buf *) fatbuf_get(fb, numdocs * sizeof(sized_buf));
+    idvlist = (sized_buf *) fatbuf_get(fb, numdocs * sizeof(sized_buf));
 
-    for(i = 0; i < numdocs; i++)
-    {
+    for (i = 0; i < numdocs; i++) {
         seq++;
-        if(docs)
+        if (docs) {
             curdoc = docs[i];
-        else
+        } else {
             curdoc = NULL;
+        }
         error_pass(add_doc_to_update_list(db, curdoc, infos[i], fb,
-                    &seqklist[i], &idklist[i], &seqvlist[i], &idvlist[i], seq, options));
+                                          &seqklist[i], &idklist[i], &seqvlist[i], &idvlist[i], seq, options));
     }
 
     error_pass(update_indexes(db, seqklist, seqvlist, idklist, idvlist, numdocs));
 
 cleanup:
     fatbuf_free(fb);
-    if(errcode == 0)
+    if (errcode == 0) {
         db->header.update_seq = seq;
+    }
     return errcode;
 }
 
-int save_doc(Db* db, Doc* doc, DocInfo* info, uint64_t options)
+int save_doc(Db *db, Doc *doc, DocInfo *info, uint64_t options)
 {
     return save_docs(db, &doc, &info, 1, options);
 }
@@ -850,20 +840,19 @@ int save_doc(Db* db, Doc* doc, DocInfo* info, uint64_t options)
 int local_doc_fetch(couchfile_lookup_request *rq, void *k, sized_buf *v)
 {
     int errcode = 0;
-    sized_buf *id = (sized_buf*) k;
-    LocalDoc** lDoc = (LocalDoc**) rq->callback_ctx;
-    if(!v)
-    {
+    sized_buf *id = (sized_buf *) k;
+    LocalDoc **lDoc = (LocalDoc **) rq->callback_ctx;
+    if (!v) {
         *lDoc = NULL;
         return 0;
     }
-    fatbuf* ldbuf = fatbuf_alloc(sizeof(LocalDoc) + id->size + v->size);
+    fatbuf *ldbuf = fatbuf_alloc(sizeof(LocalDoc) + id->size + v->size);
     error_unless(ldbuf, ERROR_ALLOC_FAIL);
-    *lDoc = (LocalDoc*) fatbuf_get(ldbuf, sizeof(LocalDoc));
-    (*lDoc)->id.buf = (char*) fatbuf_get(ldbuf, id->size - 5);
+    *lDoc = (LocalDoc *) fatbuf_get(ldbuf, sizeof(LocalDoc));
+    (*lDoc)->id.buf = (char *) fatbuf_get(ldbuf, id->size - 5);
     (*lDoc)->id.size = id->size - 5;
 
-    (*lDoc)->json.buf = (char*) fatbuf_get(ldbuf, v->size - 5);
+    (*lDoc)->json.buf = (char *) fatbuf_get(ldbuf, v->size - 5);
     (*lDoc)->json.size = v->size - 5;
 
     (*lDoc)->deleted = 0;
@@ -871,13 +860,13 @@ int local_doc_fetch(couchfile_lookup_request *rq, void *k, sized_buf *v)
     memcpy((*lDoc)->id.buf, id->buf + 5, id->size - 5);
     memcpy((*lDoc)->json.buf, v->buf + 5, v->size - 5);
 cleanup:
-    if(errcode < 0) {
+    if (errcode < 0) {
         fatbuf_free(ldbuf);
     }
     return errcode;
 }
 
-int open_local_doc(Db *db, uint8_t* id, size_t idlen, LocalDoc** pDoc)
+int open_local_doc(Db *db, uint8_t *id, size_t idlen, LocalDoc **pDoc)
 {
     sized_buf key;
     void *keylist = &key;
@@ -885,10 +874,11 @@ int open_local_doc(Db *db, uint8_t* id, size_t idlen, LocalDoc** pDoc)
     sized_buf cmptmp;
     int errcode = 0;
 
-    if(db->header.local_docs_root == NULL)
+    if (db->header.local_docs_root == NULL) {
         return DOC_NOT_FOUND;
+    }
 
-    key.buf = (char*) id;
+    key.buf = (char *) id;
     key.size = idlen;
 
     rq.cmp.compare = ebin_cmp;
@@ -902,43 +892,40 @@ int open_local_doc(Db *db, uint8_t* id, size_t idlen, LocalDoc** pDoc)
     rq.fold = 0;
 
     errcode = btree_lookup(&rq, db->header.local_docs_root->pointer);
-    if(errcode == 0)
-    {
-        if(*pDoc == NULL)
+    if (errcode == 0) {
+        if (*pDoc == NULL) {
             errcode = DOC_NOT_FOUND;
+        }
     }
     return errcode;
 }
 
-int save_local_doc(Db* db, LocalDoc* lDoc)
+int save_local_doc(Db *db, LocalDoc *lDoc)
 {
     int errcode = 0;
     couchfile_modify_action ldupdate;
-    fatbuf* binbufs = fatbuf_alloc(10 + lDoc->id.size + lDoc->json.size);
+    fatbuf *binbufs = fatbuf_alloc(10 + lDoc->id.size + lDoc->json.size);
     sized_buf idterm;
     sized_buf jsonterm;
     sized_buf cmptmp;
-    node_pointer* new_local_docs_root = NULL;
+    node_pointer *new_local_docs_root = NULL;
     error_unless(binbufs, ERROR_ALLOC_FAIL);
 
-    if(lDoc->deleted)
-    {
+    if (lDoc->deleted) {
         ldupdate.type = ACTION_REMOVE;
-    }
-    else
-    {
+    } else {
         ldupdate.type = ACTION_INSERT;
     }
 
-    idterm.buf = (char*) fatbuf_get(binbufs, lDoc->id.size + 5);
+    idterm.buf = (char *) fatbuf_get(binbufs, lDoc->id.size + 5);
     idterm.size = 0;
-    ei_encode_binary(idterm.buf, (int*) &idterm.size, lDoc->id.buf, lDoc->id.size);
+    ei_encode_binary(idterm.buf, (int *) &idterm.size, lDoc->id.buf, lDoc->id.size);
 
-    jsonterm.buf = (char*) fatbuf_get(binbufs, lDoc->json.size + 5);
+    jsonterm.buf = (char *) fatbuf_get(binbufs, lDoc->json.size + 5);
     jsonterm.size = 0;
-    ei_encode_binary(jsonterm.buf, (int*) &jsonterm.size, lDoc->json.buf, lDoc->json.size);
+    ei_encode_binary(jsonterm.buf, (int *) &jsonterm.size, lDoc->json.buf, lDoc->json.size);
 
-    ldupdate.cmp_key = (void*) &lDoc->id;
+    ldupdate.cmp_key = (void *) &lDoc->id;
     ldupdate.key = &idterm;
     ldupdate.value.term = &jsonterm;
 
@@ -954,7 +941,7 @@ int save_local_doc(Db* db, LocalDoc* lDoc)
     rq.db = db;
 
     new_local_docs_root = modify_btree(&rq, db->header.local_docs_root, &errcode);
-    if(errcode == 0 && new_local_docs_root != db->header.local_docs_root) {
+    if (errcode == 0 && new_local_docs_root != db->header.local_docs_root) {
         free(db->header.local_docs_root);
         db->header.local_docs_root = new_local_docs_root;
     }
@@ -963,11 +950,11 @@ cleanup:
     return errcode;
 }
 
-void free_local_doc(LocalDoc* lDoc)
+void free_local_doc(LocalDoc *lDoc)
 {
     if (lDoc) {
-        char* offset = (char*) (&((fatbuf*) NULL)->buf);
-        fatbuf_free((fatbuf*) ((char*)lDoc - (char*)offset));
+        char *offset = (char *) (&((fatbuf *) NULL)->buf);
+        fatbuf_free((fatbuf *) ((char *)lDoc - (char *)offset));
     }
 }
 

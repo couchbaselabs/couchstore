@@ -11,18 +11,16 @@
                                   D, sizeof(D) - 1, M, sizeof(M)); testdocset.datasize += sizeof(D) - 1;
 
 //Wrapper in couchstore.
-int ei_decode_uint64(char* buf, int* index, uint64_t* val);
+int ei_decode_uint64(char *buf, int *index, uint64_t *val);
 
-typedef struct _counterset
-{
+typedef struct _counterset {
     int totaldocs;
     int deleted;
 } counterset;
 
-typedef struct _docset
-{
-    Doc* docs;
-    DocInfo* infos;
+typedef struct _docset {
+    Doc *docs;
+    DocInfo *infos;
     int size;
     int pos;
     uint64_t datasize;
@@ -31,9 +29,9 @@ typedef struct _docset
 
 counterset counters;
 docset testdocset;
-fatbuf* docsetbuf = NULL;
+fatbuf *docsetbuf = NULL;
 
-void setdoc(Doc* doc, DocInfo* info, char* id, int idlen, char* data, int datalen, char* meta, int metalen)
+void setdoc(Doc *doc, DocInfo *info, char *id, int idlen, char *data, int datalen, char *meta, int metalen)
 {
     doc->id.buf = id;
     doc->id.size = idlen;
@@ -53,8 +51,7 @@ void docset_init(int numdocs)
     testdocset.size = numdocs;
     testdocset.pos = 0;
     testdocset.datasize = 0;
-    if(docsetbuf)
-    {
+    if (docsetbuf) {
         fatbuf_free(docsetbuf);
         docsetbuf = NULL;
     }
@@ -65,31 +62,32 @@ void docset_init(int numdocs)
     ZERO(testdocset.counters);
 }
 
-int counter_inc(Db* db, DocInfo* info, void *ctx)
+int counter_inc(Db *db, DocInfo *info, void *ctx)
 {
-    counterset* ctr = ctx;
+    counterset *ctr = ctx;
     ctr->totaldocs++;
-    if(info->deleted)
+    if (info->deleted) {
         ctr->deleted++;
+    }
     return 0;
 }
 
 #define EQUAL_DOC_BUF(f) assert(memcmp(doc-> f .buf, testdocset.docs[testdocset.pos]. f .buf, doc-> f .size) == 0)
 #define EQUAL_INFO_BUF(f) assert(memcmp(info-> f  .buf, testdocset.infos[testdocset.pos]. f .buf, info-> f .size) == 0)
-int docset_check(Db* db, DocInfo* info, void *ctx)
+int docset_check(Db *db, DocInfo *info, void *ctx)
 {
     int errcode = 0;
-    docset* ds = ctx;
-    counterset* ctr = &ds->counters;
+    docset *ds = ctx;
+    counterset *ctr = &ds->counters;
     ctr->totaldocs++;
-    if(info->deleted)
+    if (info->deleted) {
         ctr->deleted++;
+    }
     EQUAL_INFO_BUF(id);
     EQUAL_INFO_BUF(rev_meta);
-    Doc* doc;
+    Doc *doc;
     try(open_doc_with_docinfo(db, info, &doc, DECOMPRESS_DOC_BODIES));
-    if(testdocset.docs[testdocset.pos].data.size > 0)
-    {
+    if (testdocset.docs[testdocset.pos].data.size > 0) {
         assert(doc);
         EQUAL_DOC_BUF(data);
         EQUAL_DOC_BUF(id);
@@ -101,7 +99,7 @@ cleanup:
     return 0;
 }
 
-void assert_id_rv(char* buf, uint64_t deleted, uint64_t notdeleted, uint64_t size)
+void assert_id_rv(char *buf, uint64_t deleted, uint64_t notdeleted, uint64_t size)
 {
     uint64_t r_deleted, r_notdeleted, r_size;
     int pos = 0;
@@ -117,13 +115,13 @@ void assert_id_rv(char* buf, uint64_t deleted, uint64_t notdeleted, uint64_t siz
 
 }
 //Check the toplevel reduces on the db headers.
-void check_reductions(Db* db)
+void check_reductions(Db *db)
 {
     assert_id_rv(db->header.by_id_root->reduce_value.buf,
-            testdocset.counters.deleted, testdocset.counters.totaldocs - testdocset.counters.deleted, testdocset.datasize);
+                 testdocset.counters.deleted, testdocset.counters.totaldocs - testdocset.counters.deleted, testdocset.datasize);
 }
 
-int dump_count(Db* db)
+int dump_count(Db *db)
 {
     int errcode = 0;
     ZERO(counters);
@@ -135,23 +133,26 @@ cleanup:
 char zerometa[] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3};
 void test_save_docs()
 {
-    fprintf(stderr, "save_docs... "); fflush(stderr);
+    fprintf(stderr, "save_docs... ");
+    fflush(stderr);
     int errcode = 0;
     docset_init(4);
     SETDOC(0, "doc1", "{\"test_doc_index\":1}", zerometa);
     SETDOC(1, "doc2", "{\"test_doc_index\":2}", zerometa);
     SETDOC(2, "doc3", "{\"test_doc_index\":3}", zerometa);
     SETDOC(3, "doc4", "{\"test_doc_index\":4}", zerometa);
-    Doc* docptrs [4] =  { &testdocset.docs[0],
+    Doc *docptrs [4] =  { &testdocset.docs[0],
                           &testdocset.docs[1],
                           &testdocset.docs[2],
-                          &testdocset.docs[3]};
-    DocInfo* nfoptrs [4] =  { &testdocset.infos[0],
+                          &testdocset.docs[3]
+                        };
+    DocInfo *nfoptrs [4] =  { &testdocset.infos[0],
                               &testdocset.infos[1],
                               &testdocset.infos[2],
-                              &testdocset.infos[3]};
+                              &testdocset.infos[3]
+                            };
     unlink("test.couch");
-    Db* db;
+    Db *db;
     try(open_db("test.couch", COUCH_CREATE_FILES, NULL, &db));
     try(save_docs(db, docptrs, nfoptrs, 4, 0));
     try(commit_all(db, 0));
@@ -169,7 +170,8 @@ cleanup:
 
 void test_save_doc()
 {
-    fprintf(stderr, "save_doc... "); fflush(stderr);
+    fprintf(stderr, "save_doc... ");
+    fflush(stderr);
     int errcode = 0;
     docset_init(4);
     SETDOC(0, "doc1", "{\"test_doc_index\":1}", zerometa);
@@ -177,7 +179,7 @@ void test_save_doc()
     SETDOC(2, "doc3", "{\"test_doc_index\":3}", zerometa);
     SETDOC(3, "doc4", "{\"test_doc_index\":4}", zerometa);
     unlink("test.couch");
-    Db* db;
+    Db *db;
     try(open_db("test.couch", COUCH_CREATE_FILES, NULL, &db));
     try(save_doc(db, &testdocset.docs[0], &testdocset.infos[0], 0));
     try(save_doc(db, &testdocset.docs[1], &testdocset.infos[1], 0));
@@ -197,18 +199,21 @@ cleanup:
 
 void test_compressed_doc_body()
 {
-    fprintf(stderr, "compressed bodies... "); fflush(stderr);
+    fprintf(stderr, "compressed bodies... ");
+    fflush(stderr);
     int errcode = 0;
     docset_init(2);
     SETDOC(0, "doc1", "{\"test_doc_index\":1, \"val\":\"blah blah blah blah blah blah\"}", zerometa);
     SETDOC(1, "doc2", "{\"test_doc_index\":2, \"val\":\"blah blah blah blah blah blah\"}", zerometa);
-    Doc* docptrs [2] =  { &testdocset.docs[0],
-                          &testdocset.docs[1]};
-    DocInfo* nfoptrs [2] =  { &testdocset.infos[0],
-                              &testdocset.infos[1]};
+    Doc *docptrs [2] =  { &testdocset.docs[0],
+                          &testdocset.docs[1]
+                        };
+    DocInfo *nfoptrs [2] =  { &testdocset.infos[0],
+                              &testdocset.infos[1]
+                            };
     testdocset.infos[1].content_meta = 128; //Mark doc2 as to be snappied.
     unlink("test.couch");
-    Db* db;
+    Db *db;
     try(open_db("test.couch", COUCH_CREATE_FILES, NULL, &db));
     try(save_docs(db, docptrs, nfoptrs, 2, COMPRESS_DOC_BODIES));
     try(commit_all(db, 0));
@@ -225,9 +230,10 @@ cleanup:
 
 void test_dump_empty_db()
 {
-    fprintf(stderr, "dump empty db... "); fflush(stderr);
+    fprintf(stderr, "dump empty db... ");
+    fflush(stderr);
     unlink("test.couch");
-    Db* db;
+    Db *db;
     open_db("test.couch", COUCH_CREATE_FILES, NULL, &db);
     close_db(db);
     open_db("test.couch", 0, NULL, &db);
@@ -239,9 +245,10 @@ void test_dump_empty_db()
 
 void test_local_docs()
 {
-    fprintf(stderr, "local docs... "); fflush(stderr);
+    fprintf(stderr, "local docs... ");
+    fflush(stderr);
     int errcode = 0;
-    Db* db;
+    Db *db;
     LocalDoc lDocWrite;
     LocalDoc *lDocRead = NULL;
     unlink("test.couch");
@@ -267,9 +274,10 @@ cleanup:
 
 void test_open_file_error()
 {
-    fprintf(stderr, "opening nonexistent file errors... "); fflush(stderr);
+    fprintf(stderr, "opening nonexistent file errors... ");
+    fflush(stderr);
     unlink("test.couch");
-    Db* db;
+    Db *db;
     int errcode = open_db("test.couch", 0, NULL, &db);
     assert(errcode == ERROR_OPEN_FILE);
 }
@@ -277,12 +285,18 @@ void test_open_file_error()
 
 int main(void)
 {
-    test_open_file_error(); fprintf(stderr, "OK \n");
-    test_dump_empty_db(); fprintf(stderr," OK\n");
-    test_save_doc(); fprintf(stderr," OK\n");
-    test_save_docs(); fprintf(stderr," OK\n");
-    test_local_docs(); fprintf(stderr," OK\n");
-    test_compressed_doc_body(); fprintf(stderr," OK\n");
+    test_open_file_error();
+    fprintf(stderr, "OK \n");
+    test_dump_empty_db();
+    fprintf(stderr, " OK\n");
+    test_save_doc();
+    fprintf(stderr, " OK\n");
+    test_save_docs();
+    fprintf(stderr, " OK\n");
+    test_local_docs();
+    fprintf(stderr, " OK\n");
+    test_compressed_doc_body();
+    fprintf(stderr, " OK\n");
 
     return 0;
 }

@@ -18,8 +18,9 @@ typedef union {
 
 extern "C" {
 
-    static void push_db(lua_State *ls, Db *db) {
-        Db **d = static_cast<Db **>(lua_newuserdata(ls, sizeof(Db*)));
+    static void push_db(lua_State *ls, Db *db)
+    {
+        Db **d = static_cast<Db **>(lua_newuserdata(ls, sizeof(Db *)));
         assert(d);
         *d = db;
 
@@ -27,8 +28,9 @@ extern "C" {
         lua_setmetatable(ls, -2);
     }
 
-    static void push_docinfo(lua_State *ls, DocInfo *docinfo) {
-        DocInfo **di = static_cast<DocInfo **>(lua_newuserdata(ls, sizeof(DocInfo*)));
+    static void push_docinfo(lua_State *ls, DocInfo *docinfo)
+    {
+        DocInfo **di = static_cast<DocInfo **>(lua_newuserdata(ls, sizeof(DocInfo *)));
         assert(di);
         *di = docinfo;
         assert(*di);
@@ -37,14 +39,16 @@ extern "C" {
         lua_setmetatable(ls, -2);
     }
 
-    static DocInfo *getDocInfo(lua_State *ls) {
-        DocInfo **d = static_cast<DocInfo**>(luaL_checkudata(ls, 1, "docinfo"));
+    static DocInfo *getDocInfo(lua_State *ls)
+    {
+        DocInfo **d = static_cast<DocInfo **>(luaL_checkudata(ls, 1, "docinfo"));
         assert(d);
         assert(*d);
         return *d;
     }
 
-    static int couch_open(lua_State *ls) {
+    static int couch_open(lua_State *ls)
+    {
         if (lua_gettop(ls) < 1) {
             lua_pushstring(ls, "couch.open takes at least one argument: "
                            "\"pathname\" [shouldCreate]");
@@ -81,14 +85,16 @@ extern "C" {
         return 1;
     }
 
-    static Db *getDb(lua_State *ls) {
-        Db **d = static_cast<Db**>(luaL_checkudata(ls, 1, "couch"));
+    static Db *getDb(lua_State *ls)
+    {
+        Db **d = static_cast<Db **>(luaL_checkudata(ls, 1, "couch"));
         assert(d);
         assert(*d);
         return *d;
     }
 
-    static int couch_close(lua_State *ls) {
+    static int couch_close(lua_State *ls)
+    {
         Db *db = getDb(ls);
 
         if (close_db(db) < 0) {
@@ -99,7 +105,8 @@ extern "C" {
         return 0;
     }
 
-    static int couch_commit(lua_State *ls) {
+    static int couch_commit(lua_State *ls)
+    {
         Db *db = getDb(ls);
 
         if (commit_all(db, 0) < 0) {
@@ -110,7 +117,8 @@ extern "C" {
         return 0;
     }
 
-    static int couch_get_from_docinfo(lua_State *ls) {
+    static int couch_get_from_docinfo(lua_State *ls)
+    {
         if (lua_gettop(ls) < 2) {
             lua_pushstring(ls, "couch:get_from_docinfo takes one argument: \"docinfo\"");
             lua_error(ls);
@@ -142,7 +150,8 @@ extern "C" {
     }
 
     // couch:get(key) -> string, docinfo
-    static int couch_get(lua_State *ls) {
+    static int couch_get(lua_State *ls)
+    {
         if (lua_gettop(ls) < 1) {
             lua_pushstring(ls, "couch:get takes one argument: \"key\"");
             lua_error(ls);
@@ -155,9 +164,9 @@ extern "C" {
 
         size_t klen;
         // Should be const :/
-        char *key = const_cast<char*>(luaL_checklstring(ls, 2, &klen));
+        char *key = const_cast<char *>(luaL_checklstring(ls, 2, &klen));
 
-        int rc = docinfo_by_id(db, reinterpret_cast<uint8_t*>(key), klen, &docinfo);
+        int rc = docinfo_by_id(db, reinterpret_cast<uint8_t *>(key), klen, &docinfo);
         if (rc < 0) {
             char buf[256];
             snprintf(buf, sizeof(buf), "error get docinfo: %s", describe_error(rc));
@@ -185,7 +194,8 @@ extern "C" {
     }
 
     // couch:truncate(length)
-    static int couch_truncate(lua_State *ls) {
+    static int couch_truncate(lua_State *ls)
+    {
         if (lua_gettop(ls) < 1) {
             lua_pushstring(ls, "couch:truncate takes one argument: length");
             lua_error(ls);
@@ -217,7 +227,8 @@ extern "C" {
     }
 
     // couch:delete(key, [rev])
-    static int couch_delete(lua_State *ls) {
+    static int couch_delete(lua_State *ls)
+    {
         if (lua_gettop(ls) < 1) {
             lua_pushstring(ls, "couch:delete takes at least one argument: "
                            "\"key\" [rev_seq]");
@@ -228,7 +239,7 @@ extern "C" {
         Doc doc;
         DocInfo docinfo = DOC_INFO_INITIALIZER;
 
-        doc.id.buf = const_cast<char*>(luaL_checklstring(ls, 2, &doc.id.size));
+        doc.id.buf = const_cast<char *>(luaL_checklstring(ls, 2, &doc.id.size));
         doc.data.size = 0;
         docinfo.id = doc.id;
         docinfo.deleted = 1;
@@ -251,18 +262,19 @@ extern "C" {
         return 0;
     }
 
-    class BulkData {
+    class BulkData
+    {
     public:
         BulkData(size_t n) : size(n),
-                             docs(static_cast<Doc**>(calloc(size, sizeof(Doc*)))),
-                             infos(static_cast<DocInfo**>(calloc(size, sizeof(DocInfo*)))) {
+            docs(static_cast<Doc **>(calloc(size, sizeof(Doc *)))),
+            infos(static_cast<DocInfo **>(calloc(size, sizeof(DocInfo *)))) {
             assert(docs);
             assert(infos);
 
             for (size_t i = 0; i < size; ++i) {
-                docs[i] = static_cast<Doc*>(calloc(1, sizeof(Doc)));
+                docs[i] = static_cast<Doc *>(calloc(1, sizeof(Doc)));
                 assert(docs[i]);
-                infos[i] = static_cast<DocInfo*>(calloc(1, sizeof(DocInfo)));
+                infos[i] = static_cast<DocInfo *>(calloc(1, sizeof(DocInfo)));
                 assert(infos[i]);
             }
         }
@@ -281,7 +293,8 @@ extern "C" {
         DocInfo **infos;
     };
 
-    static int couch_save_bulk(lua_State *ls) {
+    static int couch_save_bulk(lua_State *ls)
+    {
         if (lua_gettop(ls) < 2) {
             lua_pushstring(ls, "couch:save_bulk requires a table full of docs to save");
             lua_error(ls);
@@ -310,11 +323,11 @@ extern "C" {
                 revbuf_t revbuf;
 
                 lua_rawgeti(ls, -1, 1);
-                doc->id.buf = const_cast<char*>(luaL_checklstring(ls, -1, &doc->id.size));
+                doc->id.buf = const_cast<char *>(luaL_checklstring(ls, -1, &doc->id.size));
                 lua_pop(ls, 1);
 
                 lua_rawgeti(ls, -1, 2);
-                doc->data.buf = const_cast<char*>(luaL_checklstring(ls, -1, &doc->data.size));
+                doc->data.buf = const_cast<char *>(luaL_checklstring(ls, -1, &doc->data.size));
                 docinfo->id = doc->id;
                 lua_pop(ls, 1);
 
@@ -330,7 +343,7 @@ extern "C" {
 
                 if (n > 4) {
                     lua_rawgeti(ls, -1, 5);
-                    revbuf.fields.cas =luaL_checknumber(ls, -1);
+                    revbuf.fields.cas = luaL_checknumber(ls, -1);
                     revbuf.fields.cas = ntohll(revbuf.fields.cas);
                     lua_pop(ls, 1);
                 }
@@ -370,7 +383,8 @@ extern "C" {
     }
 
     // couch:save(key, value, content_meta, [rev_seq], [cas], [exp], [flags]
-    static int couch_save(lua_State *ls) {
+    static int couch_save(lua_State *ls)
+    {
 
         if (lua_gettop(ls) < 4) {
             lua_pushstring(ls, "couch:save takes at least three arguments: "
@@ -385,8 +399,8 @@ extern "C" {
         revbuf_t revbuf;
 
         // These really should be const char*
-        doc.id.buf = const_cast<char*>(luaL_checklstring(ls, 2, &doc.id.size));
-        doc.data.buf = const_cast<char*>(luaL_checklstring(ls, 3, &doc.data.size));
+        doc.id.buf = const_cast<char *>(luaL_checklstring(ls, 2, &doc.id.size));
+        doc.data.buf = const_cast<char *>(luaL_checklstring(ls, 3, &doc.data.size));
         docinfo.id = doc.id;
 
         docinfo.content_meta = static_cast<uint8_t>(luaL_checkint(ls, 4));
@@ -396,7 +410,7 @@ extern "C" {
         }
 
         if (lua_gettop(ls) > 5) {
-            revbuf.fields.cas =luaL_checknumber(ls, 6);
+            revbuf.fields.cas = luaL_checknumber(ls, 6);
             revbuf.fields.cas = ntohll(revbuf.fields.cas);
         }
 
@@ -427,7 +441,8 @@ extern "C" {
         return 0;
     }
 
-    static int couch_save_local(lua_State *ls) {
+    static int couch_save_local(lua_State *ls)
+    {
         if (lua_gettop(ls) < 3) {
             lua_pushstring(ls, "couch:save_local takes two arguments: "
                            "\"key\" \"value\"");
@@ -436,8 +451,8 @@ extern "C" {
         }
 
         LocalDoc doc;
-        doc.id.buf = const_cast<char*>(luaL_checklstring(ls, 2, &doc.id.size));
-        doc.json.buf = const_cast<char*>(luaL_checklstring(ls, 3, &doc.json.size));
+        doc.id.buf = const_cast<char *>(luaL_checklstring(ls, 2, &doc.id.size));
+        doc.json.buf = const_cast<char *>(luaL_checklstring(ls, 3, &doc.json.size));
         doc.deleted = 0;
 
         Db *db = getDb(ls);
@@ -454,7 +469,8 @@ extern "C" {
         return 0;
     }
 
-    static int couch_delete_local(lua_State *ls) {
+    static int couch_delete_local(lua_State *ls)
+    {
         if (lua_gettop(ls) < 2) {
             lua_pushstring(ls, "couch:delete_local takes one argument: \"key\"");
             lua_error(ls);
@@ -462,7 +478,7 @@ extern "C" {
         }
 
         LocalDoc doc;
-        doc.id.buf = const_cast<char*>(luaL_checklstring(ls, 2, &doc.id.size));
+        doc.id.buf = const_cast<char *>(luaL_checklstring(ls, 2, &doc.id.size));
         doc.json.size = 0;
         doc.deleted = 1;
 
@@ -481,7 +497,8 @@ extern "C" {
     }
 
     // couch:get_local(key) -> val
-    static int couch_get_local(lua_State *ls) {
+    static int couch_get_local(lua_State *ls)
+    {
         if (lua_gettop(ls) < 1) {
             lua_pushstring(ls, "couch:get_local takes one argument: \"key\"");
             lua_error(ls);
@@ -493,10 +510,10 @@ extern "C" {
 
         size_t klen;
         // Should be const :/
-        char *key = const_cast<char*>(luaL_checklstring(ls, 2, &klen));
+        char *key = const_cast<char *>(luaL_checklstring(ls, 2, &klen));
 
 
-        int rc = open_local_doc(db, reinterpret_cast<uint8_t*>(key), klen, &doc);
+        int rc = open_local_doc(db, reinterpret_cast<uint8_t *>(key), klen, &doc);
         if (rc < 0) {
             char buf[256];
             snprintf(buf, sizeof(buf), "error getting local doc: %s",
@@ -514,15 +531,17 @@ extern "C" {
     }
 
     static int luaStringWriter(lua_State *,
-                               const void* p,
+                               const void *p,
                                size_t sz,
-                               void* ud) {
-        std::string *s = static_cast<std::string*>(ud);
-        s->append(static_cast<const char*>(p), sz);
+                               void *ud)
+    {
+        std::string *s = static_cast<std::string *>(ud);
+        s->append(static_cast<const char *>(p), sz);
         return 0;
     }
 
-    class ChangesState {
+    class ChangesState
+    {
     public:
         ChangesState(lua_State *s, const char *f) : ls(s), fun_name(f) {
             assert(lua_isfunction(ls, -1));
@@ -549,8 +568,9 @@ extern "C" {
         const char *fun_name;
     };
 
-    static int couch_changes_each(Db *db, DocInfo *di, void *ctx) {
-        ChangesState *st(static_cast<ChangesState*>(ctx));
+    static int couch_changes_each(Db *db, DocInfo *di, void *ctx)
+    {
+        ChangesState *st(static_cast<ChangesState *>(ctx));
         st->invoke(di);
         return NO_FREE_DOCINFO;
     }
@@ -558,8 +578,9 @@ extern "C" {
     static int couch_func_id(0);
 
     // db:changes(since, function(docinfo) something end)
-    static int couch_changes(lua_State *ls) {
-                if (lua_gettop(ls) < 3) {
+    static int couch_changes(lua_State *ls)
+    {
+        if (lua_gettop(ls) < 3) {
             lua_pushstring(ls, "couch:changes takes two arguments: "
                            "rev_seq, function(docinfo)...");
             lua_error(ls);
@@ -613,46 +634,53 @@ extern "C" {
         {NULL, NULL}
     };
 
-    static int docinfo_id(lua_State *ls) {
+    static int docinfo_id(lua_State *ls)
+    {
         DocInfo *di = getDocInfo(ls);
         lua_pushlstring(ls, di->id.buf, di->id.size);
         return 1;
     }
 
-    static int docinfo_db_seq(lua_State *ls) {
+    static int docinfo_db_seq(lua_State *ls)
+    {
         DocInfo *di = getDocInfo(ls);
         lua_pushnumber(ls, di->db_seq);
         return 1;
     }
 
-    static int docinfo_rev_seq(lua_State *ls) {
+    static int docinfo_rev_seq(lua_State *ls)
+    {
         DocInfo *di = getDocInfo(ls);
         lua_pushnumber(ls, di->rev_seq);
         return 1;
     }
 
-    static int docinfo_deleted(lua_State *ls) {
+    static int docinfo_deleted(lua_State *ls)
+    {
         DocInfo *di = getDocInfo(ls);
         lua_pushinteger(ls, di->deleted);
         return 1;
     }
 
-    static int docinfo_content_meta(lua_State *ls) {
+    static int docinfo_content_meta(lua_State *ls)
+    {
         DocInfo *di = getDocInfo(ls);
         lua_pushinteger(ls, di->content_meta);
         return 1;
     }
 
-    static int docinfo_len(lua_State *ls) {
+    static int docinfo_len(lua_State *ls)
+    {
         DocInfo *di = getDocInfo(ls);
         lua_pushinteger(ls, di->size);
         return 1;
     }
 
-    static int docinfo_cas(lua_State *ls) {
+    static int docinfo_cas(lua_State *ls)
+    {
         DocInfo *di = getDocInfo(ls);
         if (di->rev_meta.size >= sizeof(revbuf_t)) {
-            revbuf_t *rbt(reinterpret_cast<revbuf_t*>(di->rev_meta.buf));
+            revbuf_t *rbt(reinterpret_cast<revbuf_t *>(di->rev_meta.buf));
             lua_pushnumber(ls, ntohll(rbt->fields.cas));
         } else {
             lua_pushnumber(ls, 0);
@@ -660,10 +688,11 @@ extern "C" {
         return 1;
     }
 
-    static int docinfo_exp(lua_State *ls) {
+    static int docinfo_exp(lua_State *ls)
+    {
         DocInfo *di = getDocInfo(ls);
         if (di->rev_meta.size >= sizeof(revbuf_t)) {
-            revbuf_t *rbt(reinterpret_cast<revbuf_t*>(di->rev_meta.buf));
+            revbuf_t *rbt(reinterpret_cast<revbuf_t *>(di->rev_meta.buf));
             lua_pushnumber(ls, ntohl(rbt->fields.exp));
         } else {
             lua_pushnumber(ls, 0);
@@ -671,10 +700,11 @@ extern "C" {
         return 1;
     }
 
-    static int docinfo_flags(lua_State *ls) {
+    static int docinfo_flags(lua_State *ls)
+    {
         DocInfo *di = getDocInfo(ls);
         if (di->rev_meta.size >= sizeof(revbuf_t)) {
-            revbuf_t *rbt(reinterpret_cast<revbuf_t*>(di->rev_meta.buf));
+            revbuf_t *rbt(reinterpret_cast<revbuf_t *>(di->rev_meta.buf));
             lua_pushnumber(ls, ntohl(rbt->fields.flags));
         } else {
             lua_pushnumber(ls, 0);
@@ -682,7 +712,8 @@ extern "C" {
         return 1;
     }
 
-    static int docinfo_gc(lua_State *ls) {
+    static int docinfo_gc(lua_State *ls)
+    {
         DocInfo *di = getDocInfo(ls);
         free_docinfo(di);
         return 1;
@@ -705,7 +736,8 @@ extern "C" {
 
 }
 
-static void initCouch(lua_State *ls) {
+static void initCouch(lua_State *ls)
+{
     luaL_newmetatable(ls, "couch");
 
     lua_pushstring(ls, "__index");
@@ -717,7 +749,8 @@ static void initCouch(lua_State *ls) {
     luaL_openlib(ls, "couch", couch_funcs, 0);
 }
 
-static void initDocInfo(lua_State *ls) {
+static void initDocInfo(lua_State *ls)
+{
     luaL_newmetatable(ls, "docinfo");
 
     lua_pushstring(ls, "__index");
@@ -727,7 +760,8 @@ static void initDocInfo(lua_State *ls) {
     luaL_openlib(ls, NULL, docinfo_methods, 0);
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
     if (argc < 2) {
         std::cerr << "Give me a filename or give me death." << std::endl;
         exit(EX_USAGE);

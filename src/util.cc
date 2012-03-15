@@ -5,9 +5,8 @@
 
 #define ERR_MIN -9
 
-const char* errordescs[9] =
-{
-      "error opening file"        // ERROR_OPEN_FILE
+const char *errordescs[9] = {
+    "error opening file"        // ERROR_OPEN_FILE
     , "error reading erlang term" // ERROR_PARSE_TERM
     , "failed to allocate buffer" // ERROR_ALLOC_FAIL
     , "error reading file"        // ERROR_READ
@@ -18,15 +17,16 @@ const char* errordescs[9] =
     , "checksum fail" // ERROR_CHECKSUM_FAIL
 };
 
-const char* describe_error(int errcode)
+const char *describe_error(int errcode)
 {
-    if(errcode < 0 && errcode >= ERR_MIN)
-        return errordescs[-1-errcode];
-    else
+    if (errcode < 0 && errcode >= ERR_MIN) {
+        return errordescs[-1 - errcode];
+    } else {
         return NULL;
+    }
 }
 
-void term_to_buf(sized_buf *dst, char* buf, int *pos)
+void term_to_buf(sized_buf *dst, char *buf, int *pos)
 {
     int start = *pos;
     ei_skip_term(buf, pos);
@@ -34,20 +34,21 @@ void term_to_buf(sized_buf *dst, char* buf, int *pos)
     dst->size = *pos - start;
 }
 
-node_pointer* read_root(char* buf, int* endpos)
+node_pointer *read_root(char *buf, int *endpos)
 {
     //Parse {ptr, reduce_value, subtreesize} into a node_pointer with no key.
-    node_pointer* ptr;
+    node_pointer *ptr;
     int size, type;
     int pos = *endpos;
     ei_get_type(buf, &pos, &type, &size);
     ei_skip_term(buf, endpos);
-    if(type == ERL_ATOM_EXT)
+    if (type == ERL_ATOM_EXT) {
         return NULL;
+    }
     size = *endpos - pos;
     //Copy the erlang term into the buffer.
-    ptr = (node_pointer*) malloc(sizeof(node_pointer) + size);
-    buf = (char*) memcpy(((char*)ptr) + sizeof(node_pointer), buf + pos, size);
+    ptr = (node_pointer *) malloc(sizeof(node_pointer) + size);
+    buf = (char *) memcpy(((char *)ptr) + sizeof(node_pointer), buf + pos, size);
     pos = 0;
     ptr->key.buf = NULL;
     ptr->key.size = 0;
@@ -60,7 +61,7 @@ node_pointer* read_root(char* buf, int* endpos)
     return ptr;
 }
 
-int ei_decode_uint64(char* buf, int* index, uint64_t* val)
+int ei_decode_uint64(char *buf, int *index, uint64_t *val)
 {
     unsigned long long ulval;
     int rv = ei_decode_ulonglong(buf, index, &ulval);
@@ -68,14 +69,11 @@ int ei_decode_uint64(char* buf, int* index, uint64_t* val)
     return rv;
 }
 
-void ei_x_encode_nodepointer(ei_x_buff* x, node_pointer* node)
+void ei_x_encode_nodepointer(ei_x_buff *x, node_pointer *node)
 {
-    if(node == NULL)
-    {
+    if (node == NULL) {
         ei_x_encode_atom(x, "nil");
-    }
-    else
-    {
+    } else {
         ei_x_encode_tuple_header(x, 3);
         ei_x_encode_ulonglong(x, node->pointer);
         ei_x_append_buf(x, node->reduce_value.buf, node->reduce_value.size);
@@ -84,38 +82,37 @@ void ei_x_encode_nodepointer(ei_x_buff* x, node_pointer* node)
 }
 
 
-fatbuf* fatbuf_alloc(size_t bytes)
+fatbuf *fatbuf_alloc(size_t bytes)
 {
-    fatbuf* fb = (fatbuf*) malloc(sizeof(fatbuf) + bytes);
+    fatbuf *fb = (fatbuf *) malloc(sizeof(fatbuf) + bytes);
 #ifdef DEBUG
     memset(fb->buf, 0x44, bytes);
 #endif
-    if(!fb)
+    if (!fb) {
         return NULL;
+    }
 
     fb->size = bytes;
     fb->pos = 0;
     return fb;
 }
 
-void* fatbuf_get(fatbuf* fb, size_t bytes)
+void *fatbuf_get(fatbuf *fb, size_t bytes)
 {
-    if(fb->pos + bytes > fb->size)
-    {
+    if (fb->pos + bytes > fb->size) {
         return NULL;
     }
 #ifdef DEBUG
-    if(fb->buf[fb->pos] != 0x44)
-    {
+    if (fb->buf[fb->pos] != 0x44) {
         fprintf(stderr, "Fatbuf space has been written to before it was taken!\n");
     }
 #endif
-    void* rptr = fb->buf + fb->pos;
+    void *rptr = fb->buf + fb->pos;
     fb->pos += bytes;
     return rptr;
 }
 
-void fatbuf_free(fatbuf* fb)
+void fatbuf_free(fatbuf *fb)
 {
     free(fb);
 }
@@ -123,13 +120,13 @@ void fatbuf_free(fatbuf* fb)
 #if !defined(HAVE_HTONLL) && !defined(WORDS_BIGENDIAN)
 extern uint64_t couchstore_byteswap64(uint64_t val)
 {
-   size_t ii;
-   uint64_t ret = 0;
-   for (ii = 0; ii < sizeof(uint64_t); ii++) {
-      ret <<= 8;
-      ret |= val & 0xff;
-      val >>= 8;
-   }
-   return ret;
+    size_t ii;
+    uint64_t ret = 0;
+    for (ii = 0; ii < sizeof(uint64_t); ii++) {
+        ret <<= 8;
+        ret |= val & 0xff;
+        val >>= 8;
+    }
+    return ret;
 }
 #endif

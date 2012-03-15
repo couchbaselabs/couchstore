@@ -8,7 +8,7 @@
 #define COUCH_SNAPPY_THRESHOLD 64
 
 typedef struct _sized_buf {
-    char* buf;
+    char *buf;
     size_t size;
 } sized_buf;
 
@@ -55,13 +55,12 @@ typedef struct _local_doc {
     int deleted;
 } LocalDoc;
 
-typedef struct _db_header
-{
+typedef struct _db_header {
     uint64_t disk_version;
     uint64_t update_seq;
-    node_pointer* by_id_root;
-    node_pointer* by_seq_root;
-    node_pointer* local_docs_root;
+    node_pointer *by_id_root;
+    node_pointer *by_seq_root;
+    node_pointer *local_docs_root;
     uint64_t purge_seq;
     sized_buf *purged_docs;
     uint64_t position;
@@ -100,9 +99,9 @@ int pread_header(Db *db, off_t pos, char **ret_ptr);
 
 ssize_t total_read_len(off_t blockoffset, ssize_t finallen);
 
-int db_write_header(Db* db, sized_buf* buf, off_t *pos);
-int db_write_buf(Db* db, sized_buf* buf, off_t *pos);
-int db_write_buf_compressed(Db* db, sized_buf* buf, off_t *pos);
+int db_write_header(Db *db, sized_buf *buf, off_t *pos);
+int db_write_buf(Db *db, sized_buf *buf, off_t *pos);
+int db_write_buf_compressed(Db *db, sized_buf *buf, off_t *pos);
 
 /* Errors */
 

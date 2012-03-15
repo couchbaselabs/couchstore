@@ -9,9 +9,9 @@ typedef struct _fat_buffer {
 #ifdef __cplusplus
 extern "C" {
 #endif
-fatbuf* fatbuf_alloc(size_t bytes);
-void* fatbuf_get(fatbuf* fb, size_t bytes);
-void fatbuf_free(fatbuf* fb);
+    fatbuf *fatbuf_alloc(size_t bytes);
+    void *fatbuf_get(fatbuf *fb, size_t bytes);
+    void fatbuf_free(fatbuf *fb);
 #ifdef __cplusplus
 }
 #endif

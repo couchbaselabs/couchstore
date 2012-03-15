@@ -2,18 +2,19 @@
 #include <libcouchstore/couch_btree.h>
 #include <ei.h>
 
-void by_seq_reduce (sized_buf* dst, nodelist* leaflist, int count)
+void by_seq_reduce (sized_buf *dst, nodelist *leaflist, int count)
 {
     //will be freed by flush_mr
-    dst->buf = (char*) malloc(12);
-    if(!dst->buf)
+    dst->buf = (char *) malloc(12);
+    if (!dst->buf) {
         return;
+    }
     int pos = 0;
     ei_encode_long(dst->buf, &pos, count);
     dst->size = pos;
 }
 
-void by_seq_rereduce (sized_buf* dst, nodelist* leaflist, int count)
+void by_seq_rereduce (sized_buf *dst, nodelist *leaflist, int count)
 {
     long total = 0;
     long current = 0;
@@ -21,12 +22,12 @@ void by_seq_rereduce (sized_buf* dst, nodelist* leaflist, int count)
     int pos = 0;
 
     //will be freed by flush_mr
-    dst->buf = (char*) malloc(12);
-    if(!dst->buf)
+    dst->buf = (char *) malloc(12);
+    if (!dst->buf) {
         return;
-    nodelist* i = leaflist;
-    while(i != NULL)
-    {
+    }
+    nodelist *i = leaflist;
+    while (i != NULL) {
         r_pos = 0;
         ei_decode_long(i->value.pointer->reduce_value.buf, &r_pos, &current);
         total += current;
@@ -36,19 +37,19 @@ void by_seq_rereduce (sized_buf* dst, nodelist* leaflist, int count)
     dst->size = pos;
 }
 
-void by_id_rereduce(sized_buf *dst, nodelist* leaflist, int count)
+void by_id_rereduce(sized_buf *dst, nodelist *leaflist, int count)
 {
     //Source term {NotDeleted, Deleted, Size}
     //Result term {NotDeleted, Deleted, Size}
-    dst->buf = (char*) malloc(30);
-    if(!dst->buf)
+    dst->buf = (char *) malloc(30);
+    if (!dst->buf) {
         return;
+    }
     int dstpos = 0;
     int srcpos = 0;
     long notdeleted = 0, deleted = 0, size = 0;
-    nodelist* i = leaflist;
-    while(i != NULL)
-    {
+    nodelist *i = leaflist;
+    while (i != NULL) {
         srcpos = 0;
         long long src_deleted = 0;
         long long src_notdeleted = 0;
@@ -70,19 +71,19 @@ void by_id_rereduce(sized_buf *dst, nodelist* leaflist, int count)
     dst->size = dstpos;
 }
 
-void by_id_reduce(sized_buf *dst, nodelist* leaflist, int count)
+void by_id_reduce(sized_buf *dst, nodelist *leaflist, int count)
 {
     //Source term {Key, {Seq, Rev, Bp, Deleted, ContentMeta, Size}}
     //Result term {NotDeleted, Deleted, Size}
-    dst->buf = (char*) malloc(30);
-    if(!dst->buf)
+    dst->buf = (char *) malloc(30);
+    if (!dst->buf) {
         return;
+    }
     int dstpos = 0;
     int srcpos = 0;
     long notdeleted = 0, deleted = 0, size = 0;
-    nodelist* i = leaflist;
-    while(i != NULL)
-    {
+    nodelist *i = leaflist;
+    while (i != NULL) {
         srcpos = 0;
         long src_deleted = 0;
         long long src_size = 0;
@@ -95,10 +96,11 @@ void by_id_reduce(sized_buf *dst, nodelist* leaflist, int count)
         ei_decode_long(i->value.leaf->buf, &srcpos, &src_deleted);
         ei_skip_term(i->value.leaf->buf, &srcpos); //skip ContentMeta
         ei_decode_longlong(i->value.leaf->buf, &srcpos, &src_size);
-        if(src_deleted == 1)
+        if (src_deleted == 1) {
             deleted++;
-        else
+        } else {
             notdeleted++;
+        }
 
         size += src_size;
         i = i->next;

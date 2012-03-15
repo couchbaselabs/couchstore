@@ -104,3 +104,21 @@ testapp_LDADD = libcouchstore.la
 test: check-TESTS $(extra_tests)
 
 slow_test: $(slow_tests)
+
+reformat:
+	astyle --mode=c \
+               --quiet \
+               --style=1tbs \
+               --indent=spaces=4 \
+               --indent-namespaces \
+               --indent-col1-comments \
+               --max-instatement-indent=78 \
+               --pad-oper \
+               --pad-header \
+               --add-brackets \
+               --align-pointer=name \
+               --align-reference=name \
+               $(top_srcdir)/include/libcouchstore/*.h \
+               $(top_srcdir)/src/*.[ch] \
+               $(top_srcdir)/src/*.cc \
+               $(top_srcdir)/tests/*.[ch]
