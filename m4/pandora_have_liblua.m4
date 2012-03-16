@@ -29,7 +29,7 @@ AC_DEFUN([_PANDORA_SEARCH_LIBLUA],[
     ifdef([PKG_CHECK_MODULES],[
         AS_IF([test "x$ac_cv_liblua" = "xno"], [
             PKG_CHECK_MODULES([lua], [lua5.1],
-                [ac_cv_liblua="yes"])
+                [ac_cv_liblua="yes"], [true])
             AS_IF([test "x$ac_cv_liblua" = "xyes"], [
                 LTLIBLUA=$lua_LIBS
             ])
