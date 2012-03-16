@@ -2,6 +2,7 @@
 #include <iostream>
 #include <cassert>
 #include <sysexits.h>
+#include <stdlib.h>
 
 #include <libcouchstore/couch_db.h>
 
