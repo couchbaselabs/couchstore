@@ -73,7 +73,7 @@ bin_PROGRAMS += couchscript
 
 couchscript_CXXFLAGS = $(lua_CFLAGS)
 couchscript_SOURCES = src/couchscript.cc
-couchscript_LDADD = libcouchstore.la $(LTLIBLUA)
+couchscript_LDADD = libcouchstore.la $(LTLIBLUA) -ldl
 couchscript_DEPENDENCIES = libcouchstore.la
 extra_tests += lua_tests
 
