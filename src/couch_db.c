@@ -27,7 +27,7 @@ static couch_file_ops default_file_ops = {
     couch_sync
 };
 
-int find_header(Db *db)
+static int find_header(Db *db)
 {
     uint64_t block = db->file_pos / COUCH_BLOCK_SIZE;
     int errcode = 0;
@@ -86,7 +86,7 @@ cleanup:
     return errcode;
 }
 
-int write_header(Db *db)
+static int write_header(Db *db)
 {
     ei_x_buff x_header;
     sized_buf writebuf;
@@ -114,11 +114,13 @@ int write_header(Db *db)
     return errcode;
 }
 
+LIBCOUCHSTORE_API
 uint64_t get_header_position(Db *db)
 {
     return db->header.position;
 }
 
+LIBCOUCHSTORE_API
 int commit_all(Db *db, uint64_t options)
 {
     write_header(db);
@@ -126,6 +128,7 @@ int commit_all(Db *db, uint64_t options)
     return 0;
 }
 
+LIBCOUCHSTORE_API
 int open_db(const char *filename, uint64_t options, couch_file_ops *ops, Db **pDb)
 {
     int errcode = 0;
@@ -164,6 +167,7 @@ cleanup:
     return errcode;
 }
 
+LIBCOUCHSTORE_API
 int close_db(Db *db)
 {
     int errcode = 0;
@@ -189,6 +193,7 @@ int close_db(Db *db)
     return errcode;
 }
 
+LIBCOUCHSTORE_API
 int ebin_cmp(void *k1, void *k2)
 {
     sized_buf *e1 = (sized_buf *)k1;
@@ -211,6 +216,7 @@ int ebin_cmp(void *k1, void *k2)
     return cmp;
 }
 
+LIBCOUCHSTORE_API
 void *ebin_from_ext(compare_info *c, char *buf, int pos)
 {
     int binsize;
@@ -222,7 +228,7 @@ void *ebin_from_ext(compare_info *c, char *buf, int pos)
     return ebcmp;
 }
 
-void *term_from_ext(compare_info *c, char *buf, int pos)
+static void *term_from_ext(compare_info *c, char *buf, int pos)
 {
     int endpos = pos;
     sized_buf *ebcmp = (sized_buf *) c->arg;
@@ -232,7 +238,7 @@ void *term_from_ext(compare_info *c, char *buf, int pos)
     return ebcmp;
 }
 
-int long_term_cmp(void *k1, void *k2)
+static int long_term_cmp(void *k1, void *k2)
 {
     sized_buf *e1 = (sized_buf *)k1;
     sized_buf *e2 = (sized_buf *)k2;
@@ -247,7 +253,7 @@ int long_term_cmp(void *k1, void *k2)
     return (e1val < e2val ? -1 : 1);
 }
 
-int docinfo_from_buf(DocInfo **pInfo, sized_buf *v, int idBytes)
+static int docinfo_from_buf(DocInfo **pInfo, sized_buf *v, int idBytes)
 {
     int errcode = 0, term_index = 0, fterm_pos = 0, fterm_size = 0;
     int metabin_pos = 0, metabin_size = 0;
@@ -327,7 +333,7 @@ cleanup:
 
 #define COMPRESSED_BODY 1
 //Fill in doc from reading file.
-int bp_to_doc(Doc **pDoc, Db *db, off_t bp, uint64_t options)
+static int bp_to_doc(Doc **pDoc, Db *db, off_t bp, uint64_t options)
 {
     int errcode = 0;
     uint32_t jsonlen, hasbin;
@@ -365,7 +371,7 @@ cleanup:
     return errcode;
 }
 
-int docinfo_fetch(couchfile_lookup_request *rq, void *k, sized_buf *v)
+static int docinfo_fetch(couchfile_lookup_request *rq, void *k, sized_buf *v)
 {
     int errcode = 0;
     sized_buf *id = (sized_buf *) k;
@@ -376,6 +382,7 @@ cleanup:
     return errcode;
 }
 
+LIBCOUCHSTORE_API
 int docinfo_by_id(Db *db, uint8_t *id,  size_t idlen, DocInfo **pInfo)
 {
     sized_buf key;
@@ -410,6 +417,7 @@ int docinfo_by_id(Db *db, uint8_t *id,  size_t idlen, DocInfo **pInfo)
     return errcode;
 }
 
+LIBCOUCHSTORE_API
 int open_doc_with_docinfo(Db *db, DocInfo *docinfo, Doc **pDoc, uint64_t options)
 {
     int errcode = 0;
@@ -428,6 +436,7 @@ cleanup:
     return errcode;
 }
 
+LIBCOUCHSTORE_API
 int open_doc(Db *db, uint8_t *id,  size_t idlen, Doc **pDoc, uint64_t options)
 {
     int errcode = 0;
@@ -444,7 +453,7 @@ cleanup:
     return errcode;
 }
 
-int byseq_do_callback(couchfile_lookup_request *rq, void *k, sized_buf *v)
+static int byseq_do_callback(couchfile_lookup_request *rq, void *k, sized_buf *v)
 {
     int(*real_callback)(Db * db, DocInfo * docinfo, void * ctx) =
         (int ( *)(Db *, DocInfo *, void *)) ((void **)rq->callback_ctx)[0];
@@ -462,8 +471,9 @@ int byseq_do_callback(couchfile_lookup_request *rq, void *k, sized_buf *v)
     return 0;
 }
 
+LIBCOUCHSTORE_API
 int changes_since(Db *db, uint64_t since, uint64_t options,
-                             int(*f)(Db *db, DocInfo *docinfo, void *ctx), void *ctx)
+                  int(*f)(Db *db, DocInfo *docinfo, void *ctx), void *ctx)
 {
     char since_termbuf[10];
     sized_buf since_term;
@@ -499,6 +509,7 @@ int changes_since(Db *db, uint64_t since, uint64_t options,
     return errcode;
 }
 
+LIBCOUCHSTORE_API
 void free_doc(Doc *doc)
 {
     if (doc) {
@@ -507,18 +518,19 @@ void free_doc(Doc *doc)
     }
 }
 
+LIBCOUCHSTORE_API
 void free_docinfo(DocInfo *docinfo)
 {
     free(docinfo);
 }
 
-void copy_term(char *dst, int *index, sized_buf *term)
+static void copy_term(char *dst, int *index, sized_buf *term)
 {
     memcpy(dst + *index, term->buf, term->size);
     *index += term->size;
 }
 
-int assemble_index_value(DocInfo *docinfo, char *dst, sized_buf *first_term)
+static int assemble_index_value(DocInfo *docinfo, char *dst, sized_buf *first_term)
 {
     int pos = 0;
     ei_encode_tuple_header(dst, &pos, 6); //2 bytes.
@@ -542,7 +554,7 @@ int assemble_index_value(DocInfo *docinfo, char *dst, sized_buf *first_term)
     return pos;
 }
 
-int write_doc(Db *db, Doc *doc, uint64_t *bp, uint64_t writeopts)
+static int write_doc(Db *db, Doc *doc, uint64_t *bp, uint64_t writeopts)
 {
     int errcode = 0;
     if (writeopts & COMPRESSED_BODY) {
@@ -554,7 +566,7 @@ cleanup:
     return errcode;
 }
 
-int id_action_compare(const void *actv1, const void *actv2)
+static int id_action_compare(const void *actv1, const void *actv2)
 {
     const couchfile_modify_action *act1, *act2;
     act1 = (const couchfile_modify_action *) actv1;
@@ -572,8 +584,7 @@ int id_action_compare(const void *actv1, const void *actv2)
     return cmp;
 }
 
-
-int seq_action_compare(const void *actv1, const void *actv2)
+static int seq_action_compare(const void *actv1, const void *actv2)
 {
     const couchfile_modify_action *act1, *act2;
     act1 = (const couchfile_modify_action *) actv1;
@@ -615,7 +626,7 @@ typedef struct _idxupdatectx {
     fatbuf *deltermbuf;
 } index_update_ctx;
 
-void idfetch_update_cb(couchfile_modify_request *rq, sized_buf *k, sized_buf *v, void *arg)
+static void idfetch_update_cb(couchfile_modify_request *rq, sized_buf *k, sized_buf *v, void *arg)
 {
     //v contains a seq we need to remove ( {Seq,_,_,_,_} )
     int termpos = 0;
@@ -645,7 +656,7 @@ void idfetch_update_cb(couchfile_modify_request *rq, sized_buf *k, sized_buf *v,
     return;
 }
 
-int update_indexes(Db *db, sized_buf *seqs, sized_buf *seqvals, sized_buf *ids, sized_buf *idvals, int numdocs)
+static int update_indexes(Db *db, sized_buf *seqs, sized_buf *seqvals, sized_buf *ids, sized_buf *idvals, int numdocs)
 {
     int errcode = 0;
     fatbuf *actbuf = fatbuf_alloc(numdocs * ( 4 * sizeof(couchfile_modify_action) + // Two action list up to numdocs * 2 in size
@@ -740,7 +751,7 @@ cleanup:
     return errcode;
 }
 
-int add_doc_to_update_list(Db *db, Doc *doc, DocInfo *info, fatbuf *fb,
+static int add_doc_to_update_list(Db *db, Doc *doc, DocInfo *info, fatbuf *fb,
                            sized_buf *seqterm, sized_buf *idterm, sized_buf *seqval, sized_buf *idval, uint64_t seq, uint64_t options)
 {
     int errcode = 0;
@@ -785,6 +796,7 @@ cleanup:
     return errcode;
 }
 
+LIBCOUCHSTORE_API
 int save_docs(Db *db, Doc **docs, DocInfo **infos, long numdocs, uint64_t options)
 {
     int errcode = 0, i;
@@ -832,12 +844,13 @@ cleanup:
     return errcode;
 }
 
+LIBCOUCHSTORE_API
 int save_doc(Db *db, Doc *doc, DocInfo *info, uint64_t options)
 {
     return save_docs(db, &doc, &info, 1, options);
 }
 
-int local_doc_fetch(couchfile_lookup_request *rq, void *k, sized_buf *v)
+static int local_doc_fetch(couchfile_lookup_request *rq, void *k, sized_buf *v)
 {
     int errcode = 0;
     sized_buf *id = (sized_buf *) k;
@@ -866,6 +879,7 @@ cleanup:
     return errcode;
 }
 
+LIBCOUCHSTORE_API
 int open_local_doc(Db *db, uint8_t *id, size_t idlen, LocalDoc **pDoc)
 {
     sized_buf key;
@@ -900,6 +914,7 @@ int open_local_doc(Db *db, uint8_t *id, size_t idlen, LocalDoc **pDoc)
     return errcode;
 }
 
+LIBCOUCHSTORE_API
 int save_local_doc(Db *db, LocalDoc *lDoc)
 {
     int errcode = 0;
@@ -950,6 +965,7 @@ cleanup:
     return errcode;
 }
 
+LIBCOUCHSTORE_API
 void free_local_doc(LocalDoc *lDoc)
 {
     if (lDoc) {

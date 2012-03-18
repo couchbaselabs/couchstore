@@ -21,7 +21,8 @@ EXTRA_DIST = LICENSE README.md src/rfc1321
 pkginclude_HEADERS = \
                      include/libcouchstore/couch_db.h \
                      include/libcouchstore/couch_common.h \
-                     include/libcouchstore/couch_btree.h
+                     include/libcouchstore/couch_btree.h \
+                     include/libcouchstore/visibility.h
 
 lib_LTLIBRARIES = libcouchstore.la
 
@@ -31,6 +32,7 @@ pkgconfig_DATA = libcouchstore.pc
 libcouchstore_la_SOURCES = \
                             src/btree_modify.c \
                             src/btree_read.c \
+                            src/byteswap.c \
                             src/config_static.h \
                             src/couch_btree.h \
                             src/couch_common.h \
@@ -49,16 +51,17 @@ libcouchstore_la_SOURCES = \
                             src/util.h
 
 libcouchstore_la_LDFLAGS = $(AM_LDFLAGS) -version-info $(LIBCOUCHSTORE_API_CURRENT):$(LIBCOUCHSTORE_API_REVISION):$(LIBCOUCHSTORE_API_AGE) -no-undefined $(ERL_INTERFACE_DIR_LIB) -lei -lsnappy
-libcouchstore_la_CFLAGS = $(ERL_INTERFACE_DIR_INCLUDE)
+libcouchstore_la_CFLAGS = -DLIBCOUCHSTORE_INTERNAL=1 $(ERL_INTERFACE_DIR_INCLUDE)
 libcouchstore_la_CXXFLAGS = $(ERL_INTERFACE_DIR_INCLUDE)
 
-couch_dbdump_SOURCES = src/dbdump.c
+couch_dbdump_SOURCES = src/dbdump.c src/byteswap.c
 couch_dbdump_DEPENDENCIES = libcouchstore.la
 couch_dbdump_CXXFLAGS = -D__STDC_FORMAT_MACROS
 couch_dbdump_LDADD = libcouchstore.la -lsnappy
 
-couch_dbinfo_SOURCES = src/dbinfo.cc
+couch_dbinfo_SOURCES = src/dbinfo.cc src/util.c src/byteswap.c
 couch_dbinfo_CXXFLAGS = $(ERL_INTERFACE_DIR_INCLUDE) -D__STDC_FORMAT_MACROS
+couch_dbinfo_CFLAGS = $(ERL_INTERFACE_DIR_INCLUDE) -D__STDC_FORMAT_MACROS
 couch_dbinfo_DEPENDENCIES = libcouchstore.la
 couch_dbinfo_LDADD = libcouchstore.la
 #writetest_SOURCES = src/writetest.c
@@ -72,7 +75,7 @@ if HAVE_LIBLUA
 bin_PROGRAMS += couchscript
 
 couchscript_CXXFLAGS = $(lua_CFLAGS)
-couchscript_SOURCES = src/couchscript.cc
+couchscript_SOURCES = src/couchscript.cc src/byteswap.c
 couchscript_LDADD = libcouchstore.la $(LTLIBLUA) -ldl
 couchscript_DEPENDENCIES = libcouchstore.la
 extra_tests += lua_tests
@@ -96,7 +99,7 @@ endif
 check_PROGRAMS = testapp
 TESTS = ${check_PROGRAMS}
 
-testapp_SOURCES = tests/testapp.c
+testapp_SOURCES = tests/testapp.c src/util.c
 testapp_CFLAGS = $(ERL_INTERFACE_DIR_INCLUDE)
 testapp_LDFLAGS = $(ERL_INTERFACE_DIR_LIB) -lei
 testapp_DEPENDENCIES = libcouchstore.la

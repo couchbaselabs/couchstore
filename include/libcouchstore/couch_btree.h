@@ -38,6 +38,7 @@ typedef struct couchfile_lookup_request {
     node_pointer *root;
 } couchfile_lookup_request;
 
+LIBCOUCHSTORE_API
 int btree_lookup(couchfile_lookup_request *rq, uint64_t root_pointer);
 
 /* Modify */
@@ -98,9 +99,12 @@ typedef struct couchfile_modify_result {
     int error_state;
 } couchfile_modify_result;
 
+LIBCOUCHSTORE_API
 node_pointer *modify_btree(couchfile_modify_request *rq,
                            node_pointer *root, int *errcode);
+LIBCOUCHSTORE_API
 int ebin_cmp(void *k1, void *k2);
+LIBCOUCHSTORE_API
 void *ebin_from_ext(compare_info *c, char *buf, int pos);
 
 #ifdef __cplusplus
