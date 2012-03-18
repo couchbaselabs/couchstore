@@ -1,6 +1,11 @@
 #ifndef COUCH_BTREE_H
 #define COUCH_BTREE_H
 #include <libcouchstore/couch_common.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct compare_info {
     /* used by find_first_gteq */
     int last_cmp_val;
@@ -97,5 +102,9 @@ node_pointer *modify_btree(couchfile_modify_request *rq,
                            node_pointer *root, int *errcode);
 int ebin_cmp(void *k1, void *k2);
 void *ebin_from_ext(compare_info *c, char *buf, int pos);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

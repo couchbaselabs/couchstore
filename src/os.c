@@ -1,3 +1,7 @@
+#include <sys/uio.h>
+#include <unistd.h>
+#include <fcntl.h>
+
 #include "os.h"
 
 ssize_t couch_pread(Db *db, void *buf, size_t nbyte, off_t offset)

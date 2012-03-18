@@ -462,7 +462,7 @@ int byseq_do_callback(couchfile_lookup_request *rq, void *k, sized_buf *v)
     return 0;
 }
 
-extern "C" int changes_since(Db *db, uint64_t since, uint64_t options,
+int changes_since(Db *db, uint64_t since, uint64_t options,
                              int(*f)(Db *db, DocInfo *docinfo, void *ctx), void *ctx)
 {
     char since_termbuf[10];

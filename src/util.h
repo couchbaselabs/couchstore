@@ -18,6 +18,10 @@
 #define error_unless(C, E) if(!(C)) { error_pass(E); }
 #define error_nonzero(C, E) if((C) != 0) { error_pass(E); }
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define atom_check(B, A) do_atom_check(B, A, sizeof(A) - 1)
 
 static inline int do_atom_check(char *buf, const char *atomname, int len)
@@ -52,8 +56,11 @@ node_pointer *read_root(char *buf, int *endpos);
 void ei_x_encode_nodepointer(ei_x_buff *x, node_pointer *node);
 void term_to_buf(sized_buf *dst, char *buf, int *pos);
 
-extern "C" {
-    int ei_decode_uint64(char *buf, int *index, uint64_t *val);
-    uint32_t hash_crc32(const char *key, size_t key_length);
+int ei_decode_uint64(char *buf, int *index, uint64_t *val);
+uint32_t hash_crc32(const char *key, size_t key_length);
+
+#ifdef __cplusplus
 }
+#endif
+
 #endif

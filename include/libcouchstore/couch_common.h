@@ -3,6 +3,10 @@
 #include <sys/types.h>
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define COUCH_BLOCK_SIZE 4096
 #define COUCH_DISK_VERSION 9
 #define COUCH_SNAPPY_THRESHOLD 64
@@ -114,5 +118,9 @@ int db_write_buf_compressed(Db *db, sized_buf *buf, off_t *pos);
 #define ERROR_WRITE -7
 #define ERROR_HEADER_VERSION -8
 #define ERROR_CHECKSUM_FAIL -9
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

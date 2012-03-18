@@ -69,7 +69,7 @@ AC_DEFUN([COUCHBASE_GENERIC_COMPILER], [
   SPRO_CPP_WARNINGS="-errhdr=%user -errfmt=error -errshort=full -errtags "
   SPRO_C_COMPILER_WARNINGS="-v"
   SPRO_CXX_COMPILER_WARNINGS="+w +w2"
-  SPRO_LDFLAGS="-mt=yes -library=stlport4"
+  SPRO_LDFLAGS="-mt=yes"
 
   AC_CHECK_DECL([__SUNPRO_C], [SUNCC="yes"], [SUNCC="no"])
   AC_CHECK_DECL([__GNUC__], [GCC="yes"], [GCC="no"])
