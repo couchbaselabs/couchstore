@@ -48,7 +48,7 @@ libcouchstore_la_SOURCES = \
                             src/util.cc \
                             src/util.h
 
-libcouchstore_la_LDFLAGS = -version-info $(LIBCOUCHSTORE_API_CURRENT):$(LIBCOUCHSTORE_API_REVISION):$(LIBCOUCHSTORE_API_AGE) -no-undefined $(ERL_INTERFACE_DIR_LIB) -lei -lsnappy
+libcouchstore_la_LDFLAGS = $(AM_LDFLAGS) -version-info $(LIBCOUCHSTORE_API_CURRENT):$(LIBCOUCHSTORE_API_REVISION):$(LIBCOUCHSTORE_API_AGE) -no-undefined $(ERL_INTERFACE_DIR_LIB) -lei -lsnappy
 libcouchstore_la_CFLAGS = $(ERL_INTERFACE_DIR_INCLUDE)
 libcouchstore_la_CXXFLAGS = $(ERL_INTERFACE_DIR_INCLUDE)
 
