@@ -1,6 +1,6 @@
 #ifndef COUCH_COMMON_H
 #define COUCH_COMMON_H
-#include <unistd.h>
+#include <sys/types.h>
 #include <stdint.h>
 
 #define COUCH_BLOCK_SIZE 4096

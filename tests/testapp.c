@@ -1,3 +1,5 @@
+#include "config.h"
+#include <unistd.h>
 #include <libcouchstore/couch_db.h>
 #include "../src/fatbuf.h"
 #include <stdio.h>
