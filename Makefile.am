@@ -51,12 +51,12 @@ libcouchstore_la_SOURCES = \
                             src/util.h
 
 libcouchstore_la_LDFLAGS = $(AM_LDFLAGS) -version-info $(LIBCOUCHSTORE_API_CURRENT):$(LIBCOUCHSTORE_API_REVISION):$(LIBCOUCHSTORE_API_AGE) -no-undefined $(ERL_INTERFACE_DIR_LIB) -lei -lsnappy
-libcouchstore_la_CFLAGS = -DLIBCOUCHSTORE_INTERNAL=1 $(ERL_INTERFACE_DIR_INCLUDE)
+libcouchstore_la_CFLAGS = $(AM_CFLAGS) -DLIBCOUCHSTORE_INTERNAL=1 $(ERL_INTERFACE_DIR_INCLUDE)
 libcouchstore_la_CXXFLAGS = $(ERL_INTERFACE_DIR_INCLUDE)
 
 couch_dbdump_SOURCES = src/dbdump.c src/byteswap.c
 couch_dbdump_DEPENDENCIES = libcouchstore.la
-couch_dbdump_CXXFLAGS = -D__STDC_FORMAT_MACROS
+couch_dbdump_CFLAGS = $(AM_CFLAGS) -D__STDC_FORMAT_MACROS
 couch_dbdump_LDADD = libcouchstore.la -lsnappy
 
 couch_dbinfo_SOURCES = src/dbinfo.c src/util.c src/byteswap.c
