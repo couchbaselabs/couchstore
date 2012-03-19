@@ -8,17 +8,6 @@
 #include <ei.h>
 #include "util.h"
 
-#ifndef DEBUG
-#define error_pass(C) if((errcode = (C)) < 0) { goto cleanup; }
-#else
-#define error_pass(C) if((errcode = (C)) < 0) { \
-                            fprintf(stderr, "Couchstore error `%s' at %s:%d\r\n", \
-                            describe_error(errcode), __FILE__, __LINE__); goto cleanup; }
-#endif
-#define error_unless(C, E) if(!(C)) { error_pass(E); }
-#define SNAPPY_FLAG 128
-
-
 void printsb(sized_buf *sb)
 {
     if (sb->buf == NULL) {
@@ -27,16 +16,17 @@ void printsb(sized_buf *sb)
     }
     printf("%.*s\n", (int) sb->size, sb->buf);
 }
-char rfs[256];
+
 char *size_str(double size)
 {
+    static char rfs[256];
     int i = 0;
     const char *units[] = {"bytes", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"};
     while (size > 1024) {
         size /= 1024;
         i++;
     }
-    sprintf(rfs, "%.*f %s", i, size, units[i]);
+    snprintf(rfs, sizeof(rfs), "%.*f %s", i, size, units[i]);
     return rfs;
 }
 
@@ -99,4 +89,3 @@ cleanup:
     }
     return errcode;
 }
-

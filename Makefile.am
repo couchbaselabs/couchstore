@@ -59,8 +59,7 @@ couch_dbdump_DEPENDENCIES = libcouchstore.la
 couch_dbdump_CXXFLAGS = -D__STDC_FORMAT_MACROS
 couch_dbdump_LDADD = libcouchstore.la -lsnappy
 
-couch_dbinfo_SOURCES = src/dbinfo.cc src/util.c src/byteswap.c
-couch_dbinfo_CXXFLAGS = $(ERL_INTERFACE_DIR_INCLUDE) -D__STDC_FORMAT_MACROS
+couch_dbinfo_SOURCES = src/dbinfo.c src/util.c src/byteswap.c
 couch_dbinfo_CFLAGS = $(ERL_INTERFACE_DIR_INCLUDE) -D__STDC_FORMAT_MACROS
 couch_dbinfo_DEPENDENCIES = libcouchstore.la
 couch_dbinfo_LDADD = libcouchstore.la
