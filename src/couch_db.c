@@ -18,15 +18,6 @@ sized_buf nil_atom = {
     6
 };
 
-static couch_file_ops default_file_ops = {
-    couch_pread,
-    couch_pwrite,
-    couch_open,
-    couch_close,
-    couch_goto_eof,
-    couch_sync
-};
-
 static int find_header(Db *db)
 {
     uint64_t block = db->file_pos / COUCH_BLOCK_SIZE;
@@ -133,7 +124,13 @@ int open_db(const char *filename, uint64_t options, couch_file_ops *ops, Db **pD
 {
     int errcode = 0;
     Db *db = (Db *) malloc(sizeof(Db));
-    db->file_ops = ops == NULL ? &default_file_ops : ops;
+
+    if (ops == NULL) {
+       db->file_ops = couch_get_default_file_ops();
+    } else {
+       db->file_ops = ops;
+    }
+
     *pDb = db;
     int openflags = 0;
     if (options & COUCH_CREATE_FILES) {
