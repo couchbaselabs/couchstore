@@ -1,3 +1,4 @@
+/* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include "config.h"
 #include <iostream>
 #include <cassert>
@@ -7,7 +8,15 @@
 
 #include <libcouchstore/couch_db.h>
 
-#include <lua.hpp>
+// Copied from lua.hpp to allow us to use older versions of lua
+// without that wrapper file.. (BTW this method is broken because
+// it includes system headers within 'extern "C"' and that may not
+// work very well...
+extern "C" {
+#include <lua.h>
+#include <lualib.h>
+#include <lauxlib.h>
+}
 
 typedef union {
     struct {
@@ -15,7 +24,7 @@ typedef union {
         uint32_t exp;
         uint32_t flags;
     } fields;
-    char bytes[];
+    char bytes[1];
 } revbuf_t;
 
 extern "C" {
@@ -314,7 +323,7 @@ extern "C" {
         int offset(0);
         for (lua_pushnil(ls); lua_next(ls, -2); lua_pop(ls, 1)) {
 
-            int n(lua_objlen(ls, -1));
+            int n = static_cast<int>(lua_objlen(ls, -1));
 
             if (n > 2) {
                 Doc *doc(bs.docs[offset]);
@@ -352,14 +361,14 @@ extern "C" {
 
                 if (n > 5) {
                     lua_rawgeti(ls, -1, 6);
-                    revbuf.fields.exp = luaL_checklong(ls, -1);
+                    revbuf.fields.exp = static_cast<uint32_t>(luaL_checklong(ls, -1));
                     revbuf.fields.exp = ntohl(revbuf.fields.exp);
                     lua_pop(ls, 1);
                 }
 
                 if (n > 6) {
                     lua_rawgeti(ls, -1, 7);
-                    revbuf.fields.flags = luaL_checklong(ls, 8);
+                    revbuf.fields.flags = static_cast<uint32_t>(luaL_checklong(ls, 8));
                     revbuf.fields.flags = ntohl(revbuf.fields.flags);
                     lua_pop(ls, 1);
                 }
@@ -417,12 +426,12 @@ extern "C" {
         }
 
         if (lua_gettop(ls) > 6) {
-            revbuf.fields.exp = luaL_checklong(ls, 7);
+            revbuf.fields.exp = static_cast<uint32_t>(luaL_checklong(ls, 7));
             revbuf.fields.exp = ntohl(revbuf.fields.exp);
         }
 
         if (lua_gettop(ls) > 7) {
-            revbuf.fields.flags = luaL_checklong(ls, 8);
+            revbuf.fields.flags = static_cast<uint32_t>(luaL_checklong(ls, 8));
             revbuf.fields.flags = ntohl(revbuf.fields.flags);
         }
 
@@ -532,16 +541,6 @@ extern "C" {
         return 1;
     }
 
-    static int luaStringWriter(lua_State *,
-                               const void *p,
-                               size_t sz,
-                               void *ud)
-    {
-        std::string *s = static_cast<std::string *>(ud);
-        s->append(static_cast<const char *>(p), sz);
-        return 0;
-    }
-
     class ChangesState
     {
     public:
@@ -570,7 +569,7 @@ extern "C" {
         const char *fun_name;
     };
 
-    static int couch_changes_each(Db *db, DocInfo *di, void *ctx)
+    static int couch_changes_each(Db *, DocInfo *di, void *ctx)
     {
         ChangesState *st(static_cast<ChangesState *>(ctx));
         st->invoke(di);

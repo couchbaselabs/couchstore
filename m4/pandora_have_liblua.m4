@@ -17,15 +17,13 @@ AC_DEFUN([_PANDORA_SEARCH_LIBLUA],[
     [ac_enable_liblua="yes"])
 
   AS_IF([test "x$ac_enable_liblua" = "xyes"],[
-    AC_LANG_PUSH([C++])
     AC_LIB_HAVE_LINKFLAGS(lua,,[
       #include <stdio.h>
-      #include <lua.hpp>
+      #include <lua.h>
     ],[
       lua_State *l;
       l = lua_newstate(NULL, NULL);
     ])
-    AC_LANG_POP([C++])
     ifdef([PKG_CHECK_MODULES],[
         AS_IF([test "x$ac_cv_liblua" = "xno"], [
             PKG_CHECK_MODULES([lua], [lua5.1],
