@@ -1,4 +1,4 @@
-# libcouchbase
+# libcouchstore
 # Copyright (C) 2010, 2011 Couchbase, Inc
 # All rights reserved.
 #
