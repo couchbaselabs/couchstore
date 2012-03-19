@@ -48,44 +48,51 @@ uint64_t id_reduce_info(node_pointer *root)
     return size;
 }
 
+static int process_file(const char *file)
+{
+   Db *db = NULL;
+   int errcode = open_db(file, 0, NULL, &db);
+   if (errcode < 0) {
+      fprintf(stderr, "Failed to open \"%s\": %s\n",
+              file, describe_error(errcode));
+      return -1;
+   }
+
+   uint64_t datasize = 0;
+   uint64_t btreesize = 0;
+   printf("DB Info (%s)\n", file);
+   printf("   file format version: %"PRIu64"\n", db->header.disk_version);
+   printf("   update_seq: %"PRIu64"\n", db->header.update_seq);
+   datasize = id_reduce_info(db->header.by_id_root);
+   if (db->header.by_id_root) {
+      btreesize += db->header.by_id_root->subtreesize;
+   }
+   if (db->header.by_seq_root) {
+      btreesize += db->header.by_seq_root->subtreesize;
+   }
+   printf("   B-tree size: %s\n", size_str(btreesize));
+   printf("   total disk size: %s\n", size_str(db->file_pos));
+
+   close_db(db);
+
+   return 0;
+}
+
 int main(int argc, char **argv)
 {
-    Db *db = NULL;
-    int errcode;
-    uint64_t datasize, btreesize;
-
-    int argpos = 1;
     if (argc < 2) {
         printf("USAGE: %s <file.couch>\n", argv[0]);
-        return -1;
+        exit(EXIT_FAILURE);
     }
 
-again:
-    datasize = 0;
-    btreesize = 0;
-    error_pass(open_db(argv[argpos], 0, NULL, &db));
-    printf("DB Info (%s)\n", argv[argpos]);
-    printf("   file format version: %"PRIu64"\n", db->header.disk_version);
-    printf("   update_seq: %"PRIu64"\n", db->header.update_seq);
-    datasize = id_reduce_info(db->header.by_id_root);
-    if (db->header.by_id_root) {
-        btreesize += db->header.by_id_root->subtreesize;
+    int error = 0;
+    for (int ii = 1; ii < argc; ++ii) {
+       error += process_file(argv[ii]);
     }
-    if (db->header.by_seq_root) {
-        btreesize += db->header.by_seq_root->subtreesize;
+
+    if (error) {
+       exit(EXIT_FAILURE);
+    } else {
+       exit(EXIT_SUCCESS);
     }
-    printf("   B-tree size: %s\n", size_str(btreesize));
-    printf("   total disk size: %s\n", size_str(db->file_pos));
-cleanup:
-    if (errcode == 0 && db) {
-        close_db(db);
-    }
-    argpos++;
-    if (errcode == 0 && argpos < argc) {
-        goto again;
-    }
-    if (errcode < 0) {
-        printf("ERROR: %s\n", describe_error(errcode));
-    }
-    return errcode;
 }
