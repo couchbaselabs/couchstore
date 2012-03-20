@@ -61,10 +61,10 @@ node_pointer *read_root(char *buf, int *endpos)
     return ptr;
 }
 
-int ei_decode_uint64(char *buf, int *index, uint64_t *val)
+int ei_decode_uint64(char *buf, int *idx, uint64_t *val)
 {
     unsigned long long ulval;
-    int rv = ei_decode_ulonglong(buf, index, &ulval);
+    int rv = ei_decode_ulonglong(buf, idx, &ulval);
     *val = ulval;
     return rv;
 }

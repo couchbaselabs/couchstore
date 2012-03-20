@@ -39,10 +39,10 @@ static inline int do_atom_check(char *buf, const char *atomname, int len)
     return !strncmp(atomname, buf + 3, len);
 }
 
-static inline int tuple_check(char *buf, int *index, int tuplelen)
+static inline int tuple_check(char *buf, int *idx, int tuplelen)
 {
     int checklen = 0;
-    if (ei_decode_tuple_header(buf, index, &checklen) < 0) {
+    if (ei_decode_tuple_header(buf, idx, &checklen) < 0) {
         return 0;
     } else {
         if (checklen != tuplelen) {

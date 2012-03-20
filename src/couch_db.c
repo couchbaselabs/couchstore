@@ -34,32 +34,32 @@ static int find_header(Db *db)
             int arity = 0;
             int purged_docs_index = 0;
             if (header_len > 0) {
-                int index = 0;
-                if (ei_decode_version(header_buf, &index, &arity) < 0) {
+                int idx = 0;
+                if (ei_decode_version(header_buf, &idx, &arity) < 0) {
                     errcode = ERROR_PARSE_TERM;
                     break;
                 }
-                if (ei_decode_tuple_header(header_buf, &index, &arity) < 0) {
+                if (ei_decode_tuple_header(header_buf, &idx, &arity) < 0) {
                     errcode = ERROR_PARSE_TERM;
                     break;
                 }
-                ei_skip_term(header_buf, &index); //db_header
-                ei_decode_uint64(header_buf, &index, &db->header.disk_version);
+                ei_skip_term(header_buf, &idx); //db_header
+                ei_decode_uint64(header_buf, &idx, &db->header.disk_version);
                 error_unless(db->header.disk_version == COUCH_DISK_VERSION, ERROR_HEADER_VERSION)
-                ei_decode_uint64(header_buf, &index, &db->header.update_seq);
-                db->header.by_id_root = read_root(header_buf, &index);
-                db->header.by_seq_root = read_root(header_buf, &index);
-                db->header.local_docs_root = read_root(header_buf, &index);
-                ei_decode_uint64(header_buf, &index, &db->header.purge_seq);
+                ei_decode_uint64(header_buf, &idx, &db->header.update_seq);
+                db->header.by_id_root = read_root(header_buf, &idx);
+                db->header.by_seq_root = read_root(header_buf, &idx);
+                db->header.local_docs_root = read_root(header_buf, &idx);
+                ei_decode_uint64(header_buf, &idx, &db->header.purge_seq);
 
-                purged_docs_index = index;
-                ei_skip_term(header_buf, &index); //purged_docs
-                db->header.purged_docs = (sized_buf *) malloc(sizeof(sized_buf) + (index - purged_docs_index));
+                purged_docs_index = idx;
+                ei_skip_term(header_buf, &idx); //purged_docs
+                db->header.purged_docs = (sized_buf *) malloc(sizeof(sized_buf) + (idx - purged_docs_index));
                 db->header.purged_docs->buf = ((char *)db->header.purged_docs) + sizeof(sized_buf);
-                memcpy(db->header.purged_docs->buf, header_buf + purged_docs_index, index - purged_docs_index);
-                db->header.purged_docs->size = index - purged_docs_index;
+                memcpy(db->header.purged_docs->buf, header_buf + purged_docs_index, idx - purged_docs_index);
+                db->header.purged_docs->size = idx - purged_docs_index;
 
-                ei_skip_term(header_buf, &index); //security ptr
+                ei_skip_term(header_buf, &idx); //security ptr
                 db->header.position = block * COUCH_BLOCK_SIZE;
                 break;
             }
@@ -521,10 +521,10 @@ void free_docinfo(DocInfo *docinfo)
     free(docinfo);
 }
 
-static void copy_term(char *dst, int *index, sized_buf *term)
+static void copy_term(char *dst, int *idx, sized_buf *term)
 {
-    memcpy(dst + *index, term->buf, term->size);
-    *index += term->size;
+    memcpy(dst + *idx, term->buf, term->size);
+    *idx += term->size;
 }
 
 static int assemble_index_value(DocInfo *docinfo, char *dst, sized_buf *first_term)
