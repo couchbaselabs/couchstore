@@ -1,3 +1,4 @@
+/* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include "config.h"
 #include <string.h>
 #include <stdio.h>
@@ -6,18 +7,9 @@
 #include <libcouchstore/couch_db.h>
 #include <snappy-c.h>
 
-#ifndef DEBUG
-#define error_pass(C) if((errcode = (C)) < 0) { goto cleanup; }
-#else
-#define error_pass(C) if((errcode = (C)) < 0) { \
-                            fprintf(stderr, "Couchstore error `%s' at %s:%d\r\n", \
-                            describe_error(errcode), __FILE__, __LINE__); goto cleanup; }
-#endif
-#define error_unless(C, E) if(!(C)) { error_pass(E); }
 #define SNAPPY_FLAG 128
 
-
-void printsb(sized_buf *sb)
+static void printsb(sized_buf *sb)
 {
     if (sb->buf == NULL) {
         printf("null\n");
@@ -26,7 +18,7 @@ void printsb(sized_buf *sb)
     printf("%.*s\n", (int) sb->size, sb->buf);
 }
 
-int foldprint(Db *db, DocInfo *docinfo, void *ctx)
+static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
 {
     int *count = (int *) ctx;
     Doc *doc;
@@ -62,32 +54,48 @@ int foldprint(Db *db, DocInfo *docinfo, void *ctx)
     return 0;
 }
 
-int main(int argc, char **argv)
+static int process_file(const char *file, int *total)
 {
     Db *db = NULL;
-    int errcode;
-    int count = 0;
-
-    int argpos = 1;
-    if (argc < 2) {
-        printf("USAGE: %s <file.couch>\n", argv[0]);
+    int errcode = open_db(file, 0, NULL, &db);
+    if (errcode < 0) {
+        fprintf(stderr, "Failed to open \"%s\": %s\n",
+                file, describe_error(errcode));
         return -1;
     }
-again:
-    error_pass(open_db(argv[argpos], 0, NULL, &db));
-    error_pass(changes_since(db, 0, 0, foldprint, &count));
-cleanup:
-    if (errcode == 0 && db) {
-        close_db(db);
-    }
-    argpos++;
-    if (errcode == 0 && argpos < argc) {
-        goto again;
-    }
-    printf("\nTotal docs: %d\n", count);
+
+    int count = 0;
+    errcode = changes_since(db, 0, 0, foldprint, &count);
+    close_db(db);
+
     if (errcode < 0) {
-        printf("ERROR: %s\n", describe_error(errcode));
+        fprintf(stderr, "Failed to dump database \"%s\": %s\n",
+                file, describe_error(errcode));
+        return -1;
     }
-    return errcode;
+
+    *total += count;
+    return 0;
+}
+
+int main(int argc, char **argv)
+{
+    if (argc < 2) {
+        printf("USAGE: %s <file.couch>\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+
+    int error = 0;
+    int count;
+    for (int ii = 1; ii < argc; ++ii) {
+        error += process_file(argv[ii], &count);
+    }
+
+    printf("\nTotal docs: %d\n", count);
+    if (error) {
+       exit(EXIT_FAILURE);
+    } else {
+       exit(EXIT_SUCCESS);
+    }
 }
 
