@@ -8,6 +8,7 @@
 
 #include "rfc1321/global.h"
 #include "rfc1321/md5.h"
+#include "crc32.h"
 #include "util.h"
 
 ssize_t raw_write(Db *db, sized_buf *buf, off_t pos)

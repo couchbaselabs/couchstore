@@ -5,7 +5,7 @@
 #include <netinet/in.h>
 #include <snappy-c.h>
 #include <ei.h>
-
+#include "crc32.h"
 #include "util.h"
 
 #define SIZE_BLOCK 4096
