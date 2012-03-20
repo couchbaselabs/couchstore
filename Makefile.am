@@ -29,6 +29,13 @@ lib_LTLIBRARIES = libcouchstore.la
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libcouchstore.pc
 
+noinst_LTLIBRARIES = librfc1321.la
+librfc1321_la_SOURCES = \
+                            src/rfc1321/md5c.c \
+                            src/rfc1321/md5.h \
+                            src/rfc1321/global.h
+librfc1321_la_CFLAGS =  $(AM_CFLAGS) ${NO_WERROR}
+
 libcouchstore_la_SOURCES = \
                             src/btree_modify.c \
                             src/btree_read.c \
@@ -44,16 +51,13 @@ libcouchstore_la_SOURCES = \
                             src/couch_file_write.c \
                             src/reduces.c \
                             src/reduces.h \
-                            src/rfc1321/md5c.c \
-                            src/rfc1321/md5.h \
-                            src/rfc1321/global.h \
                             src/os.c src/os.h \
                             src/util.c \
                             src/util.h
 
 libcouchstore_la_LDFLAGS = $(AM_LDFLAGS) -version-info $(LIBCOUCHSTORE_API_CURRENT):$(LIBCOUCHSTORE_API_REVISION):$(LIBCOUCHSTORE_API_AGE) -no-undefined $(ERL_INTERFACE_DIR_LIB) -lei -lsnappy
 libcouchstore_la_CFLAGS = $(AM_CFLAGS) -DLIBCOUCHSTORE_INTERNAL=1 $(ERL_INTERFACE_DIR_INCLUDE)
-libcouchstore_la_CXXFLAGS = $(ERL_INTERFACE_DIR_INCLUDE)
+libcouchstore_la_LIBADD = librfc1321.la
 
 couch_dbdump_SOURCES = src/dbdump.c src/byteswap.c
 couch_dbdump_DEPENDENCIES = libcouchstore.la
