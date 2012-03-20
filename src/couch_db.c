@@ -333,8 +333,6 @@ cleanup:
 static int bp_to_doc(Doc **pDoc, Db *db, off_t bp, uint64_t options)
 {
     int errcode = 0;
-    uint32_t jsonlen, hasbin;
-    size_t jsonlen_uncompressed = 0;
     size_t bodylen = 0;
     char *docbody = NULL;
     fatbuf *docbuf = NULL;
