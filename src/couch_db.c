@@ -195,7 +195,7 @@ int ebin_cmp(void *k1, void *k2)
 {
     sized_buf *e1 = (sized_buf *)k1;
     sized_buf *e2 = (sized_buf *)k2;
-    int size;
+    size_t size;
     if (e2->size < e1->size) {
         size = e2->size;
     } else {
