@@ -94,7 +94,7 @@ static int pread_bin_int(Db *db, off_t pos, char **ret_ptr, int header)
     buf_len = raw_read(db, &pos, 2 * SIZE_BLOCK - (pos % SIZE_BLOCK), &bufptr);
     if (buf_len == -1) {
         buf_len = raw_read(db, &pos, 4, &bufptr);
-        error_unless(buf_len > 0, ERROR_READ);
+        error_unless(buf_len > 0, COUCHSTORE_ERROR_READ);
     }
 
     prefix = bufptr[0] & 0x80;
@@ -121,26 +121,26 @@ static int pread_bin_int(Db *db, off_t pos, char **ret_ptr, int header)
     memmove(bufptr, bufptr + skip, buf_len);
     if (chunk_len <= buf_len) {
         newbufptr = (char *) realloc(bufptr, chunk_len);
-        error_unless(newbufptr, ERROR_READ);
+        error_unless(newbufptr, COUCHSTORE_ERROR_READ);
         bufptr = newbufptr;
 
         if (crc32) {
-            error_unless((crc32) == hash_crc32(bufptr, chunk_len), ERROR_CHECKSUM_FAIL);
+            error_unless((crc32) == hash_crc32(bufptr, chunk_len), COUCHSTORE_ERROR_CHECKSUM_FAIL);
         }
         *ret_ptr = bufptr;
         return chunk_len;
     } else {
         int rest_len = raw_read(db, &pos, chunk_len - buf_len, &bufptr_rest);
-        error_unless(rest_len > 0, ERROR_READ);
+        error_unless(rest_len > 0, COUCHSTORE_ERROR_READ);
 
         newbufptr = (char *) realloc(bufptr, buf_len + rest_len);
-        error_unless(newbufptr, ERROR_READ);
+        error_unless(newbufptr, COUCHSTORE_ERROR_READ);
         bufptr = newbufptr;
 
         memcpy(bufptr + buf_len, bufptr_rest, rest_len);
         free(bufptr_rest);
         if (crc32) {
-            error_unless((crc32) == hash_crc32(bufptr, chunk_len), ERROR_CHECKSUM_FAIL);
+            error_unless((crc32) == hash_crc32(bufptr, chunk_len), COUCHSTORE_ERROR_CHECKSUM_FAIL);
         }
         *ret_ptr = bufptr;
         return chunk_len;

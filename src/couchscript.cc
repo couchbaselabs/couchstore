@@ -27,6 +27,11 @@ typedef union {
     char bytes[1];
 } revbuf_t;
 
+// Wrapper function while we're fixing up the namespace
+static const char *couchstore_strerror(int code) {
+    return couchstore_strerror((couchstore_error_t)code);
+}
+
 extern "C" {
 
     static void push_db(lua_State *ls, Db *db)
@@ -85,7 +90,7 @@ extern "C" {
         int rc = open_db(pathname, flags, NULL, &db);
         if (rc < 0) {
             char buf[256];
-            snprintf(buf, sizeof(buf), "error opening DB: %s", describe_error(rc));
+            snprintf(buf, sizeof(buf), "error opening DB: %s", couchstore_strerror(rc));
             lua_pushstring(ls, buf);
             lua_error(ls);
             return 1;
@@ -147,7 +152,7 @@ extern "C" {
         if (rc < 0) {
             char buf[256];
             free_docinfo(docinfo);
-            snprintf(buf, sizeof(buf), "error getting doc by docinfo: %s", describe_error(rc));
+            snprintf(buf, sizeof(buf), "error getting doc by docinfo: %s", couchstore_strerror(rc));
             lua_pushstring(ls, buf);
             lua_error(ls);
             return 1;
@@ -180,7 +185,7 @@ extern "C" {
         int rc = docinfo_by_id(db, reinterpret_cast<uint8_t *>(key), klen, &docinfo);
         if (rc < 0) {
             char buf[256];
-            snprintf(buf, sizeof(buf), "error get docinfo: %s", describe_error(rc));
+            snprintf(buf, sizeof(buf), "error get docinfo: %s", couchstore_strerror(rc));
             lua_pushstring(ls, buf);
             lua_error(ls);
             return 1;
@@ -190,7 +195,7 @@ extern "C" {
         if (rc < 0) {
             char buf[256];
             free_docinfo(docinfo);
-            snprintf(buf, sizeof(buf), "error get doc by docinfo: %s", describe_error(rc));
+            snprintf(buf, sizeof(buf), "error get doc by docinfo: %s", couchstore_strerror(rc));
             lua_pushstring(ls, buf);
             lua_error(ls);
             return 1;
@@ -264,7 +269,7 @@ extern "C" {
         int rc = save_doc(db, &doc, &docinfo, 0);
         if (rc < 0) {
             char buf[256];
-            snprintf(buf, sizeof(buf), "error deleting document: %s", describe_error(rc));
+            snprintf(buf, sizeof(buf), "error deleting document: %s", couchstore_strerror(rc));
             lua_pushstring(ls, buf);
             lua_error(ls);
             return 1;
@@ -384,7 +389,7 @@ extern "C" {
         int rc = save_docs(db, bs.docs, bs.infos, bs.size, COMPRESS_DOC_BODIES);
         if (rc < 0) {
             char buf[256];
-            snprintf(buf, sizeof(buf), "error storing document: %s", describe_error(rc));
+            snprintf(buf, sizeof(buf), "error storing document: %s", couchstore_strerror(rc));
             lua_pushstring(ls, buf);
             lua_error(ls);
             return 1;
@@ -443,7 +448,7 @@ extern "C" {
         int rc = save_doc(db, &doc, &docinfo, COMPRESS_DOC_BODIES);
         if (rc < 0) {
             char buf[256];
-            snprintf(buf, sizeof(buf), "error storing document: %s", describe_error(rc));
+            snprintf(buf, sizeof(buf), "error storing document: %s", couchstore_strerror(rc));
             lua_pushstring(ls, buf);
             lua_error(ls);
             return 1;
@@ -472,7 +477,7 @@ extern "C" {
         if (rc < 0) {
             char buf[256];
             snprintf(buf, sizeof(buf), "error storing local document: %s",
-                     describe_error(rc));
+                     couchstore_strerror(rc));
             lua_pushstring(ls, buf);
             lua_error(ls);
             return 1;
@@ -499,7 +504,7 @@ extern "C" {
         if (rc < 0) {
             char buf[256];
             snprintf(buf, sizeof(buf), "error deleting local document: %s",
-                     describe_error(rc));
+                     couchstore_strerror(rc));
             lua_pushstring(ls, buf);
             lua_error(ls);
             return 1;
@@ -528,7 +533,7 @@ extern "C" {
         if (rc < 0) {
             char buf[256];
             snprintf(buf, sizeof(buf), "error getting local doc: %s",
-                     describe_error(rc));
+                     couchstore_strerror(rc));
             lua_pushstring(ls, buf);
             lua_error(ls);
             return 1;
@@ -605,7 +610,7 @@ extern "C" {
         int rc = changes_since(db, since, 0, couch_changes_each, &changes_state);
         if (rc != 0) {
             char buf[128];
-            snprintf(buf, sizeof(buf), "error iterating: %s", describe_error(rc));
+            snprintf(buf, sizeof(buf), "error iterating: %s", couchstore_strerror(rc));
             lua_pushstring(ls, buf);
             lua_error(ls);
             return 1;

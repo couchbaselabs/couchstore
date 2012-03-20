@@ -281,7 +281,7 @@ void test_open_file_error()
     unlink("test.couch");
     Db *db;
     int errcode = open_db("test.couch", 0, NULL, &db);
-    assert(errcode == ERROR_OPEN_FILE);
+    assert(errcode == COUCHSTORE_ERROR_OPEN_FILE);
 }
 
 

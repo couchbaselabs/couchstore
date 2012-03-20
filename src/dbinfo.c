@@ -46,7 +46,7 @@ static int process_file(const char *file)
     int errcode = open_db(file, 0, NULL, &db);
     if (errcode < 0) {
         fprintf(stderr, "Failed to open \"%s\": %s\n",
-                file, describe_error(errcode));
+                file, couchstore_strerror(errcode));
         return -1;
     }
 

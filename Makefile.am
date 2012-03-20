@@ -51,6 +51,7 @@ libcouchstore_la_SOURCES = \
                             src/couch_file_write.c \
                             src/reduces.c \
                             src/reduces.h \
+                            src/strerror.c \
                             src/os.c src/os.h \
                             src/util.c \
                             src/util.h

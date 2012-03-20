@@ -4,29 +4,6 @@
 #include <libcouchstore/couch_db.h>
 #include "util.h"
 
-#define ERR_MIN -9
-
-const char *errordescs[9] = {
-    "error opening file"        // ERROR_OPEN_FILE
-    , "error reading erlang term" // ERROR_PARSE_TERM
-    , "failed to allocate buffer" // ERROR_ALLOC_FAIL
-    , "error reading file"        // ERROR_READ
-    , "document not found"        // DOC_NOT_FOUND
-    , "no header in non-empty file" // ERROR_NO_HEADER
-    , "error writing to file" // ERROR_WRITE
-    , "incorrect version in header" // ERROR_HEADER_VERSION
-    , "checksum fail" // ERROR_CHECKSUM_FAIL
-};
-
-const char *describe_error(int errcode)
-{
-    if (errcode < 0 && errcode >= ERR_MIN) {
-        return errordescs[-1 - errcode];
-    } else {
-        return NULL;
-    }
-}
-
 void term_to_buf(sized_buf *dst, char *buf, int *pos)
 {
     int start = *pos;

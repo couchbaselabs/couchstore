@@ -37,16 +37,16 @@ static int find_header(Db *db)
             if (header_len > 0) {
                 int idx = 0;
                 if (ei_decode_version(header_buf, &idx, &arity) < 0) {
-                    errcode = ERROR_PARSE_TERM;
+                    errcode = COUCHSTORE_ERROR_PARSE_TERM;
                     break;
                 }
                 if (ei_decode_tuple_header(header_buf, &idx, &arity) < 0) {
-                    errcode = ERROR_PARSE_TERM;
+                    errcode = COUCHSTORE_ERROR_PARSE_TERM;
                     break;
                 }
                 ei_skip_term(header_buf, &idx); //db_header
                 ei_decode_uint64(header_buf, &idx, &db->header.disk_version);
-                error_unless(db->header.disk_version == COUCH_DISK_VERSION, ERROR_HEADER_VERSION)
+                error_unless(db->header.disk_version == COUCH_DISK_VERSION, COUCHSTORE_ERROR_HEADER_VERSION)
                 ei_decode_uint64(header_buf, &idx, &db->header.update_seq);
                 db->header.by_id_root = read_root(header_buf, &idx);
                 db->header.by_seq_root = read_root(header_buf, &idx);
@@ -73,7 +73,7 @@ cleanup:
     if (block == -1) {
         //Didn't find a header block
         //TODO what do we do here?
-        return ERROR_NO_HEADER;
+        return COUCHSTORE_ERROR_NO_HEADER;
     }
     return errcode;
 }
@@ -139,7 +139,7 @@ int open_db(const char *filename, uint64_t options,
         openflags |= O_CREAT;
     }
     db->fd = db->file_ops->open(filename, openflags | O_RDWR, 0666);
-    error_unless(db->fd > 0, ERROR_OPEN_FILE);
+    error_unless(db->fd > 0, COUCHSTORE_ERROR_OPEN_FILE);
     db->file_pos = db->file_ops->goto_eof(db);
     //TODO are there some cases where we should blow up?
     //     such as not finding a header in a file that we didn't
@@ -264,35 +264,35 @@ static int docinfo_from_buf(DocInfo **pInfo, sized_buf *v, int idBytes)
     *pInfo = NULL;
 
     if (v == NULL) {
-        return DOC_NOT_FOUND;
+        return COUCHSTORE_ERROR_DOC_NOT_FOUND;
     }
 
     //Id/Seq
-    error_unless(tuple_check(v->buf, &term_index, 6), ERROR_PARSE_TERM);
+    error_unless(tuple_check(v->buf, &term_index, 6), COUCHSTORE_ERROR_PARSE_TERM);
     fterm_pos = term_index; //Save position of first term
     ei_skip_term(v->buf, &term_index);
     fterm_size = term_index - fterm_pos; //and size.
 
     //Rev = {RevNum, MetaBin}
-    error_unless(tuple_check(v->buf, &term_index, 2), ERROR_PARSE_TERM);
-    error_nonzero(ei_decode_uint64(v->buf, &term_index, &rev), ERROR_PARSE_TERM);
+    error_unless(tuple_check(v->buf, &term_index, 2), COUCHSTORE_ERROR_PARSE_TERM);
+    error_nonzero(ei_decode_uint64(v->buf, &term_index, &rev), COUCHSTORE_ERROR_PARSE_TERM);
     metabin_pos = term_index + 5; //Save position of meta term
     //We know it's an ERL_BINARY_EXT, so the contents are from
     //5 bytes in to the end of the term.
     ei_skip_term(v->buf, &term_index);
     metabin_size = term_index - metabin_pos; //and size.
 
-    error_nonzero(ei_decode_uint64(v->buf, &term_index, &bp), ERROR_PARSE_TERM);
-    error_nonzero(ei_decode_uint64(v->buf, &term_index, &deleted), ERROR_PARSE_TERM);
-    error_nonzero(ei_decode_uint64(v->buf, &term_index, &content_meta), ERROR_PARSE_TERM);
-    error_nonzero(ei_decode_uint64(v->buf, &term_index, &size), ERROR_PARSE_TERM);
+    error_nonzero(ei_decode_uint64(v->buf, &term_index, &bp), COUCHSTORE_ERROR_PARSE_TERM);
+    error_nonzero(ei_decode_uint64(v->buf, &term_index, &deleted), COUCHSTORE_ERROR_PARSE_TERM);
+    error_nonzero(ei_decode_uint64(v->buf, &term_index, &content_meta), COUCHSTORE_ERROR_PARSE_TERM);
+    error_nonzero(ei_decode_uint64(v->buf, &term_index, &size), COUCHSTORE_ERROR_PARSE_TERM);
 
     //If first term is seq, we don't need to include it in the buffer
     if (idBytes != 0) {
         fterm_size = 0;
     }
     infobuf = (char *) malloc(sizeof(DocInfo) + metabin_size + fterm_size + idBytes);
-    error_unless(infobuf, ERROR_ALLOC_FAIL);
+    error_unless(infobuf, COUCHSTORE_ERROR_ALLOC_FAIL);
     *pInfo = (DocInfo *) infobuf;
 
     (*pInfo)->rev_meta.buf = infobuf + sizeof(DocInfo);
@@ -345,7 +345,7 @@ static int bp_to_doc(Doc **pDoc, Db *db, off_t bp, uint64_t options)
         bodylen = pread_bin(db, bp, &docbody);
     }
 
-    error_unless(docbuf = fatbuf_alloc(sizeof(Doc) + bodylen), ERROR_ALLOC_FAIL);
+    error_unless(docbuf = fatbuf_alloc(sizeof(Doc) + bodylen), COUCHSTORE_ERROR_ALLOC_FAIL);
     *pDoc = (Doc *) fatbuf_get(docbuf, sizeof(Doc));
 
     if (bodylen == 0) { //Empty doc
@@ -354,8 +354,8 @@ static int bp_to_doc(Doc **pDoc, Db *db, off_t bp, uint64_t options)
         return 0;
     }
 
-    error_unless(bodylen > 0, ERROR_READ);
-    error_unless(docbody, ERROR_READ);
+    error_unless(bodylen > 0, COUCHSTORE_ERROR_READ);
+    error_unless(docbody, COUCHSTORE_ERROR_READ);
     (*pDoc)->data.buf = (char *) fatbuf_get(docbuf, bodylen);
     (*pDoc)->data.size = bodylen;
     memcpy((*pDoc)->data.buf, docbody, bodylen);
@@ -389,7 +389,7 @@ int docinfo_by_id(Db *db, uint8_t *id,  size_t idlen, DocInfo **pInfo)
     int errcode = 0;
 
     if (db->header.by_id_root == NULL) {
-        return DOC_NOT_FOUND;
+        return COUCHSTORE_ERROR_DOC_NOT_FOUND;
     }
 
     key.buf = (char *) id;
@@ -408,7 +408,7 @@ int docinfo_by_id(Db *db, uint8_t *id,  size_t idlen, DocInfo **pInfo)
     errcode = btree_lookup(&rq, db->header.by_id_root->pointer);
     if (errcode == 0) {
         if (*pInfo == NULL) {
-            errcode = DOC_NOT_FOUND;
+            errcode = COUCHSTORE_ERROR_DOC_NOT_FOUND;
         }
     }
     return errcode;
@@ -421,7 +421,7 @@ int open_doc_with_docinfo(Db *db, DocInfo *docinfo,
     int errcode = 0;
     *pDoc = NULL;
     if (docinfo->bp == 0) {
-        return DOC_NOT_FOUND;
+        return COUCHSTORE_ERROR_DOC_NOT_FOUND;
     }
     int readopts = 0;
     if ((options & DECOMPRESS_DOC_BODIES) && (docinfo->content_meta & SNAPPY_META_FLAG)) {
@@ -765,7 +765,7 @@ static int add_doc_to_update_list(Db *db, Doc *doc, DocInfo *info, fatbuf *fb,
     seqterm->buf = (char *) fatbuf_get(fb, 10);
     seqterm->size = 0;
 
-    error_unless(seqterm->buf, ERROR_ALLOC_FAIL);
+    error_unless(seqterm->buf, COUCHSTORE_ERROR_ALLOC_FAIL);
     ei_encode_ulonglong(seqterm->buf, (int *) &seqterm->size, seq);
 
     if (doc) {
@@ -782,16 +782,16 @@ static int add_doc_to_update_list(Db *db, Doc *doc, DocInfo *info, fatbuf *fb,
     }
 
     idterm->buf = (char *) fatbuf_get(fb, updated.id.size + 5);
-    error_unless(idterm->buf, ERROR_ALLOC_FAIL);
+    error_unless(idterm->buf, COUCHSTORE_ERROR_ALLOC_FAIL);
     idterm->size = 0;
     ei_encode_binary(idterm->buf, (int *) &idterm->size, updated.id.buf, updated.id.size);
 
     seqval->buf = (char *) fatbuf_get(fb, (44 + updated.id.size + updated.rev_meta.size));
-    error_unless(seqval->buf, ERROR_ALLOC_FAIL);
+    error_unless(seqval->buf, COUCHSTORE_ERROR_ALLOC_FAIL);
     seqval->size = assemble_index_value(&updated, seqval->buf, idterm);
 
     idval->buf = (char *) fatbuf_get(fb, (44 + 10 + updated.rev_meta.size));
-    error_unless(idval->buf, ERROR_ALLOC_FAIL);
+    error_unless(idval->buf, COUCHSTORE_ERROR_ALLOC_FAIL);
     idval->size = assemble_index_value(&updated, idval->buf, seqterm);
 
     //Use max of 10 +, id.size + 5 +, 42 + rev_meta.size + id.size, + 52 + rev_meta.size
@@ -821,7 +821,7 @@ int save_docs(Db *db, Doc **docs, DocInfo **infos,
                       numdocs * (
                           sizeof(sized_buf) * 4)); //seq/id key and value lists
 
-    error_unless(fb, ERROR_ALLOC_FAIL);
+    error_unless(fb, COUCHSTORE_ERROR_ALLOC_FAIL);
 
     seqklist = (sized_buf *) fatbuf_get(fb, numdocs * sizeof(sized_buf));
     idklist = (sized_buf *) fatbuf_get(fb, numdocs * sizeof(sized_buf));
@@ -865,7 +865,7 @@ static int local_doc_fetch(couchfile_lookup_request *rq, void *k, sized_buf *v)
         return 0;
     }
     fatbuf *ldbuf = fatbuf_alloc(sizeof(LocalDoc) + id->size + v->size);
-    error_unless(ldbuf, ERROR_ALLOC_FAIL);
+    error_unless(ldbuf, COUCHSTORE_ERROR_ALLOC_FAIL);
     *lDoc = (LocalDoc *) fatbuf_get(ldbuf, sizeof(LocalDoc));
     (*lDoc)->id.buf = (char *) fatbuf_get(ldbuf, id->size - 5);
     (*lDoc)->id.size = id->size - 5;
@@ -894,7 +894,7 @@ int open_local_doc(Db *db, uint8_t *id, size_t idlen, LocalDoc **pDoc)
     int errcode = 0;
 
     if (db->header.local_docs_root == NULL) {
-        return DOC_NOT_FOUND;
+        return COUCHSTORE_ERROR_DOC_NOT_FOUND;
     }
 
     key.buf = (char *) id;
@@ -913,7 +913,7 @@ int open_local_doc(Db *db, uint8_t *id, size_t idlen, LocalDoc **pDoc)
     errcode = btree_lookup(&rq, db->header.local_docs_root->pointer);
     if (errcode == 0) {
         if (*pDoc == NULL) {
-            errcode = DOC_NOT_FOUND;
+            errcode = COUCHSTORE_ERROR_DOC_NOT_FOUND;
         }
     }
     return errcode;
@@ -929,7 +929,7 @@ int save_local_doc(Db *db, LocalDoc *lDoc)
     sized_buf jsonterm;
     sized_buf cmptmp;
     node_pointer *new_local_docs_root = NULL;
-    error_unless(binbufs, ERROR_ALLOC_FAIL);
+    error_unless(binbufs, COUCHSTORE_ERROR_ALLOC_FAIL);
 
     if (lDoc->deleted) {
         ldupdate.type = ACTION_REMOVE;

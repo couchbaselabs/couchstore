@@ -13,7 +13,7 @@
 
 #define try(C) if((errcode = (C)) < 0) { \
                             fprintf(stderr, "Couchstore error `%s' at %s:%d\r\n", \
-                            describe_error(errcode), __FILE__, __LINE__); goto cleanup; }
+                            couchstore_strerror(errcode), __FILE__, __LINE__); goto cleanup; }
 
 #define error_unless(C, E) if(!(C)) { try(E); }
 

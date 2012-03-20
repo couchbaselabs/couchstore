@@ -17,19 +17,19 @@ static int btree_lookup_inner(couchfile_lookup_request *rq, uint64_t diskpos,
     char *nodebuf = NULL;
 
     nodebuflen = pread_compressed(rq->db, diskpos, &nodebuf);
-    error_unless(nodebuflen > 0, ERROR_READ);
+    error_unless(nodebuflen > 0, COUCHSTORE_ERROR_READ);
 
     bufpos++; //Skip over term version
-    error_unless(tuple_check(nodebuf, &bufpos, 2), ERROR_PARSE_TERM);
+    error_unless(tuple_check(nodebuf, &bufpos, 2), COUCHSTORE_ERROR_PARSE_TERM);
     type_pos = bufpos;
     ei_skip_term(nodebuf, &bufpos); //node type
-    error_nonzero(ei_decode_list_header(nodebuf, &bufpos, &list_size), ERROR_PARSE_TERM);
+    error_nonzero(ei_decode_list_header(nodebuf, &bufpos, &list_size), COUCHSTORE_ERROR_PARSE_TERM);
 
     if (atom_check(nodebuf + type_pos, "kp_node")) {
         int list_item = 0;
         while (list_item < list_size && current < end) {
             //{K,P}
-            error_unless(tuple_check(nodebuf, &bufpos, 2), ERROR_PARSE_TERM);
+            error_unless(tuple_check(nodebuf, &bufpos, 2), COUCHSTORE_ERROR_PARSE_TERM);
             void *cmp_key = rq->cmp.from_ext(&rq->cmp, nodebuf, bufpos);
             ei_skip_term(nodebuf, &bufpos); //Skip key
 
@@ -44,7 +44,7 @@ static int btree_lookup_inner(couchfile_lookup_request *rq, uint64_t diskpos,
                     last_item++;
                 } while (last_item < end && rq->cmp.compare(cmp_key, rq->keys[last_item]) >= 0);
 
-                error_unless(tuple_check(nodebuf, &bufpos, 3), ERROR_PARSE_TERM);
+                error_unless(tuple_check(nodebuf, &bufpos, 3), COUCHSTORE_ERROR_PARSE_TERM);
                 ei_decode_uint64(nodebuf, &bufpos, &pointer);
                 ei_skip_term(nodebuf, &bufpos); //Skip reduce
                 ei_skip_term(nodebuf, &bufpos); //Skip subtreesize
@@ -63,7 +63,7 @@ static int btree_lookup_inner(couchfile_lookup_request *rq, uint64_t diskpos,
             int cmp_val, keypos;
             sized_buf key_term;
             //{K,V}
-            error_unless(tuple_check(nodebuf, &bufpos, 2), ERROR_PARSE_TERM);
+            error_unless(tuple_check(nodebuf, &bufpos, 2), COUCHSTORE_ERROR_PARSE_TERM);
             void *cmp_key = rq->cmp.from_ext(&rq->cmp, nodebuf, bufpos);
             keypos = bufpos;
             ei_skip_term(nodebuf, &bufpos); //Skip key

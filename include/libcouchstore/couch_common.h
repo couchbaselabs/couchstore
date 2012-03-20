@@ -117,16 +117,19 @@ extern "C" {
     int db_write_buf_compressed(Db *db, sized_buf *buf, off_t *pos);
 
     /* Errors */
+    typedef enum {
+        COUCHSTORE_SUCCESS = 0,
+        COUCHSTORE_ERROR_OPEN_FILE = -1,
+        COUCHSTORE_ERROR_PARSE_TERM = -2,
+        COUCHSTORE_ERROR_ALLOC_FAIL = -3,
+        COUCHSTORE_ERROR_READ = -4,
+        COUCHSTORE_ERROR_DOC_NOT_FOUND = -5,
+        COUCHSTORE_ERROR_NO_HEADER = -6,
+        COUCHSTORE_ERROR_WRITE = -7,
+        COUCHSTORE_ERROR_HEADER_VERSION = -8,
+        COUCHSTORE_ERROR_CHECKSUM_FAIL = -9
+    } couchstore_error_t;
 
-#define ERROR_OPEN_FILE -1
-#define ERROR_PARSE_TERM -2
-#define ERROR_ALLOC_FAIL -3
-#define ERROR_READ -4
-#define DOC_NOT_FOUND -5
-#define ERROR_NO_HEADER -6
-#define ERROR_WRITE -7
-#define ERROR_HEADER_VERSION -8
-#define ERROR_CHECKSUM_FAIL -9
 
 #ifdef __cplusplus
 }

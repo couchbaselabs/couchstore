@@ -107,9 +107,16 @@ extern "C" {
     LIBCOUCHSTORE_API
     void free_local_doc(LocalDoc *lDoc);
 
-    /* Description of errcodes returned by couchstore functions */
+    /**
+     * Convert an error code from couchstore to a textual description. The
+     * text is a constant within the library so you should not try to modify
+     * or release the pointer.
+     *
+     * @param errcode The error code to look up
+     * @return a textual description of the error
+     */
     LIBCOUCHSTORE_API
-    const char *describe_error(int errcode);
+    const char *couchstore_strerror(couchstore_error_t errcode);
 #ifdef __cplusplus
 }
 #endif
