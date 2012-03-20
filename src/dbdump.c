@@ -93,9 +93,9 @@ int main(int argc, char **argv)
 
     printf("\nTotal docs: %d\n", count);
     if (error) {
-       exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);
     } else {
-       exit(EXIT_SUCCESS);
+        exit(EXIT_SUCCESS);
     }
 }
 

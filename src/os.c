@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+/* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include <sys/types.h>
 #include <unistd.h>
 #include <fcntl.h>

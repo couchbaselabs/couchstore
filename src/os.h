@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 
-   couch_file_ops *couch_get_default_file_ops(void);
+    couch_file_ops *couch_get_default_file_ops(void);
 
 #ifdef __cplusplus
 }

@@ -264,7 +264,7 @@ void test_local_docs()
     commit_all(db, 0);
     close_db(db);
     open_db("test.couch", 0, NULL, &db);
-    open_local_doc(db, (uint8_t*)"_local/testlocal", 16, &lDocRead);
+    open_local_doc(db, (uint8_t *)"_local/testlocal", 16, &lDocRead);
     assert(lDocRead);
     assert(lDocRead->json.size == 13);
     assert(memcmp(lDocRead->json.buf, "{\"test\":true}", 13) == 0);

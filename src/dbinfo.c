@@ -1,3 +1,4 @@
+/* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include "config.h"
 #include <string.h>
 #include <stdio.h>
@@ -41,32 +42,32 @@ static uint64_t id_reduce_info(node_pointer *root)
 
 static int process_file(const char *file)
 {
-   Db *db = NULL;
-   int errcode = open_db(file, 0, NULL, &db);
-   if (errcode < 0) {
-      fprintf(stderr, "Failed to open \"%s\": %s\n",
-              file, describe_error(errcode));
-      return -1;
-   }
+    Db *db = NULL;
+    int errcode = open_db(file, 0, NULL, &db);
+    if (errcode < 0) {
+        fprintf(stderr, "Failed to open \"%s\": %s\n",
+                file, describe_error(errcode));
+        return -1;
+    }
 
-   uint64_t datasize = 0;
-   uint64_t btreesize = 0;
-   printf("DB Info (%s)\n", file);
-   printf("   file format version: %"PRIu64"\n", db->header.disk_version);
-   printf("   update_seq: %"PRIu64"\n", db->header.update_seq);
-   datasize = id_reduce_info(db->header.by_id_root);
-   if (db->header.by_id_root) {
-      btreesize += db->header.by_id_root->subtreesize;
-   }
-   if (db->header.by_seq_root) {
-      btreesize += db->header.by_seq_root->subtreesize;
-   }
-   printf("   B-tree size: %s\n", size_str(btreesize));
-   printf("   total disk size: %s\n", size_str(db->file_pos));
+    uint64_t datasize = 0;
+    uint64_t btreesize = 0;
+    printf("DB Info (%s)\n", file);
+    printf("   file format version: %"PRIu64"\n", db->header.disk_version);
+    printf("   update_seq: %"PRIu64"\n", db->header.update_seq);
+    datasize = id_reduce_info(db->header.by_id_root);
+    if (db->header.by_id_root) {
+        btreesize += db->header.by_id_root->subtreesize;
+    }
+    if (db->header.by_seq_root) {
+        btreesize += db->header.by_seq_root->subtreesize;
+    }
+    printf("   B-tree size: %s\n", size_str(btreesize));
+    printf("   total disk size: %s\n", size_str(db->file_pos));
 
-   close_db(db);
+    close_db(db);
 
-   return 0;
+    return 0;
 }
 
 int main(int argc, char **argv)
@@ -78,12 +79,12 @@ int main(int argc, char **argv)
 
     int error = 0;
     for (int ii = 1; ii < argc; ++ii) {
-       error += process_file(argv[ii]);
+        error += process_file(argv[ii]);
     }
 
     if (error) {
-       exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);
     } else {
-       exit(EXIT_SUCCESS);
+        exit(EXIT_SUCCESS);
     }
 }

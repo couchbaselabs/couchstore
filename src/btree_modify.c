@@ -1,3 +1,4 @@
+/* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
@@ -22,7 +23,8 @@ static void append_buf(void *dst, int *dstpos, void *src, int len)
     *dstpos += len;
 }
 
-static int find_first_gteq(char *buf, int pos, void *key, compare_info *lu, int at_least)
+static int find_first_gteq(char *buf, int pos, void *key,
+                           compare_info *lu, int at_least)
 {
     int list_arity, inner_arity;
     int list_pos = 0, cmp_val;
@@ -116,7 +118,8 @@ static void free_modres(couchfile_modify_result *mr)
     free(mr);
 }
 
-static int mr_push_action(couchfile_modify_action *act, couchfile_modify_result *dst)
+static int mr_push_action(couchfile_modify_action *act,
+                          couchfile_modify_result *dst)
 {
     //For ACTION_INSERT
     sized_buf *lv = (sized_buf *) malloc(sizeof(sized_buf) +
@@ -165,7 +168,8 @@ static int mr_push_pointerinfo(node_pointer *ptr, couchfile_modify_result *dst)
     return maybe_flush(dst);
 }
 
-static int mr_push_kv_range(char *buf, int pos, int bound, int end, couchfile_modify_result *dst)
+static int mr_push_kv_range(char *buf, int pos, int bound, int end,
+                            couchfile_modify_result *dst)
 {
     int current = 0;
     int term_begin_pos;
@@ -220,7 +224,8 @@ static node_pointer *read_pointer(char *buf, int pos)
     return p;
 }
 
-static void mr_push_kp_range(char *buf, int pos, int bound, int end, couchfile_modify_result *dst)
+static void mr_push_kp_range(char *buf, int pos, int bound, int end,
+                             couchfile_modify_result *dst)
 {
     int current = 0;
     ei_decode_list_header(buf, &pos, NULL);
@@ -366,7 +371,8 @@ cleanup:
 }
 
 //Move this node's pointers list to dst node's values list.
-static int mr_move_pointers(couchfile_modify_result *src, couchfile_modify_result *dst)
+static int mr_move_pointers(couchfile_modify_result *src,
+                            couchfile_modify_result *dst)
 {
     int errcode = 0;
     if (src->pointers_end == src->pointers) {

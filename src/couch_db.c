@@ -1,3 +1,4 @@
+/* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include <fcntl.h>
 #include <string.h>
 #include <stdlib.h>
@@ -120,15 +121,16 @@ int commit_all(Db *db, uint64_t options)
 }
 
 LIBCOUCHSTORE_API
-int open_db(const char *filename, uint64_t options, couch_file_ops *ops, Db **pDb)
+int open_db(const char *filename, uint64_t options,
+            couch_file_ops *ops, Db **pDb)
 {
     int errcode = 0;
     Db *db = (Db *) malloc(sizeof(Db));
 
     if (ops == NULL) {
-       db->file_ops = couch_get_default_file_ops();
+        db->file_ops = couch_get_default_file_ops();
     } else {
-       db->file_ops = ops;
+        db->file_ops = ops;
     }
 
     *pDb = db;
@@ -413,7 +415,8 @@ int docinfo_by_id(Db *db, uint8_t *id,  size_t idlen, DocInfo **pInfo)
 }
 
 LIBCOUCHSTORE_API
-int open_doc_with_docinfo(Db *db, DocInfo *docinfo, Doc **pDoc, uint64_t options)
+int open_doc_with_docinfo(Db *db, DocInfo *docinfo,
+                          Doc **pDoc, uint64_t options)
 {
     int errcode = 0;
     *pDoc = NULL;
@@ -448,7 +451,8 @@ cleanup:
     return errcode;
 }
 
-static int byseq_do_callback(couchfile_lookup_request *rq, void *k, sized_buf *v)
+static int byseq_do_callback(couchfile_lookup_request *rq,
+                             void *k, sized_buf *v)
 {
     int(*real_callback)(Db * db, DocInfo * docinfo, void * ctx) =
         (int ( *)(Db *, DocInfo *, void *)) ((void **)rq->callback_ctx)[0];
@@ -525,7 +529,8 @@ static void copy_term(char *dst, int *idx, sized_buf *term)
     *idx += term->size;
 }
 
-static int assemble_index_value(DocInfo *docinfo, char *dst, sized_buf *first_term)
+static int assemble_index_value(DocInfo *docinfo, char *dst,
+                                sized_buf *first_term)
 {
     int pos = 0;
     ei_encode_tuple_header(dst, &pos, 6); //2 bytes.
@@ -652,7 +657,8 @@ static void idfetch_update_cb(couchfile_modify_request *rq,
     return;
 }
 
-static int update_indexes(Db *db, sized_buf *seqs, sized_buf *seqvals, sized_buf *ids, sized_buf *idvals, int numdocs)
+static int update_indexes(Db *db, sized_buf *seqs, sized_buf *seqvals,
+                          sized_buf *ids, sized_buf *idvals, int numdocs)
 {
     int errcode = 0;
     fatbuf *actbuf = fatbuf_alloc(numdocs * ( 4 * sizeof(couchfile_modify_action) + // Two action list up to numdocs * 2 in size
@@ -748,7 +754,9 @@ cleanup:
 }
 
 static int add_doc_to_update_list(Db *db, Doc *doc, DocInfo *info, fatbuf *fb,
-                           sized_buf *seqterm, sized_buf *idterm, sized_buf *seqval, sized_buf *idval, uint64_t seq, uint64_t options)
+                                  sized_buf *seqterm, sized_buf *idterm,
+                                  sized_buf *seqval, sized_buf *idval,
+                                  uint64_t seq, uint64_t options)
 {
     int errcode = 0;
     DocInfo updated = *info;
@@ -793,7 +801,8 @@ cleanup:
 }
 
 LIBCOUCHSTORE_API
-int save_docs(Db *db, Doc **docs, DocInfo **infos, long numdocs, uint64_t options)
+int save_docs(Db *db, Doc **docs, DocInfo **infos,
+              long numdocs, uint64_t options)
 {
     int errcode = 0, i;
     sized_buf *seqklist, *idklist, *seqvlist, *idvlist;

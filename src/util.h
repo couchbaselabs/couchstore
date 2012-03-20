@@ -24,39 +24,39 @@ extern "C" {
 
 #define atom_check(B, A) do_atom_check(B, A, sizeof(A) - 1)
 
-static inline int do_atom_check(char *buf, const char *atomname, int len)
-{
-    //quick atom check for < 255 in len
-    if (buf[0] != 100) {
-        return 0;
-    }
-    if (buf[1] != 0) {
-        return 0;
-    }
-    if (buf[2] != len) {
-        return 0;
-    }
-    return !strncmp(atomname, buf + 3, len);
-}
-
-static inline int tuple_check(char *buf, int *idx, int tuplelen)
-{
-    int checklen = 0;
-    if (ei_decode_tuple_header(buf, idx, &checklen) < 0) {
-        return 0;
-    } else {
-        if (checklen != tuplelen) {
+    static inline int do_atom_check(char *buf, const char *atomname, int len)
+    {
+        //quick atom check for < 255 in len
+        if (buf[0] != 100) {
             return 0;
         }
+        if (buf[1] != 0) {
+            return 0;
+        }
+        if (buf[2] != len) {
+            return 0;
+        }
+        return !strncmp(atomname, buf + 3, len);
     }
-    return 1;
-}
 
-node_pointer *read_root(char *buf, int *endpos);
-void ei_x_encode_nodepointer(ei_x_buff *x, node_pointer *node);
-void term_to_buf(sized_buf *dst, char *buf, int *pos);
+    static inline int tuple_check(char *buf, int *idx, int tuplelen)
+    {
+        int checklen = 0;
+        if (ei_decode_tuple_header(buf, idx, &checklen) < 0) {
+            return 0;
+        } else {
+            if (checklen != tuplelen) {
+                return 0;
+            }
+        }
+        return 1;
+    }
 
-int ei_decode_uint64(char *buf, int *index, uint64_t *val);
+    node_pointer *read_root(char *buf, int *endpos);
+    void ei_x_encode_nodepointer(ei_x_buff *x, node_pointer *node);
+    void term_to_buf(sized_buf *dst, char *buf, int *pos);
+
+    int ei_decode_uint64(char *buf, int *index, uint64_t *val);
 
 #ifdef __cplusplus
 }
