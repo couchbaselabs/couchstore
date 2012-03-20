@@ -14,15 +14,15 @@ sized_buf empty_root = {
     13
 };
 
-int flush_mr(couchfile_modify_result *res);
+static int flush_mr(couchfile_modify_result *res);
 
-void append_buf(void *dst, int *dstpos, void *src, int len)
+static void append_buf(void *dst, int *dstpos, void *src, int len)
 {
     memcpy((char *) dst + *dstpos, src, len);
     *dstpos += len;
 }
 
-int find_first_gteq(char *buf, int pos, void *key, compare_info *lu, int at_least)
+static int find_first_gteq(char *buf, int pos, void *key, compare_info *lu, int at_least)
 {
     int list_arity, inner_arity;
     int list_pos = 0, cmp_val;
@@ -53,7 +53,7 @@ cleanup:
     return pair_pos;
 }
 
-int maybe_flush(couchfile_modify_result *mr)
+static int maybe_flush(couchfile_modify_result *mr)
 {
     if (mr->modified && mr->node_len > CHUNK_THRESHOLD) {
         return flush_mr(mr);
@@ -62,7 +62,7 @@ int maybe_flush(couchfile_modify_result *mr)
 }
 
 
-void free_nodelist(nodelist *nl)
+static void free_nodelist(nodelist *nl)
 {
     while (nl) {
         nodelist *next = nl->next;
@@ -72,7 +72,7 @@ void free_nodelist(nodelist *nl)
     }
 }
 
-nodelist *make_nodelist()
+static nodelist *make_nodelist(void)
 {
     nodelist *r = (nodelist *) malloc(sizeof(nodelist));
     if (!r) {
@@ -83,7 +83,7 @@ nodelist *make_nodelist()
     return r;
 }
 
-couchfile_modify_result *make_modres(couchfile_modify_request *rq)
+static couchfile_modify_result *make_modres(couchfile_modify_request *rq)
 {
     couchfile_modify_result *res = (couchfile_modify_result *) malloc(sizeof(couchfile_modify_result));
     if (!res) {
@@ -109,14 +109,14 @@ couchfile_modify_result *make_modres(couchfile_modify_request *rq)
     return res;
 }
 
-void free_modres(couchfile_modify_result *mr)
+static void free_modres(couchfile_modify_result *mr)
 {
     free_nodelist(mr->values);
     free_nodelist(mr->pointers);
     free(mr);
 }
 
-int mr_push_action(couchfile_modify_action *act, couchfile_modify_result *dst)
+static int mr_push_action(couchfile_modify_action *act, couchfile_modify_result *dst)
 {
     //For ACTION_INSERT
     sized_buf *lv = (sized_buf *) malloc(sizeof(sized_buf) +
@@ -149,7 +149,7 @@ int mr_push_action(couchfile_modify_action *act, couchfile_modify_result *dst)
     return maybe_flush(dst);
 }
 
-int mr_push_pointerinfo(node_pointer *ptr, couchfile_modify_result *dst)
+static int mr_push_pointerinfo(node_pointer *ptr, couchfile_modify_result *dst)
 {
     nodelist *pel = make_nodelist();
     if (!pel) {
@@ -165,7 +165,7 @@ int mr_push_pointerinfo(node_pointer *ptr, couchfile_modify_result *dst)
     return maybe_flush(dst);
 }
 
-int mr_push_kv_range(char *buf, int pos, int bound, int end, couchfile_modify_result *dst)
+static int mr_push_kv_range(char *buf, int pos, int bound, int end, couchfile_modify_result *dst)
 {
     int current = 0;
     int term_begin_pos;
@@ -203,7 +203,7 @@ cleanup:
     return errcode;
 }
 
-node_pointer *read_pointer(char *buf, int pos)
+static node_pointer *read_pointer(char *buf, int pos)
 {
     //Parse KP pair into a node_pointer {K, {ptr, reduce_value, subtreesize}}
     node_pointer *p = (node_pointer *) malloc(sizeof(node_pointer));
@@ -220,7 +220,7 @@ node_pointer *read_pointer(char *buf, int pos)
     return p;
 }
 
-void mr_push_kp_range(char *buf, int pos, int bound, int end, couchfile_modify_result *dst)
+static void mr_push_kp_range(char *buf, int pos, int bound, int end, couchfile_modify_result *dst)
 {
     int current = 0;
     ei_decode_list_header(buf, &pos, NULL);
@@ -235,7 +235,7 @@ void mr_push_kp_range(char *buf, int pos, int bound, int end, couchfile_modify_r
 
 //Write the current contents of the values list to disk as a node
 //and add the resulting pointer to the pointers list.
-int flush_mr(couchfile_modify_result *res)
+static int flush_mr(couchfile_modify_result *res)
 {
     int nbufpos = 0;
     uint64_t subtreesize = 0;
@@ -366,7 +366,7 @@ cleanup:
 }
 
 //Move this node's pointers list to dst node's values list.
-int mr_move_pointers(couchfile_modify_result *src, couchfile_modify_result *dst)
+static int mr_move_pointers(couchfile_modify_result *src, couchfile_modify_result *dst)
 {
     int errcode = 0;
     if (src->pointers_end == src->pointers) {
@@ -396,8 +396,8 @@ cleanup:
     return errcode;
 }
 
-int modify_node(couchfile_modify_request *rq, node_pointer *nptr,
-                int start, int end, couchfile_modify_result *dst)
+static int modify_node(couchfile_modify_request *rq, node_pointer *nptr,
+                       int start, int end, couchfile_modify_result *dst)
 {
     sized_buf current_node;
     int curnode_pos = 0;
@@ -603,8 +603,9 @@ cleanup:
     return errcode;
 }
 
-node_pointer *finish_root(couchfile_modify_request *rq,
-                          couchfile_modify_result *root_result, int *errcode)
+static node_pointer *finish_root(couchfile_modify_request *rq,
+                                 couchfile_modify_result *root_result,
+                                 int *errcode)
 {
     node_pointer *ret_ptr = NULL;
     couchfile_modify_result *collector = make_modres(rq);

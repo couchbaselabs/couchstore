@@ -2,7 +2,8 @@
 #include <libcouchstore/couch_btree.h>
 #include "util.h"
 
-int btree_lookup_inner(couchfile_lookup_request *rq, uint64_t diskpos, int current, int end)
+static int btree_lookup_inner(couchfile_lookup_request *rq, uint64_t diskpos,
+                              int current, int end)
 {
     int bufpos = 0, nodebuflen = 0, type_pos = 0,
         list_size = 0;

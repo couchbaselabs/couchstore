@@ -11,7 +11,7 @@
 #include "crc32.h"
 #include "util.h"
 
-ssize_t raw_write(Db *db, sized_buf *buf, off_t pos)
+static ssize_t raw_write(Db *db, sized_buf *buf, off_t pos)
 {
     off_t write_pos = pos;
     off_t buf_pos = 0;

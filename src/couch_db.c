@@ -623,7 +623,8 @@ typedef struct _idxupdatectx {
     fatbuf *deltermbuf;
 } index_update_ctx;
 
-static void idfetch_update_cb(couchfile_modify_request *rq, sized_buf *k, sized_buf *v, void *arg)
+static void idfetch_update_cb(couchfile_modify_request *rq,
+                              sized_buf *k, sized_buf *v, void *arg)
 {
     //v contains a seq we need to remove ( {Seq,_,_,_,_} )
     int termpos = 0;

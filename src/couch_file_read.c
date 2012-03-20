@@ -30,7 +30,7 @@ ssize_t total_read_len(off_t blockoffset, ssize_t finallen)
     }
 }
 
-int remove_block_prefixes(char *buf, off_t offset, ssize_t len)
+static int remove_block_prefixes(char *buf, off_t offset, ssize_t len)
 {
     off_t buf_pos = 0;
     off_t gap = 0;
@@ -60,7 +60,7 @@ int remove_block_prefixes(char *buf, off_t offset, ssize_t len)
 
 // Sets *dst to returned buffer, returns end size.
 // Increases pos by read len.
-int raw_read(Db *db, off_t *pos, ssize_t len, char **dst)
+static int raw_read(Db *db, off_t *pos, ssize_t len, char **dst)
 {
     off_t blockoffs = *pos % SIZE_BLOCK;
     ssize_t total = total_read_len(blockoffs, len);
@@ -82,7 +82,7 @@ fail:
     return -1;
 }
 
-int pread_bin_int(Db *db, off_t pos, char **ret_ptr, int header)
+static int pread_bin_int(Db *db, off_t pos, char **ret_ptr, int header)
 {
     char *bufptr = NULL, *bufptr_rest = NULL, *newbufptr = NULL;
     char prefix;

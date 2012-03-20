@@ -8,16 +8,7 @@
 #include <ei.h>
 #include "util.h"
 
-void printsb(sized_buf *sb)
-{
-    if (sb->buf == NULL) {
-        printf("null\n");
-        return;
-    }
-    printf("%.*s\n", (int) sb->size, sb->buf);
-}
-
-char *size_str(double size)
+static char *size_str(double size)
 {
     static char rfs[256];
     int i = 0;
@@ -30,7 +21,7 @@ char *size_str(double size)
     return rfs;
 }
 
-uint64_t id_reduce_info(node_pointer *root)
+static uint64_t id_reduce_info(node_pointer *root)
 {
     int pos = 0;
     uint64_t total, deleted, size;
