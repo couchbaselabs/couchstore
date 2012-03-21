@@ -57,8 +57,8 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
 static int process_file(const char *file, int *total)
 {
     Db *db = NULL;
-    int errcode = open_db(file, 0, NULL, &db);
-    if (errcode < 0) {
+    couchstore_error_t errcode = couchstore_open_db(file, 0, NULL, &db);
+    if (errcode != COUCHSTORE_SUCCESS) {
         fprintf(stderr, "Failed to open \"%s\": %s\n",
                 file, couchstore_strerror(errcode));
         return -1;
@@ -66,7 +66,7 @@ static int process_file(const char *file, int *total)
 
     int count = 0;
     errcode = changes_since(db, 0, 0, foldprint, &count);
-    close_db(db);
+    (void)couchstore_close_db(db);
 
     if (errcode < 0) {
         fprintf(stderr, "Failed to dump database \"%s\": %s\n",

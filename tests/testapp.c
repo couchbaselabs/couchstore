@@ -155,17 +155,17 @@ void test_save_docs()
                             };
     unlink("test.couch");
     Db *db;
-    try(open_db("test.couch", COUCH_CREATE_FILES, NULL, &db));
+    try(couchstore_open_db("test.couch", COUCHSTORE_OPEN_FLAG_CREATE, NULL, &db));
     try(save_docs(db, docptrs, nfoptrs, 4, 0));
     try(commit_all(db, 0));
-    close_db(db);
+    couchstore_close_db(db);
     //Read back
-    try(open_db("test.couch", 0, NULL, &db));
+    try(couchstore_open_db("test.couch", 0, NULL, &db));
     try(changes_since(db, 0, 0, docset_check, &testdocset));
     assert(testdocset.counters.totaldocs == 4);
     assert(testdocset.counters.deleted == 0);
     check_reductions(db);
-    close_db(db);
+    couchstore_close_db(db);
 cleanup:
     assert(errcode == 0);
 }
@@ -182,19 +182,19 @@ void test_save_doc()
     SETDOC(3, "doc4", "{\"test_doc_index\":4}", zerometa);
     unlink("test.couch");
     Db *db;
-    try(open_db("test.couch", COUCH_CREATE_FILES, NULL, &db));
+    try(couchstore_open_db("test.couch", COUCHSTORE_OPEN_FLAG_CREATE, NULL, &db));
     try(save_doc(db, &testdocset.docs[0], &testdocset.infos[0], 0));
     try(save_doc(db, &testdocset.docs[1], &testdocset.infos[1], 0));
     try(save_doc(db, &testdocset.docs[2], &testdocset.infos[2], 0));
     try(save_doc(db, &testdocset.docs[3], &testdocset.infos[3], 0));
     try(commit_all(db, 0));
-    close_db(db);
+    couchstore_close_db(db);
     //Read back
-    try(open_db("test.couch", 0, NULL, &db));
+    try(couchstore_open_db("test.couch", 0, NULL, &db));
     try(changes_since(db, 0, 0, docset_check, &testdocset));
     assert(testdocset.counters.totaldocs == 4);
     assert(testdocset.counters.deleted == 0);
-    close_db(db);
+    couchstore_close_db(db);
 cleanup:
     assert(errcode == 0);
 }
@@ -216,16 +216,16 @@ void test_compressed_doc_body()
     testdocset.infos[1].content_meta = 128; //Mark doc2 as to be snappied.
     unlink("test.couch");
     Db *db;
-    try(open_db("test.couch", COUCH_CREATE_FILES, NULL, &db));
+    try(couchstore_open_db("test.couch", COUCHSTORE_OPEN_FLAG_CREATE, NULL, &db));
     try(save_docs(db, docptrs, nfoptrs, 2, COMPRESS_DOC_BODIES));
     try(commit_all(db, 0));
-    close_db(db);
+    couchstore_close_db(db);
     //Read back
-    try(open_db("test.couch", 0, NULL, &db));
+    try(couchstore_open_db("test.couch", 0, NULL, &db));
     try(changes_since(db, 0, 0, docset_check, &testdocset));
     assert(testdocset.counters.totaldocs == 2);
     assert(testdocset.counters.deleted == 0);
-    close_db(db);
+    couchstore_close_db(db);
 cleanup:
     assert(errcode == 0);
 }
@@ -236,13 +236,13 @@ void test_dump_empty_db()
     fflush(stderr);
     unlink("test.couch");
     Db *db;
-    open_db("test.couch", COUCH_CREATE_FILES, NULL, &db);
-    close_db(db);
-    open_db("test.couch", 0, NULL, &db);
+    couchstore_open_db("test.couch", COUCHSTORE_OPEN_FLAG_CREATE, NULL, &db);
+    couchstore_close_db(db);
+    couchstore_open_db("test.couch", 0, NULL, &db);
     dump_count(db);
     assert(counters.totaldocs == 0);
     assert(counters.deleted == 0);
-    close_db(db);
+    couchstore_close_db(db);
 }
 
 void test_local_docs()
@@ -254,7 +254,7 @@ void test_local_docs()
     LocalDoc lDocWrite;
     LocalDoc *lDocRead = NULL;
     unlink("test.couch");
-    try(open_db("test.couch", COUCH_CREATE_FILES, NULL, &db));
+    try(couchstore_open_db("test.couch", COUCHSTORE_OPEN_FLAG_CREATE, NULL, &db));
     lDocWrite.id.buf = "_local/testlocal";
     lDocWrite.id.size = 16;
     lDocWrite.json.buf = "{\"test\":true}";
@@ -262,14 +262,14 @@ void test_local_docs()
     lDocWrite.deleted = 0;
     save_local_doc(db, &lDocWrite);
     commit_all(db, 0);
-    close_db(db);
-    open_db("test.couch", 0, NULL, &db);
+    couchstore_close_db(db);
+    couchstore_open_db("test.couch", 0, NULL, &db);
     open_local_doc(db, (uint8_t *)"_local/testlocal", 16, &lDocRead);
     assert(lDocRead);
     assert(lDocRead->json.size == 13);
     assert(memcmp(lDocRead->json.buf, "{\"test\":true}", 13) == 0);
     free_local_doc(lDocRead);
-    close_db(db);
+    couchstore_close_db(db);
 cleanup:
     assert(errcode == 0);
 }
@@ -280,7 +280,7 @@ void test_open_file_error()
     fflush(stderr);
     unlink("test.couch");
     Db *db;
-    int errcode = open_db("test.couch", 0, NULL, &db);
+    int errcode = couchstore_open_db("test.couch", 0, NULL, &db);
     assert(errcode == COUCHSTORE_ERROR_OPEN_FILE);
 }
 

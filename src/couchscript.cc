@@ -82,13 +82,13 @@ extern "C" {
                 lua_error(ls);
                 return 1;
             }
-            flags = lua_toboolean(ls, 2) ? COUCH_CREATE_FILES : 0;
+            flags = lua_toboolean(ls, 2) ? COUCHSTORE_OPEN_FLAG_CREATE : 0;
         }
 
         Db *db(NULL);
 
-        int rc = open_db(pathname, flags, NULL, &db);
-        if (rc < 0) {
+        couchstore_error_t rc = couchstore_open_db(pathname, flags, NULL, &db);
+        if (rc != COUCHSTORE_SUCCESS) {
             char buf[256];
             snprintf(buf, sizeof(buf), "error opening DB: %s", couchstore_strerror(rc));
             lua_pushstring(ls, buf);
@@ -113,7 +113,7 @@ extern "C" {
     {
         Db *db = getDb(ls);
 
-        if (close_db(db) < 0) {
+        if (couchstore_close_db(db) != COUCHSTORE_SUCCESS) {
             lua_pushstring(ls, "error closing database");
             lua_error(ls);
             return 1;

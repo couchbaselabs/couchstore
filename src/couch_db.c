@@ -121,11 +121,25 @@ int commit_all(Db *db, uint64_t options)
 }
 
 LIBCOUCHSTORE_API
-int open_db(const char *filename, uint64_t options,
-            couch_file_ops *ops, Db **pDb)
+couchstore_error_t couchstore_open_db(const char *filename,
+                                      uint64_t flags,
+                                      couch_file_ops *ops,
+                                      Db **pDb)
 {
-    int errcode = 0;
-    Db *db = (Db *) malloc(sizeof(Db));
+    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
+    Db *db;
+    int openflags;
+
+    /* Sanity check input parameters */
+    if ((filename == NULL || pDb == NULL) ||
+        ((flags & COUCHSTORE_OPEN_FLAG_RDONLY) &&
+         (flags & COUCHSTORE_OPEN_FLAG_CREATE))) {
+        return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
+    }
+
+    if ((db = malloc(sizeof(Db))) == NULL) {
+        return COUCHSTORE_ERROR_ALLOC_FAIL;
+    }
 
     if (ops == NULL) {
         db->file_ops = couch_get_default_file_ops();
@@ -134,11 +148,17 @@ int open_db(const char *filename, uint64_t options,
     }
 
     *pDb = db;
-    int openflags = 0;
-    if (options & COUCH_CREATE_FILES) {
+    if (flags & COUCHSTORE_OPEN_FLAG_RDONLY) {
+        openflags = O_RDONLY;
+    } else {
+        openflags = O_RDWR;
+    }
+
+    if (flags & COUCHSTORE_OPEN_FLAG_CREATE) {
         openflags |= O_CREAT;
     }
-    db->fd = db->file_ops->open(filename, openflags | O_RDWR, 0666);
+
+    db->fd = db->file_ops->open(filename, openflags, 0666);
     error_unless(db->fd > 0, COUCHSTORE_ERROR_OPEN_FILE);
     db->file_pos = db->file_ops->goto_eof(db);
     //TODO are there some cases where we should blow up?
@@ -167,9 +187,9 @@ cleanup:
 }
 
 LIBCOUCHSTORE_API
-int close_db(Db *db)
+couchstore_error_t couchstore_close_db(Db *db)
 {
-    int errcode = 0;
+    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     if (db->fd) {
         db->file_ops->close(db);
     }
@@ -189,6 +209,7 @@ int close_db(Db *db)
     }
     db->header.purged_docs = NULL;
     free(db);
+
     return errcode;
 }
 

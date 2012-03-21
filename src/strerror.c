@@ -27,6 +27,8 @@ const char *couchstore_strerror(couchstore_error_t errcode)
         return "incorrect version in header";
     case COUCHSTORE_ERROR_CHECKSUM_FAIL:
         return "checksum fail";
+    case COUCHSTORE_ERROR_INVALID_ARGUMENTS:
+        return "invalid arguments";
     default:
         return NULL;
     }

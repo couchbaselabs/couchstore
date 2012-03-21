@@ -7,17 +7,48 @@
 extern "C" {
 #endif
 
-    //Open a database, should be closed with close_db
+    /**
+     * Open a database.
+     *
+     * The database should be closed with couchstore_close_db().
+     *
+     * @param filename The name of the file containing the database
+     * @param flags Additional flags for how the database should
+     *              be opened. See couchstore_open_flags_* for the
+     *              available flags.
+     * @param ops Pointer to a structure containing the file io operations
+     *            you want the library to use.
+     * @oaram db Pointer to where you want the handle to the database to be
+     *           stored.
+     * @return COUCHSTORE_SUCCESS for success
+     */
     LIBCOUCHSTORE_API
-    int open_db(const char *filename, uint64_t options, couch_file_ops *ops, Db **db);
+    couchstore_error_t couchstore_open_db(const char *filename,
+                                          uint64_t flags,
+                                          couch_file_ops *ops,
+                                          Db **db);
+    /*
+     * Flags to pass as the flags parameter to couchstore_open_db
+     */
+    /**
+     * Create a new empty .couch file if file doesn't exist.
+     */
+#define COUCHSTORE_OPEN_FLAG_CREATE 1
+    /**
+     * Open the database in read only mode
+     */
+#define COUCHSTORE_OPEN_FLAG_RDONLY 2
 
-    //Flags passable to open_db options parameter
-    /* Create a new empty .couch file if file doesn't exist. */
-#define COUCH_CREATE_FILES 1
 
-    /* Close a database and free resources */
+    /**
+     * Close an open database and release all allocated resources.
+     *
+     * @param db Pointer to the database handle to release.
+     * @return COUCHSTORE_SUCCESS upon success
+     */
     LIBCOUCHSTORE_API
-    int close_db(Db *db);
+    couchstore_error_t couchstore_close_db(Db *db);
+
 
     /* Get the position in the file of the mostly recently written database header. */
     LIBCOUCHSTORE_API

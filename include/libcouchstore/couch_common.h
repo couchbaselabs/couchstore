@@ -1,3 +1,4 @@
+/* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #ifndef COUCH_COMMON_H
 #define COUCH_COMMON_H
 #include <sys/types.h>
@@ -127,7 +128,8 @@ extern "C" {
         COUCHSTORE_ERROR_NO_HEADER = -6,
         COUCHSTORE_ERROR_WRITE = -7,
         COUCHSTORE_ERROR_HEADER_VERSION = -8,
-        COUCHSTORE_ERROR_CHECKSUM_FAIL = -9
+        COUCHSTORE_ERROR_CHECKSUM_FAIL = -9,
+    COUCHSTORE_ERROR_INVALID_ARGUMENTS = -10
     } couchstore_error_t;
 
 

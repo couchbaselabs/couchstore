@@ -43,8 +43,8 @@ static uint64_t id_reduce_info(node_pointer *root)
 static int process_file(const char *file)
 {
     Db *db = NULL;
-    int errcode = open_db(file, 0, NULL, &db);
-    if (errcode < 0) {
+    couchstore_error_t errcode = couchstore_open_db(file, 0, NULL, &db);
+    if (errcode != COUCHSTORE_SUCCESS) {
         fprintf(stderr, "Failed to open \"%s\": %s\n",
                 file, couchstore_strerror(errcode));
         return -1;
@@ -65,7 +65,7 @@ static int process_file(const char *file)
     printf("   B-tree size: %s\n", size_str(btreesize));
     printf("   total disk size: %s\n", size_str(db->file_pos));
 
-    close_db(db);
+    couchstore_close_db(db);
 
     return 0;
 }
