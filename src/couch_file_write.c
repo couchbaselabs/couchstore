@@ -139,7 +139,9 @@ int db_write_buf_compressed(Db *db, sized_buf *buf, off_t *pos)
     to_write.buf = (char *) malloc(max_size);
     to_write.size = max_size;
     error_unless(to_write.buf, COUCHSTORE_ERROR_ALLOC_FAIL);
-    error_unless(snappy_compress(buf->buf, buf->size, to_write.buf, &to_write.size) == SNAPPY_OK, COUCHSTORE_ERROR_WRITE);
+    error_unless(snappy_compress(buf->buf, buf->size, to_write.buf,
+                                 &to_write.size) == SNAPPY_OK,
+                COUCHSTORE_ERROR_WRITE);
 
     error_pass(db_write_buf(db, &to_write, pos));
 cleanup:
