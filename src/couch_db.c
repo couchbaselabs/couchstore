@@ -78,11 +78,10 @@ cleanup:
     return errcode;
 }
 
-static int write_header(Db *db)
+static couchstore_error_t write_header(Db *db)
 {
     ei_x_buff x_header;
     sized_buf writebuf;
-    int errcode = 0;
 
     ei_x_new_with_version(&x_header);
     ei_x_encode_tuple_header(&x_header, 8);
@@ -98,12 +97,25 @@ static int write_header(Db *db)
     writebuf.buf = x_header.buff;
     writebuf.size = x_header.index;
     off_t pos;
-    errcode = db_write_header(db, &writebuf, &pos);
-    if (errcode == 0) {
+    couchstore_error_t errcode = db_write_header(db, &writebuf, &pos);
+    if (errcode == COUCHSTORE_SUCCESS) {
         db->header.position = pos;
     }
     ei_x_free(&x_header);
     return errcode;
+}
+
+static couchstore_error_t create_header(Db *db)
+{
+    db->header.disk_version = COUCH_DISK_VERSION;
+    db->header.update_seq = 0;
+    db->header.by_id_root = NULL;
+    db->header.by_seq_root = NULL;
+    db->header.local_docs_root = NULL;
+    db->header.purge_seq = 0;
+    db->header.purged_docs = &nil_atom;
+    db->header.position = 0;
+    return write_header(db);
 }
 
 LIBCOUCHSTORE_API
@@ -120,7 +132,6 @@ int commit_all(Db *db, uint64_t options)
     // @TODO We need error checks!!!!!!!!
     return 0;
 }
-
 
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_open_db(const char *filename,
@@ -156,9 +167,6 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
 
-    *pDb = db;
-    db->file_ops = ops;
-
     if (flags & COUCHSTORE_OPEN_FLAG_RDONLY) {
         openflags = O_RDONLY;
     } else {
@@ -169,36 +177,35 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
         openflags |= O_CREAT;
     }
 
+    db->file_ops = ops;
     errcode = db->file_ops->open(db, filename, openflags);
     if (errcode != COUCHSTORE_SUCCESS) {
-        *pDb = NULL;
+        db->file_ops->destructor(db);
         free(db);
         return errcode;
     }
 
-    db->file_pos = db->file_ops->goto_eof(db);
-    //TODO are there some cases where we should blow up?
-    //     such as not finding a header in a file that we didn't
-    //     just create? (Possibly not a couch file?)
-    if (db->file_pos == 0) {
-        //Our file is empty, create and write a new empty db header.
-        db->header.disk_version = COUCH_DISK_VERSION;
-        db->header.update_seq = 0;
-        db->header.by_id_root = NULL;
-        db->header.by_seq_root = NULL;
-        db->header.local_docs_root = NULL;
-        db->header.purge_seq = 0;
-        db->header.purged_docs = &nil_atom;
-        db->header.position = 0;
-        write_header(db);
-        return 0;
+    if ((db->file_pos = db->file_ops->goto_eof(db)) == 0) {
+        /* This is an empty file. Create a new fileheader unless the
+         * user wanted a read-only version of the file
+         */
+        if (flags & COUCHSTORE_OPEN_FLAG_RDONLY) {
+            errcode = COUCHSTORE_ERROR_CHECKSUM_FAIL;
+        } else {
+            errcode = create_header(db);
+        }
     } else {
-        error_pass(find_header(db));
+        errcode = find_header(db);
     }
-cleanup:
-    if (errcode < 0) {
+
+    if (errcode == COUCHSTORE_SUCCESS) {
+        *pDb = db;
+    } else {
+        db->file_ops->close(db);
+        db->file_ops->destructor(db);
         free(db);
     }
+
     return errcode;
 }
 

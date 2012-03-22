@@ -47,7 +47,7 @@ static ssize_t raw_write(Db *db, sized_buf *buf, off_t pos)
     return write_pos - pos;
 }
 
-int db_write_header(Db *db, sized_buf *buf, off_t *pos)
+couchstore_error_t db_write_header(Db *db, sized_buf *buf, off_t *pos)
 {
     off_t write_pos = db->file_pos;
     ssize_t written;
@@ -93,7 +93,8 @@ int db_write_header(Db *db, sized_buf *buf, off_t *pos)
     }
     write_pos += written;
     db->file_pos = write_pos;
-    return 0;
+
+    return COUCHSTORE_SUCCESS;
 }
 
 int db_write_buf(Db *db, sized_buf *buf, off_t *pos)

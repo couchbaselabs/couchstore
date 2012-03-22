@@ -75,29 +75,6 @@ extern "C" {
 
     typedef struct _db Db;
 
-    /* File ops
-
-    //Read a chunk from file, remove block prefixes, and decompress.
-    //Don't forget to free when done with the returned value.
-    //(If it returns -1 it will not have set ret_ptr, no need to free.) */
-    LIBCOUCHSTORE_API
-    int pread_bin(Db *db, off_t pos, char **ret_ptr);
-    LIBCOUCHSTORE_API
-    int pread_compressed(Db *db, off_t pos, char **ret_ptr);
-
-    LIBCOUCHSTORE_API
-    int pread_header(Db *db, off_t pos, char **ret_ptr);
-
-    LIBCOUCHSTORE_API
-    ssize_t total_read_len(off_t blockoffset, ssize_t finallen);
-
-    LIBCOUCHSTORE_API
-    int db_write_header(Db *db, sized_buf *buf, off_t *pos);
-    LIBCOUCHSTORE_API
-    int db_write_buf(Db *db, sized_buf *buf, off_t *pos);
-    LIBCOUCHSTORE_API
-    int db_write_buf_compressed(Db *db, sized_buf *buf, off_t *pos);
-
     /* Errors */
     typedef enum {
         COUCHSTORE_SUCCESS = 0,
@@ -113,7 +90,6 @@ extern "C" {
         COUCHSTORE_ERROR_INVALID_ARGUMENTS = -10,
         COUCHSTORE_ERROR_NO_SUCH_FILE = -11
     } couchstore_error_t;
-
 
 #ifdef __cplusplus
 }

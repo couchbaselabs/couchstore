@@ -25,6 +25,22 @@ extern "C" {
 
     couch_file_ops *couch_get_default_file_ops(void);
 
+    /* File ops
+     *  Read a chunk from file, remove block prefixes, and decompress.
+     *  Don't forget to free when done with the returned value.
+     *  (If it returns -1 it will not have set ret_ptr, no need to free.)
+    */
+    int pread_bin(Db *db, off_t pos, char **ret_ptr);
+    int pread_compressed(Db *db, off_t pos, char **ret_ptr);
+
+    int pread_header(Db *db, off_t pos, char **ret_ptr);
+
+    ssize_t total_read_len(off_t blockoffset, ssize_t finallen);
+
+    couchstore_error_t db_write_header(Db *db, sized_buf *buf, off_t *pos);
+    int db_write_buf(Db *db, sized_buf *buf, off_t *pos);
+    int db_write_buf_compressed(Db *db, sized_buf *buf, off_t *pos);
+
 #ifdef __cplusplus
 }
 #endif
