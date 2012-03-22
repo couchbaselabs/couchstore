@@ -126,7 +126,7 @@ extern "C" {
     {
         Db *db = getDb(ls);
 
-        if (commit_all(db, 0) < 0) {
+        if (couchstore_commit(db) != COUCHSTORE_SUCCESS) {
             lua_pushstring(ls, "error committing");
             lua_error(ls);
             return 1;

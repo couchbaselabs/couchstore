@@ -125,12 +125,14 @@ uint64_t get_header_position(Db *db)
 }
 
 LIBCOUCHSTORE_API
-int commit_all(Db *db, uint64_t options)
+couchstore_error_t couchstore_commit(Db *db)
 {
-    write_header(db);
-    db->file_ops->sync(db);
-    // @TODO We need error checks!!!!!!!!
-    return 0;
+    couchstore_error_t errcode = write_header(db);
+    if (errcode == COUCHSTORE_SUCCESS) {
+        errcode = db->file_ops->sync(db);
+    }
+
+    return errcode;
 }
 
 LIBCOUCHSTORE_API

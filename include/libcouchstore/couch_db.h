@@ -100,8 +100,14 @@ extern "C" {
      */
 
     /* Write header and fsync. */
+    /**
+     * Commit all pending changes and flush buffers to persistent storage.
+     *
+     * @param db database to perform the commit on
+     * @return COUCHSTORE_SUCCESS on success
+     */
     LIBCOUCHSTORE_API
-    int commit_all(Db *db, uint64_t options);
+    couchstore_error_t couchstore_commit(Db *db);
 
     /* Retrieve a doc_info record using the by_id index
      * should be freed with free_docinfo.

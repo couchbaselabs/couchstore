@@ -158,7 +158,7 @@ void test_save_docs()
     Db *db;
     try(couchstore_open_db("test.couch", COUCHSTORE_OPEN_FLAG_CREATE, &db));
     try(save_docs(db, docptrs, nfoptrs, 4, 0));
-    try(commit_all(db, 0));
+    try(couchstore_commit(db));
     couchstore_close_db(db);
     //Read back
     try(couchstore_open_db("test.couch", 0, &db));
@@ -188,7 +188,7 @@ void test_save_doc()
     try(save_doc(db, &testdocset.docs[1], &testdocset.infos[1], 0));
     try(save_doc(db, &testdocset.docs[2], &testdocset.infos[2], 0));
     try(save_doc(db, &testdocset.docs[3], &testdocset.infos[3], 0));
-    try(commit_all(db, 0));
+    try(couchstore_commit(db));
     couchstore_close_db(db);
     //Read back
     try(couchstore_open_db("test.couch", 0, &db));
@@ -219,7 +219,7 @@ void test_compressed_doc_body()
     Db *db;
     try(couchstore_open_db("test.couch", COUCHSTORE_OPEN_FLAG_CREATE, &db));
     try(save_docs(db, docptrs, nfoptrs, 2, COMPRESS_DOC_BODIES));
-    try(commit_all(db, 0));
+    try(couchstore_commit(db));
     couchstore_close_db(db);
     //Read back
     try(couchstore_open_db("test.couch", 0, &db));
@@ -262,7 +262,7 @@ void test_local_docs()
     lDocWrite.json.size = 13;
     lDocWrite.deleted = 0;
     save_local_doc(db, &lDocWrite);
-    commit_all(db, 0);
+    couchstore_commit(db);
     couchstore_close_db(db);
     couchstore_open_db("test.couch", 0, &db);
     open_local_doc(db, (uint8_t *)"_local/testlocal", 16, &lDocRead);
