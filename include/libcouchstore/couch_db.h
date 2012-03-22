@@ -16,8 +16,6 @@ extern "C" {
      * @param flags Additional flags for how the database should
      *              be opened. See couchstore_open_flags_* for the
      *              available flags.
-     * @param ops Pointer to a structure containing the file io operations
-     *            you want the library to use.
      * @oaram db Pointer to where you want the handle to the database to be
      *           stored.
      * @return COUCHSTORE_SUCCESS for success
@@ -25,8 +23,29 @@ extern "C" {
     LIBCOUCHSTORE_API
     couchstore_error_t couchstore_open_db(const char *filename,
                                           uint64_t flags,
-                                          couch_file_ops *ops,
                                           Db **db);
+
+    /**
+     * Open a database.
+     *
+     * The database should be closed with couchstore_close_db().
+     *
+     * @param filename The name of the file containing the database
+     * @param flags Additional flags for how the database should
+     *              be opened. See couchstore_open_flags_* for the
+     *              available flags.
+     * @param ops Pointer to a structure containing the file io operations
+     *            you want the library to use.
+     * @oaram db Pointer to where you want the handle to the database to be
+     *           stored.
+     * @return COUCHSTORE_SUCCESS for success
+     */
+    LIBCOUCHSTORE_API
+    couchstore_error_t couchstore_open_db_ex(const char *filename,
+                                             uint64_t flags,
+                                             couch_file_ops *ops,
+                                             Db **db);
+
     /*
      * Flags to pass as the flags parameter to couchstore_open_db
      */

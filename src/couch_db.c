@@ -121,18 +121,28 @@ int commit_all(Db *db, uint64_t options)
     return 0;
 }
 
+
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_open_db(const char *filename,
                                       uint64_t flags,
-                                      couch_file_ops *ops,
                                       Db **pDb)
+{
+    return couchstore_open_db_ex(filename, flags,
+                                 couch_get_default_file_ops(), pDb);
+}
+
+LIBCOUCHSTORE_API
+couchstore_error_t couchstore_open_db_ex(const char *filename,
+                                         uint64_t flags,
+                                         couch_file_ops *ops,
+                                         Db **pDb)
 {
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     Db *db;
     int openflags;
 
     /* Sanity check input parameters */
-    if ((filename == NULL || pDb == NULL) ||
+    if ((filename == NULL || pDb == NULL || ops == NULL) ||
         ((flags & COUCHSTORE_OPEN_FLAG_RDONLY) &&
          (flags & COUCHSTORE_OPEN_FLAG_CREATE))) {
         return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
@@ -142,11 +152,7 @@ couchstore_error_t couchstore_open_db(const char *filename,
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
 
-    if (ops == NULL) {
-        db->file_ops = couch_get_default_file_ops();
-    } else {
-        db->file_ops = ops;
-    }
+    db->file_ops = ops;
 
     *pDb = db;
     if (flags & COUCHSTORE_OPEN_FLAG_RDONLY) {

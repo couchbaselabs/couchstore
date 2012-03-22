@@ -88,7 +88,7 @@ extern "C" {
 
         Db *db(NULL);
 
-        couchstore_error_t rc = couchstore_open_db(pathname, flags, NULL, &db);
+        couchstore_error_t rc = couchstore_open_db(pathname, flags, &db);
         if (rc != COUCHSTORE_SUCCESS) {
             char buf[256];
             snprintf(buf, sizeof(buf), "error opening DB: %s", couchstore_strerror(rc));

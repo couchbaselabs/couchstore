@@ -45,7 +45,7 @@ static uint64_t id_reduce_info(node_pointer *root)
 static int process_file(const char *file)
 {
     Db *db = NULL;
-    couchstore_error_t errcode = couchstore_open_db(file, 0, NULL, &db);
+    couchstore_error_t errcode = couchstore_open_db(file, 0, &db);
     if (errcode != COUCHSTORE_SUCCESS) {
         fprintf(stderr, "Failed to open \"%s\": %s\n",
                 file, couchstore_strerror(errcode));
