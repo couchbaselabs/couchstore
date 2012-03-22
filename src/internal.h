@@ -11,9 +11,31 @@
 
 #include <libcouchstore/couch_db.h>
 
+#define COUCH_BLOCK_SIZE 4096
+#define COUCH_DISK_VERSION 9
+#define COUCH_SNAPPY_THRESHOLD 64
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+    typedef struct _nodepointer {
+        sized_buf key;
+        uint64_t pointer;
+        sized_buf reduce_value;
+        uint64_t subtreesize;
+    } node_pointer;
+
+    typedef struct _db_header {
+        uint64_t disk_version;
+        uint64_t update_seq;
+        node_pointer *by_id_root;
+        node_pointer *by_seq_root;
+        node_pointer *local_docs_root;
+        uint64_t purge_seq;
+        sized_buf *purged_docs;
+        uint64_t position;
+    } db_header;
 
     struct _db {
         uint64_t file_pos;

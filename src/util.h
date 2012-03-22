@@ -5,7 +5,8 @@
 #include <signal.h>
 #include <libcouchstore/couch_db.h>
 
-#include "ei.h"
+#include <ei.h>
+#include "internal.h"
 #include "fatbuf.h"
 
 #ifndef DEBUG

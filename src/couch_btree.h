@@ -1,6 +1,7 @@
 #ifndef COUCH_BTREE_H
 #define COUCH_BTREE_H
 #include <libcouchstore/couch_common.h>
+#include "internal.h"
 
 #ifdef __cplusplus
 extern "C" {
