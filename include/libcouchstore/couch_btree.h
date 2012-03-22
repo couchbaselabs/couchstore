@@ -101,7 +101,8 @@ extern "C" {
 
     LIBCOUCHSTORE_API
     node_pointer *modify_btree(couchfile_modify_request *rq,
-                               node_pointer *root, int *errcode);
+                               node_pointer *root,
+                               couchstore_error_t *errcode);
     LIBCOUCHSTORE_API
     int ebin_cmp(void *k1, void *k2);
     LIBCOUCHSTORE_API

@@ -76,15 +76,42 @@ extern "C" {
     LIBCOUCHSTORE_API
     uint64_t get_header_position(Db *db);
 
-    /* When saving documents you should only set the
-     * id, rev_meta, rev_seq, deleted, and content_meta fields on the
-     * DocInfo. */
-    /* Save document pointed to by doc and docinfo to db. */
+
+    /**
+     * Save document pointed to by doc and docinfo to db.
+     *
+     * When saving documents you should only set the id, rev_meta,
+     * rev_seq, deleted, and content_meta fields on the DocInfo.
+     *
+     * @param db database to save the document in
+     * @param doc the document to save
+     * @param info document info
+     * @param options ???
+     * @return COUCHSTORE_SUCCESS upon success
+     */
     LIBCOUCHSTORE_API
-    int save_doc(Db *db, Doc *doc, DocInfo *info, uint64_t options);
-    /* Save array of docs to db, expects arrays of Doc and DocInfo pointers */
+    couchstore_error_t couchstore_save_document(Db *db,
+                                                Doc *doc,
+                                                DocInfo *info,
+                                                uint64_t options);
+
+    /**
+     * Save array of docs to db
+     *
+     * @param db the database to save documents in
+     * @param docs an array of document pointers
+     * @param infos an array of docinfo pointers
+     * @param numDocs the number documents to save
+     * @param options ???
+     * @return COUCHSTORE_SUCCESS upon success
+     */
     LIBCOUCHSTORE_API
-    int save_docs(Db *db, Doc **docs, DocInfo **infos, long numDocs, uint64_t options);
+    couchstore_error_t couchstore_save_documents(Db *db,
+                                                 Doc **docs,
+                                                 DocInfo **infos,
+                                                 long numDocs,
+                                                 uint64_t options);
+
 
     //Options flags for save_doc and save_docs
     /* Snappy compress document data if the high bit of the content_meta field

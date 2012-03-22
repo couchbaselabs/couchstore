@@ -157,7 +157,7 @@ void test_save_docs()
     unlink("test.couch");
     Db *db;
     try(couchstore_open_db("test.couch", COUCHSTORE_OPEN_FLAG_CREATE, &db));
-    try(save_docs(db, docptrs, nfoptrs, 4, 0));
+    try(couchstore_save_documents(db, docptrs, nfoptrs, 4, 0));
     try(couchstore_commit(db));
     couchstore_close_db(db);
     //Read back
@@ -184,10 +184,14 @@ void test_save_doc()
     unlink("test.couch");
     Db *db;
     try(couchstore_open_db("test.couch", COUCHSTORE_OPEN_FLAG_CREATE, &db));
-    try(save_doc(db, &testdocset.docs[0], &testdocset.infos[0], 0));
-    try(save_doc(db, &testdocset.docs[1], &testdocset.infos[1], 0));
-    try(save_doc(db, &testdocset.docs[2], &testdocset.infos[2], 0));
-    try(save_doc(db, &testdocset.docs[3], &testdocset.infos[3], 0));
+    try(couchstore_save_document(db, &testdocset.docs[0],
+                                 &testdocset.infos[0], 0));
+    try(couchstore_save_document(db, &testdocset.docs[1],
+                                 &testdocset.infos[1], 0));
+    try(couchstore_save_document(db, &testdocset.docs[2],
+                                 &testdocset.infos[2], 0));
+    try(couchstore_save_document(db, &testdocset.docs[3],
+                                 &testdocset.infos[3], 0));
     try(couchstore_commit(db));
     couchstore_close_db(db);
     //Read back
@@ -218,7 +222,8 @@ void test_compressed_doc_body()
     unlink("test.couch");
     Db *db;
     try(couchstore_open_db("test.couch", COUCHSTORE_OPEN_FLAG_CREATE, &db));
-    try(save_docs(db, docptrs, nfoptrs, 2, COMPRESS_DOC_BODIES));
+    try(couchstore_save_documents(db, docptrs, nfoptrs, 2,
+                                  COMPRESS_DOC_BODIES));
     try(couchstore_commit(db));
     couchstore_close_db(db);
     //Read back

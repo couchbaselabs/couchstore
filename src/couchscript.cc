@@ -270,7 +270,7 @@ extern "C" {
 
         Db *db = getDb(ls);
 
-        int rc = save_doc(db, &doc, &docinfo, 0);
+        int rc = couchstore_save_document(db, &doc, &docinfo, 0);
         if (rc < 0) {
             char buf[256];
             snprintf(buf, sizeof(buf), "error deleting document: %s", couchstore_strerror(rc));
@@ -390,7 +390,8 @@ extern "C" {
 
         Db *db = getDb(ls);
 
-        int rc = save_docs(db, bs.docs, bs.infos, bs.size, COMPRESS_DOC_BODIES);
+        int rc = couchstore_save_documents(db, bs.docs, bs.infos,
+                                           bs.size, COMPRESS_DOC_BODIES);
         if (rc < 0) {
             char buf[256];
             snprintf(buf, sizeof(buf), "error storing document: %s", couchstore_strerror(rc));
@@ -449,7 +450,8 @@ extern "C" {
 
         Db *db = getDb(ls);
 
-        int rc = save_doc(db, &doc, &docinfo, COMPRESS_DOC_BODIES);
+        int rc = couchstore_save_document(db, &doc, &docinfo,
+                                          COMPRESS_DOC_BODIES);
         if (rc < 0) {
             char buf[256];
             snprintf(buf, sizeof(buf), "error storing document: %s", couchstore_strerror(rc));

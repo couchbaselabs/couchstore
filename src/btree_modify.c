@@ -654,7 +654,8 @@ cleanup:
 }
 
 node_pointer *modify_btree(couchfile_modify_request *rq,
-                           node_pointer *root, int *errcode)
+                           node_pointer *root,
+                           couchstore_error_t *errcode)
 {
     node_pointer *ret_ptr = root;
     couchfile_modify_result *root_result = make_modres(rq);

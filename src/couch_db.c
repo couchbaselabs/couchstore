@@ -695,48 +695,67 @@ static void idfetch_update_cb(couchfile_modify_request *rq,
     return;
 }
 
-static int update_indexes(Db *db, sized_buf *seqs, sized_buf *seqvals,
-                          sized_buf *ids, sized_buf *idvals, int numdocs)
+static couchstore_error_t update_indexes(Db *db,
+                                         sized_buf *seqs,
+                                         sized_buf *seqvals,
+                                         sized_buf *ids,
+                                         sized_buf *idvals,
+                                         int numdocs)
 {
-    int errcode = 0;
-    fatbuf *actbuf = fatbuf_alloc(numdocs * ( 4 * sizeof(couchfile_modify_action) + // Two action list up to numdocs * 2 in size
-                                              2 * sizeof(sized_buf) + // Compare keys for ids, and compare keys for removed seqs found from id index.
-                                              10)); //Max size of a int64 erlang term (for deleted seqs)
+    couchfile_modify_action *idacts;
+    couchfile_modify_action *seqacts;
     sized_buf *idcmps;
-    couchfile_modify_action *idacts, *seqacts;
-    node_pointer *new_id_root, *new_seq_root;
-
-    idacts = (couchfile_modify_action *) fatbuf_get(actbuf, numdocs * sizeof(couchfile_modify_action) * 2);
-    seqacts = (couchfile_modify_action *) fatbuf_get(actbuf, numdocs * sizeof(couchfile_modify_action) * 2);
-    idcmps = (sized_buf *) fatbuf_get(actbuf, numdocs * sizeof(sized_buf));
-
+    size_t size;
+    fatbuf *actbuf;
+    node_pointer *new_id_root;
+    node_pointer *new_seq_root;
+    couchstore_error_t errcode;
     couchfile_modify_request seqrq, idrq;
     sized_buf tmpsb;
-    index_update_ctx fetcharg = {
-        seqacts, 0, &seqs, &seqvals, 0,
-        actbuf
-    };
+    int ii;
 
+    /*
+    ** Two action list up to numdocs * 2 in size + Compare keys for ids,
+    ** and compare keys for removed seqs found from id index +
+    ** Max size of a int64 erlang term (for deleted seqs)
+    */
+    size = 4 * sizeof(couchfile_modify_action) + 2 * sizeof(sized_buf) + 10;
 
-    int i;
-    for (i = 0; i < numdocs; i++) {
-        idcmps[i].buf = ids[i].buf + 5;
-        idcmps[i].size = ids[i].size - 5;
-
-        idacts[i * 2].type = ACTION_FETCH;
-        idacts[i * 2].value.arg = &fetcharg;
-        idacts[i * 2 + 1].type = ACTION_INSERT;
-        idacts[i * 2 + 1].value.term = &idvals[i];
-
-        idacts[i * 2].key = &ids[i];
-        idacts[i * 2].cmp_key = &idcmps[i];
-
-        idacts[i * 2 + 1].key = &ids[i];
-        idacts[i * 2 + 1].cmp_key = &idcmps[i];
+    if ((actbuf = fatbuf_alloc(numdocs * size)) == NULL) {
+        return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
 
+    idacts = fatbuf_get(actbuf, numdocs * sizeof(couchfile_modify_action) * 2);
+    seqacts = fatbuf_get(actbuf, numdocs * sizeof(couchfile_modify_action) * 2);
+    idcmps = fatbuf_get(actbuf, numdocs * sizeof(sized_buf));
 
-    qsort(idacts, numdocs * 2, sizeof(couchfile_modify_action), id_action_compare);
+    if (idacts == NULL || seqacts == NULL || idcmps == NULL) {
+        fatbuf_free(actbuf);
+        return COUCHSTORE_ERROR_ALLOC_FAIL;
+    }
+
+    index_update_ctx fetcharg = {
+        seqacts, 0, &seqs, &seqvals, 0, actbuf
+    };
+
+    for (ii = 0; ii < numdocs; ii++) {
+        idcmps[ii].buf = ids[ii].buf + 5;
+        idcmps[ii].size = ids[ii].size - 5;
+
+        idacts[ii * 2].type = ACTION_FETCH;
+        idacts[ii * 2].value.arg = &fetcharg;
+        idacts[ii * 2 + 1].type = ACTION_INSERT;
+        idacts[ii * 2 + 1].value.term = &idvals[ii];
+
+        idacts[ii * 2].key = &ids[ii];
+        idacts[ii * 2].cmp_key = &idcmps[ii];
+
+        idacts[ii * 2 + 1].key = &ids[ii];
+        idacts[ii * 2 + 1].cmp_key = &idcmps[ii];
+    }
+
+    qsort(idacts, numdocs * 2, sizeof(couchfile_modify_action),
+          id_action_compare);
 
     idrq.cmp.compare = ebin_cmp;
     idrq.cmp.from_ext = ebin_from_ext;
@@ -750,7 +769,10 @@ static int update_indexes(Db *db, sized_buf *seqs, sized_buf *seqvals,
     idrq.db = db;
 
     new_id_root = modify_btree(&idrq, db->header.by_id_root, &errcode);
-    error_pass(errcode);
+    if (errcode != COUCHSTORE_SUCCESS) {
+        fatbuf_free(actbuf);
+        return errcode;
+    }
 
     while (fetcharg.valpos < numdocs) {
         seqacts[fetcharg.actpos].type = ACTION_INSERT;
@@ -762,7 +784,8 @@ static int update_indexes(Db *db, sized_buf *seqs, sized_buf *seqvals,
     }
 
     //printf("Total seq actions: %d\n", fetcharg.actpos);
-    qsort(seqacts, fetcharg.actpos, sizeof(couchfile_modify_action), seq_action_compare);
+    qsort(seqacts, fetcharg.actpos, sizeof(couchfile_modify_action),
+          seq_action_compare);
 
     seqrq.cmp.compare = long_term_cmp;
     seqrq.cmp.from_ext = term_from_ext;
@@ -774,7 +797,10 @@ static int update_indexes(Db *db, sized_buf *seqs, sized_buf *seqvals,
     seqrq.db = db;
 
     new_seq_root = modify_btree(&seqrq, db->header.by_seq_root, &errcode);
-    error_pass(errcode);
+    if (errcode != COUCHSTORE_SUCCESS) {
+        fatbuf_free(actbuf);
+        return errcode;
+    }
 
     if (db->header.by_id_root != new_id_root) {
         free(db->header.by_id_root);
@@ -786,31 +812,46 @@ static int update_indexes(Db *db, sized_buf *seqs, sized_buf *seqvals,
         db->header.by_seq_root = new_seq_root;
     }
 
-cleanup:
     fatbuf_free(actbuf);
     return errcode;
 }
 
-static int add_doc_to_update_list(Db *db, Doc *doc, DocInfo *info, fatbuf *fb,
-                                  sized_buf *seqterm, sized_buf *idterm,
-                                  sized_buf *seqval, sized_buf *idval,
-                                  uint64_t seq, uint64_t options)
+static couchstore_error_t add_doc_to_update_list(Db *db,
+                                                 Doc *doc,
+                                                 DocInfo *info,
+                                                 fatbuf *fb,
+                                                 sized_buf *seqterm,
+                                                 sized_buf *idterm,
+                                                 sized_buf *seqval,
+                                                 sized_buf *idval,
+                                                 uint64_t seq,
+                                                 uint64_t options)
 {
-    int errcode = 0;
+    couchstore_error_t errcode;
     DocInfo updated = *info;
     updated.db_seq = seq;
 
-    seqterm->buf = (char *) fatbuf_get(fb, 10);
-    seqterm->size = 0;
+    seqterm->buf = fatbuf_get(fb, 10);
+    idterm->buf = fatbuf_get(fb, updated.id.size + 5);
+    seqval->buf = fatbuf_get(fb, (44 + updated.id.size + updated.rev_meta.size));
+    idval->buf = fatbuf_get(fb, (44 + 10 + updated.rev_meta.size));
 
-    error_unless(seqterm->buf, COUCHSTORE_ERROR_ALLOC_FAIL);
+    if (!(seqterm->buf && idterm->buf && seqval->buf && idval->buf)) {
+        return COUCHSTORE_ERROR_ALLOC_FAIL;
+    }
+    seqterm->size = 0;
+    idterm->size = 0;
     ei_encode_ulonglong(seqterm->buf, (int *) &seqterm->size, seq);
 
     if (doc) {
         if ((options & COMPRESS_DOC_BODIES) && (info->content_meta & SNAPPY_META_FLAG)) {
-            error_pass(write_doc(db, doc, &updated.bp, COMPRESSED_BODY));
+            errcode = write_doc(db, doc, &updated.bp, COMPRESSED_BODY);
         } else {
-            error_pass(write_doc(db, doc, &updated.bp, 0));
+            errcode = write_doc(db, doc, &updated.bp, 0);
+        }
+
+        if (errcode != COUCHSTORE_SUCCESS) {
+            return errcode;
         }
         updated.size = doc->data.size;
     } else {
@@ -819,30 +860,25 @@ static int add_doc_to_update_list(Db *db, Doc *doc, DocInfo *info, fatbuf *fb,
         updated.size = 0;
     }
 
-    idterm->buf = (char *) fatbuf_get(fb, updated.id.size + 5);
-    error_unless(idterm->buf, COUCHSTORE_ERROR_ALLOC_FAIL);
-    idterm->size = 0;
     ei_encode_binary(idterm->buf, (int *) &idterm->size, updated.id.buf, updated.id.size);
-
-    seqval->buf = (char *) fatbuf_get(fb, (44 + updated.id.size + updated.rev_meta.size));
-    error_unless(seqval->buf, COUCHSTORE_ERROR_ALLOC_FAIL);
     seqval->size = assemble_index_value(&updated, seqval->buf, idterm);
-
-    idval->buf = (char *) fatbuf_get(fb, (44 + 10 + updated.rev_meta.size));
-    error_unless(idval->buf, COUCHSTORE_ERROR_ALLOC_FAIL);
     idval->size = assemble_index_value(&updated, idval->buf, seqterm);
 
     //Use max of 10 +, id.size + 5 +, 42 + rev_meta.size + id.size, + 52 + rev_meta.size
     // == id.size *2 + rev_meta.size *2 + 109 bytes
-cleanup:
+
     return errcode;
 }
 
 LIBCOUCHSTORE_API
-int save_docs(Db *db, Doc **docs, DocInfo **infos,
-              long numdocs, uint64_t options)
+couchstore_error_t couchstore_save_documents(Db *db,
+                                             Doc **docs,
+                                             DocInfo **infos,
+                                             long numdocs,
+                                             uint64_t options)
 {
-    int errcode = 0, i;
+    couchstore_error_t errcode;
+    int ii;
     sized_buf *seqklist, *idklist, *seqvlist, *idvlist;
     size_t term_meta_size = 0;
     Doc *curdoc;
@@ -850,47 +886,60 @@ int save_docs(Db *db, Doc **docs, DocInfo **infos,
 
     fatbuf *fb;
 
-    for (i = 0; i < numdocs; i++) {
-        //Get additional size for terms to be inserted into indexes
-        term_meta_size += 113 + (2 * (infos[i]->id.size + infos[i]->rev_meta.size));
+    for (ii = 0; ii < numdocs; ii++) {
+        // Get additional size for terms to be inserted into indexes
+        size_t size = infos[ii]->id.size + infos[ii]->rev_meta.size;
+        term_meta_size += 113 + (2 * size);
     }
 
     fb = fatbuf_alloc(term_meta_size +
-                      numdocs * (
-                          sizeof(sized_buf) * 4)); //seq/id key and value lists
+                      numdocs * (sizeof(sized_buf) * 4)); //seq/id key and value lists
 
-    error_unless(fb, COUCHSTORE_ERROR_ALLOC_FAIL);
+    if (fb == NULL) {
+        return COUCHSTORE_ERROR_ALLOC_FAIL;
+    }
 
-    seqklist = (sized_buf *) fatbuf_get(fb, numdocs * sizeof(sized_buf));
-    idklist = (sized_buf *) fatbuf_get(fb, numdocs * sizeof(sized_buf));
-    seqvlist = (sized_buf *) fatbuf_get(fb, numdocs * sizeof(sized_buf));
-    idvlist = (sized_buf *) fatbuf_get(fb, numdocs * sizeof(sized_buf));
 
-    for (i = 0; i < numdocs; i++) {
+    seqklist = fatbuf_get(fb, numdocs * sizeof(sized_buf));
+    idklist = fatbuf_get(fb, numdocs * sizeof(sized_buf));
+    seqvlist = fatbuf_get(fb, numdocs * sizeof(sized_buf));
+    idvlist = fatbuf_get(fb, numdocs * sizeof(sized_buf));
+
+    for (ii = 0; ii < numdocs; ii++) {
         seq++;
         if (docs) {
-            curdoc = docs[i];
+            curdoc = docs[ii];
         } else {
             curdoc = NULL;
         }
-        error_pass(add_doc_to_update_list(db, curdoc, infos[i], fb,
-                                          &seqklist[i], &idklist[i], &seqvlist[i], &idvlist[i], seq, options));
+
+        errcode = add_doc_to_update_list(db, curdoc, infos[ii], fb,
+                                         &seqklist[ii], &idklist[ii],
+                                         &seqvlist[ii], &idvlist[ii],
+                                         seq, options);
+        if (errcode != COUCHSTORE_SUCCESS) {
+            break;
+        }
     }
 
-    error_pass(update_indexes(db, seqklist, seqvlist, idklist, idvlist, numdocs));
+    if (errcode == COUCHSTORE_SUCCESS) {
+        errcode = update_indexes(db, seqklist, seqvlist,
+                                 idklist, idvlist, numdocs);
+    }
 
-cleanup:
     fatbuf_free(fb);
-    if (errcode == 0) {
+    if (errcode == COUCHSTORE_SUCCESS) {
         db->header.update_seq = seq;
     }
+
     return errcode;
 }
 
 LIBCOUCHSTORE_API
-int save_doc(Db *db, Doc *doc, DocInfo *info, uint64_t options)
+couchstore_error_t couchstore_save_document(Db *db, Doc *doc,
+                                            DocInfo *info, uint64_t options)
 {
-    return save_docs(db, &doc, &info, 1, options);
+    return couchstore_save_documents(db, &doc, &info, 1, options);
 }
 
 static int local_doc_fetch(couchfile_lookup_request *rq, void *k, sized_buf *v)
