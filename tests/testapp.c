@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <libcouchstore/couch_db.h>
 #include "../src/fatbuf.h"
+#include "../src/internal.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

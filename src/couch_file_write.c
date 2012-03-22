@@ -1,4 +1,5 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+#include "config.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -9,6 +10,7 @@
 
 #include "rfc1321/global.h"
 #include "rfc1321/md5.h"
+#include "internal.h"
 #include "crc32.h"
 #include "util.h"
 

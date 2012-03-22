@@ -86,13 +86,6 @@ extern "C" {
         int (*sync)(Db *db);
     } couch_file_ops;
 
-    struct _db {
-        int fd;
-        uint64_t file_pos;
-        couch_file_ops *file_ops;
-        db_header header;
-        void *userdata;
-    };
 
     /* File ops
 

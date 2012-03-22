@@ -7,6 +7,8 @@
 #include <libcouchstore/couch_db.h>
 #include <snappy-c.h>
 #include <ei.h>
+
+#include "internal.h"
 #include "util.h"
 
 static char *size_str(double size)

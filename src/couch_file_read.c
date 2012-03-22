@@ -1,4 +1,5 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -6,6 +7,8 @@
 #include <netinet/in.h>
 #include <snappy-c.h>
 #include <ei.h>
+
+#include "internal.h"
 #include "crc32.h"
 #include "util.h"
 

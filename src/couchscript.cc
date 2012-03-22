@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include <libcouchstore/couch_db.h>
+#include "internal.h"
 
 // Copied from lua.hpp to allow us to use older versions of lua
 // without that wrapper file.. (BTW this method is broken because

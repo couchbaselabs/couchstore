@@ -8,6 +8,7 @@
 #include <ei.h>
 #include <snappy-c.h>
 
+#include "internal.h"
 #include "util.h"
 #include "reduces.h"
 #include "os.h"

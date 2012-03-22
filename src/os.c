@@ -1,9 +1,11 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+#include "config.h"
 #include <sys/types.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
 
+#include "internal.h"
 #include "os.h"
 
 static ssize_t couch_pread(Db *db, void *buf, size_t nbyte, off_t offset)
