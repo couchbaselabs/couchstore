@@ -46,7 +46,6 @@ libcouchstore_la_SOURCES = \
                             src/couch_db.c \
                             src/crc32.c \
                             src/crc32.h \
-                            src/couch_db.h \
                             src/couch_file_read.c \
                             src/couch_file_write.c \
                             src/reduces.c \
