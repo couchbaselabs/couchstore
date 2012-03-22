@@ -16,13 +16,14 @@ extern "C" {
 #endif
 
     struct _db {
-        int fd;
         uint64_t file_pos;
         couch_file_ops *file_ops;
+        void *file_ops_cookie;
         db_header header;
         void *userdata;
     };
 
+    couch_file_ops *couch_get_default_file_ops(void);
 
 #ifdef __cplusplus
 }

@@ -75,18 +75,6 @@ extern "C" {
 
     typedef struct _db Db;
 
-    typedef struct {
-        ssize_t (*pread)(Db *db, void *buf, size_t nbyte, off_t offset);
-        ssize_t (*pwrite)(Db *db, const void *buf, size_t nbyte, off_t offset);
-        int (*open)(const char *path, int oflag, int mode);
-        int (*close)(Db *db);
-
-        off_t (*goto_eof)(Db *db);
-
-        int (*sync)(Db *db);
-    } couch_file_ops;
-
-
     /* File ops
 
     //Read a chunk from file, remove block prefixes, and decompress.
@@ -122,7 +110,8 @@ extern "C" {
         COUCHSTORE_ERROR_WRITE = -7,
         COUCHSTORE_ERROR_HEADER_VERSION = -8,
         COUCHSTORE_ERROR_CHECKSUM_FAIL = -9,
-    COUCHSTORE_ERROR_INVALID_ARGUMENTS = -10
+        COUCHSTORE_ERROR_INVALID_ARGUMENTS = -10,
+        COUCHSTORE_ERROR_NO_SUCH_FILE = -11
     } couchstore_error_t;
 
 

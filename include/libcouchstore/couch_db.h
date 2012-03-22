@@ -3,6 +3,9 @@
 #define COUCHSTORE_COUCH_DB_H
 
 #include "couch_common.h"
+
+#include <libcouchstore/file_ops.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -11,7 +11,6 @@
 #include "internal.h"
 #include "util.h"
 #include "reduces.h"
-#include "os.h"
 
 #define SNAPPY_META_FLAG 128
 
@@ -118,6 +117,7 @@ int commit_all(Db *db, uint64_t options)
 {
     write_header(db);
     db->file_ops->sync(db);
+    // @TODO We need error checks!!!!!!!!
     return 0;
 }
 
@@ -142,7 +142,11 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
     int openflags;
 
     /* Sanity check input parameters */
-    if ((filename == NULL || pDb == NULL || ops == NULL) ||
+    if (filename == NULL || pDb == NULL || ops == NULL ||
+        ops->version != 1 || ops->open == NULL ||
+        ops->close == NULL || ops->pread == NULL ||
+        ops->pwrite == NULL || ops->goto_eof == NULL ||
+        ops->sync == NULL || ops->destructor == NULL ||
         ((flags & COUCHSTORE_OPEN_FLAG_RDONLY) &&
          (flags & COUCHSTORE_OPEN_FLAG_CREATE))) {
         return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
@@ -152,9 +156,9 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
 
+    *pDb = db;
     db->file_ops = ops;
 
-    *pDb = db;
     if (flags & COUCHSTORE_OPEN_FLAG_RDONLY) {
         openflags = O_RDONLY;
     } else {
@@ -165,8 +169,13 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
         openflags |= O_CREAT;
     }
 
-    db->fd = db->file_ops->open(filename, openflags, 0666);
-    error_unless(db->fd > 0, COUCHSTORE_ERROR_OPEN_FILE);
+    errcode = db->file_ops->open(db, filename, openflags);
+    if (errcode != COUCHSTORE_SUCCESS) {
+        *pDb = NULL;
+        free(db);
+        return errcode;
+    }
+
     db->file_pos = db->file_ops->goto_eof(db);
     //TODO are there some cases where we should blow up?
     //     such as not finding a header in a file that we didn't
@@ -197,10 +206,8 @@ LIBCOUCHSTORE_API
 couchstore_error_t couchstore_close_db(Db *db)
 {
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
-    if (db->fd) {
-        db->file_ops->close(db);
-    }
-    db->fd = 0;
+    db->file_ops->close(db);
+    db->file_ops->destructor(db);
 
     free(db->header.by_id_root);
     db->header.by_id_root = NULL;

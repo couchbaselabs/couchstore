@@ -29,6 +29,8 @@ const char *couchstore_strerror(couchstore_error_t errcode)
         return "checksum fail";
     case COUCHSTORE_ERROR_INVALID_ARGUMENTS:
         return "invalid arguments";
+    case COUCHSTORE_ERROR_NO_SUCH_FILE:
+        return "no such file";
     default:
         return NULL;
     }

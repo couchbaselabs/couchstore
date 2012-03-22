@@ -282,7 +282,7 @@ void test_open_file_error()
     unlink("test.couch");
     Db *db;
     int errcode = couchstore_open_db("test.couch", 0, &db);
-    assert(errcode == COUCHSTORE_ERROR_OPEN_FILE);
+    assert(errcode == COUCHSTORE_ERROR_NO_SUCH_FILE);
 }
 
 

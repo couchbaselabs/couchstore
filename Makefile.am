@@ -22,6 +22,7 @@ pkginclude_HEADERS = \
                      include/libcouchstore/couch_db.h \
                      include/libcouchstore/couch_common.h \
                      include/libcouchstore/couch_btree.h \
+                     include/libcouchstore/file_ops.h \
                      include/libcouchstore/visibility.h
 
 lib_LTLIBRARIES = libcouchstore.la
