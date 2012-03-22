@@ -212,26 +212,20 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_close_db(Db *db)
 {
-    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     db->file_ops->close(db);
     db->file_ops->destructor(db);
 
     free(db->header.by_id_root);
-    db->header.by_id_root = NULL;
-
     free(db->header.by_seq_root);
-    db->header.by_seq_root = NULL;
-
     free(db->header.local_docs_root);
-    db->header.local_docs_root = NULL;
 
     if (db->header.purged_docs != &nil_atom) {
         free(db->header.purged_docs);
     }
-    db->header.purged_docs = NULL;
+    memset(db, 0xa5, sizeof(*db));
     free(db);
 
-    return errcode;
+    return COUCHSTORE_SUCCESS;
 }
 
 LIBCOUCHSTORE_API
