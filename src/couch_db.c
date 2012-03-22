@@ -2,13 +2,11 @@
 #include <fcntl.h>
 #include <string.h>
 #include <stdlib.h>
-#include <libcouchstore/couch_db.h>
-
-#include <libcouchstore/couch_btree.h>
 #include <ei.h>
 #include <snappy-c.h>
 
 #include "internal.h"
+#include "couch_btree.h"
 #include "util.h"
 #include "reduces.h"
 

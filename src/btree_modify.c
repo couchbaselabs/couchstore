@@ -1,9 +1,10 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+#include "config.h"
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
 
-#include <libcouchstore/couch_btree.h>
+#include "couch_btree.h"
 #include <ei.h>
 #include "util.h"
 

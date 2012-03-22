@@ -1,6 +1,7 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+#include "config.h"
 #include <stdlib.h>
-#include <libcouchstore/couch_btree.h>
+#include "couch_btree.h"
 #include "util.h"
 
 static int btree_lookup_inner(couchfile_lookup_request *rq, uint64_t diskpos,

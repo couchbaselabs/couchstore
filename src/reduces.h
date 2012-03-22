@@ -2,7 +2,7 @@
 #define COUCHSTORE_REDUCES_H 1
 
 #include <libcouchstore/couch_common.h>
-#include <libcouchstore/couch_btree.h>
+#include "couch_btree.h"
 
 #ifdef __cplusplus
 extern "C" {
