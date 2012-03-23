@@ -4,33 +4,39 @@
 #include "couch_btree.h"
 #include "util.h"
 
-static int btree_lookup_inner(couchfile_lookup_request *rq, uint64_t diskpos,
-                              int current, int end)
+static couchstore_error_t btree_lookup_inner(couchfile_lookup_request *rq,
+                                             uint64_t diskpos,
+                                             int current,
+                                             int end)
 {
-    int bufpos = 0, nodebuflen = 0, type_pos = 0,
-        list_size = 0;
+    int bufpos = 0;
+    int type_pos;
+    int list_size = 0;
     sized_buf v;
+
     if (current == end) {
         return 0;
     }
-    int errcode = 0;
+    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
 
     char *nodebuf = NULL;
 
-    nodebuflen = pread_compressed(rq->db, diskpos, &nodebuf);
+    int nodebuflen = pread_compressed(rq->db, diskpos, &nodebuf);
     error_unless(nodebuflen > 0, COUCHSTORE_ERROR_READ);
 
     bufpos++; //Skip over term version
     error_unless(tuple_check(nodebuf, &bufpos, 2), COUCHSTORE_ERROR_PARSE_TERM);
     type_pos = bufpos;
     ei_skip_term(nodebuf, &bufpos); //node type
-    error_nonzero(ei_decode_list_header(nodebuf, &bufpos, &list_size), COUCHSTORE_ERROR_PARSE_TERM);
+    error_nonzero(ei_decode_list_header(nodebuf, &bufpos, &list_size),
+                  COUCHSTORE_ERROR_PARSE_TERM);
 
     if (atom_check(nodebuf + type_pos, "kp_node")) {
         int list_item = 0;
         while (list_item < list_size && current < end) {
             //{K,P}
-            error_unless(tuple_check(nodebuf, &bufpos, 2), COUCHSTORE_ERROR_PARSE_TERM);
+            error_unless(tuple_check(nodebuf, &bufpos, 2),
+                         COUCHSTORE_ERROR_PARSE_TERM);
             void *cmp_key = rq->cmp.from_ext(&rq->cmp, nodebuf, bufpos);
             ei_skip_term(nodebuf, &bufpos); //Skip key
 
@@ -38,12 +44,14 @@ static int btree_lookup_inner(couchfile_lookup_request *rq, uint64_t diskpos,
                 if (rq->fold) {
                     rq->in_fold = 1;
                 }
-                uint64_t pointer = 0, last_item = current;
+                uint64_t pointer = 0;
+                int last_item = current;
                 //Descend into the pointed to node.
                 //with all keys < item key.
                 do {
                     last_item++;
-                } while (last_item < end && rq->cmp.compare(cmp_key, rq->keys[last_item]) >= 0);
+                } while (last_item < end &&
+                         rq->cmp.compare(cmp_key, rq->keys[last_item]) >= 0);
 
                 error_unless(tuple_check(nodebuf, &bufpos, 3), COUCHSTORE_ERROR_PARSE_TERM);
                 ei_decode_uint64(nodebuf, &bufpos, &pointer);
@@ -106,7 +114,8 @@ cleanup:
     return errcode;
 }
 
-int btree_lookup(couchfile_lookup_request *rq, uint64_t root_pointer)
+couchstore_error_t btree_lookup(couchfile_lookup_request *rq,
+                                uint64_t root_pointer)
 {
     rq->in_fold = 0;
     return btree_lookup_inner(rq, root_pointer, 0, rq->num_keys);

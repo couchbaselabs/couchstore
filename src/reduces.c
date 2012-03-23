@@ -5,6 +5,7 @@
 
 void by_seq_reduce (sized_buf *dst, nodelist *leaflist, int count)
 {
+    (void)leaflist;
     //will be freed by flush_mr
     dst->buf = (char *) malloc(12);
     if (!dst->buf) {
@@ -17,6 +18,7 @@ void by_seq_reduce (sized_buf *dst, nodelist *leaflist, int count)
 
 void by_seq_rereduce (sized_buf *dst, nodelist *leaflist, int count)
 {
+    (void)count;
     long total = 0;
     long current = 0;
     int r_pos = 0;
@@ -40,6 +42,7 @@ void by_seq_rereduce (sized_buf *dst, nodelist *leaflist, int count)
 
 void by_id_rereduce(sized_buf *dst, nodelist *leaflist, int count)
 {
+    (void)count;
     //Source term {NotDeleted, Deleted, Size}
     //Result term {NotDeleted, Deleted, Size}
     dst->buf = (char *) malloc(30);
@@ -74,6 +77,7 @@ void by_id_rereduce(sized_buf *dst, nodelist *leaflist, int count)
 
 void by_id_reduce(sized_buf *dst, nodelist *leaflist, int count)
 {
+    (void)count;
     //Source term {Key, {Seq, Rev, Bp, Deleted, ContentMeta, Size}}
     //Result term {NotDeleted, Deleted, Size}
     dst->buf = (char *) malloc(30);

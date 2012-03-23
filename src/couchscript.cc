@@ -232,7 +232,7 @@ extern "C" {
         void* cookie = libcouchstore_get_file_ops_cookie(db);
         intptr_t fd = reinterpret_cast<intptr_t>(cookie);
 
-        int rv = ftruncate(fd, location);
+        int rv = ftruncate((int)fd, location);
         if (rv != 0) {
             char buf[256];
             snprintf(buf, sizeof(buf), "error truncating DB: %d", rv);

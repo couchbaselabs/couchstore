@@ -235,8 +235,7 @@ couchstore_error_t couchstore_close_db(Db *db)
     return COUCHSTORE_SUCCESS;
 }
 
-LIBCOUCHSTORE_API
-int ebin_cmp(void *k1, void *k2)
+static int ebin_cmp(void *k1, void *k2)
 {
     sized_buf *e1 = (sized_buf *)k1;
     sized_buf *e2 = (sized_buf *)k2;
@@ -258,8 +257,7 @@ int ebin_cmp(void *k1, void *k2)
     return cmp;
 }
 
-LIBCOUCHSTORE_API
-void *ebin_from_ext(compare_info *c, char *buf, int pos)
+static void *ebin_from_ext(compare_info *c, char *buf, int pos)
 {
     int binsize;
     int type;
@@ -295,9 +293,12 @@ static int long_term_cmp(void *k1, void *k2)
     return (e1val < e2val ? -1 : 1);
 }
 
-static int docinfo_from_buf(DocInfo **pInfo, sized_buf *v, int idBytes)
+static couchstore_error_t docinfo_from_buf(DocInfo **pInfo,
+                                           sized_buf *v,
+                                           int idBytes)
 {
-    int errcode = 0, term_index = 0, fterm_pos = 0, fterm_size = 0;
+    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
+    int term_index = 0, fterm_pos = 0, fterm_size = 0;
     int metabin_pos = 0, metabin_size = 0;
     uint64_t deleted;
     uint64_t content_meta;
@@ -375,9 +376,9 @@ cleanup:
 
 #define COMPRESSED_BODY 1
 //Fill in doc from reading file.
-static int bp_to_doc(Doc **pDoc, Db *db, off_t bp, uint64_t options)
+static couchstore_error_t bp_to_doc(Doc **pDoc, Db *db, off_t bp, uint64_t options)
 {
-    int errcode = 0;
+    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     size_t bodylen = 0;
     char *docbody = NULL;
     fatbuf *docbuf = NULL;

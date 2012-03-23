@@ -122,7 +122,7 @@ static int pread_bin_int(Db *db, off_t pos, char **ret_ptr, int header)
 
     buf_len -= skip;
     memmove(bufptr, bufptr + skip, buf_len);
-    if (chunk_len <= buf_len) {
+    if (chunk_len <= (uint32_t)buf_len) {
         newbufptr = (char *) realloc(bufptr, chunk_len);
         error_unless(newbufptr, COUCHSTORE_ERROR_READ);
         bufptr = newbufptr;

@@ -21,7 +21,7 @@ static ssize_t raw_write(Db *db, sized_buf *buf, off_t pos)
     char blockprefix = 0;
     ssize_t written;
     size_t block_remain;
-    while (buf_pos < buf->size) {
+    while (buf_pos < (off_t)buf->size) {
         block_remain = COUCH_BLOCK_SIZE - (write_pos % COUCH_BLOCK_SIZE);
         if (block_remain > (buf->size - buf_pos)) {
             block_remain = buf->size - buf_pos;

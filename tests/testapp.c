@@ -1,3 +1,4 @@
+/* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include "config.h"
 #include <unistd.h>
 #include <libcouchstore/couch_db.h>
@@ -10,8 +11,9 @@
 #include "macros.h"
 
 #define ZERO(V) memset(&(V), 0, sizeof(V))
-#define SETDOC(N, I, D, M) setdoc(&testdocset.docs[N], &testdocset.infos[N], I, sizeof(I) - 1, \
-                                  D, sizeof(D) - 1, M, sizeof(M)); testdocset.datasize += sizeof(D) - 1;
+#define SETDOC(N, I, D, M)  \
+   setdoc(&testdocset.docs[N], &testdocset.infos[N], I, sizeof(I) - 1, \
+         D, sizeof(D) - 1, M, sizeof(M)); testdocset.datasize += sizeof(D) - 1;
 
 //Wrapper in couchstore.
 int ei_decode_uint64(char *buf, int *index, uint64_t *val);
@@ -34,7 +36,8 @@ counterset counters;
 docset testdocset;
 fatbuf *docsetbuf = NULL;
 
-void setdoc(Doc *doc, DocInfo *info, char *id, int idlen, char *data, int datalen, char *meta, int metalen)
+static void setdoc(Doc *doc, DocInfo *info, char *id, int idlen,
+                   char *data, int datalen, char *meta, int metalen)
 {
     doc->id.buf = id;
     doc->id.size = idlen;
@@ -49,7 +52,7 @@ void setdoc(Doc *doc, DocInfo *info, char *id, int idlen, char *data, int datale
     info->id = doc->id;
 }
 
-void docset_init(int numdocs)
+static void docset_init(int numdocs)
 {
     testdocset.size = numdocs;
     testdocset.pos = 0;
@@ -65,8 +68,9 @@ void docset_init(int numdocs)
     ZERO(testdocset.counters);
 }
 
-int counter_inc(Db *db, DocInfo *info, void *ctx)
+static int counter_inc(Db *db, DocInfo *info, void *ctx)
 {
+   (void)db;
     counterset *ctr = ctx;
     ctr->totaldocs++;
     if (info->deleted) {
@@ -77,7 +81,7 @@ int counter_inc(Db *db, DocInfo *info, void *ctx)
 
 #define EQUAL_DOC_BUF(f) assert(memcmp(doc-> f .buf, testdocset.docs[testdocset.pos]. f .buf, doc-> f .size) == 0)
 #define EQUAL_INFO_BUF(f) assert(memcmp(info-> f  .buf, testdocset.infos[testdocset.pos]. f .buf, info-> f .size) == 0)
-int docset_check(Db *db, DocInfo *info, void *ctx)
+static int docset_check(Db *db, DocInfo *info, void *ctx)
 {
     int errcode = 0;
     docset *ds = ctx;
@@ -102,7 +106,7 @@ cleanup:
     return 0;
 }
 
-void assert_id_rv(char *buf, uint64_t deleted, uint64_t notdeleted, uint64_t size)
+static void assert_id_rv(char *buf, uint64_t deleted, uint64_t notdeleted, uint64_t size)
 {
     uint64_t r_deleted, r_notdeleted, r_size;
     int pos = 0;
@@ -118,13 +122,13 @@ void assert_id_rv(char *buf, uint64_t deleted, uint64_t notdeleted, uint64_t siz
 
 }
 //Check the toplevel reduces on the db headers.
-void check_reductions(Db *db)
+static void check_reductions(Db *db)
 {
     assert_id_rv(db->header.by_id_root->reduce_value.buf,
                  testdocset.counters.deleted, testdocset.counters.totaldocs - testdocset.counters.deleted, testdocset.datasize);
 }
 
-int dump_count(Db *db)
+static int dump_count(Db *db)
 {
     int errcode = 0;
     ZERO(counters);
@@ -134,7 +138,7 @@ cleanup:
     return errcode;
 }
 char zerometa[] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3};
-void test_save_docs()
+static void test_save_docs(void)
 {
     fprintf(stderr, "save_docs... ");
     fflush(stderr);
@@ -171,7 +175,7 @@ cleanup:
     assert(errcode == 0);
 }
 
-void test_save_doc()
+static void test_save_doc(void)
 {
     fprintf(stderr, "save_doc... ");
     fflush(stderr);
@@ -204,7 +208,7 @@ cleanup:
     assert(errcode == 0);
 }
 
-void test_compressed_doc_body()
+static void test_compressed_doc_body(void)
 {
     fprintf(stderr, "compressed bodies... ");
     fflush(stderr);
@@ -236,7 +240,7 @@ cleanup:
     assert(errcode == 0);
 }
 
-void test_dump_empty_db()
+static void test_dump_empty_db(void)
 {
     fprintf(stderr, "dump empty db... ");
     fflush(stderr);
@@ -251,7 +255,7 @@ void test_dump_empty_db()
     couchstore_close_db(db);
 }
 
-void test_local_docs()
+static void test_local_docs(void)
 {
     fprintf(stderr, "local docs... ");
     fflush(stderr);
@@ -280,7 +284,7 @@ cleanup:
     assert(errcode == 0);
 }
 
-void test_open_file_error()
+static void test_open_file_error(void)
 {
     fprintf(stderr, "opening nonexistent file errors... ");
     fflush(stderr);

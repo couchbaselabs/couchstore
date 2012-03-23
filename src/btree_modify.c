@@ -16,7 +16,7 @@ sized_buf empty_root = {
     13
 };
 
-static int flush_mr(couchfile_modify_result *res);
+static couchstore_error_t flush_mr(couchfile_modify_result *res);
 
 static void append_buf(void *dst, int *dstpos, void *src, int len)
 {
@@ -24,19 +24,21 @@ static void append_buf(void *dst, int *dstpos, void *src, int len)
     *dstpos += len;
 }
 
-static int find_first_gteq(char *buf, int pos, void *key,
-                           compare_info *lu, int at_least)
+static couchstore_error_t find_first_gteq(char *buf, int pos, void *key,
+                                          compare_info *lu, int at_least)
 {
     int list_arity, inner_arity;
     int list_pos = 0, cmp_val;
     off_t pair_pos = 0;
-    int errcode = 0;
-    error_nonzero(ei_decode_list_header(buf, &pos, &list_arity), COUCHSTORE_ERROR_PARSE_TERM);
+    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
+    error_nonzero(ei_decode_list_header(buf, &pos, &list_arity),
+                  COUCHSTORE_ERROR_PARSE_TERM);
     while (list_pos < list_arity) {
         //{<<"key", some other term}
         pair_pos = pos; //Save pos of kv/kp pair tuple
 
-        error_nonzero(ei_decode_tuple_header(buf, &pos, &inner_arity), COUCHSTORE_ERROR_PARSE_TERM)
+        error_nonzero(ei_decode_tuple_header(buf, &pos, &inner_arity),
+                      COUCHSTORE_ERROR_PARSE_TERM)
 
         lu->last_cmp_key = (*lu->from_ext)(lu, buf, pos);
         cmp_val = (*lu->compare) (lu->last_cmp_key, key);
@@ -56,12 +58,13 @@ cleanup:
     return pair_pos;
 }
 
-static int maybe_flush(couchfile_modify_result *mr)
+static couchstore_error_t maybe_flush(couchfile_modify_result *mr)
 {
     if (mr->modified && mr->node_len > CHUNK_THRESHOLD) {
         return flush_mr(mr);
     }
-    return 0;
+
+    return COUCHSTORE_SUCCESS;
 }
 
 
@@ -77,7 +80,7 @@ static void free_nodelist(nodelist *nl)
 
 static nodelist *make_nodelist(void)
 {
-    nodelist *r = (nodelist *) malloc(sizeof(nodelist));
+    nodelist *r = malloc(sizeof(nodelist));
     if (!r) {
         return NULL;
     }
@@ -88,7 +91,7 @@ static nodelist *make_nodelist(void)
 
 static couchfile_modify_result *make_modres(couchfile_modify_request *rq)
 {
-    couchfile_modify_result *res = (couchfile_modify_result *) malloc(sizeof(couchfile_modify_result));
+    couchfile_modify_result *res = malloc(sizeof(couchfile_modify_result));
     if (!res) {
         return NULL;
     }
@@ -119,12 +122,12 @@ static void free_modres(couchfile_modify_result *mr)
     free(mr);
 }
 
-static int mr_push_action(couchfile_modify_action *act,
-                          couchfile_modify_result *dst)
+static couchstore_error_t mr_push_action(couchfile_modify_action *act,
+                                         couchfile_modify_result *dst)
 {
     //For ACTION_INSERT
-    sized_buf *lv = (sized_buf *) malloc(sizeof(sized_buf) +
-                                         act->key->size + act->value.term->size + 2);
+    sized_buf *lv = malloc(sizeof(sized_buf) +
+                           act->key->size + act->value.term->size + 2);
     if (!lv) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
@@ -153,7 +156,8 @@ static int mr_push_action(couchfile_modify_action *act,
     return maybe_flush(dst);
 }
 
-static int mr_push_pointerinfo(node_pointer *ptr, couchfile_modify_result *dst)
+static couchstore_error_t mr_push_pointerinfo(node_pointer *ptr,
+                                              couchfile_modify_result *dst)
 {
     nodelist *pel = make_nodelist();
     if (!pel) {
@@ -169,13 +173,14 @@ static int mr_push_pointerinfo(node_pointer *ptr, couchfile_modify_result *dst)
     return maybe_flush(dst);
 }
 
-static int mr_push_kv_range(char *buf, int pos, int bound, int end,
-                            couchfile_modify_result *dst)
+static couchstore_error_t mr_push_kv_range(char *buf, int pos,
+                                           int bound, int end,
+                                           couchfile_modify_result *dst)
 {
     int current = 0;
     int term_begin_pos;
     ei_decode_list_header(buf, &pos, NULL);
-    int errcode = 0;
+    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     sized_buf *lv = NULL;
 
     while (current < end && errcode == 0) {
@@ -241,7 +246,7 @@ static void mr_push_kp_range(char *buf, int pos, int bound, int end,
 
 //Write the current contents of the values list to disk as a node
 //and add the resulting pointer to the pointers list.
-static int flush_mr(couchfile_modify_result *res)
+static couchstore_error_t flush_mr(couchfile_modify_result *res)
 {
     int nbufpos = 0;
     uint64_t subtreesize = 0;
@@ -251,7 +256,7 @@ static int flush_mr(couchfile_modify_result *res)
     reduce_value.buf = (char *) "\x6A"; //NIL_EXT
     reduce_value.size = 1;
     int reduced = 0;
-    int errcode = 0;
+    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     nodelist *pel = NULL;
 
     if (res->values_end == res->values || !res->modified) {
@@ -372,10 +377,10 @@ cleanup:
 }
 
 //Move this node's pointers list to dst node's values list.
-static int mr_move_pointers(couchfile_modify_result *src,
-                            couchfile_modify_result *dst)
+static couchstore_error_t mr_move_pointers(couchfile_modify_result *src,
+                                           couchfile_modify_result *dst)
 {
-    int errcode = 0;
+    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     if (src->pointers_end == src->pointers) {
         return 0;
     }
@@ -403,8 +408,10 @@ cleanup:
     return errcode;
 }
 
-static int modify_node(couchfile_modify_request *rq, node_pointer *nptr,
-                       int start, int end, couchfile_modify_result *dst)
+static couchstore_error_t modify_node(couchfile_modify_request *rq,
+                                      node_pointer *nptr,
+                                      int start, int end,
+                                      couchfile_modify_result *dst)
 {
     sized_buf current_node;
     int curnode_pos = 0;
@@ -412,7 +419,7 @@ static int modify_node(couchfile_modify_request *rq, node_pointer *nptr,
     int list_start_pos = 0;
     int node_len = 0;
     int node_bound = 0;
-    int errcode = 0;
+    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     int kpos = 0;
     int node_type_pos = 0;
     couchfile_modify_result *local_result = NULL;
@@ -612,7 +619,7 @@ cleanup:
 
 static node_pointer *finish_root(couchfile_modify_request *rq,
                                  couchfile_modify_result *root_result,
-                                 int *errcode)
+                                 couchstore_error_t *errcode)
 {
     node_pointer *ret_ptr = NULL;
     couchfile_modify_result *collector = make_modres(rq);

@@ -35,11 +35,12 @@ extern "C" {
         int in_fold;
         void **keys;
         void *callback_ctx;
-        int (*fetch_callback) (struct couchfile_lookup_request *rq, void *k, sized_buf *v);
+        couchstore_error_t (*fetch_callback) (struct couchfile_lookup_request *rq, void *k, sized_buf *v);
         node_pointer *root;
     } couchfile_lookup_request;
 
-    int btree_lookup(couchfile_lookup_request *rq, uint64_t root_pointer);
+    couchstore_error_t btree_lookup(couchfile_lookup_request *rq,
+                                    uint64_t root_pointer);
 
     /* Modify */
 
@@ -102,9 +103,6 @@ extern "C" {
     node_pointer *modify_btree(couchfile_modify_request *rq,
                                node_pointer *root,
                                couchstore_error_t *errcode);
-    int ebin_cmp(void *k1, void *k2);
-    void *ebin_from_ext(compare_info *c, char *buf, int pos);
-
 #ifdef __cplusplus
 }
 #endif
