@@ -30,7 +30,10 @@ lib_LTLIBRARIES = libcouchstore.la
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libcouchstore.pc
 
-noinst_LTLIBRARIES = librfc1321.la
+noinst_LTLIBRARIES = librfc1321.la libbyteswap.la
+
+libbyteswap_la_SOURCES = src/byteswap.c
+
 librfc1321_la_SOURCES = \
                             src/rfc1321/md5c.c \
                             src/rfc1321/md5.h \
@@ -40,7 +43,6 @@ librfc1321_la_CFLAGS =  $(AM_CFLAGS) ${NO_WERROR}
 libcouchstore_la_SOURCES = \
                             src/btree_modify.c \
                             src/btree_read.c \
-                            src/byteswap.c \
                             src/config_static.h \
                             src/couch_btree.h \
                             src/couch_common.h \
@@ -58,17 +60,17 @@ libcouchstore_la_SOURCES = \
 
 libcouchstore_la_LDFLAGS = $(AM_LDFLAGS) -version-info $(LIBCOUCHSTORE_API_CURRENT):$(LIBCOUCHSTORE_API_REVISION):$(LIBCOUCHSTORE_API_AGE) -no-undefined $(ERL_INTERFACE_DIR_LIB) -lei -lsnappy
 libcouchstore_la_CFLAGS = $(AM_CFLAGS) -DLIBCOUCHSTORE_INTERNAL=1 $(ERL_INTERFACE_DIR_INCLUDE)
-libcouchstore_la_LIBADD = librfc1321.la
+libcouchstore_la_LIBADD = librfc1321.la libbyteswap.la
 
-couch_dbdump_SOURCES = src/dbdump.c src/byteswap.c
+couch_dbdump_SOURCES = src/dbdump.c
 couch_dbdump_DEPENDENCIES = libcouchstore.la
 couch_dbdump_CFLAGS = $(AM_CFLAGS) -D__STDC_FORMAT_MACROS
-couch_dbdump_LDADD = libcouchstore.la -lsnappy
+couch_dbdump_LDADD = libcouchstore.la libbyteswap.la -lsnappy
 
-couch_dbinfo_SOURCES = src/dbinfo.c src/util.c src/byteswap.c
+couch_dbinfo_SOURCES = src/dbinfo.c src/util.c
 couch_dbinfo_CFLAGS = $(AM_CFLAGS) $(ERL_INTERFACE_DIR_INCLUDE) -D__STDC_FORMAT_MACROS
-couch_dbinfo_DEPENDENCIES = libcouchstore.la
-couch_dbinfo_LDADD = libcouchstore.la
+couch_dbinfo_DEPENDENCIES = libcouchstore.la libbyteswap.la
+couch_dbinfo_LDADD = libcouchstore.la libbyteswap.la
 #writetest_SOURCES = src/writetest.c
 #writetest_DEPENDENCIES = libcouchstore.la
 #writetest_LDADD = libcouchstore.la
@@ -80,10 +82,10 @@ if HAVE_LIBLUA
 bin_PROGRAMS += couchscript
 
 couchscript_CXXFLAGS = $(AM_CXXFLAGS) $(lua_CFLAGS)
-couchscript_SOURCES = src/couchscript.cc src/byteswap.c
+couchscript_SOURCES = src/couchscript.cc
 couchscript_LDFLAGS = $(AM_LDFLAGS) $(AM_CXX_LDFLAGS)
-couchscript_LDADD = libcouchstore.la $(LTLIBLUA) -ldl
-couchscript_DEPENDENCIES = libcouchstore.la
+couchscript_LDADD = libcouchstore.la libbyteswap.la $(LTLIBLUA) -ldl
+couchscript_DEPENDENCIES = libcouchstore.la libbyteswap.la
 extra_tests += lua_tests
 
 slow_tests += slow_lua_tests
