@@ -4,6 +4,7 @@
 
 #include "couch_common.h"
 
+#include <libcouchstore/error.h>
 #include <libcouchstore/file_ops.h>
 
 #ifdef __cplusplus

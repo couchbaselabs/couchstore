@@ -54,22 +54,6 @@ extern "C" {
 
     typedef struct _db Db;
 
-    /* Errors */
-    typedef enum {
-        COUCHSTORE_SUCCESS = 0,
-        COUCHSTORE_ERROR_OPEN_FILE = -1,
-        COUCHSTORE_ERROR_PARSE_TERM = -2,
-        COUCHSTORE_ERROR_ALLOC_FAIL = -3,
-        COUCHSTORE_ERROR_READ = -4,
-        COUCHSTORE_ERROR_DOC_NOT_FOUND = -5,
-        COUCHSTORE_ERROR_NO_HEADER = -6,
-        COUCHSTORE_ERROR_WRITE = -7,
-        COUCHSTORE_ERROR_HEADER_VERSION = -8,
-        COUCHSTORE_ERROR_CHECKSUM_FAIL = -9,
-        COUCHSTORE_ERROR_INVALID_ARGUMENTS = -10,
-        COUCHSTORE_ERROR_NO_SUCH_FILE = -11
-    } couchstore_error_t;
-
 #ifdef __cplusplus
 }
 #endif
