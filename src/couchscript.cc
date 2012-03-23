@@ -149,10 +149,10 @@ extern "C" {
         DocInfo *docinfo = getDocInfo(ls);
         assert(docinfo);
 
-        int rc = open_doc_with_docinfo(db, docinfo, &doc, 0);
+        int rc = couchstore_open_doc_with_docinfo(db, docinfo, &doc, 0);
         if (rc < 0) {
             char buf[256];
-            free_docinfo(docinfo);
+            couchstore_free_docinfo(docinfo);
             snprintf(buf, sizeof(buf), "error getting doc by docinfo: %s", couchstore_strerror(rc));
             lua_pushstring(ls, buf);
             lua_error(ls);
@@ -161,7 +161,7 @@ extern "C" {
 
         lua_pushlstring(ls, doc->data.buf, doc->data.size);
 
-        free_doc(doc);
+        couchstore_free_document(doc);
 
         return 1;
     }
@@ -183,7 +183,7 @@ extern "C" {
         // Should be const :/
         char *key = const_cast<char *>(luaL_checklstring(ls, 2, &klen));
 
-        int rc = docinfo_by_id(db, reinterpret_cast<uint8_t *>(key), klen, &docinfo);
+        int rc = couchstore_docinfo_by_id(db, reinterpret_cast<uint8_t *>(key), klen, &docinfo);
         if (rc < 0) {
             char buf[256];
             snprintf(buf, sizeof(buf), "error get docinfo: %s", couchstore_strerror(rc));
@@ -192,10 +192,10 @@ extern "C" {
             return 1;
         }
 
-        rc = open_doc_with_docinfo(db, docinfo, &doc, 0);
+        rc = couchstore_open_doc_with_docinfo(db, docinfo, &doc, 0);
         if (rc < 0) {
             char buf[256];
-            free_docinfo(docinfo);
+            couchstore_free_docinfo(docinfo);
             snprintf(buf, sizeof(buf), "error get doc by docinfo: %s", couchstore_strerror(rc));
             lua_pushstring(ls, buf);
             lua_error(ls);
@@ -205,7 +205,7 @@ extern "C" {
         lua_pushlstring(ls, doc->data.buf, doc->data.size);
         push_docinfo(ls, docinfo);
 
-        free_doc(doc);
+        couchstore_free_document(doc);
 
         return 2;
     }
@@ -479,7 +479,7 @@ extern "C" {
 
         Db *db = getDb(ls);
 
-        int rc = save_local_doc(db, &doc);
+        int rc = couchstore_save_local_document(db, &doc);
         if (rc < 0) {
             char buf[256];
             snprintf(buf, sizeof(buf), "error storing local document: %s",
@@ -506,7 +506,7 @@ extern "C" {
 
         Db *db = getDb(ls);
 
-        int rc = save_local_doc(db, &doc);
+        int rc = couchstore_save_local_document(db, &doc);
         if (rc < 0) {
             char buf[256];
             snprintf(buf, sizeof(buf), "error deleting local document: %s",
@@ -532,10 +532,9 @@ extern "C" {
 
         size_t klen;
         // Should be const :/
-        char *key = const_cast<char *>(luaL_checklstring(ls, 2, &klen));
+        const char *key = luaL_checklstring(ls, 2, &klen);
 
-
-        int rc = open_local_doc(db, reinterpret_cast<uint8_t *>(key), klen, &doc);
+        int rc = couchstore_open_local_document(db, static_cast<const void*>(key), klen, &doc);
         if (rc < 0) {
             char buf[256];
             snprintf(buf, sizeof(buf), "error getting local doc: %s",
@@ -547,7 +546,7 @@ extern "C" {
 
         lua_pushlstring(ls, doc->json.buf, doc->json.size);
 
-        free_local_doc(doc);
+        couchstore_free_local_document(doc);
 
         return 1;
     }
@@ -584,7 +583,7 @@ extern "C" {
     {
         ChangesState *st(static_cast<ChangesState *>(ctx));
         st->invoke(di);
-        return NO_FREE_DOCINFO;
+        return 1;
     }
 
     static int couch_func_id(0);
@@ -613,7 +612,8 @@ extern "C" {
         snprintf(fun_buf, sizeof(fun_buf), "couch_fun_%d", ++couch_func_id);
         ChangesState changes_state(ls, fun_buf);
 
-        int rc = changes_since(db, since, 0, couch_changes_each, &changes_state);
+        int rc = couchstore_changes_since(db, since, 0,
+                                          couch_changes_each, &changes_state);
         if (rc != 0) {
             char buf[128];
             snprintf(buf, sizeof(buf), "error iterating: %s", couchstore_strerror(rc));
@@ -727,7 +727,7 @@ extern "C" {
     static int docinfo_gc(lua_State *ls)
     {
         DocInfo *di = getDocInfo(ls);
-        free_docinfo(di);
+        couchstore_free_docinfo(di);
         return 1;
     }
 

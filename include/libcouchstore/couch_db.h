@@ -73,9 +73,12 @@ extern "C" {
     couchstore_error_t couchstore_close_db(Db *db);
 
 
-    /* Get the position in the file of the mostly recently written database header. */
+    /**
+     * Get the position in the file of the mostly recently written
+     * database header.
+     */
     LIBCOUCHSTORE_API
-    uint64_t get_header_position(Db *db);
+    uint64_t couchstore_get_header_position(Db *db);
 
 
     /**
@@ -84,10 +87,12 @@ extern "C" {
      * When saving documents you should only set the id, rev_meta,
      * rev_seq, deleted, and content_meta fields on the DocInfo.
      *
+     * To delete a docuemnt, set doc to NULL.
+     *
      * @param db database to save the document in
      * @param doc the document to save
      * @param info document info
-     * @param options ???
+     * @param options see descrtiption of COMPRESS_DOC_BODIES below
      * @return COUCHSTORE_SUCCESS upon success
      */
     LIBCOUCHSTORE_API
@@ -99,11 +104,15 @@ extern "C" {
     /**
      * Save array of docs to db
      *
+     * To delete docuemnts, set docs to NULL, the docs referenced by
+     * the docinfos will be deleted. To intermix deletes and inserts
+     * in a bulk update, pass docinfos with the deleted flag set.
+     *
      * @param db the database to save documents in
      * @param docs an array of document pointers
      * @param infos an array of docinfo pointers
      * @param numDocs the number documents to save
-     * @param options ???
+     * @param options see descrtiption of COMPRESS_DOC_BODIES below
      * @return COUCHSTORE_SUCCESS upon success
      */
     LIBCOUCHSTORE_API
@@ -112,22 +121,19 @@ extern "C" {
                                                  DocInfo **infos,
                                                  long numDocs,
                                                  uint64_t options);
-
-
-    //Options flags for save_doc and save_docs
-    /* Snappy compress document data if the high bit of the content_meta field
-     * of the DocInfo is set.
-     * This is NOT the default, and if this is not set the data field of the Doc
-     * will be written to disk as-is, regardless of the content_meta flags. */
-#define COMPRESS_DOC_BODIES 1
-
-    /* To delete docuemnts, call save_doc or save_docs with doc or docs set to NULL,
-     * the docs referenced by the docinfos will be deleted.
-     * To intermix deletes and inserts in a bulk update, pass docinfos with the deleted flag
-     * set to save_docs.
+    /*
+     * Options used by couchstore_save_document() and
+     * couchstore_save_documents():
      */
 
-    /* Write header and fsync. */
+    /**
+     * Snappy compress document data if the high bit of the
+     * content_meta field of the DocInfo is set. This is NOT the
+     * default, and if this is not set the data field of the Doc will
+     * be written to disk as-is, regardless of the content_meta flags.
+     */
+#define COMPRESS_DOC_BODIES 1
+
     /**
      * Commit all pending changes and flush buffers to persistent storage.
      *
@@ -137,23 +143,60 @@ extern "C" {
     LIBCOUCHSTORE_API
     couchstore_error_t couchstore_commit(Db *db);
 
-    /* Retrieve a doc_info record using the by_id index
-     * should be freed with free_docinfo.
+    /**
+     * Retrieve the document info for a given key.
+     *
+     * The info should be released with couchstore_free_docinfo()
+     *
+     * @param id the document identifier
+     * @param idlen the number of bytes in the identifier
+     * @param pInfo where to store the result
+     * @return COUCHSTORE_SUCCESS on success.
      */
     LIBCOUCHSTORE_API
-    int docinfo_by_id(Db *db, uint8_t *id,  size_t idlen, DocInfo **pInfo);
+    couchstore_error_t couchstore_docinfo_by_id(Db *db,
+                                                const void *id,
+                                                size_t idlen,
+                                                DocInfo **pInfo);
 
-    /* Retrieve a doc from the db.
-     * doc.id.buf will be the same buffer as id
-     * Should be freed with free_doc. */
+    /**
+     * Retrieve a doc from the db.
+     *
+     * The document should be released with couchstore_free_document()
+     *
+     * doc.id.buf will be the same buffer as id @@ WHat does this mean? @@
+     *
+     * @param db database to load document from
+     * @param id the identifier to load
+     * @param idlen the number of bytes in the id
+     * @param pDoc Where to store the result
+     * @param options See DECOMPRESS_DOC_BODIES
+     * @return COUCHSTORE_SUCCESS if found
+     */
     LIBCOUCHSTORE_API
-    int open_doc(Db *db, uint8_t *id, size_t idlen, Doc **pDoc, uint64_t options);
+    couchstore_error_t couchstore_open_document(Db *db,
+                                                const void *id,
+                                                size_t idlen,
+                                                Doc **pDoc,
+                                                uint64_t options);
 
-    /* Retrieve a doc from the using a docinfo.
+    /**
+     * Retrieve a doc from the using a docinfo.
+     *
      * Do not free the docinfo before freeing the doc.
-     * Should be freed with free_doc. */
+     * Should be freed with free_doc.
+     *
+     * @param db database to load document from
+     * @param docid the the identified to load
+     * @param pDoc Where to store the result
+     * @param options See DECOMPRESS_DOC_BODIES
+     * @return COUCHSTORE_SUCCESS if found
+     */
     LIBCOUCHSTORE_API
-    int open_doc_with_docinfo(Db *db, DocInfo *docinfo, Doc **pDoc, uint64_t options);
+    couchstore_error_t couchstore_open_doc_with_docinfo(Db *db,
+                                                        DocInfo *docinfo,
+                                                        Doc **pDoc,
+                                                        uint64_t options);
 
     //Options flags for open_doc and open_doc_with_docinfo
     /* Snappy decompress document data if the high bit of the content_meta field
@@ -162,37 +205,96 @@ extern "C" {
      * will be read from disk as-is, regardless of the content_meta flags. */
 #define DECOMPRESS_DOC_BODIES 1
 
-    /* Free a doc returned from open_doc. */
+    /**
+     * Release all allocated resources from a document returned from
+     * couchstore_open_document()
+     *
+     * @param doc the document to release
+     */
     LIBCOUCHSTORE_API
-    void free_doc(Doc *doc);
+    void couchstore_free_document(Doc *doc);
 
-    /* Free a docinfo returned from docinfo_by_id. */
-    LIBCOUCHSTORE_API
-    void free_docinfo(DocInfo *docinfo);
 
-    /* Get changes since sequence number `since`.
-     * the docinfo passed to the callback will be freed after the callback finishes,
-     * do not free it. Return NO_FREE_DOCINFO to prevent freeing of the docinfo
-     * (free it with free_docinfo when you are done with it)
-     * otherwise 0. */
+    /**
+     * Release all allocated resources from a docinfo structure returned by
+     * couchstore_docinfo_by_id.
+     *
+     * @param docinfo the document info to relase
+     */
     LIBCOUCHSTORE_API
-    int changes_since(Db *db, uint64_t since, uint64_t options,
-                      int(*f)(Db *db, DocInfo *docinfo, void *ctx), void *ctx);
-#define NO_FREE_DOCINFO 1
+    void couchstore_free_docinfo(DocInfo *docinfo);
 
-    /* Get a local doc from the DB. ID must include the _local/ prefix. */
-    LIBCOUCHSTORE_API
-    int open_local_doc(Db *db, uint8_t *id, size_t idlen, LocalDoc **lDoc);
+    /**
+     * The callback function used by couchstore_changes_since to iterate
+     * through the documents.
+     *
+     * The docinfo structure is automatically released if the callback
+     * returns 0. A non-zero return value will preserve the DocInfo
+     * for future use (should be released with free_docinfo by the
+     * caller)
+     *
+     * @param db the database being traversed
+     * @param docinfo the current document
+     * @param ctx user context
+     * @return 0 or 1. See description above
+     */
+    typedef int (*couchstore_changes_callback_fn)(Db *db,
+                                                  DocInfo *docinfo,
+                                                  void *ctx);
 
-    /* Save a local doc to the db. ID must include the _local/ prefix.
-     * To delete an existing doc set the deleted flag on the LocalDoc struct. The json buffer
-     * will be ignored for a deletion. */
+    /**
+     * Iterate through the changes since sequence number `since`.
+     *
+     * @param db the database to iterate through
+     * @param since the sequence number to start iterating from
+     * @param options Not used
+     * @param callback the callback function used to iterate over all changes
+     * @param ctx client context (passed to the callback)
+     * @return COUCHSTORE_SUCCESS upon success
+     */
     LIBCOUCHSTORE_API
-    int save_local_doc(Db *db, LocalDoc *lDoc);
+    couchstore_error_t couchstore_changes_since(Db *db,
+                                                uint64_t since,
+                                                uint64_t options,
+                                                couchstore_changes_callback_fn callback,
+                                                void *ctx);
+    /**
+     * Get a local doc from the DB.
+     *
+     * The document should be released with couchstore_free_local_document()
+     *
+     * @param db database to load document from
+     * @param id the identifier to load (must include "_local/" prefix)
+     * @param idlen the number of bytes in the id
+     * @param lDoc Where to store the result
+     * @return COUCHSTORE_SUCCESS if found
+     */
+    LIBCOUCHSTORE_API
+    couchstore_error_t couchstore_open_local_document(Db *db,
+                                                      const void *id,
+                                                      size_t idlen,
+                                                      LocalDoc **lDoc);
 
-    /* LocalDoc's obtained with open_local_doc must be freed with free_local_doc */
+    /**
+     * Save a local doc to the db. ID must include the _local/ prefix.
+     * To delete an existing doc set the deleted flag on the LocalDoc
+     * struct. The json buffer will be ignored for a deletion.
+     *
+     * @param db the database to store the document in
+     * @param lDoc the document to store
+     * @return COUCHSTORE_SUCCESS on success
+     */
     LIBCOUCHSTORE_API
-    void free_local_doc(LocalDoc *lDoc);
+    couchstore_error_t couchstore_save_local_document(Db *db, LocalDoc *lDoc);
+
+    /*
+     * Release all allocated resources from a LocalDoc obtained from
+     * couchstore_open_local_document().
+     *
+     * @param lDoc document to release
+     */
+    LIBCOUCHSTORE_API
+    void couchstore_free_local_document(LocalDoc *lDoc);
 
     /**
      * Convert an error code from couchstore to a textual description. The

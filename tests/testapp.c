@@ -89,14 +89,14 @@ int docset_check(Db *db, DocInfo *info, void *ctx)
     EQUAL_INFO_BUF(id);
     EQUAL_INFO_BUF(rev_meta);
     Doc *doc;
-    try(open_doc_with_docinfo(db, info, &doc, DECOMPRESS_DOC_BODIES));
+    try(couchstore_open_doc_with_docinfo(db, info, &doc, DECOMPRESS_DOC_BODIES));
     if (testdocset.docs[testdocset.pos].data.size > 0) {
         assert(doc);
         EQUAL_DOC_BUF(data);
         EQUAL_DOC_BUF(id);
     }
     testdocset.pos++;
-    free_doc(doc);
+    couchstore_free_document(doc);
 cleanup:
     assert(errcode == 0);
     return 0;
@@ -128,7 +128,7 @@ int dump_count(Db *db)
 {
     int errcode = 0;
     ZERO(counters);
-    try(changes_since(db, 0, 0, counter_inc, &counters));
+    try(couchstore_changes_since(db, 0, 0, counter_inc, &counters));
 cleanup:
     assert(errcode == 0);
     return errcode;
@@ -162,7 +162,7 @@ void test_save_docs()
     couchstore_close_db(db);
     //Read back
     try(couchstore_open_db("test.couch", 0, &db));
-    try(changes_since(db, 0, 0, docset_check, &testdocset));
+    try(couchstore_changes_since(db, 0, 0, docset_check, &testdocset));
     assert(testdocset.counters.totaldocs == 4);
     assert(testdocset.counters.deleted == 0);
     check_reductions(db);
@@ -196,7 +196,7 @@ void test_save_doc()
     couchstore_close_db(db);
     //Read back
     try(couchstore_open_db("test.couch", 0, &db));
-    try(changes_since(db, 0, 0, docset_check, &testdocset));
+    try(couchstore_changes_since(db, 0, 0, docset_check, &testdocset));
     assert(testdocset.counters.totaldocs == 4);
     assert(testdocset.counters.deleted == 0);
     couchstore_close_db(db);
@@ -228,7 +228,7 @@ void test_compressed_doc_body()
     couchstore_close_db(db);
     //Read back
     try(couchstore_open_db("test.couch", 0, &db));
-    try(changes_since(db, 0, 0, docset_check, &testdocset));
+    try(couchstore_changes_since(db, 0, 0, docset_check, &testdocset));
     assert(testdocset.counters.totaldocs == 2);
     assert(testdocset.counters.deleted == 0);
     couchstore_close_db(db);
@@ -266,15 +266,15 @@ void test_local_docs()
     lDocWrite.json.buf = "{\"test\":true}";
     lDocWrite.json.size = 13;
     lDocWrite.deleted = 0;
-    save_local_doc(db, &lDocWrite);
+    couchstore_save_local_document(db, &lDocWrite);
     couchstore_commit(db);
     couchstore_close_db(db);
     couchstore_open_db("test.couch", 0, &db);
-    open_local_doc(db, (uint8_t *)"_local/testlocal", 16, &lDocRead);
+    couchstore_open_local_document(db, "_local/testlocal", 16, &lDocRead);
     assert(lDocRead);
     assert(lDocRead->json.size == 13);
     assert(memcmp(lDocRead->json.buf, "{\"test\":true}", 13) == 0);
-    free_local_doc(lDocRead);
+    couchstore_free_local_document(lDocRead);
     couchstore_close_db(db);
 cleanup:
     assert(errcode == 0);

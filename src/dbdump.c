@@ -27,7 +27,7 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
     cas = htonll(*((uint64_t *) docinfo->rev_meta.buf));
     expiry = htonl(*((uint32_t *) (docinfo->rev_meta.buf + 8)));
     flags = htonl(*((uint32_t *) (docinfo->rev_meta.buf + 12)));
-    open_doc_with_docinfo(db, docinfo, &doc, 0);
+    couchstore_open_doc_with_docinfo(db, docinfo, &doc, 0);
     printf("Doc seq: %"PRIu64"\n", docinfo->db_seq);
     printf("     id: ");
     printsb(&docinfo->id);
@@ -49,7 +49,7 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
         printsb(&doc->data);
     }
 
-    free_doc(doc);
+    couchstore_free_document(doc);
     (*count)++;
     return 0;
 }
@@ -66,7 +66,7 @@ static int process_file(const char *file, int *total)
     }
 
     int count = 0;
-    errcode = changes_since(db, 0, 0, foldprint, &count);
+    errcode = couchstore_changes_since(db, 0, 0, foldprint, &count);
     (void)couchstore_close_db(db);
 
     if (errcode < 0) {
