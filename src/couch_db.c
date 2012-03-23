@@ -17,7 +17,7 @@ sized_buf nil_atom = {
     6
 };
 
-static int find_header(Db *db)
+static couchstore_error_t find_header(Db *db)
 {
     uint64_t block = db->file_pos / COUCH_BLOCK_SIZE;
     int errcode = 0;
@@ -25,7 +25,7 @@ static int find_header(Db *db)
     char *header_buf = NULL;
     uint8_t buf[2];
 
-    while (block >= 0) {
+    while (1) {
         readsize = db->file_ops->pread(db, buf, 2, block * COUCH_BLOCK_SIZE);
         if (readsize == 2 && buf[0] == 1) {
             //Found a header block.
@@ -44,7 +44,12 @@ static int find_header(Db *db)
                 }
                 ei_skip_term(header_buf, &idx); //db_header
                 ei_decode_uint64(header_buf, &idx, &db->header.disk_version);
-                error_unless(db->header.disk_version == COUCH_DISK_VERSION, COUCHSTORE_ERROR_HEADER_VERSION)
+
+                if (db->header.disk_version != COUCH_DISK_VERSION) {
+                    errcode = COUCHSTORE_ERROR_HEADER_VERSION;
+                    break;
+                }
+
                 ei_decode_uint64(header_buf, &idx, &db->header.update_seq);
                 db->header.by_id_root = read_root(header_buf, &idx);
                 db->header.by_seq_root = read_root(header_buf, &idx);
@@ -53,7 +58,7 @@ static int find_header(Db *db)
 
                 purged_docs_index = idx;
                 ei_skip_term(header_buf, &idx); //purged_docs
-                db->header.purged_docs = (sized_buf *) malloc(sizeof(sized_buf) + (idx - purged_docs_index));
+                db->header.purged_docs = malloc(sizeof(sized_buf) + (idx - purged_docs_index));
                 db->header.purged_docs->buf = ((char *)db->header.purged_docs) + sizeof(sized_buf);
                 memcpy(db->header.purged_docs->buf, header_buf + purged_docs_index, idx - purged_docs_index);
                 db->header.purged_docs->size = idx - purged_docs_index;
@@ -63,16 +68,18 @@ static int find_header(Db *db)
                 break;
             }
         }
+
+        if (block == 0) {
+            /*
+             * We've read all of the blocks in the file from the end up to
+             * the beginning, and we still haven't found a header.
+             */
+            return COUCHSTORE_ERROR_NO_HEADER;
+        }
         block--;
     }
-cleanup:
-    free(header_buf);
 
-    if (block == -1) {
-        //Didn't find a header block
-        //TODO what do we do here?
-        return COUCHSTORE_ERROR_NO_HEADER;
-    }
+    free(header_buf);
     return errcode;
 }
 
