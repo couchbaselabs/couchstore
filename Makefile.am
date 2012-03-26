@@ -16,7 +16,7 @@
 ACLOCAL_AMFLAGS = -I m4 --force
 
 bin_PROGRAMS = couch_dbdump couch_dbinfo
-EXTRA_DIST = LICENSE README.md src/rfc1321
+EXTRA_DIST = LICENSE README.md
 
 pkginclude_HEADERS = \
                      include/libcouchstore/couch_db.h \
@@ -41,20 +41,21 @@ librfc1321_la_SOURCES = \
 librfc1321_la_CFLAGS =  $(AM_CFLAGS) ${NO_WERROR}
 
 libcouchstore_la_SOURCES = \
+                            config_static.h \
                             src/btree_modify.c \
                             src/btree_read.c \
-                            src/config_static.h \
                             src/couch_btree.h \
-                            src/couch_common.h \
                             src/couch_db.c \
                             src/crc32.c \
                             src/crc32.h \
                             src/couch_file_read.c \
                             src/couch_file_write.c \
+                            src/fatbuf.h \
+                            src/internal.h \
                             src/reduces.c \
                             src/reduces.h \
                             src/strerror.c \
-                            src/os.c src/os.h \
+                            src/os.c \
                             src/util.c \
                             src/util.h
 
@@ -104,10 +105,11 @@ endif
 
 #tests
 
+CLEANFILES = test.couch
 check_PROGRAMS = testapp
 TESTS = ${check_PROGRAMS}
 
-testapp_SOURCES = tests/testapp.c src/util.c
+testapp_SOURCES = tests/testapp.c src/util.c tests/macros.h
 testapp_CFLAGS = $(AM_CFLAGS) $(ERL_INTERFACE_DIR_INCLUDE)
 testapp_LDFLAGS = $(ERL_INTERFACE_DIR_LIB) -lei
 testapp_DEPENDENCIES = libcouchstore.la
