@@ -32,7 +32,7 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
     printf("     id: ");
     printsb(&docinfo->id);
     printf("     content_meta: %d\n", docinfo->content_meta);
-    printf("     cas: %"PRIu64", expiry: %"PRIu64", flags: %"PRIu64"\n", (long long unsigned int) cas, (long long unsigned int) expiry, (long long unsigned int) flags);
+    printf("     cas: %"PRIu64", expiry: %"PRIu32", flags: %"PRIu32"\n", cas, expiry, flags);
     if (docinfo->deleted) {
         printf("     doc deleted\n");
     }
