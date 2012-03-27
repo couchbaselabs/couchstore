@@ -87,7 +87,7 @@ int main(int argc, char **argv)
     }
 
     int error = 0;
-    int count;
+    int count = 0;
     for (int ii = 1; ii < argc; ++ii) {
         error += process_file(argv[ii], &count);
     }

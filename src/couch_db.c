@@ -925,7 +925,7 @@ couchstore_error_t couchstore_save_documents(Db *db,
                                              long numdocs,
                                              uint64_t options)
 {
-    couchstore_error_t errcode;
+    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     int ii;
     sized_buf *seqklist, *idklist, *seqvlist, *idvlist;
     size_t term_meta_size = 0;
