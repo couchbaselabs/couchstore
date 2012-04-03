@@ -267,6 +267,103 @@ static void test_open_file_error(void)
     assert(errcode == COUCHSTORE_ERROR_NO_SUCH_FILE);
 }
 
+void shuffle(Doc **docs, DocInfo **docinfos, size_t n)
+{
+    if (n > 1) {
+        size_t i;
+        for (i = 0; i < n - 1; i++) {
+          size_t j = i + rand() / (RAND_MAX / (n - i) + 1);
+          DocInfo *docinfo;
+          Doc *doc = docs[j];
+          docs[j] = docs[i];
+          docs[i] = doc;
+
+          docinfo = docinfos[j];
+          docinfos[j] = docinfos[i];
+          docinfos[i] = docinfo;
+        }
+    }
+}
+
+static int docmap_check(Db *db, DocInfo *info, void *ctx)
+{
+    (void)db;
+    char* docmap = (char*)ctx;
+    int i;
+    char buffer[100];
+    memcpy(buffer, info->id.buf, info->size);
+    buffer[info->size] = 0; // null terminate
+    sscanf(buffer, "doc%d", &i);
+    assert(docmap[i] == 0);
+    docmap[i] = 1;
+    return 0;
+}
+
+static void test_changes_no_dups(void)
+{
+    fprintf(stderr, "changes no dupes... ");
+    fflush(stderr);
+    int errcode = 0;
+    int i, j;
+    const int numdocs = 10000;
+    int updatebatch = 1000;
+    Doc **docptrs;
+    DocInfo **nfoptrs;
+    char *docmap;
+    Db *db;
+    int times = 4;
+    docset_init(numdocs);
+    for (i=0; i < numdocs; i++) {
+        char* id = malloc(100);
+        char* body = malloc(100);
+        sprintf(id, "doc%d", i);
+        sprintf(body, "{\"test_doc_index\":%d}", i);
+        setdoc(&testdocset.docs[i], &testdocset.infos[i],
+                id, strlen(id),
+                body, strlen(body),
+                zerometa, sizeof(zerometa));
+    }
+    docptrs = malloc(numdocs * sizeof(Doc*));
+    nfoptrs = malloc(numdocs * sizeof(DocInfo*));
+    docmap = malloc(numdocs);
+    for (i=0; i < numdocs; i++) {
+        docptrs[i] = &testdocset.docs[i];
+        nfoptrs[i] = &testdocset.infos[i];
+    }
+    unlink("test.couch");
+    try(couchstore_open_db("test.couch", COUCHSTORE_OPEN_FLAG_CREATE, &db));
+    // only save half the docs at first.
+    try(couchstore_save_documents(db, docptrs, nfoptrs, numdocs/2, 0));
+    try(couchstore_commit(db));
+    couchstore_close_db(db);
+
+    for (i=0; i < numdocs/2; i++) {
+        // increment the rev for already added docs
+        nfoptrs[i]->rev_seq++;
+    }
+    srand(10); // make deterministic
+    // now shuffle so some bulk updates contain previous docs and new docs
+    shuffle(docptrs, nfoptrs, numdocs);
+    try(couchstore_open_db("test.couch", 0, &db));
+    for (i=0; i < numdocs; i += updatebatch) {
+        // now do bulk updates and check the changes for dups
+        try(couchstore_save_documents(db, docptrs + i, nfoptrs + i, updatebatch, 0));
+        try(couchstore_commit(db));
+        memset(docmap, 0, numdocs);
+        try(couchstore_changes_since(db, 0, 0, docmap_check, docmap));
+    }
+    couchstore_close_db(db);
+cleanup:
+    for (i=0; i < numdocs; i++) {
+        free(docptrs[i]->id.buf);
+        free(docptrs[i]->data.buf);
+    }
+    free(docptrs);
+    free(nfoptrs);
+    free(docmap);
+    assert(errcode == 0);
+}
+
 
 int main(void)
 {
@@ -281,6 +378,8 @@ int main(void)
     test_local_docs();
     fprintf(stderr, " OK\n");
     test_compressed_doc_body();
+    fprintf(stderr, " OK\n");
+    test_changes_no_dups();
     fprintf(stderr, " OK\n");
 
     return 0;
