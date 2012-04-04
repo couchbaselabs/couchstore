@@ -39,12 +39,12 @@ AC_DEFUN([COUCHBASE_GENERIC_COMPILER], [
 
   GCC_NO_WERROR="-Wno-error"
   GCC_WERROR="-Werror"
-  GCC_C_OPTIMIZE="-O3"
-  GCC_CXX_OPTIMIZE="-O3"
-  GCC_C_DEBUG="-O0 -g3"
-  GCC_CXX_DEBUG="-O0 -g3"
+  GCC_C_OPTIMIZE=""
+  GCC_CXX_OPTIMIZE=""
+  GCC_C_DEBUG="-O0 -fno-inline -g3"
+  GCC_CXX_DEBUG="-O0 -fno-inline -g3"
   GCC_VISIBILITY="-DHAVE_VISIBILITY=1 -fvisibility=hidden"
-  GCC_CPPFLAGS="-pipe"
+  GCC_CPPFLAGS=""
   GCC_CFLAGS="-std=gnu99"
   GCC_CXXFLAGS=""
   GCC_CXX_LDFLAGS=""
@@ -94,7 +94,20 @@ AC_DEFUN([COUCHBASE_GENERIC_COMPILER], [
         CXX_OPTIMIZE="$GCC_CXX_OPTIMIZE"
         C_DEBUG="$GCC_C_DEBUG"
         CXX_DEBUG="$GCC_CXX_DEBUG"
-        VISIBILITY="$GCC_VISIBILITY"
+
+        AC_MSG_CHECKING([checking if -fvisibility is supported])
+        gcc_fvisibility_supported=no
+
+        save_CFLAGS="$CFLAGS"
+        CFLAGS="$CFLAGS $GCC_VISIBILITY"
+        AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [])], [gcc_fvisibility_supported=yes])
+        CFLAGS="$save_CFLAGS"
+        AC_MSG_RESULT([$gcc_fvisibility_supported])
+
+        AS_IF([test x"$gcc_fvisibility_supported" = xyes],
+              [VISIBILITY="$GCC_VISIBILITY"],
+              [VISIBILITY=""])
+
         CPP_WARNINGS="$GCC_CPP_WARNINGS"
         C_COMPILER_WARNINGS="$GCC_C_COMPILER_WARNINGS"
         CXX_COMPILER_WARNINGS="$GCC_CXX_COMPILER_WARNINGS"
