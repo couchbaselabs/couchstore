@@ -818,7 +818,7 @@ static couchstore_error_t add_doc_to_update_list(Db *db,
                                                  uint64_t seq,
                                                  uint64_t options)
 {
-    couchstore_error_t errcode;
+    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     DocInfo updated = *info;
     updated.db_seq = seq;
 
