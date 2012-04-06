@@ -11,6 +11,22 @@
 extern "C" {
 #endif
 
+    /*
+     * Flags to pass as the flags parameter to couchstore_open_db
+     */
+    typedef uint64_t couchstore_open_flags;
+    enum {
+        /**
+         * Create a new empty .couch file if file doesn't exist.
+         */
+        COUCHSTORE_OPEN_FLAG_CREATE = 1,
+        /**
+         * Open the database in read only mode
+         */
+        COUCHSTORE_OPEN_FLAG_RDONLY = 2
+    };
+
+
     /**
      * Open a database.
      *
@@ -26,7 +42,7 @@ extern "C" {
      */
     LIBCOUCHSTORE_API
     couchstore_error_t couchstore_open_db(const char *filename,
-                                          uint64_t flags,
+                                          couchstore_open_flags flags,
                                           Db **db);
 
     /**
@@ -46,22 +62,9 @@ extern "C" {
      */
     LIBCOUCHSTORE_API
     couchstore_error_t couchstore_open_db_ex(const char *filename,
-                                             uint64_t flags,
+                                             couchstore_open_flags flags,
                                              couch_file_ops *ops,
                                              Db **db);
-
-    /*
-     * Flags to pass as the flags parameter to couchstore_open_db
-     */
-    /**
-     * Create a new empty .couch file if file doesn't exist.
-     */
-#define COUCHSTORE_OPEN_FLAG_CREATE 1
-    /**
-     * Open the database in read only mode
-     */
-#define COUCHSTORE_OPEN_FLAG_RDONLY 2
-
 
     /**
      * Close an open database and release all allocated resources.
@@ -81,6 +84,21 @@ extern "C" {
     uint64_t couchstore_get_header_position(Db *db);
 
 
+    /*
+     * Options used by couchstore_save_document() and
+     * couchstore_save_documents():
+     */
+    typedef uint64_t couchstore_save_options;
+    enum {
+        /**
+         * Snappy compress document data if the high bit of the
+         * content_meta field of the DocInfo is set. This is NOT the
+         * default, and if this is not set the data field of the Doc will
+         * be written to disk as-is, regardless of the content_meta flags.
+         */
+        COMPRESS_DOC_BODIES = 1
+    };
+
     /**
      * Save document pointed to by doc and docinfo to db.
      *
@@ -99,7 +117,7 @@ extern "C" {
     couchstore_error_t couchstore_save_document(Db *db,
                                                 Doc *doc,
                                                 DocInfo *info,
-                                                uint64_t options);
+                                                couchstore_save_options options);
 
     /**
      * Save array of docs to db
@@ -120,20 +138,7 @@ extern "C" {
                                                  Doc **docs,
                                                  DocInfo **infos,
                                                  long numDocs,
-                                                 uint64_t options);
-    /*
-     * Options used by couchstore_save_document() and
-     * couchstore_save_documents():
-     */
-
-    /**
-     * Snappy compress document data if the high bit of the
-     * content_meta field of the DocInfo is set. This is NOT the
-     * default, and if this is not set the data field of the Doc will
-     * be written to disk as-is, regardless of the content_meta flags.
-     */
-#define COMPRESS_DOC_BODIES 1
-
+                                                 couchstore_save_options options);
     /**
      * Commit all pending changes and flush buffers to persistent storage.
      *
@@ -159,6 +164,16 @@ extern "C" {
                                                 size_t idlen,
                                                 DocInfo **pInfo);
 
+    /** Options flags for open_doc and open_doc_with_docinfo */
+    typedef uint64_t couchstore_open_options;
+    enum {
+        /* Snappy decompress document data if the high bit of the content_meta field
+         * of the DocInfo is set.
+         * This is NOT the default, and if this is not set the data field of the Doc
+         * will be read from disk as-is, regardless of the content_meta flags. */
+        DECOMPRESS_DOC_BODIES = 1
+    };
+
     /**
      * Retrieve a doc from the db.
      *
@@ -178,7 +193,7 @@ extern "C" {
                                                 const void *id,
                                                 size_t idlen,
                                                 Doc **pDoc,
-                                                uint64_t options);
+                                                couchstore_open_options options);
 
     /**
      * Retrieve a doc from the using a docinfo.
@@ -196,14 +211,7 @@ extern "C" {
     couchstore_error_t couchstore_open_doc_with_docinfo(Db *db,
                                                         DocInfo *docinfo,
                                                         Doc **pDoc,
-                                                        uint64_t options);
-
-    //Options flags for open_doc and open_doc_with_docinfo
-    /* Snappy decompress document data if the high bit of the content_meta field
-     * of the DocInfo is set.
-     * This is NOT the default, and if this is not set the data field of the Doc
-     * will be read from disk as-is, regardless of the content_meta flags. */
-#define DECOMPRESS_DOC_BODIES 1
+                                                        couchstore_open_options options);
 
     /**
      * Release all allocated resources from a document returned from
