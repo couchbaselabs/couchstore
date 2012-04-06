@@ -35,6 +35,8 @@ fatbuf *docsetbuf = NULL;
 static void setdoc(Doc *doc, DocInfo *info, char *id, int idlen,
                    char *data, int datalen, char *meta, int metalen)
 {
+    memset(doc, 0, sizeof(Doc));
+    memset(info, 0, sizeof(DocInfo));
     doc->id.buf = id;
     doc->id.size = idlen;
     doc->data.buf = data;
