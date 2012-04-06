@@ -58,4 +58,14 @@ extern "C" {
 #undef htonl
 #endif
 
+//Large File Support
+#define _LARGE_FILE 1
+#ifndef _FILE_OFFSET_BITS
+#  define _FILE_OFFSET_BITS 64
+#endif
+#define _LARGEFILE_SOURCE 1
+#ifndef O_LARGEFILE
+# define O_LARGEFILE 0
+#endif
+
 #endif

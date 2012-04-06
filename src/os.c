@@ -46,7 +46,7 @@ static couchstore_error_t couch_open(Db *db, const char *path, int oflag)
     int rv;
     intptr_t fd;
     do {
-        rv = open(path, oflag, 0666);
+        rv = open(path, oflag | O_LARGEFILE, 0666);
     } while (rv == -1 && errno == EINTR);
 
     if (rv == -1) {
