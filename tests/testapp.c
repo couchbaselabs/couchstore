@@ -4,6 +4,7 @@
 #include <libcouchstore/couch_db.h>
 #include "../src/fatbuf.h"
 #include "../src/internal.h"
+#include "../src/bitfield.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -114,39 +115,80 @@ cleanup:
     return errcode;
 }
 char zerometa[] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3};
-static void test_save_docs(void)
+static void test_save_docs(int count, const char *doc_tpl)
 {
-    fprintf(stderr, "save_docs... ");
-    fflush(stderr);
     int errcode = 0;
-    docset_init(4);
-    SETDOC(0, "doc1", "{\"test_doc_index\":1}", zerometa);
-    SETDOC(1, "doc2", "{\"test_doc_index\":2}", zerometa);
-    SETDOC(2, "doc3", "{\"test_doc_index\":3}", zerometa);
-    SETDOC(3, "doc4", "{\"test_doc_index\":4}", zerometa);
-    Doc *docptrs [4] =  { &testdocset.docs[0],
-                          &testdocset.docs[1],
-                          &testdocset.docs[2],
-                          &testdocset.docs[3]
-                        };
-    DocInfo *nfoptrs [4] =  { &testdocset.infos[0],
-                              &testdocset.infos[1],
-                              &testdocset.infos[2],
-                              &testdocset.infos[3]
-                            };
+    int i;
+    char *idBuf, *valueBuf;
+    Doc **docptrs;
+    DocInfo **nfoptrs;
+    uint64_t idtreesize = 0;
+    uint64_t seqtreesize = 0;
+    uint64_t docssize = 0;
+    uint64_t dbfilesize = 0;
+
+    fprintf(stderr, "save_docs (doc count %d)... ", count);
+    fflush(stderr);
+
+    docset_init(count);
+    for (i = 0; i < count; ++i) {
+        idBuf = (char *) malloc(sizeof(char) * 32);
+        assert(idBuf != NULL);
+        sprintf(idBuf, "doc%d", i + 1);
+        valueBuf = (char *) malloc(sizeof(char) * (strlen(doc_tpl) + 20));
+        assert(valueBuf != NULL);
+        sprintf(valueBuf, doc_tpl, i + 1);
+        SETDOC(i, idBuf, valueBuf, zerometa);
+    }
+
+    docptrs = (Doc **) malloc(sizeof(Doc*) * count);
+    assert(docptrs != NULL);
+    for (i = 0; i < count; ++i) {
+        docptrs[i] = &testdocset.docs[i];
+    }
+
+    nfoptrs = (DocInfo **) malloc(sizeof(DocInfo*) * count);
+    assert(nfoptrs != NULL);
+    for (i = 0; i < count; ++i) {
+        nfoptrs[i] = &testdocset.infos[i];
+    }
+
     unlink("test.couch");
     Db *db;
     try(couchstore_open_db("test.couch", COUCHSTORE_OPEN_FLAG_CREATE, &db));
-    try(couchstore_save_documents(db, docptrs, nfoptrs, 4, 0));
+    try(couchstore_save_documents(db, docptrs, nfoptrs, count, 0));
     try(couchstore_commit(db));
     couchstore_close_db(db);
+
     //Read back
     try(couchstore_open_db("test.couch", 0, &db));
     try(couchstore_changes_since(db, 0, 0, docset_check, &testdocset));
-    assert(testdocset.counters.totaldocs == 4);
+    assert(testdocset.counters.totaldocs == count);
     assert(testdocset.counters.deleted == 0);
+
+    idtreesize = db->header.by_id_root->subtreesize;
+    seqtreesize = db->header.by_seq_root->subtreesize;
+    docssize = get_48(db->header.by_id_root->reduce_value.buf + 10);
+    dbfilesize = db->file_pos;
+
+    assert(dbfilesize > 0);
+    assert(idtreesize > 0);
+    assert(seqtreesize > 0);
+    assert(docssize > 0);
+    assert(idtreesize < dbfilesize);
+    assert(seqtreesize < dbfilesize);
+    assert(docssize < dbfilesize);
+    assert(db->header.local_docs_root == NULL);
+    assert((idtreesize + seqtreesize + docssize) < dbfilesize);
+
     couchstore_close_db(db);
 cleanup:
+    for (i = 0; i < count; ++i) {
+        free(docptrs[i]->id.buf);
+        free(docptrs[i]->data.buf);
+    }
+    free(docptrs);
+    free(nfoptrs);
     assert(errcode == 0);
 }
 
@@ -369,14 +411,35 @@ cleanup:
 
 int main(void)
 {
+    int doc_counts[] = { 4, 69, 666, 9090, 99999 };
+    int i;
+    const char *small_doc_tpl = "{\"test_doc_index\":%d}";
+    const char *large_doc_tpl =
+        "{"
+        "\"test_doc_index\":%d,"
+        "\"field1\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\","
+        "\"field2\": \"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\","
+        "\"field3\": \"cccccccccccccccccccccccccccccccccccccccccccccccccc"
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\""
+        "}";
+
     test_open_file_error();
     fprintf(stderr, "OK \n");
     test_dump_empty_db();
     fprintf(stderr, " OK\n");
     test_save_doc();
     fprintf(stderr, " OK\n");
-    test_save_docs();
-    fprintf(stderr, " OK\n");
+    for (i = 0; i < (sizeof(doc_counts) / sizeof(int)); ++i) {
+        test_save_docs(doc_counts[i], small_doc_tpl);
+        fprintf(stderr, " OK\n");
+        test_save_docs(doc_counts[i], large_doc_tpl);
+        fprintf(stderr, " OK\n");
+    }
     test_local_docs();
     fprintf(stderr, " OK\n");
     test_compressed_doc_body();

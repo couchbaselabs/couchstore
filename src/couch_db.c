@@ -838,7 +838,7 @@ static couchstore_error_t add_doc_to_update_list(Db *db,
         if (errcode != COUCHSTORE_SUCCESS) {
             return errcode;
         }
-        updated.size = doc->data.size;
+        updated.size = doc->data.disk_size;
     } else {
         updated.deleted = 1;
         updated.bp = 0;

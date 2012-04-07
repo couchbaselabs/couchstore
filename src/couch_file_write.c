@@ -125,6 +125,8 @@ int db_write_buf(Db *db, sized_buf *buf, off_t *pos)
     }
 
     db->file_pos = end_pos;
+    buf->disk_size = (size_t) (end_pos - write_pos);
+
     return 0;
 }
 
@@ -146,6 +148,7 @@ cleanup:
     if (to_write.buf) {
         free(to_write.buf);
     }
+    buf->disk_size = to_write.disk_size;
     return errcode;
 }
 

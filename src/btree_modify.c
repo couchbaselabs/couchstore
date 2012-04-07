@@ -213,7 +213,7 @@ static couchstore_error_t flush_mr(couchfile_modify_result *res)
     memcpy(ptr->key.buf, final_key.buf, final_key.size);
     memcpy(ptr->reduce_value.buf, reducebuf, reducesize);
 
-    ptr->subtreesize = subtreesize + writebuf.size;
+    ptr->subtreesize = subtreesize + writebuf.disk_size;
     ptr->pointer = diskpos;
 
     nodelist *pel = encode_pointer(ptr);

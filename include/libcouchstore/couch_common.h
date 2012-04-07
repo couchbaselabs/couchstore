@@ -13,6 +13,10 @@ extern "C" {
     typedef struct _sized_buf {
         char *buf;
         size_t size;
+        /* Size of data on disk - this accounts for eventual compression,
+           checksums, block prefixes/padding and any other metadata.
+           To be set by file write operations. */
+        size_t disk_size;
     } sized_buf;
 
     typedef struct _doc {
