@@ -1,5 +1,9 @@
 #ifndef COUCH_BITFIELD_H
 #define COUCH_BITFIELD_H
+
+#include "config.h"
+#include <string.h>
+
 static inline uint64_t get_48(const char *buf)
 {
     uint64_t num = 0;
