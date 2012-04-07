@@ -24,12 +24,12 @@ static char *size_str(double size)
     return rfs;
 }
 
-static uint64_t id_reduce_info(node_pointer *root)
+static void id_reduce_info(node_pointer *root)
 {
     uint64_t total, deleted, size;
     if (root == NULL) {
         printf("   no documents\n");
-        return 0;
+        return;
     }
     total = get_40(root->reduce_value.buf);
     deleted = get_40(root->reduce_value.buf + 5);
@@ -37,7 +37,6 @@ static uint64_t id_reduce_info(node_pointer *root)
     printf("   doc count: %"PRIu64"\n", total);
     printf("   deleted doc count: %"PRIu64"\n", deleted);
     printf("   data size: %s\n", size_str(size));
-    return size;
 }
 
 static int process_file(const char *file)
@@ -52,13 +51,11 @@ static int process_file(const char *file)
         return -1;
     }
 
-    uint64_t datasize = 0;
     uint64_t btreesize = 0;
     printf("DB Info (%s)\n", file);
     printf("   file format version: %"PRIu64"\n", db->header.disk_version);
     printf("   update_seq: %"PRIu64"\n", db->header.update_seq);
-    datasize = id_reduce_info(db->header.by_id_root);
-    printf("   data size: %s\n", size_str(datasize));
+    id_reduce_info(db->header.by_id_root);
     if (db->header.by_id_root) {
         btreesize += db->header.by_id_root->subtreesize;
     }
