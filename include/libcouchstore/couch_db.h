@@ -119,8 +119,8 @@ extern "C" {
      */
     LIBCOUCHSTORE_API
     couchstore_error_t couchstore_save_document(Db *db,
-                                                Doc *doc,
-                                                DocInfo *info,
+                                                const Doc *doc,
+                                                const DocInfo *info,
                                                 couchstore_save_options options);
 
     /**
@@ -139,8 +139,8 @@ extern "C" {
      */
     LIBCOUCHSTORE_API
     couchstore_error_t couchstore_save_documents(Db *db,
-                                                 Doc **docs,
-                                                 DocInfo **infos,
+                                                 Doc* const *docs,
+                                                 DocInfo* const *infos,
                                                  long numDocs,
                                                  couchstore_save_options options);
     /**

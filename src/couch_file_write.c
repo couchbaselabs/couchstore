@@ -14,7 +14,7 @@
 #include "crc32.h"
 #include "util.h"
 
-static ssize_t raw_write(Db *db, sized_buf *buf, off_t pos)
+static ssize_t raw_write(Db *db, const sized_buf *buf, off_t pos)
 {
     off_t write_pos = pos;
     off_t buf_pos = 0;
@@ -92,7 +92,7 @@ couchstore_error_t db_write_header(Db *db, sized_buf *buf, off_t *pos)
     return COUCHSTORE_SUCCESS;
 }
 
-int db_write_buf(Db *db, sized_buf *buf, off_t *pos, size_t *disk_size)
+int db_write_buf(Db *db, const sized_buf *buf, off_t *pos, size_t *disk_size)
 {
     off_t write_pos = db->file_pos;
     off_t end_pos = write_pos;
@@ -132,7 +132,7 @@ int db_write_buf(Db *db, sized_buf *buf, off_t *pos, size_t *disk_size)
     return 0;
 }
 
-int db_write_buf_compressed(Db *db, sized_buf *buf, off_t *pos, size_t *disk_size)
+int db_write_buf_compressed(Db *db, const sized_buf *buf, off_t *pos, size_t *disk_size)
 {
     int errcode = 0;
     sized_buf to_write;

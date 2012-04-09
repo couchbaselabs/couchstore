@@ -587,7 +587,7 @@ int assemble_id_index_value(DocInfo *docinfo, char *dst)
     return 21 + docinfo->rev_meta.size;
 }
 
-static couchstore_error_t write_doc(Db *db, Doc *doc, uint64_t *bp,
+static couchstore_error_t write_doc(Db *db, const Doc *doc, uint64_t *bp,
                                     size_t* disk_size, uint64_t writeopts)
 {
     couchstore_error_t errcode;
@@ -808,8 +808,8 @@ static couchstore_error_t update_indexes(Db *db,
 }
 
 static couchstore_error_t add_doc_to_update_list(Db *db,
-                                                 Doc *doc,
-                                                 DocInfo *info,
+                                                 const Doc *doc,
+                                                 const DocInfo *info,
                                                  fatbuf *fb,
                                                  sized_buf *seqterm,
                                                  sized_buf *idterm,
@@ -864,8 +864,8 @@ cleanup:
 
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_save_documents(Db *db,
-                                             Doc **docs,
-                                             DocInfo **infos,
+                                             Doc* const *docs,
+                                             DocInfo* const *infos,
                                              long numdocs,
                                              uint64_t options)
 {
@@ -873,7 +873,7 @@ couchstore_error_t couchstore_save_documents(Db *db,
     int ii;
     sized_buf *seqklist, *idklist, *seqvlist, *idvlist;
     size_t term_meta_size = 0;
-    Doc *curdoc;
+    const Doc *curdoc;
     uint64_t seq = db->header.update_seq;
 
     fatbuf *fb;
@@ -928,10 +928,10 @@ couchstore_error_t couchstore_save_documents(Db *db,
 }
 
 LIBCOUCHSTORE_API
-couchstore_error_t couchstore_save_document(Db *db, Doc *doc,
-                                            DocInfo *info, uint64_t options)
+couchstore_error_t couchstore_save_document(Db *db, const Doc *doc,
+                                            const DocInfo *info, uint64_t options)
 {
-    return couchstore_save_documents(db, &doc, &info, 1, options);
+    return couchstore_save_documents(db, (Doc**)&doc, (DocInfo**)&info, 1, options);
 }
 
 static couchstore_error_t local_doc_fetch(couchfile_lookup_request *rq,
