@@ -311,7 +311,7 @@ static void test_open_file_error(void)
     assert(errcode == COUCHSTORE_ERROR_NO_SUCH_FILE);
 }
 
-void shuffle(Doc **docs, DocInfo **docinfos, size_t n)
+static void shuffle(Doc **docs, DocInfo **docinfos, size_t n)
 {
     if (n > 1) {
         size_t i;
@@ -348,14 +348,13 @@ static void test_changes_no_dups(void)
     fprintf(stderr, "changes no dupes... ");
     fflush(stderr);
     int errcode = 0;
-    int i, j;
+    int i;
     const int numdocs = 10000;
     int updatebatch = 1000;
     Doc **docptrs;
     DocInfo **nfoptrs;
     char *docmap;
     Db *db;
-    int times = 4;
     docset_init(numdocs);
     for (i=0; i < numdocs; i++) {
         char* id = malloc(100);
