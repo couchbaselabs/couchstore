@@ -588,13 +588,13 @@ int assemble_id_index_value(DocInfo *docinfo, char *dst)
 }
 
 static couchstore_error_t write_doc(Db *db, Doc *doc, uint64_t *bp,
-                                    uint64_t writeopts)
+                                    size_t* disk_size, uint64_t writeopts)
 {
     couchstore_error_t errcode;
     if (writeopts & COMPRESSED_BODY) {
-        errcode = db_write_buf_compressed(db, &doc->data, (off_t *) bp);
+        errcode = db_write_buf_compressed(db, &doc->data, (off_t *) bp, disk_size);
     } else {
-        errcode = db_write_buf(db, &doc->data, (off_t *) bp);
+        errcode = db_write_buf(db, &doc->data, (off_t *) bp, disk_size);
     }
 
     return errcode;
@@ -829,16 +829,18 @@ static couchstore_error_t add_doc_to_update_list(Db *db,
     set_bits(seqterm->buf, 0, 48, seq);
 
     if (doc) {
+        uint64_t writeopts = 0;
+        size_t disk_size;
+        
         if ((options & COMPRESS_DOC_BODIES) && (info->content_meta & SNAPPY_META_FLAG)) {
-            errcode = write_doc(db, doc, &updated.bp, COMPRESSED_BODY);
-        } else {
-            errcode = write_doc(db, doc, &updated.bp, 0);
+            writeopts = COMPRESSED_BODY;
         }
+        errcode = write_doc(db, doc, &updated.bp, &disk_size, writeopts);
 
         if (errcode != COUCHSTORE_SUCCESS) {
             return errcode;
         }
-        updated.size = doc->data.disk_size;
+        updated.size = disk_size;
     } else {
         updated.deleted = 1;
         updated.bp = 0;

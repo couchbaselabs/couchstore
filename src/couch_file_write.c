@@ -92,7 +92,7 @@ couchstore_error_t db_write_header(Db *db, sized_buf *buf, off_t *pos)
     return COUCHSTORE_SUCCESS;
 }
 
-int db_write_buf(Db *db, sized_buf *buf, off_t *pos)
+int db_write_buf(Db *db, sized_buf *buf, off_t *pos, size_t *disk_size)
 {
     off_t write_pos = db->file_pos;
     off_t end_pos = write_pos;
@@ -125,12 +125,14 @@ int db_write_buf(Db *db, sized_buf *buf, off_t *pos)
     }
 
     db->file_pos = end_pos;
-    buf->disk_size = (size_t) (end_pos - write_pos);
+    if (disk_size) {
+        *disk_size = (size_t) (end_pos - write_pos);
+    }
 
     return 0;
 }
 
-int db_write_buf_compressed(Db *db, sized_buf *buf, off_t *pos)
+int db_write_buf_compressed(Db *db, sized_buf *buf, off_t *pos, size_t *disk_size)
 {
     int errcode = 0;
     sized_buf to_write;
@@ -143,12 +145,11 @@ int db_write_buf_compressed(Db *db, sized_buf *buf, off_t *pos)
                                  &to_write.size) == SNAPPY_OK,
                  COUCHSTORE_ERROR_WRITE);
 
-    error_pass(db_write_buf(db, &to_write, pos));
+    error_pass(db_write_buf(db, &to_write, pos, disk_size));
 cleanup:
     if (to_write.buf) {
         free(to_write.buf);
     }
-    buf->disk_size = to_write.disk_size;
     return errcode;
 }
 

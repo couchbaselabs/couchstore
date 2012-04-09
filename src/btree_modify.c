@@ -150,6 +150,7 @@ static couchstore_error_t flush_mr(couchfile_modify_result *res)
     size_t reducesize = 0;
     uint64_t subtreesize = 0;
     off_t diskpos;
+    size_t disk_size;
     sized_buf final_key = {NULL, 0};
 
     if (res->values_end == res->values || ! res->modified) {
@@ -185,7 +186,7 @@ static couchstore_error_t flush_mr(couchfile_modify_result *res)
         i = i->next;
     }
 
-    errcode = db_write_buf_compressed(res->rq->db, &writebuf, &diskpos);
+    errcode = db_write_buf_compressed(res->rq->db, &writebuf, &diskpos, &disk_size);
     free(nodebuf);
     if (errcode != COUCHSTORE_SUCCESS) {
         return errcode;
@@ -213,7 +214,7 @@ static couchstore_error_t flush_mr(couchfile_modify_result *res)
     memcpy(ptr->key.buf, final_key.buf, final_key.size);
     memcpy(ptr->reduce_value.buf, reducebuf, reducesize);
 
-    ptr->subtreesize = subtreesize + writebuf.disk_size;
+    ptr->subtreesize = subtreesize + disk_size;
     ptr->pointer = diskpos;
 
     nodelist *pel = encode_pointer(ptr);

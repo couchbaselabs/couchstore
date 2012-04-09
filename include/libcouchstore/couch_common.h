@@ -26,10 +26,6 @@ extern "C" {
     typedef struct _sized_buf {
         char *buf;
         size_t size;
-        /* Size of data on disk - this accounts for eventual compression,
-           checksums, block prefixes/padding and any other metadata.
-           To be set by file write operations. */
-        size_t disk_size;
     } sized_buf;
 
     /** A CouchStore document, consisting of an ID (key) and data, each of which is a blob. */
