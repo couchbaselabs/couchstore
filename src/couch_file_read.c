@@ -11,8 +11,6 @@
 #include "crc32.h"
 #include "util.h"
 
-#define SIZE_BLOCK 4096
-
 ssize_t total_read_len(off_t blockoffset, ssize_t finallen)
 {
     ssize_t left;
@@ -22,14 +20,14 @@ ssize_t total_read_len(off_t blockoffset, ssize_t finallen)
         blockoffset = 1;
     }
 
-    left = SIZE_BLOCK - blockoffset;
+    left = COUCH_BLOCK_SIZE - blockoffset;
     if (left >= finallen) {
         return finallen + add;
     } else {
-        if ((finallen - left) % (SIZE_BLOCK - 1) != 0) {
+        if ((finallen - left) % (COUCH_BLOCK_SIZE - 1) != 0) {
             add++;
         }
-        return finallen + add + ((finallen - left) / (SIZE_BLOCK - 1));
+        return finallen + add + ((finallen - left) / (COUCH_BLOCK_SIZE - 1));
     }
 }
 
@@ -39,7 +37,7 @@ static int remove_block_prefixes(char *buf, off_t offset, ssize_t len)
     off_t gap = 0;
     ssize_t remain_block;
     while (buf_pos + gap < len) {
-        remain_block = SIZE_BLOCK - offset;
+        remain_block = COUCH_BLOCK_SIZE - offset;
 
         if (offset == 0) {
             gap++;
@@ -65,7 +63,7 @@ static int remove_block_prefixes(char *buf, off_t offset, ssize_t len)
 // Increases pos by read len.
 static int raw_read(Db *db, off_t *pos, ssize_t len, char **dst)
 {
-    off_t blockoffs = *pos % SIZE_BLOCK;
+    off_t blockoffs = *pos % COUCH_BLOCK_SIZE;
     ssize_t total = total_read_len(blockoffs, len);
     *dst = (char *) malloc(total);
     if (!*dst) {
@@ -92,7 +90,7 @@ static int pread_bin_int(Db *db, off_t pos, char **ret_ptr, int header)
     uint32_t chunk_len, crc32 = 0;
     int skip = 0;
     int errcode = 0;
-    buf_len = raw_read(db, &pos, 2 * SIZE_BLOCK - (pos % SIZE_BLOCK), &bufptr);
+    buf_len = raw_read(db, &pos, 2 * COUCH_BLOCK_SIZE - (pos % COUCH_BLOCK_SIZE), &bufptr);
     if (buf_len == -1) {
         buf_len = raw_read(db, &pos, 4, &bufptr);
         error_unless(buf_len > 0, COUCHSTORE_ERROR_READ);
