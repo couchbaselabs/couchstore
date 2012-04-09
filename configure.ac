@@ -66,12 +66,23 @@ AS_IF([test "$with_docs" = "yes" -a "$POD2MAN" = "missing" ],
       [ AC_MSG_ERROR([pod2man is required for building docs])])
 AM_CONDITIONAL(BUILD_DOCS, test "$with_docs" = "yes")
 
+AS_CASE( [$(uname -s)],
+  [CYGWIN*], [
+    IS_WINDOWS="TRUE"
+  ] ,
+  [*], [
+    IS_WINDOWS="FALSE"
+])
+
+AM_CONDITIONAL([WINDOWS], [test x$IS_WINDOWS = xTRUE])
+
 AC_CHECK_HEADERS_ONCE([snappy-c.h netinet/in.h inttypes.h])
 
 dnl Check that we're able to find a usable libsnappy
 AC_CACHE_CHECK([for libsnappy], [ac_cv_have_libsnappy],
   [ saved_libs="$LIBS"
-    LIBS=-lsnappy
+    AS_IF([test "x${IS_WINDOWS}" = "xTRUE"], [LIBS="-lsnappy -lstdc++.dll"],
+          [test "x${IS_WINDOWS}" != "xTRUE"],[LIBS="-lsnappy"])
     AC_TRY_LINK([
       #include <snappy-c.h>
       #include <stddef.h>

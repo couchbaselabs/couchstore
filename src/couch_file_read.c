@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <netinet/in.h>
 #include <snappy-c.h>
 
 #include "internal.h"

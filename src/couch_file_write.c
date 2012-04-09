@@ -4,7 +4,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <sys/types.h>
-#include <netinet/in.h>
 #include <snappy-c.h>
 #include <libcouchstore/couch_db.h>
 

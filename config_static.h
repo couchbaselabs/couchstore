@@ -78,4 +78,8 @@ extern "C" {
 # define O_LARGEFILE 0
 #endif
 
+#ifdef WIN32
+#include "win32/win32.h"
+#endif
+
 #endif
