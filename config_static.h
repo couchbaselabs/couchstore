@@ -32,6 +32,16 @@
 #include <inttypes.h>
 #endif
 
+#ifdef __APPLE__
+#ifndef HAVE_HTONLL
+// On Darwin, use built-in functions for 64-bit byte-swap:
+#include <libkern/OSByteOrder.h>
+#define ntohll(n) OSSwapBigToHostInt64(n)
+#define htonll(n) OSSwapHostToBigInt64(n)
+#define HAVE_HTONLL
+#endif // HAVE_HTONLL
+#endif // __APPLE__
+
 #ifndef HAVE_HTONLL
 #ifdef WORDS_BIGENDIAN
 #define ntohll(a) a
