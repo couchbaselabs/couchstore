@@ -22,6 +22,7 @@ extern "C" {
         COUCH_DOC_NON_JSON_MODE = 3 /**< Document was not checked (DB running in non-JSON mode) */
     };
 
+    /** A generic data blob. Nothing is implied about ownership of the block pointed to. */
     typedef struct _sized_buf {
         char *buf;
         size_t size;
@@ -31,24 +32,27 @@ extern "C" {
         size_t disk_size;
     } sized_buf;
 
+    /** A CouchStore document, consisting of an ID (key) and data, each of which is a blob. */
     typedef struct _doc {
         sized_buf id;
         sized_buf data;
     } Doc;
 
+    /** Metadata of a CouchStore document. */
     typedef struct _docinfo {
-        sized_buf id;
-        uint64_t db_seq;
+        sized_buf id;               /**< Document ID (key) */
+        uint64_t db_seq;            /**< Sequence number in database */
         uint64_t rev_seq;
         sized_buf rev_meta;
-        int deleted;
-        couchstore_content_meta_flags content_meta;
+        int deleted;                /**< Is this a deleted revision? */
+        couchstore_content_meta_flags content_meta;  /**< Content metadata flags */
         uint64_t bp;
-        size_t size;
+        size_t size;                /**< Data size in bytes */
     } DocInfo;
 
 #define DOC_INFO_INITIALIZER { {0, 0}, 0, 0, {0, 0}, 0, 0, 0, 0 }
 
+    /** Contents of a 'local' (unreplicated) document. */
     typedef struct _local_doc {
         sized_buf id;
         sized_buf json;
@@ -56,6 +60,7 @@ extern "C" {
     } LocalDoc;
 
 
+    /** Opaque reference to an open database. */
     typedef struct _db Db;
 
 #ifdef __cplusplus

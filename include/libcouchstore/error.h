@@ -10,6 +10,7 @@
 extern "C" {
 #endif
 
+    /** Error values returned by CouchStore API calls. */
     typedef enum {
         COUCHSTORE_SUCCESS = 0,
         COUCHSTORE_ERROR_OPEN_FILE = -1,

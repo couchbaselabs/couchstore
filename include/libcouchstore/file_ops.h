@@ -10,6 +10,10 @@
 extern "C" {
 #endif
 
+    /**
+     * A structure that defines the implementation of the file I/O primitives
+     * used by CouchStore. Passed to couchstore_open_db_ex().
+     */
     typedef struct {
         /**
          * Version number that describes the layout of the structure. Should be set
@@ -22,18 +26,17 @@ extern "C" {
          *
          * @param db the database instance to open the file
          * @param path the name of the file
-         * @param flags flags as specified by open(2)
+         * @param flags flags as specified by UNIX open(2) system call
          * @return COUCHSTORE_SUCCESS upon success.
          */
         couchstore_error_t (*open)(Db *db, const char *path, int oflag);
 
         /**
-         * Close this database handle.
+         * Close file file associated with this database handle.
          *
          * @param db database to close
          */
         void (*close)(Db *db);
-
 
         /**
          * Read a chunk of data from a given offset in the file.
@@ -42,9 +45,10 @@ extern "C" {
          * @param buf where to store data
          * @param nbyte number of bytes to read
          * @param offset where to read from
-         * @return number of bytes read
+         * @return number of bytes read (which may be less than nbytes),
+         *         or a value <= 0 if an error occurred
          */
-        ssize_t (*pread)(Db *db, void *buf, size_t nbyte, off_t offset);
+        ssize_t (*pread)(Db *db, void *buf, size_t nbytes, off_t offset);
 
         /**
          * Write a chunk of data to a given offset in the file.
@@ -52,15 +56,16 @@ extern "C" {
          * @param buf where to read data
          * @param nbyte number of bytes to write
          * @param offset where to write to
-         * @return number of bytes written
+         * @return number of bytes written (which may be less than nbytes),
+         *         or a value <= 0 if an error occurred
          */
-        ssize_t (*pwrite)(Db *db, const void *buf, size_t nbyte, off_t offset);
+        ssize_t (*pwrite)(Db *db, const void *buf, size_t nbytes, off_t offset);
 
         /**
          * Move to the end of the file.
          *
          * @param db database to move the filepointer in
-         * @return the offset (from beginning of the file)
+         * @return the offset (from beginning of the file), or -1 if the operation failed
          */
         off_t (*goto_eof)(Db *db);
 
@@ -81,9 +86,19 @@ extern "C" {
         void (*destructor)(Db *db);
     } couch_file_ops;
 
+    /**
+     * Stores an opaque pointer-sized data value associated with the database handle.
+     * This is for the use of the couch_file_ops callbacks, and is intended to store a file
+     * descriptor or similar reference.
+     */
     LIBCOUCHSTORE_API
     void libcouchstore_set_file_ops_cookie(Db *db, void *data);
 
+    /**
+     * Retrieves an opaque pointer-sized data value associated with the database handle.
+     * This is for the use of the couch_file_ops callbacks, and is intended to store a file
+     * descriptor or similar reference.
+     */
     LIBCOUCHSTORE_API
     void* libcouchstore_get_file_ops_cookie(Db *db);
 

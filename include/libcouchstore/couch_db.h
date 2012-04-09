@@ -11,6 +11,8 @@
 extern "C" {
 #endif
 
+    ////////////////////  OPENING/CLOSING DATABASES:
+
     /*
      * Flags to pass as the flags parameter to couchstore_open_db
      */
@@ -36,7 +38,7 @@ extern "C" {
      * @param flags Additional flags for how the database should
      *              be opened. See couchstore_open_flags_* for the
      *              available flags.
-     * @oaram db Pointer to where you want the handle to the database to be
+     * @param db Pointer to where you want the handle to the database to be
      *           stored.
      * @return COUCHSTORE_SUCCESS for success
      */
@@ -46,7 +48,7 @@ extern "C" {
                                           Db **db);
 
     /**
-     * Open a database.
+     * Open a database, with custom I/O callbacks.
      *
      * The database should be closed with couchstore_close_db().
      *
@@ -54,9 +56,9 @@ extern "C" {
      * @param flags Additional flags for how the database should
      *              be opened. See couchstore_open_flags_* for the
      *              available flags.
-     * @param ops Pointer to a structure containing the file io operations
+     * @param ops Pointer to a structure containing the file I/O operations
      *            you want the library to use.
-     * @oaram db Pointer to where you want the handle to the database to be
+     * @param db Pointer to where you want the handle to the database to be
      *           stored.
      * @return COUCHSTORE_SUCCESS for success
      */
@@ -67,9 +69,9 @@ extern "C" {
                                              Db **db);
 
     /**
-     * Close an open database and release all allocated resources.
+     * Close an open database and free all allocated resources.
      *
-     * @param db Pointer to the database handle to release.
+     * @param db Pointer to the database handle to free.
      * @return COUCHSTORE_SUCCESS upon success
      */
     LIBCOUCHSTORE_API
@@ -83,6 +85,8 @@ extern "C" {
     LIBCOUCHSTORE_API
     uint64_t couchstore_get_header_position(Db *db);
 
+
+    ////////////////////  WRITING DOCUMENTS:
 
     /*
      * Options used by couchstore_save_document() and
@@ -122,7 +126,7 @@ extern "C" {
     /**
      * Save array of docs to db
      *
-     * To delete docuemnts, set docs to NULL, the docs referenced by
+     * To delete documents, set docs to NULL: the docs referenced by
      * the docinfos will be deleted. To intermix deletes and inserts
      * in a bulk update, pass docinfos with the deleted flag set.
      *
@@ -148,10 +152,13 @@ extern "C" {
     LIBCOUCHSTORE_API
     couchstore_error_t couchstore_commit(Db *db);
 
+
+    ////////////////////  RETRIEVING DOCUMENTS:
+
     /**
      * Retrieve the document info for a given key.
      *
-     * The info should be released with couchstore_free_docinfo()
+     * The info should be freed with couchstore_free_docinfo().
      *
      * @param id the document identifier
      * @param idlen the number of bytes in the identifier
@@ -177,9 +184,10 @@ extern "C" {
     /**
      * Retrieve a doc from the db.
      *
-     * The document should be released with couchstore_free_document()
+     * The document should be freed with couchstore_free_document()
      *
-     * doc.id.buf will be the same buffer as id @@ WHat does this mean? @@
+     * On a successful return, doc.id.buf will point to the id you passed in,
+     * so don't free or overwrite the id buffer before freeing the document!
      *
      * @param db database to load document from
      * @param id the identifier to load
@@ -196,13 +204,14 @@ extern "C" {
                                                 couchstore_open_options options);
 
     /**
-     * Retrieve a doc from the using a docinfo.
+     * Retrieve a doc from the db, using a DocInfo.
+     * The DocInfo must have been filled in with valid values by an API call such
+     * as couchstore_docinfo_by_id().
      *
-     * Do not free the docinfo before freeing the doc.
-     * Should be freed with free_doc.
+     * Do not free the docinfo before freeing the doc, with couchstore_free_document().
      *
      * @param db database to load document from
-     * @param docid the the identified to load
+     * @param docinfo a valid DocInfo, as filled in by couchstore_docinfo_by_id()
      * @param pDoc Where to store the result
      * @param options See DECOMPRESS_DOC_BODIES
      * @return COUCHSTORE_SUCCESS if found
@@ -214,31 +223,34 @@ extern "C" {
                                                         couchstore_open_options options);
 
     /**
-     * Release all allocated resources from a document returned from
-     * couchstore_open_document()
+     * Free all allocated resources from a document returned from
+     * couchstore_open_document().
      *
-     * @param doc the document to release
+     * @param doc the document to free. May be NULL.
      */
     LIBCOUCHSTORE_API
     void couchstore_free_document(Doc *doc);
 
 
     /**
-     * Release all allocated resources from a docinfo structure returned by
-     * couchstore_docinfo_by_id.
+     * Free all allocated resources from a docinfo structure returned by
+     * couchstore_docinfo_by_id() or passed to a couchstore_changes_callback_fn.
      *
-     * @param docinfo the document info to relase
+     * @param docinfo the document info to free. May be NULL.
      */
     LIBCOUCHSTORE_API
     void couchstore_free_docinfo(DocInfo *docinfo);
 
+
+    ////////////////////  ITERATING DOCUMENTS:
+
     /**
-     * The callback function used by couchstore_changes_since to iterate
+     * The callback function used by couchstore_changes_since() to iterate
      * through the documents.
      *
-     * The docinfo structure is automatically released if the callback
+     * The docinfo structure is automatically freed if the callback
      * returns 0. A non-zero return value will preserve the DocInfo
-     * for future use (should be released with free_docinfo by the
+     * for future use (should be freed with free_docinfo by the
      * caller)
      *
      * @param db the database being traversed
@@ -255,7 +267,7 @@ extern "C" {
      *
      * @param db the database to iterate through
      * @param since the sequence number to start iterating from
-     * @param options Not used
+     * @param options (not used; pass 0)
      * @param callback the callback function used to iterate over all changes
      * @param ctx client context (passed to the callback)
      * @return COUCHSTORE_SUCCESS upon success
@@ -266,13 +278,17 @@ extern "C" {
                                                 uint64_t options,
                                                 couchstore_changes_callback_fn callback,
                                                 void *ctx);
+
+
+    ////////////////////  LOCAL DOCUMENTS:
+
     /**
-     * Get a local doc from the DB.
+     * Get a local doc from the db.
      *
-     * The document should be released with couchstore_free_local_document()
+     * The document should be freed with couchstore_free_local_document().
      *
      * @param db database to load document from
-     * @param id the identifier to load (must include "_local/" prefix)
+     * @param id the identifier to load (must begin with "_local/")
      * @param idlen the number of bytes in the id
      * @param lDoc Where to store the result
      * @return COUCHSTORE_SUCCESS if found
@@ -284,8 +300,8 @@ extern "C" {
                                                       LocalDoc **lDoc);
 
     /**
-     * Save a local doc to the db. ID must include the _local/ prefix.
-     * To delete an existing doc set the deleted flag on the LocalDoc
+     * Save a local doc to the db. Its identifier must begin with "_local/".
+     * To delete an existing doc, set the deleted flag on the LocalDoc
      * struct. The json buffer will be ignored for a deletion.
      *
      * @param db the database to store the document in
@@ -296,24 +312,28 @@ extern "C" {
     couchstore_error_t couchstore_save_local_document(Db *db, LocalDoc *lDoc);
 
     /*
-     * Release all allocated resources from a LocalDoc obtained from
+     * Free all allocated resources from a LocalDoc obtained from
      * couchstore_open_local_document().
      *
-     * @param lDoc document to release
+     * @param lDoc document to free
      */
     LIBCOUCHSTORE_API
     void couchstore_free_local_document(LocalDoc *lDoc);
 
+
+    ////////////////////  MISC:
+
     /**
      * Convert an error code from couchstore to a textual description. The
      * text is a constant within the library so you should not try to modify
-     * or release the pointer.
+     * or free the pointer.
      *
      * @param errcode The error code to look up
      * @return a textual description of the error
      */
     LIBCOUCHSTORE_API
     const char *couchstore_strerror(couchstore_error_t errcode);
+
 #ifdef __cplusplus
 }
 #endif
