@@ -38,11 +38,12 @@ extern "C" {
     typedef struct _docinfo {
         sized_buf id;               /**< Document ID (key) */
         uint64_t db_seq;            /**< Sequence number in database */
-        uint64_t rev_seq;
-        sized_buf rev_meta;
+        uint64_t rev_seq;           /**< Revision number of document */
+        sized_buf rev_meta;         /**< Revision metadata; uninterpreted by CouchStore.
+                                         Needs to be kept small enough to fit in a B-tree index.*/
         int deleted;                /**< Is this a deleted revision? */
         couchstore_content_meta_flags content_meta;  /**< Content metadata flags */
-        uint64_t bp;
+        uint64_t bp;                /**< Byte offset of document data in file */
         size_t size;                /**< Data size in bytes */
     } DocInfo;
 
