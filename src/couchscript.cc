@@ -181,13 +181,13 @@ extern "C" {
         Db *db = getDb(ls);
 
         size_t klen;
-        // Should be const :/
-        char *key = const_cast<char *>(luaL_checklstring(ls, 2, &klen));
+        const char *key = luaL_checklstring(ls, 2, &klen);
 
-        int rc = couchstore_docinfo_by_id(db, reinterpret_cast<uint8_t *>(key), klen, &docinfo);
+        int rc = couchstore_docinfo_by_id(db, key, klen, &docinfo);
         if (rc < 0) {
             char buf[256];
-            snprintf(buf, sizeof(buf), "error get docinfo: %s", couchstore_strerror(rc));
+            snprintf(buf, sizeof(buf), "error get docinfo (key=\"%s\"): %s",
+                     key, couchstore_strerror(rc));
             lua_pushstring(ls, buf);
             lua_error(ls);
             return 1;
@@ -195,9 +195,11 @@ extern "C" {
 
         rc = couchstore_open_doc_with_docinfo(db, docinfo, &doc, 0);
         if (rc < 0) {
-            char buf[256];
+            char buf[1024];
+            snprintf(buf, sizeof(buf),
+                     "error get doc by docinfo (key=\"%s\", bp=%llu, size=%zd): %s",
+                     key, docinfo->bp, docinfo->size, couchstore_strerror(rc));
             couchstore_free_docinfo(docinfo);
-            snprintf(buf, sizeof(buf), "error get doc by docinfo: %s", couchstore_strerror(rc));
             lua_pushstring(ls, buf);
             lua_error(ls);
             return 1;

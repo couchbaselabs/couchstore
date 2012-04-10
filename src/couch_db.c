@@ -334,7 +334,7 @@ int by_id_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
 static couchstore_error_t bp_to_doc(Doc **pDoc, Db *db, off_t bp, uint64_t options)
 {
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
-    size_t bodylen = 0;
+    int bodylen = 0;
     char *docbody = NULL;
     fatbuf *docbuf = NULL;
 
@@ -343,6 +343,9 @@ static couchstore_error_t bp_to_doc(Doc **pDoc, Db *db, off_t bp, uint64_t optio
     } else {
         bodylen = pread_bin(db, bp, &docbody);
     }
+
+    error_unless(bodylen >= 0, bodylen);    // if bodylen is negative it's an error code
+    error_unless(docbody || bodylen == 0, COUCHSTORE_ERROR_READ);
 
     error_unless(docbuf = fatbuf_alloc(sizeof(Doc) + bodylen), COUCHSTORE_ERROR_ALLOC_FAIL);
     *pDoc = (Doc *) fatbuf_get(docbuf, sizeof(Doc));
@@ -353,8 +356,6 @@ static couchstore_error_t bp_to_doc(Doc **pDoc, Db *db, off_t bp, uint64_t optio
         return 0;
     }
 
-    error_unless(bodylen > 0, COUCHSTORE_ERROR_READ);
-    error_unless(docbody, COUCHSTORE_ERROR_READ);
     (*pDoc)->data.buf = (char *) fatbuf_get(docbuf, bodylen);
     (*pDoc)->data.size = bodylen;
     memcpy((*pDoc)->data.buf, docbody, bodylen);

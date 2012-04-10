@@ -97,9 +97,10 @@ lua_tests: couchscript tests/localdoc.lua
 	@./couchscript tests/corrupt.lua
 	@./couchscript tests/bulk.lua
 
-slow_lua_tests: couchscript tests/largefile.lua
+slow_lua_tests: couchscript tests/largefile.lua tests/large.lua
 	@echo "Running slow lua tests."
 	@./couchscript tests/largefile.lua
+	@./couchscript tests/large.lua
 
 endif
 

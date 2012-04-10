@@ -127,7 +127,7 @@ static int pread_bin_int(Db *db, off_t pos, char **ret_ptr, int header)
     } else {
         int rest_len = raw_read(db, &pos, chunk_len - buf_len, &bufptr_rest);
         error_unless(rest_len != -1, COUCHSTORE_ERROR_READ);
-        error_unless((unsigned) rest_len + buf_len != chunk_len, COUCHSTORE_ERROR_READ);
+        error_unless((unsigned) rest_len + buf_len == chunk_len, COUCHSTORE_ERROR_READ);
 
         newbufptr = (char *) realloc(bufptr, buf_len + rest_len);
         error_unless(newbufptr, COUCHSTORE_ERROR_READ);
