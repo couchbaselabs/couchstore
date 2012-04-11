@@ -51,31 +51,21 @@ couchstore_error_t db_write_header(Db *db, sized_buf *buf, off_t *pos)
 {
     off_t write_pos = db->file_pos;
     ssize_t written;
-    char blockheader = 1;
     uint32_t size = htonl(buf->size + 4); //Len before header includes hash len.
     uint32_t crc32 = htonl(hash_crc32(buf->buf, buf->size));
-    sized_buf lenbuf = { (char *) &size, 4 };
-    sized_buf crcbuf = { (char *) &crc32, 4 };
+    char headerbuf[1 + 4 + 4];
+
     if (write_pos % COUCH_BLOCK_SIZE != 0) {
         write_pos += COUCH_BLOCK_SIZE - (write_pos % COUCH_BLOCK_SIZE);    //Move to next block boundary.
     }
     *pos = write_pos;
 
-    written = db->file_ops->pwrite(db, &blockheader, 1, write_pos);
-    if (written < 0) {
-        return COUCHSTORE_ERROR_WRITE;
-    }
-    write_pos += written;
+    // Write the header's block header
+    headerbuf[0] = 1;
+    memcpy(&headerbuf[1], &size, 4);
+    memcpy(&headerbuf[5], &crc32, 4);
 
-    //Write length
-    written = raw_write(db, &lenbuf, write_pos);
-    if (written < 0) {
-        return COUCHSTORE_ERROR_WRITE;
-    }
-    write_pos += written;
-
-    //Write CRC32
-    written = raw_write(db, &crcbuf, write_pos);
+    written = db->file_ops->pwrite(db, &headerbuf, sizeof(headerbuf), write_pos);
     if (written < 0) {
         return COUCHSTORE_ERROR_WRITE;
     }
@@ -99,21 +89,20 @@ int db_write_buf(Db *db, const sized_buf *buf, off_t *pos, size_t *disk_size)
     ssize_t written;
     uint32_t size = htonl(buf->size | 0x80000000);
     uint32_t crc32 = htonl(hash_crc32(buf->buf, buf->size));
-    sized_buf lenbuf = { (char *) &size, 4 };
-    sized_buf crcbuf = { (char *) &crc32, 4 };
+    char headerbuf[4 + 4];
 
-    written = raw_write(db, &lenbuf, end_pos);
+    // Write the buffer's header:
+    memcpy(&headerbuf[0], &size, 4);
+    memcpy(&headerbuf[4], &crc32, 4);
+
+    sized_buf sized_headerbuf = { headerbuf, 8 };
+    written = raw_write(db, &sized_headerbuf, end_pos);
     if (written < 0) {
         return COUCHSTORE_ERROR_WRITE;
     }
     end_pos += written;
 
-    written = raw_write(db, &crcbuf, end_pos);
-    if (written < 0) {
-        return COUCHSTORE_ERROR_WRITE;
-    }
-    end_pos += written;
-
+    // Write actual buffer:
     written = raw_write(db, buf, end_pos);
     if (written < 0) {
         return COUCHSTORE_ERROR_WRITE;
@@ -147,9 +136,7 @@ int db_write_buf_compressed(Db *db, const sized_buf *buf, off_t *pos, size_t *di
 
     error_pass(db_write_buf(db, &to_write, pos, disk_size));
 cleanup:
-    if (to_write.buf) {
-        free(to_write.buf);
-    }
+    free(to_write.buf);
     return errcode;
 }
 
