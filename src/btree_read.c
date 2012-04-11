@@ -20,7 +20,7 @@ static couchstore_error_t btree_lookup_inner(couchfile_lookup_request *rq,
     char *nodebuf = NULL;
 
     nodebuflen = pread_compressed(rq->db, diskpos, &nodebuf);
-    error_unless(nodebuflen > 0, COUCHSTORE_ERROR_READ);
+    error_unless(nodebuflen >= 0, nodebuflen);  // if negative, it's an error code
 
     if (nodebuf[0] == 0) { //KP Node
         while (bufpos < nodebuflen && current < end) {

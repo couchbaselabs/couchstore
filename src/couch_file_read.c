@@ -8,6 +8,7 @@
 #include <snappy-c.h>
 
 #include "internal.h"
+#include "bitfield.h"
 #include "crc32.h"
 #include "util.h"
 
@@ -31,6 +32,11 @@ ssize_t total_read_len(off_t blockoffset, ssize_t finallen)
     }
 }
 
+/** Edits out the header-detection prefix byte at the start of each file block.
+    @param buf Memory buffer containing raw data read from the file
+    @param offset offset from a block boundary at which the buffer starts
+    @param len Length of the block in bytes
+    @return The length of the block after editing out the prefix bytes */
 static int remove_block_prefixes(char *buf, off_t offset, ssize_t len)
 {
     off_t buf_pos = 0;
@@ -59,31 +65,36 @@ static int remove_block_prefixes(char *buf, off_t offset, ssize_t len)
     return len - gap;
 }
 
-// Sets *dst to returned buffer, returns end size.
-// Increases pos by read len.
+/** Reads data from the file, skipping block prefix bytes.
+    @param db Database to read from
+    @param pos Points to file position to read from. On successful return, will be incremented
+                by the number of physical bytes read.
+    @param len Number of data bytes to read
+    @param dst  On success, will be set to point to a malloc'ed buffer containing the bytes
+    @return Number of data bytes read, or an error code */
 static int raw_read(Db *db, off_t *pos, ssize_t len, char **dst)
 {
     off_t blockoffs = *pos % COUCH_BLOCK_SIZE;
     ssize_t total = total_read_len(blockoffs, len);
     *dst = (char *) malloc(total);
     if (!*dst) {
-        return -1;
+        return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
     ssize_t got_bytes = db->file_ops->pread(db, *dst, total, *pos);
     if (got_bytes <= 0) {
-        goto fail;
+        free(*dst);
+        *dst = NULL;
+        return COUCHSTORE_ERROR_READ;
     }
 
     *pos += got_bytes;
     return remove_block_prefixes(*dst, blockoffs, got_bytes);
-
-fail:
-    free(*dst);
-    *dst = NULL;
-    return -1;
 }
 
-static int pread_bin_int(Db *db, off_t pos, char **ret_ptr, int header)
+/** Common subroutine of pread_bin, pread_compressed and pread_header.
+    Parameters and return value are the same as for pread_bin,
+    except the 'header' parameter which is 1 if reading a header, 0 otherwise. */
+static int pread_bin_internal(Db *db, off_t pos, char **ret_ptr, int header)
 {
     char *bufptr = NULL, *bufptr_rest = NULL, *newbufptr = NULL;
     int buf_len;
@@ -91,19 +102,18 @@ static int pread_bin_int(Db *db, off_t pos, char **ret_ptr, int header)
     int skip = 0;
     int errcode = 0;
     buf_len = raw_read(db, &pos, 2 * COUCH_BLOCK_SIZE - (pos % COUCH_BLOCK_SIZE), &bufptr);
-    if (buf_len == -1) {
-        buf_len = raw_read(db, &pos, 4, &bufptr);
-        error_unless(buf_len > 0, COUCHSTORE_ERROR_READ);
+    if (buf_len < 0) {
+        buf_len = raw_read(db, &pos, 4, &bufptr);       //??? What is the purpose of this? Shouldn't it at least read 8 bytes? -Jens
+        error_unless(buf_len >= 0, buf_len);  // if negative, it's an error code
     }
+    error_unless(buf_len >= 8, COUCHSTORE_ERROR_READ);
 
-    memcpy(&chunk_len, bufptr, 4);
-    chunk_len = ntohl(chunk_len) & ~0x80000000;
+    chunk_len = get_32(bufptr) & ~0x80000000;
     skip += 4;
     if (header) {
         chunk_len -= 4;    //Header len includes hash len.
     }
-    memcpy(&crc32, bufptr + 4, 4);
-    crc32 = ntohl(crc32);
+    crc32 = get_32(bufptr + 4);
     skip += 4;
 
     if (chunk_len == 0) {
@@ -116,79 +126,69 @@ static int pread_bin_int(Db *db, off_t pos, char **ret_ptr, int header)
     memmove(bufptr, bufptr + skip, buf_len);
     if (chunk_len <= (uint32_t)buf_len) {
         newbufptr = (char *) realloc(bufptr, chunk_len);
-        error_unless(newbufptr, COUCHSTORE_ERROR_READ);
+        error_unless(newbufptr, COUCHSTORE_ERROR_ALLOC_FAIL);
         bufptr = newbufptr;
-
-        if (crc32) {
-            error_unless((crc32) == hash_crc32(bufptr, chunk_len), COUCHSTORE_ERROR_CHECKSUM_FAIL);
-        }
-        *ret_ptr = bufptr;
-        return chunk_len;
     } else {
         int rest_len = raw_read(db, &pos, chunk_len - buf_len, &bufptr_rest);
-        error_unless(rest_len != -1, COUCHSTORE_ERROR_READ);
+        error_unless(rest_len >= 0, rest_len);  // if negative, it's an error code
         error_unless((unsigned) rest_len + buf_len == chunk_len, COUCHSTORE_ERROR_READ);
 
         newbufptr = (char *) realloc(bufptr, buf_len + rest_len);
-        error_unless(newbufptr, COUCHSTORE_ERROR_READ);
+        error_unless(newbufptr, COUCHSTORE_ERROR_ALLOC_FAIL);
         bufptr = newbufptr;
 
         memcpy(bufptr + buf_len, bufptr_rest, rest_len);
         free(bufptr_rest);
-        if (crc32) {
-            error_unless((crc32) == hash_crc32(bufptr, chunk_len), COUCHSTORE_ERROR_CHECKSUM_FAIL);
-        }
-        *ret_ptr = bufptr;
-        return chunk_len;
+        bufptr_rest = NULL;
     }
+    if (crc32) {
+        error_unless(crc32 == hash_crc32(bufptr, chunk_len), COUCHSTORE_ERROR_CHECKSUM_FAIL);
+    }
+    *ret_ptr = bufptr;
+    return chunk_len;
 
 cleanup:
-    if (errcode < 0) {
-        free(bufptr);
-    }
+    free(bufptr);
+    free(bufptr_rest);
     return errcode;
 }
 
 int pread_header(Db *db, off_t pos, char **ret_ptr)
 {
-    return pread_bin_int(db, pos + 1, ret_ptr, 1);
+    return pread_bin_internal(db, pos + 1, ret_ptr, 1);
 }
 
 int pread_compressed(Db *db, off_t pos, char **ret_ptr)
 {
+    char *compressed_buf;
     char *new_buf;
-    int len = pread_bin_int(db, pos, ret_ptr, 0);
+    int len = pread_bin_internal(db, pos, &compressed_buf, 0);
     if (len < 0) {
         return len;
     }
-    size_t new_len;
-    if (snappy_uncompressed_length((*ret_ptr), len, &new_len)
-            != SNAPPY_OK) {
+    size_t uncompressed_len;
+    if (snappy_uncompressed_length(compressed_buf, len, &uncompressed_len) != SNAPPY_OK) {
         //should be compressed but snappy doesn't see it as valid.
-        free(*ret_ptr);
-        *ret_ptr = NULL;
-        return -1;
+        free(compressed_buf);
+        return COUCHSTORE_ERROR_CORRUPT;
     }
 
-    new_buf = (char *) malloc(new_len);
+    new_buf = (char *) malloc(uncompressed_len);
     if (!new_buf) {
-        free(*ret_ptr);
-        *ret_ptr = NULL;
-        return -1;
+        free(compressed_buf);
+        return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
-    snappy_status ss = (snappy_uncompress((*ret_ptr), len, new_buf, &new_len));
-    if (ss == SNAPPY_OK) {
-        free(*ret_ptr);
-        *ret_ptr = new_buf;
-        return new_len;
-    } else {
-        free(*ret_ptr);
-        *ret_ptr = NULL;
-        return -1;
+    snappy_status ss = (snappy_uncompress(compressed_buf, len, new_buf, &uncompressed_len));
+    free(compressed_buf);
+    if (ss != SNAPPY_OK) {
+        return COUCHSTORE_ERROR_CORRUPT;
     }
+
+    *ret_ptr = new_buf;
+    return uncompressed_len;
 }
 
 int pread_bin(Db *db, off_t pos, char **ret_ptr)
 {
-    return pread_bin_int(db, pos, ret_ptr, 0);
+    return pread_bin_internal(db, pos, ret_ptr, 0);
 }
