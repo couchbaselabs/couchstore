@@ -27,7 +27,7 @@ static ssize_t raw_write(Db *db, const sized_buf *buf, off_t pos)
         }
 
         if (write_pos % COUCH_BLOCK_SIZE == 0) {
-            written = db->file_ops->pwrite(db, &blockprefix, 1, write_pos);
+            written = db->file_ops->pwrite(db->file_handle, &blockprefix, 1, write_pos);
             if (written < 0) {
                 return COUCHSTORE_ERROR_WRITE;
             }
@@ -35,7 +35,7 @@ static ssize_t raw_write(Db *db, const sized_buf *buf, off_t pos)
             continue;
         }
 
-        written = db->file_ops->pwrite(db, buf->buf + buf_pos, block_remain, write_pos);
+        written = db->file_ops->pwrite(db->file_handle, buf->buf + buf_pos, block_remain, write_pos);
         if (written < 0) {
             return COUCHSTORE_ERROR_WRITE;
         }
@@ -64,7 +64,7 @@ couchstore_error_t db_write_header(Db *db, sized_buf *buf, off_t *pos)
     memcpy(&headerbuf[1], &size, 4);
     memcpy(&headerbuf[5], &crc32, 4);
 
-    written = db->file_ops->pwrite(db, &headerbuf, sizeof(headerbuf), write_pos);
+    written = db->file_ops->pwrite(db->file_handle, &headerbuf, sizeof(headerbuf), write_pos);
     if (written < 0) {
         return COUCHSTORE_ERROR_WRITE;
     }

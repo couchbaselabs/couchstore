@@ -39,14 +39,14 @@ extern "C" {
 
     struct _db {
         uint64_t file_pos;
-        couch_file_ops *file_ops;
-        void *file_ops_cookie;
+        const couch_file_ops *file_ops;
+        couch_file_handle file_handle;
         const char* filename;
         db_header header;
         void *userdata;
     };
 
-    couch_file_ops *couch_get_default_file_ops(void);
+    const couch_file_ops *couch_get_default_file_ops(void);
 
     /** Reads a chunk from the file at a given position.
         @param db The database to read from

@@ -65,7 +65,7 @@ extern "C" {
     LIBCOUCHSTORE_API
     couchstore_error_t couchstore_open_db_ex(const char *filename,
                                              couchstore_open_flags flags,
-                                             couch_file_ops *ops,
+                                             const couch_file_ops *ops,
                                              Db **db);
 
     /**

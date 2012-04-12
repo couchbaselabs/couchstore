@@ -30,7 +30,7 @@ static couchstore_error_t find_header(Db *db)
     uint8_t buf[2];
 
     while (1) {
-        readsize = db->file_ops->pread(db, buf, 2, block * COUCH_BLOCK_SIZE);
+        readsize = db->file_ops->pread(db->file_handle, buf, 2, block * COUCH_BLOCK_SIZE);
         if (readsize == 2 && buf[0] == 1) {
             //Found a header block.
             int header_len = pread_header(db, block * COUCH_BLOCK_SIZE, &header_buf);
@@ -140,7 +140,7 @@ couchstore_error_t couchstore_commit(Db *db)
 {
     couchstore_error_t errcode = write_header(db);
     if (errcode == COUCHSTORE_SUCCESS) {
-        errcode = db->file_ops->sync(db);
+        errcode = db->file_ops->sync(db->file_handle);
     }
 
     return errcode;
@@ -158,7 +158,7 @@ couchstore_error_t couchstore_open_db(const char *filename,
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_open_db_ex(const char *filename,
                                          uint64_t flags,
-                                         couch_file_ops *ops,
+                                         const couch_file_ops *ops,
                                          Db **pDb)
 {
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
@@ -167,7 +167,7 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
 
     /* Sanity check input parameters */
     if (filename == NULL || pDb == NULL || ops == NULL ||
-            ops->version != 1 || ops->open == NULL ||
+            ops->version != 2 || ops->constructor == NULL || ops->open == NULL ||
             ops->close == NULL || ops->pread == NULL ||
             ops->pwrite == NULL || ops->goto_eof == NULL ||
             ops->sync == NULL || ops->destructor == NULL ||
@@ -197,14 +197,15 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
     }
 
     db->file_ops = ops;
-    errcode = db->file_ops->open(db, filename, openflags);
+    db->file_handle = ops->constructor();
+    errcode = db->file_ops->open(&db->file_handle, filename, openflags);
     if (errcode != COUCHSTORE_SUCCESS) {
-        db->file_ops->destructor(db);
+        db->file_ops->destructor(db->file_handle);
         free(db);
         return errcode;
     }
 
-    if ((db->file_pos = db->file_ops->goto_eof(db)) == 0) {
+    if ((db->file_pos = db->file_ops->goto_eof(db->file_handle)) == 0) {
         /* This is an empty file. Create a new fileheader unless the
          * user wanted a read-only version of the file
          */
@@ -220,8 +221,8 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
     if (errcode == COUCHSTORE_SUCCESS) {
         *pDb = db;
     } else {
-        db->file_ops->close(db);
-        db->file_ops->destructor(db);
+        db->file_ops->close(db->file_handle);
+        db->file_ops->destructor(db->file_handle);
         free(db);
     }
 
@@ -231,8 +232,8 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_close_db(Db *db)
 {
-    db->file_ops->close(db);
-    db->file_ops->destructor(db);
+    db->file_ops->close(db->file_handle);
+    db->file_ops->destructor(db->file_handle);
     free((char*)db->filename);
 
     free(db->header.by_id_root);

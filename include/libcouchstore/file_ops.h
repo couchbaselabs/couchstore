@@ -2,13 +2,18 @@
 #ifndef LIBCOUCHSTORE_FILE_OPS_H
 #define LIBCOUCHSTORE_FILE_OPS_H
 
-#ifndef COUCHSTORE_COUCH_DB_H
-#error "You should include <libcouchstore/couch_db.h> instead"
-#endif
+#include <stdint.h>
+#include <sys/types.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+    /**
+     * Abstract file handle. Implementations can use it for anything they want, whether
+     * a pointer to an allocated data structure, or an integer such as a Unix file descriptor.
+     */
+    typedef struct couch_file_handle_opaque* couch_file_handle;
 
     /**
      * A structure that defines the implementation of the file I/O primitives
@@ -17,90 +22,84 @@ extern "C" {
     typedef struct {
         /**
          * Version number that describes the layout of the structure. Should be set
-         * to 1.
+         * to 2.
          */
         uint64_t version;
 
         /**
-         * Open a file named file.
+         * Initialize state (e.g. allocate memory) for a file handle before opening a file.
+         * This callback is optional and doesn't need to do anything at all; it can just return
+         * NULL if there isn't anything to do.
+         */
+        couch_file_handle (*constructor)(void);
+
+        /**
+         * Open a file.
          *
-         * @param db the database instance to open the file
+         * @param on input, a pointer to the file handle that was returned by the constructor
+         *        function. The function can change this value if it wants to; the value stored
+         *        here on return is the one that will be passed to the other functions.
          * @param path the name of the file
          * @param flags flags as specified by UNIX open(2) system call
          * @return COUCHSTORE_SUCCESS upon success.
          */
-        couchstore_error_t (*open)(Db *db, const char *path, int oflag);
+        couchstore_error_t (*open)(couch_file_handle* handle, const char *path, int oflag);
 
         /**
-         * Close file file associated with this database handle.
+         * Close file associated with this handle.
          *
-         * @param db database to close
+         * @param handle file handle to close
          */
-        void (*close)(Db *db);
+        void (*close)(couch_file_handle handle);
 
         /**
          * Read a chunk of data from a given offset in the file.
          *
-         * @param db database to read from
+         * @param handle file handle to read from
          * @param buf where to store data
          * @param nbyte number of bytes to read
          * @param offset where to read from
          * @return number of bytes read (which may be less than nbytes),
          *         or a value <= 0 if an error occurred
          */
-        ssize_t (*pread)(Db *db, void *buf, size_t nbytes, off_t offset);
+        ssize_t (*pread)(couch_file_handle handle, void *buf, size_t nbytes, off_t offset);
 
         /**
          * Write a chunk of data to a given offset in the file.
-         * @param db database to write to
+         *
+         * @param handle file handle to write to
          * @param buf where to read data
          * @param nbyte number of bytes to write
          * @param offset where to write to
          * @return number of bytes written (which may be less than nbytes),
          *         or a value <= 0 if an error occurred
          */
-        ssize_t (*pwrite)(Db *db, const void *buf, size_t nbytes, off_t offset);
+        ssize_t (*pwrite)(couch_file_handle handle, const void *buf, size_t nbytes, off_t offset);
 
         /**
          * Move to the end of the file.
          *
-         * @param db database to move the filepointer in
+         * @param handle file handle to move the filepointer in
          * @return the offset (from beginning of the file), or -1 if the operation failed
          */
-        off_t (*goto_eof)(Db *db);
+        off_t (*goto_eof)(couch_file_handle handle);
 
         /**
          * Flush the buffers to disk
          *
-         * @param db database handle to flush
+         * @param handle file handle to flush
          * @return COUCHSTORE_SUCCESS upon success
          */
-        couchstore_error_t (*sync)(Db *db);
+        couchstore_error_t (*sync)(couch_file_handle handle);
 
         /**
          * Called as part of shutting down the db instance this instance was
          * passed to. A hook to for releasing allocated resources
          *
-         * @param db the instance being killed
+         * @param handle file handle to be released
          */
-        void (*destructor)(Db *db);
+        void (*destructor)(couch_file_handle handle);
     } couch_file_ops;
-
-    /**
-     * Stores an opaque pointer-sized data value associated with the database handle.
-     * This is for the use of the couch_file_ops callbacks, and is intended to store a file
-     * descriptor or similar reference.
-     */
-    LIBCOUCHSTORE_API
-    void libcouchstore_set_file_ops_cookie(Db *db, void *data);
-
-    /**
-     * Retrieves an opaque pointer-sized data value associated with the database handle.
-     * This is for the use of the couch_file_ops callbacks, and is intended to store a file
-     * descriptor or similar reference.
-     */
-    LIBCOUCHSTORE_API
-    void* libcouchstore_get_file_ops_cookie(Db *db);
 
 #ifdef __cplusplus
 }

@@ -452,5 +452,7 @@ int main(int argc, const char* argv[])
     test_changes_no_dups();
     fprintf(stderr, " OK\n");
 
+    unlink(testfilepath);
+
     return 0;
 }

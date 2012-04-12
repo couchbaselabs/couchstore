@@ -79,7 +79,7 @@ static int raw_read(Db *db, off_t *pos, ssize_t len, char **dst)
     if (!*dst) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
-    ssize_t got_bytes = db->file_ops->pread(db, *dst, total, *pos);
+    ssize_t got_bytes = db->file_ops->pread(db->file_handle, *dst, total, *pos);
     if (got_bytes <= 0) {
         free(*dst);
         *dst = NULL;

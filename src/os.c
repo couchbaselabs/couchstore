@@ -7,49 +7,52 @@
 
 #include "internal.h"
 
-LIBCOUCHSTORE_API
-void libcouchstore_set_file_ops_cookie(Db *db, void *data)
+#undef LOG_IO
+#ifdef LOG_IO
+#include <stdio.h>
+#endif
+
+static inline int handle_to_fd(couch_file_handle handle)
 {
-    db->file_ops_cookie = data;
+    return (int)(size_t)handle;
 }
 
-LIBCOUCHSTORE_API
-void* libcouchstore_get_file_ops_cookie(Db *db)
+static ssize_t couch_pread(couch_file_handle handle, void *buf, size_t nbyte, off_t offset)
 {
-    return db->file_ops_cookie;
-}
-
-static ssize_t couch_pread(Db *db, void *buf, size_t nbyte, off_t offset)
-{
-    intptr_t fd = (intptr_t)libcouchstore_get_file_ops_cookie(db);
+#ifdef LOG_IO
+    fprintf(stderr, "PREAD  %8llx -- %8llx  (%6.1f kbytes)\n", offset, offset+nbyte, nbyte/1024.0);
+#endif
+    int fd = handle_to_fd(handle);
     ssize_t rv;
     do {
-        rv = pread((int)fd, buf, nbyte, offset);
+        rv = pread(fd, buf, nbyte, offset);
     } while (rv == -1 && errno == EINTR);
 
     return rv;
 }
 
-static ssize_t couch_pwrite(Db *db, const void *buf, size_t nbyte, off_t offset)
+static ssize_t couch_pwrite(couch_file_handle handle, const void *buf, size_t nbyte, off_t offset)
 {
-    intptr_t fd = (intptr_t)libcouchstore_get_file_ops_cookie(db);
+#ifdef LOG_IO
+    fprintf(stderr, "PWRITE %8llx -- %8llx  (%6.1f kbytes)\n", offset, offset+nbyte, nbyte/1024.0);
+#endif
+    int fd = handle_to_fd(handle);
     ssize_t rv;
     do {
-        rv = pwrite((int)fd, buf, nbyte, offset);
+        rv = pwrite(fd, buf, nbyte, offset);
     } while (rv == -1 && errno == EINTR);
 
     return rv;
 }
 
-static couchstore_error_t couch_open(Db *db, const char *path, int oflag)
+static couchstore_error_t couch_open(couch_file_handle* handle, const char *path, int oflag)
 {
-    int rv;
-    intptr_t fd;
+    int fd;
     do {
-        rv = open(path, oflag | O_LARGEFILE, 0666);
-    } while (rv == -1 && errno == EINTR);
+        fd = open(path, oflag | O_LARGEFILE, 0666);
+    } while (fd == -1 && errno == EINTR);
 
-    if (rv == -1) {
+    if (fd == -1) {
         if (errno == ENOENT) {
             return COUCHSTORE_ERROR_NO_SUCH_FILE;
         } else {
@@ -57,38 +60,35 @@ static couchstore_error_t couch_open(Db *db, const char *path, int oflag)
         }
     }
 
-    fd = rv;
-    libcouchstore_set_file_ops_cookie(db, (void *)fd);
+    *handle = (couch_file_handle)fd;
     return COUCHSTORE_SUCCESS;
 }
 
-static void couch_close(Db *db)
+static void couch_close(couch_file_handle handle)
 {
-    intptr_t fd = (intptr_t)libcouchstore_get_file_ops_cookie(db);
+    int fd = handle_to_fd(handle);
     int rv;
 
-    if ((int)fd != -1) {
+    if (fd != -1) {
         do {
-            rv = close((int)fd);
+            rv = close(fd);
         } while (rv == -1 && errno == EINTR);
     }
-
-    libcouchstore_set_file_ops_cookie(db, (void *)-1);
 }
 
-static off_t couch_goto_eof(Db *db)
+static off_t couch_goto_eof(couch_file_handle handle)
 {
-    intptr_t fd = (intptr_t)libcouchstore_get_file_ops_cookie(db);
-    return lseek((int)fd, 0, SEEK_END);
+    int fd = handle_to_fd(handle);
+    return lseek(fd, 0, SEEK_END);
 }
 
 
-static couchstore_error_t couch_sync(Db *db)
+static couchstore_error_t couch_sync(couch_file_handle handle)
 {
-    intptr_t fd = (intptr_t)libcouchstore_get_file_ops_cookie(db);
+    int fd = handle_to_fd(handle);
     int rv;
     do {
-        rv = fsync((int)fd);
+        rv = fsync(fd);
     } while (rv == -1 && errno == EINTR);
 
     if (rv == -1) {
@@ -98,13 +98,18 @@ static couchstore_error_t couch_sync(Db *db)
     return COUCHSTORE_SUCCESS;
 }
 
-static void couch_destructor(Db *db)
+static couch_file_handle couch_constructor(void)
 {
-    libcouchstore_set_file_ops_cookie(db, NULL);
+    return NULL;
 }
 
-static couch_file_ops default_file_ops = {
-    (uint64_t)1,
+static void couch_destructor(couch_file_handle handle)
+{
+}
+
+static const couch_file_ops default_file_ops = {
+    (uint64_t)2,
+    couch_constructor,
     couch_open,
     couch_close,
     couch_pread,
@@ -114,7 +119,7 @@ static couch_file_ops default_file_ops = {
     couch_destructor
 };
 
-couch_file_ops *couch_get_default_file_ops(void)
+const couch_file_ops *couch_get_default_file_ops(void)
 {
     return &default_file_ops;
 }
