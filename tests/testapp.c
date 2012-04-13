@@ -32,6 +32,7 @@ typedef struct _docset {
 counterset counters;
 docset testdocset;
 fatbuf *docsetbuf = NULL;
+char testfilepath[1024] = "testfile.couch";
 
 static void setdoc(Doc *doc, DocInfo *info, char *id, int idlen,
                    char *data, int datalen, char *meta, int metalen)
@@ -153,16 +154,16 @@ static void test_save_docs(int count, const char *doc_tpl)
         nfoptrs[i] = &testdocset.infos[i];
     }
 
-    unlink("test.couch");
+    unlink(testfilepath);
     Db *db;
-    try(couchstore_open_db("test.couch", COUCHSTORE_OPEN_FLAG_CREATE, &db));
-    assert(strcmp(couchstore_get_db_filename(db), "test.couch") == 0);
+    try(couchstore_open_db(testfilepath, COUCHSTORE_OPEN_FLAG_CREATE, &db));
+    assert(strcmp(couchstore_get_db_filename(db), testfilepath) == 0);
     try(couchstore_save_documents(db, docptrs, nfoptrs, count, 0));
     try(couchstore_commit(db));
     couchstore_close_db(db);
 
     //Read back
-    try(couchstore_open_db("test.couch", 0, &db));
+    try(couchstore_open_db(testfilepath, 0, &db));
     try(couchstore_changes_since(db, 0, 0, docset_check, &testdocset));
     assert(testdocset.counters.totaldocs == count);
     assert(testdocset.counters.deleted == 0);
@@ -203,9 +204,9 @@ static void test_save_doc(void)
     SETDOC(1, "doc2", "{\"test_doc_index\":2}", zerometa);
     SETDOC(2, "doc3", "{\"test_doc_index\":3}", zerometa);
     SETDOC(3, "doc4", "{\"test_doc_index\":4}", zerometa);
-    unlink("test.couch");
+    unlink(testfilepath);
     Db *db;
-    try(couchstore_open_db("test.couch", COUCHSTORE_OPEN_FLAG_CREATE, &db));
+    try(couchstore_open_db(testfilepath, COUCHSTORE_OPEN_FLAG_CREATE, &db));
     try(couchstore_save_document(db, &testdocset.docs[0],
                                      &testdocset.infos[0], 0));
     try(couchstore_save_document(db, &testdocset.docs[1],
@@ -217,7 +218,7 @@ static void test_save_doc(void)
     try(couchstore_commit(db));
     couchstore_close_db(db);
     //Read back
-    try(couchstore_open_db("test.couch", 0, &db));
+    try(couchstore_open_db(testfilepath, 0, &db));
     try(couchstore_changes_since(db, 0, 0, docset_check, &testdocset));
     assert(testdocset.counters.totaldocs == 4);
     assert(testdocset.counters.deleted == 0);
@@ -241,15 +242,15 @@ static void test_compressed_doc_body(void)
                               &testdocset.infos[1]
                             };
     testdocset.infos[1].content_meta = 128; //Mark doc2 as to be snappied.
-    unlink("test.couch");
+    unlink(testfilepath);
     Db *db;
-    try(couchstore_open_db("test.couch", COUCHSTORE_OPEN_FLAG_CREATE, &db));
+    try(couchstore_open_db(testfilepath, COUCHSTORE_OPEN_FLAG_CREATE, &db));
     try(couchstore_save_documents(db, docptrs, nfoptrs, 2,
                                       COMPRESS_DOC_BODIES));
     try(couchstore_commit(db));
     couchstore_close_db(db);
     //Read back
-    try(couchstore_open_db("test.couch", 0, &db));
+    try(couchstore_open_db(testfilepath, 0, &db));
     try(couchstore_changes_since(db, 0, 0, docset_check, &testdocset));
     assert(testdocset.counters.totaldocs == 2);
     assert(testdocset.counters.deleted == 0);
@@ -262,11 +263,11 @@ static void test_dump_empty_db(void)
 {
     fprintf(stderr, "dump empty db... ");
     fflush(stderr);
-    unlink("test.couch");
+    unlink(testfilepath);
     Db *db;
-    couchstore_open_db("test.couch", COUCHSTORE_OPEN_FLAG_CREATE, &db);
+    couchstore_open_db(testfilepath, COUCHSTORE_OPEN_FLAG_CREATE, &db);
     couchstore_close_db(db);
-    couchstore_open_db("test.couch", 0, &db);
+    couchstore_open_db(testfilepath, 0, &db);
     dump_count(db);
     assert(counters.totaldocs == 0);
     assert(counters.deleted == 0);
@@ -281,8 +282,8 @@ static void test_local_docs(void)
     Db *db;
     LocalDoc lDocWrite;
     LocalDoc *lDocRead = NULL;
-    unlink("test.couch");
-    try(couchstore_open_db("test.couch", COUCHSTORE_OPEN_FLAG_CREATE, &db));
+    unlink(testfilepath);
+    try(couchstore_open_db(testfilepath, COUCHSTORE_OPEN_FLAG_CREATE, &db));
     lDocWrite.id.buf = "_local/testlocal";
     lDocWrite.id.size = 16;
     lDocWrite.json.buf = "{\"test\":true}";
@@ -291,7 +292,7 @@ static void test_local_docs(void)
     couchstore_save_local_document(db, &lDocWrite);
     couchstore_commit(db);
     couchstore_close_db(db);
-    couchstore_open_db("test.couch", 0, &db);
+    couchstore_open_db(testfilepath, 0, &db);
     couchstore_open_local_document(db, "_local/testlocal", 16, &lDocRead);
     assert(lDocRead);
     assert(lDocRead->json.size == 13);
@@ -306,9 +307,9 @@ static void test_open_file_error(void)
 {
     fprintf(stderr, "opening nonexistent file errors... ");
     fflush(stderr);
-    unlink("test.couch");
+    unlink(testfilepath);
     Db *db;
-    int errcode = couchstore_open_db("test.couch", 0, &db);
+    int errcode = couchstore_open_db(testfilepath, 0, &db);
     assert(errcode == COUCHSTORE_ERROR_NO_SUCH_FILE);
 }
 
@@ -374,8 +375,8 @@ static void test_changes_no_dups(void)
         docptrs[i] = &testdocset.docs[i];
         nfoptrs[i] = &testdocset.infos[i];
     }
-    unlink("test.couch");
-    try(couchstore_open_db("test.couch", COUCHSTORE_OPEN_FLAG_CREATE, &db));
+    unlink(testfilepath);
+    try(couchstore_open_db(testfilepath, COUCHSTORE_OPEN_FLAG_CREATE, &db));
     // only save half the docs at first.
     try(couchstore_save_documents(db, docptrs, nfoptrs, numdocs/2, 0));
     try(couchstore_commit(db));
@@ -388,7 +389,7 @@ static void test_changes_no_dups(void)
     srand(10); // make deterministic
     // now shuffle so some bulk updates contain previous docs and new docs
     shuffle(docptrs, nfoptrs, numdocs);
-    try(couchstore_open_db("test.couch", 0, &db));
+    try(couchstore_open_db(testfilepath, 0, &db));
     for (i=0; i < numdocs; i += updatebatch) {
         // now do bulk updates and check the changes for dups
         try(couchstore_save_documents(db, docptrs + i, nfoptrs + i, updatebatch, 0));
@@ -409,7 +410,7 @@ cleanup:
 }
 
 
-int main(void)
+int main(int argc, const char* argv[])
 {
     int doc_counts[] = { 4, 69, 666, 9090, 99999 };
     int i;
@@ -427,6 +428,10 @@ int main(void)
         "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
         "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\""
         "}";
+
+    if (argc > 1)
+        strcpy(testfilepath, argv[1]);
+    printf("Using test database at %s\n", testfilepath);
 
     test_open_file_error();
     fprintf(stderr, "OK \n");
