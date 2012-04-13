@@ -24,6 +24,7 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		27093EF61537441A0087804E /* iobuffer.c in Sources */ = {isa = PBXBuildFile; fileRef = 27093EF51537441A0087804E /* iobuffer.c */; };
 		274F97BD152E1D1400247C46 /* bitfield.h in Headers */ = {isa = PBXBuildFile; fileRef = 274F9782152E1D1400247C46 /* bitfield.h */; };
 		274F97BE152E1D1400247C46 /* btree_modify.c in Sources */ = {isa = PBXBuildFile; fileRef = 274F9783152E1D1400247C46 /* btree_modify.c */; };
 		274F97BF152E1D1400247C46 /* btree_read.c in Sources */ = {isa = PBXBuildFile; fileRef = 274F9784152E1D1400247C46 /* btree_read.c */; };
@@ -120,6 +121,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		27093EF51537441A0087804E /* iobuffer.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = iobuffer.c; sourceTree = "<group>"; };
+		27093EF81537442E0087804E /* iobuffer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = iobuffer.h; sourceTree = "<group>"; };
 		274F9758152E1CCA00247C46 /* libcouchstore.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libcouchstore.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		274F9782152E1D1400247C46 /* bitfield.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bitfield.h; sourceTree = "<group>"; };
 		274F9783152E1D1400247C46 /* btree_modify.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = btree_modify.c; sourceTree = "<group>"; };
@@ -237,6 +240,8 @@
 				274F9791152E1D1400247C46 /* crc32.h */,
 				274F9794152E1D1400247C46 /* fatbuf.h */,
 				274F9795152E1D1400247C46 /* internal.h */,
+				27093EF51537441A0087804E /* iobuffer.c */,
+				27093EF81537442E0087804E /* iobuffer.h */,
 				274F97A0152E1D1400247C46 /* os.c */,
 				274F97A1152E1D1400247C46 /* reduces.c */,
 				274F97A2152E1D1400247C46 /* reduces.h */,
@@ -436,6 +441,7 @@
 				274F97D6152E1D1400247C46 /* md5c.c in Sources */,
 				274F97D7152E1D1400247C46 /* strerror.c in Sources */,
 				274F97D9152E1D1400247C46 /* util.c in Sources */,
+				27093EF61537441A0087804E /* iobuffer.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -679,6 +685,7 @@
 				27F0C72115339B34004EBA89 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

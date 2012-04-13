@@ -10,6 +10,7 @@
 #include "bitfield.h"
 #include "util.h"
 #include "reduces.h"
+#include "iobuffer.h"
 
 #define SNAPPY_META_FLAG 128
 
@@ -196,8 +197,13 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
 
-    db->file_ops = ops;
-    db->file_handle = ops->constructor();
+    db->file_ops = couch_get_buffered_file_ops(ops, &db->file_handle);
+    if (!db->file_ops) {
+        free((char*)db->filename);
+        free(db);
+        return COUCHSTORE_ERROR_ALLOC_FAIL;
+    }
+
     errcode = db->file_ops->open(&db->file_handle, filename, openflags);
     if (errcode != COUCHSTORE_SUCCESS) {
         db->file_ops->destructor(db->file_handle);

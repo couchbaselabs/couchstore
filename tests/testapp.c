@@ -412,7 +412,7 @@ cleanup:
 
 int main(int argc, const char* argv[])
 {
-    int doc_counts[] = { 4, 69, 666, 9090, 99999 };
+    int doc_counts[] = { 4, 69, 666, 9090, 99999, 666666 };
     int i;
     const char *small_doc_tpl = "{\"test_doc_index\":%d}";
     const char *large_doc_tpl =
