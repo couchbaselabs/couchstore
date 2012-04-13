@@ -41,6 +41,7 @@ extern "C" {
         uint64_t file_pos;
         couch_file_ops *file_ops;
         void *file_ops_cookie;
+        const char* filename;
         db_header header;
         void *userdata;
     };

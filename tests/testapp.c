@@ -156,6 +156,7 @@ static void test_save_docs(int count, const char *doc_tpl)
     unlink("test.couch");
     Db *db;
     try(couchstore_open_db("test.couch", COUCHSTORE_OPEN_FLAG_CREATE, &db));
+    assert(strcmp(couchstore_get_db_filename(db), "test.couch") == 0);
     try(couchstore_save_documents(db, docptrs, nfoptrs, count, 0));
     try(couchstore_commit(db));
     couchstore_close_db(db);

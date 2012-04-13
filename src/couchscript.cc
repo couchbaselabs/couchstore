@@ -232,10 +232,9 @@ extern "C" {
             location = static_cast<off_t>(arg);
         }
 
-        void* cookie = libcouchstore_get_file_ops_cookie(db);
-        intptr_t fd = reinterpret_cast<intptr_t>(cookie);
+        const char* path = couchstore_get_db_filename(db);
 
-        int rv = ftruncate((int)fd, location);
+        int rv = truncate(path, location);
         if (rv != 0) {
             char buf[256];
             snprintf(buf, sizeof(buf), "error truncating DB: %d", rv);

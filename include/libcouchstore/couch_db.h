@@ -79,6 +79,17 @@ extern "C" {
 
 
     /**
+     * Returns the filename of the database, as given when it was opened.
+     *
+     * @param db Pointer to the database handle.
+     * @return Pointer to filename (path). This is an exact copy of the filename given to
+     *         couchstore_open_db.
+     */
+    LIBCOUCHSTORE_API
+    const char* couchstore_get_db_filename(Db *db);
+
+
+    /**
      * Get the position in the file of the mostly recently written
      * database header.
      */

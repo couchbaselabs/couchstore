@@ -190,6 +190,12 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
         openflags |= O_CREAT;
     }
 
+    db->filename = strdup(filename);
+    if (!db->filename) {
+        free(db);
+        return COUCHSTORE_ERROR_ALLOC_FAIL;
+    }
+
     db->file_ops = ops;
     errcode = db->file_ops->open(db, filename, openflags);
     if (errcode != COUCHSTORE_SUCCESS) {
@@ -227,6 +233,7 @@ couchstore_error_t couchstore_close_db(Db *db)
 {
     db->file_ops->close(db);
     db->file_ops->destructor(db);
+    free((char*)db->filename);
 
     free(db->header.by_id_root);
     free(db->header.by_seq_root);
@@ -236,6 +243,11 @@ couchstore_error_t couchstore_close_db(Db *db)
     free(db);
 
     return COUCHSTORE_SUCCESS;
+}
+
+LIBCOUCHSTORE_API
+const char* couchstore_get_db_filename(Db *db) {
+    return db->filename;
 }
 
 static int ebin_cmp(sized_buf *e1, sized_buf *e2)
@@ -832,7 +844,7 @@ static couchstore_error_t add_doc_to_update_list(Db *db,
     if (doc) {
         uint64_t writeopts = 0;
         size_t disk_size;
-        
+
         if ((options & COMPRESS_DOC_BODIES) && (info->content_meta & SNAPPY_META_FLAG)) {
             writeopts = COMPRESSED_BODY;
         }
