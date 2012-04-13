@@ -11,83 +11,31 @@
 #include "crc32.h"
 #include "util.h"
 
-ssize_t total_read_len(off_t blockoffset, ssize_t finallen)
-{
-    ssize_t left;
-    ssize_t add = 0;
-    if (blockoffset == 0) {
-        add++;
-        blockoffset = 1;
+/** Read bytes from the database file, skipping over the header-detection bytes at every block
+    boundary. */
+static couchstore_error_t read_skipping_prefixes(Db* db, off_t *pos, ssize_t len, void *dst) {
+    if (*pos % COUCH_BLOCK_SIZE == 0) {
+        ++*pos;
     }
-
-    left = COUCH_BLOCK_SIZE - blockoffset;
-    if (left >= finallen) {
-        return finallen + add;
-    } else {
-        if ((finallen - left) % (COUCH_BLOCK_SIZE - 1) != 0) {
-            add++;
+    while (len > 0) {
+        size_t read_size = COUCH_BLOCK_SIZE - (*pos % COUCH_BLOCK_SIZE);
+        if (read_size > len) {
+            read_size = len;
         }
-        return finallen + add + ((finallen - left) / (COUCH_BLOCK_SIZE - 1));
-    }
-}
-
-/** Edits out the header-detection prefix byte at the start of each file block.
-    @param buf Memory buffer containing raw data read from the file
-    @param offset offset from a block boundary at which the buffer starts
-    @param len Length of the block in bytes
-    @return The length of the block after editing out the prefix bytes */
-static int remove_block_prefixes(char *buf, off_t offset, ssize_t len)
-{
-    off_t buf_pos = 0;
-    off_t gap = 0;
-    ssize_t remain_block;
-    while (buf_pos + gap < len) {
-        remain_block = COUCH_BLOCK_SIZE - offset;
-
-        if (offset == 0) {
-            gap++;
+        ssize_t got_bytes = db->file_ops->pread(db->file_handle, dst, read_size, *pos);
+        if (got_bytes < 0) {
+            return got_bytes;
+        } else if (got_bytes == 0) {
+            return COUCHSTORE_ERROR_READ;
         }
-
-        if (remain_block > (len - gap - buf_pos)) {
-            remain_block = len - gap - buf_pos;
-        }
-
-        if (offset == 0) {
-            //printf("Move %d bytes <-- by %d, landing at %d\r\n", remain_block, gap, buf_pos);
-            memmove(buf + buf_pos, buf + buf_pos + gap, remain_block);
-            offset = 1;
-        } else {
-            buf_pos += remain_block;
-            offset = 0;
+        *pos += got_bytes;
+        len -= got_bytes;
+        dst = (char*)dst + got_bytes;
+        if (*pos % COUCH_BLOCK_SIZE == 0) {
+            ++*pos;
         }
     }
-    return len - gap;
-}
-
-/** Reads data from the file, skipping block prefix bytes.
-    @param db Database to read from
-    @param pos Points to file position to read from. On successful return, will be incremented
-                by the number of physical bytes read.
-    @param len Number of data bytes to read
-    @param dst  On success, will be set to point to a malloc'ed buffer containing the bytes
-    @return Number of data bytes read, or an error code */
-static int raw_read(Db *db, off_t *pos, ssize_t len, char **dst)
-{
-    off_t blockoffs = *pos % COUCH_BLOCK_SIZE;
-    ssize_t total = total_read_len(blockoffs, len);
-    *dst = (char *) malloc(total);
-    if (!*dst) {
-        return COUCHSTORE_ERROR_ALLOC_FAIL;
-    }
-    ssize_t got_bytes = db->file_ops->pread(db->file_handle, *dst, total, *pos);
-    if (got_bytes <= 0) {
-        free(*dst);
-        *dst = NULL;
-        return COUCHSTORE_ERROR_READ;
-    }
-
-    *pos += got_bytes;
-    return remove_block_prefixes(*dst, blockoffs, got_bytes);
+    return COUCHSTORE_SUCCESS;
 }
 
 /** Common subroutine of pread_bin, pread_compressed and pread_header.
@@ -95,61 +43,37 @@ static int raw_read(Db *db, off_t *pos, ssize_t len, char **dst)
     except the 'header' parameter which is 1 if reading a header, 0 otherwise. */
 static int pread_bin_internal(Db *db, off_t pos, char **ret_ptr, int header)
 {
-    char *bufptr = NULL, *bufptr_rest = NULL, *newbufptr = NULL;
-    int buf_len;
-    uint32_t chunk_len, crc32 = 0;
-    int skip = 0;
-    int errcode = 0;
-    buf_len = raw_read(db, &pos, 2 * COUCH_BLOCK_SIZE - (pos % COUCH_BLOCK_SIZE), &bufptr);
-    if (buf_len < 0) {
-        buf_len = raw_read(db, &pos, 4, &bufptr);       //??? What is the purpose of this? Shouldn't it at least read 8 bytes? -Jens
-        error_unless(buf_len >= 0, buf_len);  // if negative, it's an error code
+    struct {
+        uint32_t chunk_len;
+        uint32_t crc32;
+    } info;
+    
+    couchstore_error_t err = read_skipping_prefixes(db, &pos, sizeof(info), &info);
+    if (err) {
+        return err;
     }
-    error_unless(buf_len >= 8, COUCHSTORE_ERROR_READ);
-
-    chunk_len = get_32(bufptr) & ~0x80000000;
-    skip += 4;
+    
+    info.chunk_len = ntohl(info.chunk_len) & ~0x80000000;
     if (header) {
-        chunk_len -= 4;    //Header len includes hash len.
+        info.chunk_len -= 4;    //Header len includes CRC len.
     }
-    crc32 = get_32(bufptr + 4);
-    skip += 4;
-
-    if (chunk_len == 0) {
-        free(bufptr);
-        *ret_ptr = NULL;
-        return 0;
+    info.crc32 = ntohl(info.crc32);
+    
+    char* buf = malloc(info.chunk_len);
+    if (!buf) {
+        return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
-
-    buf_len -= skip;
-    memmove(bufptr, bufptr + skip, buf_len);
-    if (chunk_len <= (uint32_t)buf_len) {
-        newbufptr = (char *) realloc(bufptr, chunk_len);
-        error_unless(newbufptr, COUCHSTORE_ERROR_ALLOC_FAIL);
-        bufptr = newbufptr;
-    } else {
-        int rest_len = raw_read(db, &pos, chunk_len - buf_len, &bufptr_rest);
-        error_unless(rest_len >= 0, rest_len);  // if negative, it's an error code
-        error_unless((unsigned) rest_len + buf_len == chunk_len, COUCHSTORE_ERROR_READ);
-
-        newbufptr = (char *) realloc(bufptr, buf_len + rest_len);
-        error_unless(newbufptr, COUCHSTORE_ERROR_ALLOC_FAIL);
-        bufptr = newbufptr;
-
-        memcpy(bufptr + buf_len, bufptr_rest, rest_len);
-        free(bufptr_rest);
-        bufptr_rest = NULL;
+    err = read_skipping_prefixes(db, &pos, info.chunk_len, buf);
+    if (!err && info.crc32 && info.crc32 != hash_crc32(buf, info.chunk_len)) {
+        err = COUCHSTORE_ERROR_CHECKSUM_FAIL;
     }
-    if (crc32) {
-        error_unless(crc32 == hash_crc32(bufptr, chunk_len), COUCHSTORE_ERROR_CHECKSUM_FAIL);
+    if (err) {
+        free(buf);
+        return err;
     }
-    *ret_ptr = bufptr;
-    return chunk_len;
-
-cleanup:
-    free(bufptr);
-    free(bufptr_rest);
-    return errcode;
+    
+    *ret_ptr = buf;
+    return info.chunk_len;
 }
 
 int pread_header(Db *db, off_t pos, char **ret_ptr)
