@@ -72,9 +72,11 @@ static couchfile_modify_result *make_modres(couchfile_modify_request *rq)
 
 static void free_modres(couchfile_modify_result *mr)
 {
-    free_nodelist(mr->values);
-    free_nodelist(mr->pointers);
-    free(mr);
+    if (mr) {
+        free_nodelist(mr->values);
+        free_nodelist(mr->pointers);
+        free(mr);
+    }
 }
 
 static couchstore_error_t mr_push_item(sized_buf *k, sized_buf *v, couchfile_modify_result *dst)
