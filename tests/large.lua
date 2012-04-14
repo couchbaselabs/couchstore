@@ -30,15 +30,18 @@ function make_val(size)
 end
 
 function test_big_bulk(dbname)
+   print "Making data set..."
    local t = {}
-   for i = 0, 16834, 1 do
+   for i = 0, 40000, 5 do
       table.insert(t, {"k" .. i, make_val(i), 1})
    end
 
+   print "Saving data set..."
    local db = couch.open(dbname, true)
    db:save_bulk(t)
    db:commit()
 
+   print "Checking data set..."
    check_table(db, t)
 
    db:close()
@@ -49,10 +52,11 @@ function test_big_bulk(dbname)
 end
 
 function test_big_sequential(dbname)
+   print "Making & saving data set..."
    local db = couch.open(dbname, true)
 
    local t = {}
-   for i = 0, 16834, 1 do
+   for i = 0, 40000, 5 do
       local k = "k" .. i
       local v = make_val(i)
       table.insert(t, {k, v, 1})
@@ -61,6 +65,7 @@ function test_big_sequential(dbname)
 
    db:commit()
 
+   print "Checking data set..."
    check_table(db, t)
 
    db:close()

@@ -6,12 +6,16 @@
 
 #include "couch_btree.h"
 #include "util.h"
+#include "arena.h"
 #include "bitfield.h"
 
 #define CHUNK_THRESHOLD 1279
 
+#define ARENA_CHUNK_SIZE 32768  // Size of malloc blocks the arena creates. Also largest alloc size.
+
 
 static couchstore_error_t flush_mr(couchfile_modify_result *res);
+
 
 static couchstore_error_t maybe_flush(couchfile_modify_result *mr)
 {
@@ -23,42 +27,32 @@ static couchstore_error_t maybe_flush(couchfile_modify_result *mr)
 }
 
 
-static void free_nodelist(nodelist *nl)
+static nodelist *make_nodelist(arena* arena, int bufsize)
 {
-    while (nl) {
-        nodelist *next = nl->next;
-        free(nl->pointer);
-        free(nl);
-        nl = next;
-    }
-}
-
-static nodelist *make_nodelist(int bufsize)
-{
-    nodelist *r = calloc(1, sizeof(nodelist) + bufsize);
+    nodelist *r = arena_alloc(arena, sizeof(nodelist) + bufsize);
     if (!r) {
         return NULL;
     }
+    memset(r, 0, sizeof(nodelist));
     r->data.size = bufsize;
     r->data.buf = ((char *) r) + (sizeof(nodelist));
     return r;
 }
 
-static couchfile_modify_result *make_modres(couchfile_modify_request *rq)
+static couchfile_modify_result *make_modres(arena* arena, couchfile_modify_request *rq)
 {
-    couchfile_modify_result *res = malloc(sizeof(couchfile_modify_result));
+    couchfile_modify_result *res = arena_alloc(arena, sizeof(couchfile_modify_result));
     if (!res) {
         return NULL;
     }
-    res->values = make_nodelist(0);
+    res->arena = arena;
+    res->values = make_nodelist(arena, 0);
     if (!res->values) {
-        free(res);
         return NULL;
     }
     res->values_end = res->values;
-    res->pointers = make_nodelist(0);
+    res->pointers = make_nodelist(arena, 0);
     if (!res->pointers) {
-        free(res);
         return NULL;
     }
     res->pointers_end = res->pointers;
@@ -70,18 +64,9 @@ static couchfile_modify_result *make_modres(couchfile_modify_request *rq)
     return res;
 }
 
-static void free_modres(couchfile_modify_result *mr)
-{
-    if (mr) {
-        free_nodelist(mr->values);
-        free_nodelist(mr->pointers);
-        free(mr);
-    }
-}
-
 static couchstore_error_t mr_push_item(sized_buf *k, sized_buf *v, couchfile_modify_result *dst)
 {
-    nodelist *itm = make_nodelist(0);
+    nodelist *itm = make_nodelist(dst->arena, 0);
     if (!itm) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
@@ -96,14 +81,15 @@ static couchstore_error_t mr_push_item(sized_buf *k, sized_buf *v, couchfile_mod
     return maybe_flush(dst);
 }
 
-static nodelist *encode_pointer(node_pointer *ptr)
+static nodelist *encode_pointer(arena* arena, node_pointer *ptr)
 {
-    nodelist *pel = make_nodelist(14 + ptr->reduce_value.size);
+    nodelist *pel = make_nodelist(arena, 14 + ptr->reduce_value.size);
     if (!pel) {
         return NULL;
     }
-    set_bits(pel->data.buf, 0, 48, ptr->pointer);
-    set_bits(pel->data.buf + 6, 0, 48, ptr->subtreesize);
+    memset(pel->data.buf, 0, 14);
+    set_bits(pel->data.buf +  0, 0, 48, ptr->pointer);
+    set_bits(pel->data.buf +  6, 0, 48, ptr->subtreesize);
     set_bits(pel->data.buf + 12, 0, 16, ptr->reduce_value.size);
     memcpy(pel->data.buf + 14, ptr->reduce_value.buf, ptr->reduce_value.size);
     pel->pointer = ptr;
@@ -114,7 +100,7 @@ static nodelist *encode_pointer(node_pointer *ptr)
 static couchstore_error_t mr_push_pointerinfo(node_pointer *ptr,
                                               couchfile_modify_result *dst)
 {
-    nodelist *pel = encode_pointer(ptr);
+    nodelist *pel = encode_pointer(dst->arena, ptr);
     if (!pel) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
@@ -125,10 +111,10 @@ static couchstore_error_t mr_push_pointerinfo(node_pointer *ptr,
     return maybe_flush(dst);
 }
 
-static node_pointer *read_pointer(sized_buf *key, char *buf)
+static node_pointer *read_pointer(arena* arena, sized_buf *key, char *buf)
 {
     //Parse KP pair into a node_pointer {K, {ptr, reduce_value, subtreesize}}
-    node_pointer *p = (node_pointer *) malloc(sizeof(node_pointer));
+    node_pointer *p = (node_pointer *) arena_alloc(arena, sizeof(node_pointer));
     if (!p) {
         return NULL;
     }
@@ -160,6 +146,7 @@ static couchstore_error_t flush_mr(couchfile_modify_result *res)
         return COUCHSTORE_SUCCESS;
     }
 
+    // nodebuf/writebuf is very short-lived and can be large, so use regular malloc heap for it:
     nodebuf = malloc(res->node_len + 1);
     if (!nodebuf) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -167,14 +154,14 @@ static couchstore_error_t flush_mr(couchfile_modify_result *res)
 
     writebuf.buf = nodebuf;
     writebuf.size = res->node_len + 1;
-    memset(nodebuf, 0, res->node_len + 1);
 
     nodebuf[0] = res->node_type;
     bufpos = 1;
 
     nodelist *i = res->values->next;
     while (i != NULL) {
-        set_bits(nodebuf + bufpos, 0, 12, i->key.size);
+        memset(nodebuf + bufpos, 0, 5);
+        set_bits(nodebuf + bufpos    , 0, 12, i->key.size);
         set_bits(nodebuf + bufpos + 1, 4, 28, i->data.size);
         memcpy(nodebuf + bufpos + 5, i->key.buf, i->key.size);
         memcpy(nodebuf + bufpos + 5 + i->key.size, i->data.buf, i->data.size);
@@ -189,7 +176,7 @@ static couchstore_error_t flush_mr(couchfile_modify_result *res)
     }
 
     errcode = db_write_buf_compressed(res->rq->db, &writebuf, &diskpos, &disk_size);
-    free(nodebuf);
+    free(nodebuf);  // here endeth the nodebuf.
     if (errcode != COUCHSTORE_SUCCESS) {
         return errcode;
     }
@@ -202,7 +189,7 @@ static couchstore_error_t flush_mr(couchfile_modify_result *res)
         res->rq->rereduce(reducebuf, &reducesize, res->values->next, res->count);
     }
 
-    node_pointer *ptr = (node_pointer *) malloc(sizeof(node_pointer) + final_key.size + reducesize);
+    node_pointer *ptr = (node_pointer *) arena_alloc(res->arena, sizeof(node_pointer) + final_key.size + reducesize);
     if (!ptr) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
@@ -219,9 +206,8 @@ static couchstore_error_t flush_mr(couchfile_modify_result *res)
     ptr->subtreesize = subtreesize + disk_size;
     ptr->pointer = diskpos;
 
-    nodelist *pel = encode_pointer(ptr);
+    nodelist *pel = encode_pointer(res->arena, ptr);
     if (!pel) {
-        free(ptr);
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
 
@@ -232,7 +218,6 @@ static couchstore_error_t flush_mr(couchfile_modify_result *res)
     res->count = 0;
 
     res->values_end = res->values;
-    free_nodelist(res->values->next);
     res->values->next = NULL;
 
     return COUCHSTORE_SUCCESS;
@@ -273,7 +258,7 @@ static couchstore_error_t modify_node(couchfile_modify_request *rq,
                                       int start, int end,
                                       couchfile_modify_result *dst)
 {
-    char *nodebuf = NULL;
+    char *nodebuf = NULL;  // FYI, nodebuf is a malloced block, not in the arena
     int bufpos = 1;
     int nodebuflen = 0;
     int errcode = 0;
@@ -289,7 +274,7 @@ static couchstore_error_t modify_node(couchfile_modify_request *rq,
         }
     }
 
-    local_result = make_modres(rq);
+    local_result = make_modres(dst->arena, rq);
     error_unless(local_result, COUCHSTORE_ERROR_ALLOC_FAIL);
 
     if (nptr == NULL || nodebuf[0] == 1) { //KV Node
@@ -389,16 +374,13 @@ static couchstore_error_t modify_node(couchfile_modify_request *rq,
             if (bufpos == nodebuflen) {
                 //We're at the last item in the kpnode, must apply all our
                 //actions here.
-                node_pointer *desc = read_pointer(&cmp_key, val_buf.buf);
+                node_pointer *desc = read_pointer(dst->arena, &cmp_key, val_buf.buf);
                 if (!desc) {
                     errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
                     goto cleanup;
                 }
 
                 errcode = modify_node(rq, desc, start, end, local_result);
-                if (local_result->values_end->pointer != desc) {
-                    free(desc);
-                }
                 if (errcode != COUCHSTORE_SUCCESS) {
                     goto cleanup;
                 }
@@ -408,7 +390,7 @@ static couchstore_error_t modify_node(couchfile_modify_request *rq,
             if (cmp_val < 0) {
                 //Key in node item less than action item and not at end
                 //position, so just add it and continue.
-                node_pointer *add = read_pointer(&cmp_key, val_buf.buf);
+                node_pointer *add = read_pointer(dst->arena, &cmp_key, val_buf.buf);
                 if (!add) {
                     errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
                     goto cleanup;
@@ -428,16 +410,13 @@ static couchstore_error_t modify_node(couchfile_modify_request *rq,
                     range_end++;
                 }
 
-                node_pointer *desc = read_pointer(&cmp_key, val_buf.buf);
+                node_pointer *desc = read_pointer(dst->arena, &cmp_key, val_buf.buf);
                 if (!desc) {
                     errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
                     goto cleanup;
                 }
 
                 errcode = modify_node(rq, desc, start, range_end, local_result);
-                if (local_result->values_end->pointer != desc) {
-                    free(desc);
-                }
                 start = range_end;
                 if (errcode != COUCHSTORE_SUCCESS) {
                     goto cleanup;
@@ -450,7 +429,7 @@ static couchstore_error_t modify_node(couchfile_modify_request *rq,
             sized_buf cmp_key = {nodebuf + bufpos + 5, klen};
             sized_buf val_buf = {nodebuf + bufpos + 5 + klen, vlen};
             bufpos += 5 + klen + vlen;
-            node_pointer *add = read_pointer(&cmp_key, val_buf.buf);
+            node_pointer *add = read_pointer(dst->arena, &cmp_key, val_buf.buf);
             if (!add) {
                 errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
                 goto cleanup;
@@ -476,8 +455,6 @@ static couchstore_error_t modify_node(couchfile_modify_request *rq,
         error_pass(mr_move_pointers(local_result, dst));
     }
 cleanup:
-    free_modres(local_result);
-
     if (nodebuf) {
         free(nodebuf);
     }
@@ -490,7 +467,7 @@ static node_pointer *finish_root(couchfile_modify_request *rq,
                                  couchstore_error_t *errcode)
 {
     node_pointer *ret_ptr = NULL;
-    couchfile_modify_result *collector = make_modres(rq);
+    couchfile_modify_result *collector = make_modres(root_result->arena, rq);
     if (!collector) {
         *errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
         return NULL;
@@ -503,7 +480,6 @@ static node_pointer *finish_root(couchfile_modify_request *rq,
             //The root result split into exactly one kp_node.
             //Return the pointer to it.
             ret_ptr = root_result->pointers_end->pointer;
-            root_result->pointers_end->pointer = NULL;
             break;
         } else {
             //The root result split into more than one kp_node.
@@ -525,8 +501,24 @@ static node_pointer *finish_root(couchfile_modify_request *rq,
         }
     }
 cleanup:
-    free_modres(root_result);
-    free_modres(collector);
+    return ret_ptr;
+}
+
+// Copies a node_pointer and its values to the malloc heap.
+static node_pointer* copy_node_pointer(node_pointer* ptr)
+{
+    if (!ptr) {
+        return NULL;
+    }
+    node_pointer* ret_ptr = malloc(sizeof(node_pointer) + ptr->key.size + ptr->reduce_value.size);
+    if (!ret_ptr) {
+        return NULL;
+    }
+    *ret_ptr = *ptr;
+    ret_ptr->key.buf = (char*)ret_ptr + sizeof(node_pointer);
+    memcpy(ret_ptr->key.buf, ptr->key.buf, ptr->key.size);
+    ret_ptr->reduce_value.buf = (char*)ret_ptr->key.buf + ptr->key.size;
+    memcpy(ret_ptr->reduce_value.buf, ptr->reduce_value.buf, ptr->reduce_value.size);
     return ret_ptr;
 }
 
@@ -534,16 +526,18 @@ node_pointer *modify_btree(couchfile_modify_request *rq,
                            node_pointer *root,
                            couchstore_error_t *errcode)
 {
+    arena* arena = new_arena(ARENA_CHUNK_SIZE);
     node_pointer *ret_ptr = root;
-    couchfile_modify_result *root_result = make_modres(rq);
+    couchfile_modify_result *root_result = make_modres(arena, rq);
     if (!root_result) {
+        delete_arena(arena);
         *errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
         return root;
     }
     root_result->node_type = KP_NODE;
     *errcode = modify_node(rq, root, 0, rq->num_actions, root_result);
     if (*errcode < 0) {
-        free_modres(root_result);
+        delete_arena(arena);
         return NULL;
     }
 
@@ -553,9 +547,7 @@ node_pointer *modify_btree(couchfile_modify_request *rq,
         root_result->values_end->pointer = NULL;
     }
 
-    if (!root_result->modified) {
-        free_modres(root_result);
-    } else {
+    if (root_result->modified) {
         if (root_result->count > 1 || root_result->pointers != root_result->pointers_end) {
             //The root was split
             //Write it to disk and return the pointer to it.
@@ -565,10 +557,12 @@ node_pointer *modify_btree(couchfile_modify_request *rq,
             }
         } else {
             ret_ptr = root_result->values_end->pointer;
-            root_result->values_end->pointer = NULL;
-            free_modres(root_result);
         }
     }
+    if (ret_ptr != root) {
+        ret_ptr = copy_node_pointer(ret_ptr);
+    }
+    delete_arena(arena);
     return ret_ptr;
 }
 

@@ -17,6 +17,7 @@
 				27F0C72515339B3E004EBA89 /* PBXTargetDependency */,
 				27F0C72715339B40004EBA89 /* PBXTargetDependency */,
 				27F0C72915339B42004EBA89 /* PBXTargetDependency */,
+				27AA1B1B1538DE4D00D03755 /* PBXTargetDependency */,
 			);
 			name = All;
 			productName = All;
@@ -57,9 +58,20 @@
 		2794AD06153395780047643C /* libsnappy.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 274F97E5152E1E3E00247C46 /* libsnappy.dylib */; };
 		2794AD07153395780047643C /* libcouchstore.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 274F9758152E1CCA00247C46 /* libcouchstore.dylib */; };
 		2794AD0E153395940047643C /* testapp.c in Sources */ = {isa = PBXBuildFile; fileRef = 2794ACFF15338E640047643C /* testapp.c */; };
+		27AA1B101538DE0700D03755 /* libcouchstore.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 274F9758152E1CCA00247C46 /* libcouchstore.dylib */; };
+		27AA1B171538DE2500D03755 /* couchscript.cc in Sources */ = {isa = PBXBuildFile; fileRef = 274F978F152E1D1400247C46 /* couchscript.cc */; };
+		27AA1B191538DE3900D03755 /* liblua.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 27AA1B181538DE3900D03755 /* liblua.dylib */; };
+		27AA1B1D1538EC4300D03755 /* arena.c in Sources */ = {isa = PBXBuildFile; fileRef = 27AA1B1C1538EC4300D03755 /* arena.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		27AA1B1A1538DE4D00D03755 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 274F974F152E1CCA00247C46 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 27AA1B0B1538DE0700D03755;
+			remoteInfo = couchscript;
+		};
 		27F0C72215339B3C004EBA89 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 274F974F152E1CCA00247C46 /* Project object */;
@@ -118,6 +130,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 		};
+		27AA1B111538DE0700D03755 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -160,6 +181,10 @@
 		2794ACFF15338E640047643C /* testapp.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = testapp.c; path = tests/testapp.c; sourceTree = SOURCE_ROOT; };
 		2794AD011533901D0047643C /* config_static.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = config_static.h; sourceTree = SOURCE_ROOT; };
 		2794AD0C153395780047643C /* testapp */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testapp; sourceTree = BUILT_PRODUCTS_DIR; };
+		27AA1B151538DE0700D03755 /* couchscript */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = couchscript; sourceTree = BUILT_PRODUCTS_DIR; };
+		27AA1B181538DE3900D03755 /* liblua.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = liblua.dylib; path = usr/local/lib/liblua.dylib; sourceTree = SDKROOT; };
+		27AA1B1C1538EC4300D03755 /* arena.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = arena.c; sourceTree = "<group>"; };
+		27AA1B1E1538EC5600D03755 /* arena.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = arena.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -198,6 +223,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		27AA1B0E1538DE0700D03755 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				27AA1B191538DE3900D03755 /* liblua.dylib in Frameworks */,
+				27AA1B101538DE0700D03755 /* libcouchstore.dylib in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -219,6 +253,7 @@
 				274F97ED152E22E500247C46 /* dbdump */,
 				274F9804152E235600247C46 /* dbinfo */,
 				2794AD0C153395780047643C /* testapp */,
+				27AA1B151538DE0700D03755 /* couchscript */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -235,7 +270,6 @@
 				274F9788152E1D1400247C46 /* couch_db.c */,
 				274F978C152E1D1400247C46 /* couch_file_read.c */,
 				274F978D152E1D1400247C46 /* couch_file_write.c */,
-				274F978F152E1D1400247C46 /* couchscript.cc */,
 				274F9790152E1D1400247C46 /* crc32.c */,
 				274F9791152E1D1400247C46 /* crc32.h */,
 				274F9794152E1D1400247C46 /* fatbuf.h */,
@@ -249,6 +283,8 @@
 				274F97AE152E1D1400247C46 /* strerror.c */,
 				274F97B0152E1D1400247C46 /* util.c */,
 				274F97B1152E1D1400247C46 /* util.h */,
+				27AA1B1C1538EC4300D03755 /* arena.c */,
+				27AA1B1E1538EC5600D03755 /* arena.h */,
 			);
 			path = src;
 			sourceTree = "<group>";
@@ -290,6 +326,7 @@
 				274F9792152E1D1400247C46 /* dbdump.c */,
 				274F9793152E1D1400247C46 /* dbinfo.c */,
 				2794ACFF15338E640047643C /* testapp.c */,
+				274F978F152E1D1400247C46 /* couchscript.cc */,
 			);
 			name = tools;
 			path = src;
@@ -299,6 +336,7 @@
 			isa = PBXGroup;
 			children = (
 				274F97E5152E1E3E00247C46 /* libsnappy.dylib */,
+				27AA1B181538DE3900D03755 /* liblua.dylib */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -394,6 +432,23 @@
 			productReference = 2794AD0C153395780047643C /* testapp */;
 			productType = "com.apple.product-type.tool";
 		};
+		27AA1B0B1538DE0700D03755 /* couchscript */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 27AA1B121538DE0700D03755 /* Build configuration list for PBXNativeTarget "couchscript" */;
+			buildPhases = (
+				27AA1B0C1538DE0700D03755 /* Sources */,
+				27AA1B0E1538DE0700D03755 /* Frameworks */,
+				27AA1B111538DE0700D03755 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = couchscript;
+			productName = dbdump;
+			productReference = 27AA1B151538DE0700D03755 /* couchscript */;
+			productType = "com.apple.product-type.tool";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -419,6 +474,7 @@
 				274F97EC152E22E500247C46 /* dbdump */,
 				274F97FA152E235600247C46 /* dbinfo */,
 				2794AD02153395780047643C /* testapp */,
+				27AA1B0B1538DE0700D03755 /* couchscript */,
 				27F0C71E15339B34004EBA89 /* All */,
 			);
 		};
@@ -442,6 +498,7 @@
 				274F97D7152E1D1400247C46 /* strerror.c in Sources */,
 				274F97D9152E1D1400247C46 /* util.c in Sources */,
 				27093EF61537441A0087804E /* iobuffer.c in Sources */,
+				27AA1B1D1538EC4300D03755 /* arena.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -469,9 +526,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		27AA1B0C1538DE0700D03755 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				27AA1B171538DE2500D03755 /* couchscript.cc in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		27AA1B1B1538DE4D00D03755 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 27AA1B0B1538DE0700D03755 /* couchscript */;
+			targetProxy = 27AA1B1A1538DE4D00D03755 /* PBXContainerItemProxy */;
+		};
 		27F0C72315339B3C004EBA89 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 274F9757152E1CCA00247C46 /* couchstore */;
@@ -616,6 +686,22 @@
 			};
 			name = Release;
 		};
+		27AA1B131538DE0700D03755 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				PRODUCT_NAME = couchscript;
+			};
+			name = Debug;
+		};
+		27AA1B141538DE0700D03755 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				PRODUCT_NAME = couchscript;
+			};
+			name = Release;
+		};
 		27F0C72015339B34004EBA89 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -674,6 +760,15 @@
 			buildConfigurations = (
 				2794AD0A153395780047643C /* Debug */,
 				2794AD0B153395780047643C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		27AA1B121538DE0700D03755 /* Build configuration list for PBXNativeTarget "couchscript" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				27AA1B131538DE0700D03755 /* Debug */,
+				27AA1B141538DE0700D03755 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

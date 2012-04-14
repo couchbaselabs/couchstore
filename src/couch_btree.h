@@ -80,6 +80,7 @@ extern "C" {
     /* Used to build and chunk modified nodes */
     typedef struct couchfile_modify_result {
         couchfile_modify_request *rq;
+        struct arena *arena;
         nodelist *values;
         nodelist *values_end;
 

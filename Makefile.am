@@ -42,6 +42,8 @@ librfc1321_la_CFLAGS =  $(AM_CFLAGS) ${NO_WERROR}
 
 libcouchstore_la_SOURCES = \
                             config_static.h \
+                            src/arena.c \
+                            src/arena.h \
                             src/btree_modify.c \
                             src/btree_read.c \
                             src/couch_btree.h \
