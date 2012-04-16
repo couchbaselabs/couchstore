@@ -243,19 +243,7 @@ static couch_file_handle buffered_constructor(void)
 
 static couchstore_error_t buffered_open(couch_file_handle* handle, const char *path, int oflag)
 {
-    buffered_file_handle *h = malloc(sizeof(buffered_file_handle));
-    *handle = (couch_file_handle)h;
-    if (!h)
-        return COUCHSTORE_ERROR_ALLOC_FAIL;
-    h->raw_ops = couch_get_default_file_ops();
-    h->raw_ops_handle = NULL;
-    h->nbuffers = 1;
-    h->write_buffer = new_buffer(h, WRITE_BUFFER_CAPACITY);
-    h->first_buffer = new_buffer(h, READ_BUFFER_CAPACITY);
-    
-    if (!h->write_buffer || !h->first_buffer)
-        return COUCHSTORE_ERROR_ALLOC_FAIL;
-    
+    buffered_file_handle *h = (buffered_file_handle*)*handle;
     return h->raw_ops->open(&h->raw_ops_handle, path, oflag);
 }
 

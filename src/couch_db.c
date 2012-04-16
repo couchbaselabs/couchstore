@@ -177,7 +177,7 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
         return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
     }
 
-    if ((db = malloc(sizeof(Db))) == NULL) {
+    if ((db = calloc(1, sizeof(Db))) == NULL) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
 
@@ -192,54 +192,41 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
     }
 
     db->filename = strdup(filename);
-    if (!db->filename) {
-        free(db);
-        return COUCHSTORE_ERROR_ALLOC_FAIL;
-    }
+    error_unless(db->filename, COUCHSTORE_ERROR_ALLOC_FAIL);
 
     db->file_ops = couch_get_buffered_file_ops(ops, &db->file_handle);
-    if (!db->file_ops) {
-        free((char*)db->filename);
-        free(db);
-        return COUCHSTORE_ERROR_ALLOC_FAIL;
-    }
+    error_unless(db->file_ops, COUCHSTORE_ERROR_ALLOC_FAIL);
 
-    errcode = db->file_ops->open(&db->file_handle, filename, openflags);
-    if (errcode != COUCHSTORE_SUCCESS) {
-        db->file_ops->destructor(db->file_handle);
-        free(db);
-        return errcode;
-    }
+    error_pass(db->file_ops->open(&db->file_handle, filename, openflags));
 
     if ((db->file_pos = db->file_ops->goto_eof(db->file_handle)) == 0) {
         /* This is an empty file. Create a new fileheader unless the
          * user wanted a read-only version of the file
          */
         if (flags & COUCHSTORE_OPEN_FLAG_RDONLY) {
-            errcode = COUCHSTORE_ERROR_CHECKSUM_FAIL;
+            error_pass(COUCHSTORE_ERROR_CHECKSUM_FAIL);
         } else {
-            errcode = create_header(db);
+            error_pass(create_header(db));
         }
     } else {
-        errcode = find_header(db);
+        error_pass(find_header(db));
     }
 
-    if (errcode == COUCHSTORE_SUCCESS) {
-        *pDb = db;
-    } else {
-        db->file_ops->close(db->file_handle);
-        db->file_ops->destructor(db->file_handle);
-        free(db);
-    }
+    *pDb = db;
+    return COUCHSTORE_SUCCESS;
 
+cleanup:
+    couchstore_close_db(db);
     return errcode;
 }
 
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_close_db(Db *db)
 {
-    db->file_ops->close(db->file_handle);
-    db->file_ops->destructor(db->file_handle);
+    if (db->file_ops) {
+        db->file_ops->close(db->file_handle);
+        db->file_ops->destructor(db->file_handle);
+    }
     free((char*)db->filename);
 
     free(db->header.by_id_root);
