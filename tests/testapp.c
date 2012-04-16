@@ -444,7 +444,27 @@ cleanup:
 }
 
 
-int main(int argc, const char* argv[])
+static void mb5086(void)
+{
+    Db *db;
+    Doc d;
+    DocInfo i;
+    couchstore_error_t err;
+
+    fprintf(stderr, "regression mb-5086.... ");
+    fflush(stderr);
+
+    setdoc(&d, &i, "hi", 2, "foo", 3, NULL, 0);
+    err = couchstore_open_db("mb5085.couch", COUCHSTORE_OPEN_FLAG_CREATE, &db);
+    assert(err == COUCHSTORE_SUCCESS);
+    assert(couchstore_save_document(db, &d, &i, 0) == COUCHSTORE_SUCCESS);
+    assert(couchstore_commit(db) == COUCHSTORE_SUCCESS);
+    assert(couchstore_close_db(db) == COUCHSTORE_SUCCESS);
+    assert(remove("mb5085.couch") == 0);
+}
+
+
+int main(int argc, const char *argv[])
 {
     int doc_counts[] = { 4, 69, 666, 9090, 99999, 666666 };
     int i;
@@ -487,7 +507,8 @@ int main(int argc, const char* argv[])
     fprintf(stderr, " OK\n");
     test_changes_no_dups();
     fprintf(stderr, " OK\n");
-
+    mb5086();
+    fprintf(stderr, " OK\n");
     unlink(testfilepath);
 
     // make sure os.c didn't accidentally call close(0):
