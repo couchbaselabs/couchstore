@@ -5,6 +5,7 @@
 #include "../src/fatbuf.h"
 #include "../src/internal.h"
 #include "../src/bitfield.h"
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -311,6 +312,9 @@ static void test_open_file_error(void)
     Db *db;
     int errcode = couchstore_open_db(testfilepath, 0, &db);
     assert(errcode == COUCHSTORE_ERROR_NO_SUCH_FILE);
+
+    // make sure os.c didn't accidentally call close(0):
+    assert(lseek(0, 0, SEEK_CUR) >= 0 || errno != EBADF);
 }
 
 static void shuffle(Doc **docs, DocInfo **docinfos, size_t n)
@@ -453,6 +457,9 @@ int main(int argc, const char* argv[])
     fprintf(stderr, " OK\n");
 
     unlink(testfilepath);
+
+    // make sure os.c didn't accidentally call close(0):
+    assert(lseek(0, 0, SEEK_CUR) >= 0 || errno != EBADF);
 
     return 0;
 }
