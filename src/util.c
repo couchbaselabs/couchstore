@@ -5,6 +5,10 @@
 #include "util.h"
 #include "bitfield.h"
 
+#ifdef DEBUG
+#include <stdio.h>
+#endif
+
 node_pointer *read_root(char *buf, int size)
 {
     node_pointer *ptr;
@@ -66,3 +70,10 @@ void fatbuf_free(fatbuf *fb)
 {
     free(fb);
 }
+
+#ifdef DEBUG
+void report_error(couchstore_error_t errcode, const char* file, int line) {
+    fprintf(stderr, "Couchstore error `%s' at %s:%d\r\n", \
+            couchstore_strerror(errcode), file, line);
+}
+#endif

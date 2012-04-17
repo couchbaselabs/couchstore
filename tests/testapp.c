@@ -12,8 +12,8 @@
 
 #define ZERO(V) memset(&(V), 0, sizeof(V))
 #define SETDOC(N, I, D, M)  \
-   setdoc(&testdocset.docs[N], &testdocset.infos[N], I, sizeof(I) - 1, \
-         D, sizeof(D) - 1, M, sizeof(M)); testdocset.datasize += sizeof(D) - 1;
+   setdoc(&testdocset.docs[N], &testdocset.infos[N], I, strlen(I), \
+         D, sizeof(D) - 1, M, strlen(M)); testdocset.datasize += sizeof(D) - 1;
 
 typedef struct _counterset {
     int totaldocs;
@@ -337,8 +337,8 @@ static int docmap_check(Db *db, DocInfo *info, void *ctx)
     char* docmap = (char*)ctx;
     int i;
     char buffer[100];
-    memcpy(buffer, info->id.buf, info->size);
-    buffer[info->size] = 0; // null terminate
+    memcpy(buffer, info->id.buf, info->id.size);
+    buffer[info->id.size] = 0; // null terminate
     sscanf(buffer, "doc%d", &i);
     assert(docmap[i] == 0);
     docmap[i] = 1;

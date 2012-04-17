@@ -81,7 +81,7 @@ static size_t write_to_buffer(file_buffer* buf, const void *bytes, size_t nbyte,
     if (buf->length == 0) {
         // If buffer is empty, align it to start at the current offset:
         buf->offset = offset;
-    } else if (offset < buf->offset || offset >= buf->offset+buf->capacity) {
+    } else if (offset < buf->offset || offset > buf->offset + buf->length) {
         // If it's out of range, don't write anything
         return 0;
     }

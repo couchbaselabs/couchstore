@@ -887,8 +887,10 @@ couchstore_error_t couchstore_save_documents(Db *db,
 
     for (ii = 0; ii < numdocs; ii++) {
         // Get additional size for terms to be inserted into indexes
-        size_t size = 37 + infos[ii]->id.size + 2 * infos[ii]->rev_meta.size;
-        term_meta_size += (2 * size);
+        // IMPORTANT: This must match the sizes of the fatbuf_get calls in add_doc_to_update_list!
+        term_meta_size += 6
+                        + 44 + infos[ii]->id.size + infos[ii]->rev_meta.size
+                        + 44 + 10 + infos[ii]->rev_meta.size;
     }
 
     fb = fatbuf_alloc(term_meta_size +
