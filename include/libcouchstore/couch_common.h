@@ -14,7 +14,7 @@ extern "C" {
     typedef uint8_t couchstore_content_meta_flags;
     enum {
         COUCH_DOC_IS_COMPRESSED = 128,  /**< Document contents compressed via Snappy */
-        //Content Type Reasons (content_meta & 0x0F):
+        /* Content Type Reasons (content_meta & 0x0F): */
         COUCH_DOC_IS_JSON = 0,      /**< Document is valid JSON data */
         COUCH_DOC_INVALID_JSON = 1, /**< Document was checked, and was not valid JSON */
         COUCH_DOC_INVALID_JSON_KEY = 2, /**< Document was checked, and contained reserved keys,

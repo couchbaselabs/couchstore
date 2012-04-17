@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 
-    ////////////////////  OPENING/CLOSING DATABASES:
+    /*///////////////////  OPENING/CLOSING DATABASES: */
 
     /*
      * Flags to pass as the flags parameter to couchstore_open_db
@@ -97,7 +97,7 @@ extern "C" {
     uint64_t couchstore_get_header_position(Db *db);
 
 
-    ////////////////////  WRITING DOCUMENTS:
+    /*////////////////////  WRITING DOCUMENTS: */
 
     /*
      * Options used by couchstore_save_document() and
@@ -164,7 +164,7 @@ extern "C" {
     couchstore_error_t couchstore_commit(Db *db);
 
 
-    ////////////////////  RETRIEVING DOCUMENTS:
+    /*////////////////////  RETRIEVING DOCUMENTS: */
 
     /**
      * Retrieve the document info for a given key.
@@ -253,7 +253,7 @@ extern "C" {
     void couchstore_free_docinfo(DocInfo *docinfo);
 
 
-    ////////////////////  ITERATING DOCUMENTS:
+    /*////////////////////  ITERATING DOCUMENTS: */
 
     /**
      * The callback function used by couchstore_changes_since() to iterate
@@ -291,7 +291,7 @@ extern "C" {
                                                 void *ctx);
 
 
-    ////////////////////  LOCAL DOCUMENTS:
+    /*////////////////////  LOCAL DOCUMENTS: */
 
     /**
      * Get a local doc from the db.
@@ -332,7 +332,7 @@ extern "C" {
     void couchstore_free_local_document(LocalDoc *lDoc);
 
 
-    ////////////////////  MISC:
+    /*////////////////////  MISC: */
 
     /**
      * Convert an error code from couchstore to a textual description. The
