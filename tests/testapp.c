@@ -35,6 +35,36 @@ docset testdocset;
 fatbuf *docsetbuf = NULL;
 char testfilepath[1024] = "testfile.couch";
 
+static void test_get_40(uint64_t value, const uint8_t expected[8])
+{
+    char buffer[8];
+    memset(buffer, 0, sizeof(buffer));
+    set_bits(buffer, 0, 40, value);
+    assert(memcmp(buffer, expected, 8) == 0);
+    assert(get_40(buffer) == value);
+}
+
+static void test_get_48(uint64_t value, const uint8_t expected[8])
+{
+    char buffer[8];
+    memset(buffer, 0, sizeof(buffer));
+    set_bits(buffer, 0, 48, value);
+    assert(memcmp(buffer, expected, 8) == 0);
+    assert(get_48(buffer) == value);
+}
+
+static void test_bitfield_fns(void)
+{
+    uint8_t expected1[8] = {0x12, 0x34, 0x56, 0x78, 0x90};
+    test_get_40(0x1234567890LL, expected1);
+    uint8_t expected2[8] = {0x09, 0x87, 0x65, 0x43, 0x21};
+    test_get_40(0x0987654321LL, expected2);
+    uint8_t expected3[8] = {0x12, 0x34, 0x56, 0x78, 0x90, 0xAB};
+    test_get_48(0x1234567890ABLL, expected3);
+    uint8_t expected4[8] = {0xBA, 0x98, 0x76, 0x54, 0x32, 0x10};
+    test_get_48(0xBA9876543210LL, expected4);
+}
+
 static void setdoc(Doc *doc, DocInfo *info, char *id, int idlen,
                    char *data, int datalen, char *meta, int metalen)
 {
@@ -436,6 +466,8 @@ int main(int argc, const char* argv[])
     if (argc > 1)
         strcpy(testfilepath, argv[1]);
     printf("Using test database at %s\n", testfilepath);
+
+    test_bitfield_fns();
 
     test_open_file_error();
     fprintf(stderr, "OK \n");

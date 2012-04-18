@@ -16,7 +16,7 @@ static inline uint64_t get_48(const char *buf)
 static inline uint64_t get_40(const char *buf)
 {
     const uint32_t* longs = (const uint32_t*)buf;
-    return ((uint64_t)ntohl(longs[0]) << 8) | buf[4];
+    return ((uint64_t)ntohl(longs[0]) << 8) | (uint8_t)buf[4];
 }
 
 /** Read a 32-bit big-endian integer from the address pointed to by buf. */
