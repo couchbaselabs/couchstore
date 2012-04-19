@@ -22,7 +22,7 @@ static void printsb(sized_buf *sb)
 static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
 {
     int *count = (int *) ctx;
-    Doc *doc;
+    Doc *doc = NULL;
     uint64_t cas;
     uint32_t expiry, flags;
     couchstore_open_doc_with_docinfo(db, docinfo, &doc, 0);
@@ -41,14 +41,14 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
         printf("     doc deleted\n");
     }
 
-    if (docinfo->content_meta & SNAPPY_FLAG) {
+    if (doc && docinfo->content_meta & SNAPPY_FLAG) {
         size_t rlen;
         snappy_uncompressed_length(doc->data.buf, doc->data.size, &rlen);
         char *decbuf = (char *) malloc(rlen);
         size_t uncompr_len;
         snappy_uncompress(doc->data.buf, doc->data.size, decbuf, &uncompr_len);
         printf("     data: (snappy) %.*s\n", (int) uncompr_len, decbuf);
-    } else {
+    } else if(doc) {
         printf("     data: ");
         printsb(&doc->data);
     }
