@@ -280,7 +280,7 @@ static int by_seq_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
     uint8_t content_meta;
     uint64_t bp, seq;
     get_kvlen(v->buf, &idsize, &datasize);
-    deleted = v->buf[5] >> 7;
+    deleted = (v->buf[5] & 0x80) != 0;
     bp = get_48(v->buf + 5) &~ 0x800000000000;
     content_meta = v->buf[11];
     revnum = get_32(v->buf + 12);
@@ -311,7 +311,7 @@ int by_id_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
     uint64_t bp, seq;
     seq = get_48(v->buf);
     datasize = get_32(v->buf + 6);
-    deleted = v->buf[10] >> 7;
+    deleted = (v->buf[10] & 0x80) != 0;
     bp = get_48(v->buf + 10) &~ 0x800000000000;
     content_meta = v->buf[16];
     revnum = get_32(v->buf + 17);
