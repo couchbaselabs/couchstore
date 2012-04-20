@@ -8,8 +8,8 @@
 #include "internal.h"
 #include "fatbuf.h"
 
-int ebin_cmp(sized_buf *e1, sized_buf *e2);
-int seq_cmp(sized_buf *k1, sized_buf *k2);
+int ebin_cmp(const sized_buf *e1, const sized_buf *e2);
+int seq_cmp(const sized_buf *k1, const sized_buf *k2);
 
 #ifndef DEBUG
 #define error_pass(C) if((errcode = (C)) < 0) { goto cleanup; }

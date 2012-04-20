@@ -603,7 +603,7 @@ static couchstore_error_t iterate_docinfos(Db *db,
                                            unsigned numDocs,
                                            node_pointer *tree,
                                            int (*key_ptr_compare)(const void *, const void *),
-                                           int (*key_compare)(sized_buf *k1, sized_buf *k2),
+                                           int (*key_compare)(const sized_buf *k1, const sized_buf *k2),
                                            couchstore_changes_callback_fn callback,
                                            int fold,
                                            void *ctx)
@@ -807,7 +807,6 @@ couchstore_error_t couchstore_save_local_document(Db *db, LocalDoc *lDoc)
         ldupdate.type = ACTION_INSERT;
     }
 
-    ldupdate.cmp_key = &lDoc->id;
     ldupdate.key = &lDoc->id;
     ldupdate.value.data = &lDoc->json;
 

@@ -132,7 +132,6 @@ static void idfetch_update_cb(couchfile_modify_request *rq,
     ctx->seqacts[ctx->actpos].type = ACTION_REMOVE;
     ctx->seqacts[ctx->actpos].value.data = NULL;
     ctx->seqacts[ctx->actpos].key = delbuf;
-    ctx->seqacts[ctx->actpos].cmp_key = delbuf;
 
     ctx->actpos++;
 }
@@ -190,10 +189,7 @@ static couchstore_error_t update_indexes(Db *db,
         idacts[ii * 2 + 1].value.data = &idvals[ii];
 
         idacts[ii * 2].key = &ids[ii];
-        idacts[ii * 2].cmp_key = &idcmps[ii];
-
         idacts[ii * 2 + 1].key = &ids[ii];
-        idacts[ii * 2 + 1].cmp_key = &idcmps[ii];
     }
 
     qsort(idacts, numdocs * 2, sizeof(couchfile_modify_action),
@@ -219,7 +215,6 @@ static couchstore_error_t update_indexes(Db *db,
         seqacts[fetcharg.actpos].type = ACTION_INSERT;
         seqacts[fetcharg.actpos].value.data = &seqvals[fetcharg.valpos];
         seqacts[fetcharg.actpos].key = &seqs[fetcharg.valpos];
-        seqacts[fetcharg.actpos].cmp_key = &seqs[fetcharg.valpos];
         fetcharg.valpos++;
         fetcharg.actpos++;
     }

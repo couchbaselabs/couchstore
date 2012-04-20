@@ -14,7 +14,7 @@ extern "C" {
         sized_buf *last_cmp_key;
         int list_pos;
         /* Compare function */
-        int (*compare)(sized_buf *k1, sized_buf *k2);
+        int (*compare)(const sized_buf *k1, const sized_buf *k2);
         void *arg;
     } compare_info;
 
@@ -57,7 +57,6 @@ extern "C" {
     typedef struct couchfile_modify_action {
         int type;
         sized_buf *key;
-        sized_buf *cmp_key;
         union _act_value {
             sized_buf *data;
             void *arg;

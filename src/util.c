@@ -9,7 +9,7 @@
 #include <stdio.h>
 #endif
 
-int ebin_cmp(sized_buf *e1, sized_buf *e2)
+int ebin_cmp(const sized_buf *e1, const sized_buf *e2)
 {
     size_t size;
     if (e2->size < e1->size) {
@@ -29,7 +29,7 @@ int ebin_cmp(sized_buf *e1, sized_buf *e2)
     return cmp;
 }
 
-int seq_cmp(sized_buf *k1, sized_buf *k2)
+int seq_cmp(const sized_buf *k1, const sized_buf *k2)
 {
     uint64_t e1val = get_48(k1->buf);
     uint64_t e2val = get_48(k2->buf);
