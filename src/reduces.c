@@ -33,9 +33,9 @@ void by_id_reduce(char *dst, size_t *size_r, nodelist *leaflist, int count)
     uint64_t notdeleted = 0, deleted = 0, size = 0;
     nodelist *i = leaflist;
     while (i != NULL) {
-        int isdeleted = i->data.buf[10] >> 7;
-        deleted += isdeleted;
-        if (!isdeleted) {
+        if ((i->data.buf[10] & 0x80) != 0) {
+            deleted++;
+        } else {
             notdeleted++;
         }
         size += get_32(i->data.buf + 6);
