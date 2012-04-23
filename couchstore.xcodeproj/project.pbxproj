@@ -62,6 +62,7 @@
 		27AA1B171538DE2500D03755 /* couchscript.cc in Sources */ = {isa = PBXBuildFile; fileRef = 274F978F152E1D1400247C46 /* couchscript.cc */; };
 		27AA1B191538DE3900D03755 /* liblua.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 27AA1B181538DE3900D03755 /* liblua.dylib */; };
 		27AA1B1D1538EC4300D03755 /* arena.c in Sources */ = {isa = PBXBuildFile; fileRef = 27AA1B1C1538EC4300D03755 /* arena.c */; };
+		27E65A001544F2F0000A7658 /* couch_save.c in Sources */ = {isa = PBXBuildFile; fileRef = 27E659FF1544F2F0000A7658 /* couch_save.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -185,6 +186,7 @@
 		27AA1B181538DE3900D03755 /* liblua.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = liblua.dylib; path = usr/local/lib/liblua.dylib; sourceTree = SDKROOT; };
 		27AA1B1C1538EC4300D03755 /* arena.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = arena.c; sourceTree = "<group>"; };
 		27AA1B1E1538EC5600D03755 /* arena.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = arena.h; sourceTree = "<group>"; };
+		27E659FF1544F2F0000A7658 /* couch_save.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = couch_save.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -268,6 +270,7 @@
 				2794AD011533901D0047643C /* config_static.h */,
 				274F9787152E1D1400247C46 /* couch_btree.h */,
 				274F9788152E1D1400247C46 /* couch_db.c */,
+				27E659FF1544F2F0000A7658 /* couch_save.c */,
 				274F978C152E1D1400247C46 /* couch_file_read.c */,
 				274F978D152E1D1400247C46 /* couch_file_write.c */,
 				274F9790152E1D1400247C46 /* crc32.c */,
@@ -499,6 +502,7 @@
 				274F97D9152E1D1400247C46 /* util.c in Sources */,
 				27093EF61537441A0087804E /* iobuffer.c in Sources */,
 				27AA1B1D1538EC4300D03755 /* arena.c in Sources */,
+				27E65A001544F2F0000A7658 /* couch_save.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

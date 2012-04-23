@@ -48,6 +48,7 @@ libcouchstore_la_SOURCES = \
                             src/btree_read.c \
                             src/couch_btree.h \
                             src/couch_db.c \
+                            src/couch_save.c \
                             src/crc32.c \
                             src/crc32.h \
                             src/couch_file_read.c \

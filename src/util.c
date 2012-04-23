@@ -9,6 +9,36 @@
 #include <stdio.h>
 #endif
 
+int ebin_cmp(sized_buf *e1, sized_buf *e2)
+{
+    size_t size;
+    if (e2->size < e1->size) {
+        size = e2->size;
+    } else {
+        size = e1->size;
+    }
+    
+    int cmp = memcmp(e1->buf, e2->buf, size);
+    if (cmp == 0) {
+        if (size < e2->size) {
+            return -1;
+        } else if (size < e1->size) {
+            return 1;
+        }
+    }
+    return cmp;
+}
+
+int seq_cmp(sized_buf *k1, sized_buf *k2)
+{
+    uint64_t e1val = get_48(k1->buf);
+    uint64_t e2val = get_48(k2->buf);
+    if (e1val == e2val) {
+        return 0;
+    }
+    return (e1val < e2val ? -1 : 1);
+}
+
 node_pointer *read_root(char *buf, int size)
 {
     node_pointer *ptr;
