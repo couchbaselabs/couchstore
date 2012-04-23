@@ -15,7 +15,7 @@
 #   limitations under the License.
 ACLOCAL_AMFLAGS = -I m4 --force
 
-bin_PROGRAMS = couch_dbdump couch_dbinfo
+bin_PROGRAMS = couch_dbdump couch_dbinfo couch_compact
 EXTRA_DIST = LICENSE README.md
 
 pkginclude_HEADERS = \
@@ -53,10 +53,14 @@ libcouchstore_la_SOURCES = \
                             src/crc32.h \
                             src/couch_file_read.c \
                             src/couch_file_write.c \
+                            src/db_compact.c \
                             src/fatbuf.h \
                             src/internal.h \
                             src/iobuffer.c \
                             src/iobuffer.h \
+                            src/llmsort.c \
+                            src/mergesort.c \
+                            src/mergesort.h \
                             src/reduces.c \
                             src/reduces.h \
                             src/strerror.c \
@@ -89,9 +93,11 @@ couch_dbinfo_SOURCES = src/dbinfo.c src/util.c
 couch_dbinfo_CFLAGS = $(AM_CFLAGS) -D__STDC_FORMAT_MACROS
 couch_dbinfo_DEPENDENCIES = libcouchstore.la libbyteswap.la
 couch_dbinfo_LDADD = libcouchstore.la libbyteswap.la
-#writetest_SOURCES = src/writetest.c
-#writetest_DEPENDENCIES = libcouchstore.la
-#writetest_LDADD = libcouchstore.la
+
+couch_compact_SOURCES = src/compactor.c
+couch_compact_DEPENDENCIES = libcouchstore.la
+couch_compact_CFLAGS = $(AM_CFLAGS) -D__STDC_FORMAT_MACROS
+couch_compact_LDADD = libcouchstore.la libbyteswap.la -lsnappy
 
 extra_tests=
 slow_tests=
@@ -108,11 +114,12 @@ extra_tests += lua_tests
 
 slow_tests += slow_lua_tests
 
-lua_tests: couchscript tests/localdoc.lua
+lua_tests: couchscript couch_compact tests/localdoc.lua
 	@echo "Running lua tests."
 	@./couchscript tests/localdoc.lua
 	@./couchscript tests/corrupt.lua
 	@./couchscript tests/bulk.lua
+	@./couchscript tests/compact.lua
 
 slow_lua_tests: couchscript tests/largefile.lua tests/large.lua
 	@echo "Running slow lua tests."

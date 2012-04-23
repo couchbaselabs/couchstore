@@ -44,6 +44,7 @@ static couchfile_modify_result *make_modres(arena* a, couchfile_modify_request *
         return NULL;
     }
     res->arena = a;
+    res->arena_transient = NULL;
     res->values = make_nodelist(a, 0);
     if (!res->values) {
         return NULL;
@@ -62,9 +63,34 @@ static couchfile_modify_result *make_modres(arena* a, couchfile_modify_request *
     return res;
 }
 
-static couchstore_error_t mr_push_item(sized_buf *k, sized_buf *v, couchfile_modify_result *dst)
+couchfile_modify_result *new_btree_modres(arena *a, arena *transient_arena, Db* db, compare_info* cmp, reduce_fn reduce,
+        reduce_fn rereduce)
 {
-    nodelist *itm = make_nodelist(dst->arena, 0);
+    couchfile_modify_request* rq = arena_alloc(a, sizeof(couchfile_modify_request));
+    rq->cmp = *cmp;
+    rq->db = db;
+    rq->num_actions = 0;
+    rq->fetch_callback = NULL;
+    rq->reduce = reduce;
+    rq->rereduce = rereduce;
+
+    couchfile_modify_result* mr = make_modres(a, rq);
+    mr->arena_transient = transient_arena;
+    mr->modified = 1;
+    mr->node_type = KV_NODE;
+
+    return mr;
+}
+
+couchstore_error_t mr_push_item(sized_buf *k, sized_buf *v, couchfile_modify_result *dst)
+{
+    nodelist *itm = NULL;
+    if(dst->arena_transient != NULL)
+    {
+        itm = make_nodelist(dst->arena_transient, 0);
+    } else {
+        itm = make_nodelist(dst->arena, 0);
+    }
     if (!itm) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
@@ -518,6 +544,35 @@ static node_pointer* copy_node_pointer(node_pointer* ptr)
     ret_ptr->reduce_value.buf = (char*)ret_ptr->key.buf + ptr->key.size;
     memcpy(ret_ptr->reduce_value.buf, ptr->reduce_value.buf, ptr->reduce_value.size);
     return ret_ptr;
+}
+
+// Finished creating a new b-tree (from compaction), build pointers and get a
+// root node.
+
+node_pointer* complete_new_btree(couchfile_modify_result* mr, couchstore_error_t *errcode)
+{
+    *errcode = flush_mr(mr);
+    if(*errcode != COUCHSTORE_SUCCESS) {
+        return NULL;
+    }
+
+    couchfile_modify_result* targ_mr = make_modres(mr->arena, mr->rq);
+    targ_mr->modified = 1;
+    targ_mr->node_type = KP_NODE;
+
+    *errcode = mr_move_pointers(mr, targ_mr);
+    if(*errcode != COUCHSTORE_SUCCESS) {
+        return NULL;
+    }
+
+    node_pointer* ret_ptr;
+    if(targ_mr->count > 1 || targ_mr->pointers != targ_mr->pointers_end) {
+        ret_ptr = finish_root(mr->rq, targ_mr, errcode);
+    } else {
+        ret_ptr = targ_mr->values_end->pointer;
+    }
+
+    return copy_node_pointer(ret_ptr);
 }
 
 node_pointer *modify_btree(couchfile_modify_request *rq,

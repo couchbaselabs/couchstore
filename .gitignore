@@ -31,6 +31,7 @@
 /config/plugin.ac
 /config/ar-lib
 /configure
+/couch_compact
 /couch_dbdump
 /couch_dbinfo
 /couchscript

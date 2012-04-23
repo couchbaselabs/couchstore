@@ -399,7 +399,32 @@ extern "C" {
     LIBCOUCHSTORE_API
     void couchstore_free_local_document(LocalDoc *lDoc);
 
+    /*
+     * Compact a database. This creates a new DB file with the same data as the
+     * source db, omitting data that is no longer needed.
+     * Will use default couch_file_ops to create and write the target db.
+     *
+     * @param source the source database
+     * @param target_filename the filename of the new database to create.
+     * @return COUCHSTORE_SUCCESS on success
+     */
+    LIBCOUCHSTORE_API
+    couchstore_error_t couchstore_compact_db(Db* source, const char* target_filename);
 
+    /*
+     * Compact a database. This creates a new DB file with the same data as the
+     * source db, omitting data that is no longer needed.
+     * Will use specified couch_file_ops to create and write the target db.
+     *
+     * @param source the source database
+     * @param target_filename the filename of the new database to create.
+     * @param ops Pointer to a structure containing the file I/O operations
+     *            you want the library to use.
+     * @return COUCHSTORE_SUCCESS on success
+     */
+    LIBCOUCHSTORE_API
+    couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filename,
+                                                const couch_file_ops *ops);
     /*////////////////////  MISC: */
 
     /**
