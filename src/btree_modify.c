@@ -11,8 +11,6 @@
 
 #define CHUNK_THRESHOLD 1279
 
-#define ARENA_CHUNK_SIZE 32768  // Size of malloc blocks the arena creates. Also largest alloc size.
-
 
 static couchstore_error_t flush_mr(couchfile_modify_result *res);
 
@@ -526,7 +524,7 @@ node_pointer *modify_btree(couchfile_modify_request *rq,
                            node_pointer *root,
                            couchstore_error_t *errcode)
 {
-    arena* a = new_arena(ARENA_CHUNK_SIZE);
+    arena* a = new_arena(0);
     node_pointer *ret_ptr = root;
     couchfile_modify_result *root_result = make_modres(a, rq);
     if (!root_result) {

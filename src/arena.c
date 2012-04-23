@@ -10,16 +10,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-
-#define LOG_STATS 0
-
-#if LOG_STATS
+#include <stdint.h>
 #include <stdio.h>
-#endif
 
+#define ALIGNMENT 4                 // Byte alignment of blocks; must be a power of 2
+#define PAGE_SIZE 4096              // Chunk allocation will be rounded to a multiple of this
+#define DEFAULT_CHUNK_SIZE 32768    // Used if 0 is passed to new_arena
+#define LOG_STATS 0                 // Set to 1 to log info about allocations when arenas are freed
 
 typedef struct arena_chunk {
-    struct arena_chunk* prev_chunk;
+    struct arena_chunk* prev_chunk; // Link to previous chunk
+    size_t size;                    // Size of available bytes after this header
 } arena_chunk;
 
 
@@ -36,40 +37,50 @@ struct arena {
 
 
 // Returns a pointer to the first byte of a chunk's contents.
-static inline void* chunk_start(arena_chunk* chunk) {
-    return chunk + 1;
+static inline void* chunk_start(arena_chunk* chunk)
+{
+    return (char*)chunk + sizeof(arena_chunk);
 }
 
 // Returns a pointer to the byte past the end of a chunk's contents.
-static inline void* chunk_end(arena* a, arena_chunk* chunk) {
-    return (char*)chunk_start(chunk) + a->chunk_size;
+static inline void* chunk_end(arena_chunk* chunk)
+{
+    return (char*)chunk_start(chunk) + chunk->size;
 }
 
-// Allocates a new chunk and attaches it to the arena.
-static arena_chunk* add_chunk(arena* a)
+// Allocates a new chunk, attaches it to the arena, and allocates 'size' bytes from it.
+static void* add_chunk(arena* a, size_t size)
 {
-    arena_chunk* chunk = malloc(sizeof(arena_chunk) + a->chunk_size);
-    if (chunk) {
-        a->next_block = chunk_start(chunk);
-        a->end = chunk_end(a, chunk);
-        chunk->prev_chunk = a->cur_chunk;
-        a->cur_chunk = chunk;
+    size_t chunk_size = a->chunk_size;
+    if (size > chunk_size) {
+        chunk_size = size;  // make sure the new chunk is big enough to fit 'size' bytes
     }
-    return chunk;
+    arena_chunk* chunk = malloc(sizeof(arena_chunk) + chunk_size);
+    if (!chunk) {
+        return NULL;
+    }
+    chunk->prev_chunk = a->cur_chunk;
+    chunk->size = chunk_size;
+
+    void* result = chunk_start(chunk);
+    a->next_block = (char*)result + size;
+    a->end = chunk_end(chunk);
+    a->cur_chunk = chunk;
+    return result;
 }
 
 
 arena* new_arena(size_t chunk_size)
 {
-    arena* a = malloc(sizeof(arena));
+    arena* a = calloc(1, sizeof(arena));
     if (a) {
-        a->chunk_size = chunk_size;
-        a->cur_chunk = NULL;
-        a->next_block = a->end = NULL;
-#ifdef DEBUG
-        a->blocks_allocated = 0;
-        a->bytes_allocated = 0;
-#endif
+        if (chunk_size == 0) {
+            chunk_size = DEFAULT_CHUNK_SIZE;
+        } else {
+            chunk_size += sizeof(arena_chunk);
+            chunk_size = (chunk_size + PAGE_SIZE) & ~(PAGE_SIZE - 1);   // round up to multiple
+        }
+        a->chunk_size = chunk_size - sizeof(arena_chunk);
     }
     return a;
 }
@@ -83,7 +94,7 @@ void delete_arena(arena* a)
     arena_chunk* chunk = a->cur_chunk;
     while (chunk) {
 #ifdef DEBUG
-        total_allocated += a->chunk_size;
+        total_allocated += chunk->size;
 #endif
         void* to_free = chunk;
         chunk = chunk->prev_chunk;
@@ -97,23 +108,30 @@ void delete_arena(arena* a)
     free(a);
 }
 
-void* arena_alloc(arena* a, size_t size)
+void* arena_alloc_unaligned(arena* a, size_t size)
 {
-    assert(size <= a->chunk_size);
     void* result = a->next_block;
     a->next_block += size;
-    if (a->next_block > a->end) {
-        if (!add_chunk(a)) {
-            return NULL;
-        }
-        result = a->next_block;
-        a->next_block += size;
+    if (a->next_block > a->end || size > a->chunk_size) {
+        result = add_chunk(a, size);
     }
 #ifdef DEBUG
-    ++a->blocks_allocated;
-    a->bytes_allocated += size;
+    if (result) {
+        ++a->blocks_allocated;
+        a->bytes_allocated += size;
+    }
 #endif
     return result;
+}
+
+void* arena_alloc(arena* a, size_t size)
+{
+    int padding = ((intptr_t)a->next_block & (ALIGNMENT - 1));
+    if (padding == 0) {
+        return arena_alloc_unaligned(a, size);
+    }
+    padding = ALIGNMENT - padding;
+    return (char*)arena_alloc_unaligned(a, size + padding) + padding;
 }
 
 #ifdef DEBUG
@@ -122,7 +140,7 @@ void arena_free(arena* a, void* block)
     if (block) {
         arena_chunk* chunk;
         for (chunk = a->cur_chunk; chunk; chunk = chunk->prev_chunk) {
-            if (block >= chunk_start(chunk) && block < chunk_end(a, chunk)) {
+            if (block >= chunk_start(chunk) && block < chunk_end(chunk)) {
                 break;
             }
         }
@@ -132,3 +150,26 @@ void arena_free(arena* a, void* block)
     }
 }
 #endif
+
+const arena_position* arena_mark(arena *a)
+{
+    return (const arena_position*) a->next_block;
+}
+
+void arena_free_from_mark(arena *a, const arena_position *mark)
+{
+    arena_chunk* chunk = a->cur_chunk;
+    while (chunk && ((void*)mark < chunk_start(chunk) || (void*)mark > chunk_end(chunk))) {
+        a->cur_chunk = chunk->prev_chunk;
+        free(chunk);
+        chunk = a->cur_chunk;
+    }
+    assert(chunk != NULL || mark == NULL);   // If this fails, mark was bogus
+
+    a->next_block = (void*)mark;
+    a->end = chunk ? chunk_end(chunk) : NULL;
+#ifdef DEBUG
+    memset(a->next_block, 0x55, (char*)a->end - (char*)a->next_block);
+    // TODO: Somehow roll back blocks_allocated and bytes_allocated (how?)
+#endif
+}
