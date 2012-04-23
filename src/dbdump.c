@@ -8,8 +8,6 @@
 #include <snappy-c.h>
 #include "bitfield.h"
 
-#define SNAPPY_FLAG 128
-
 static void printsb(sized_buf *sb)
 {
     if (sb->buf == NULL) {
@@ -41,7 +39,7 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
         printf("     doc deleted\n");
     }
 
-    if (doc && docinfo->content_meta & SNAPPY_FLAG) {
+    if (doc && (docinfo->content_meta & COUCH_DOC_IS_COMPRESSED)) {
         size_t rlen;
         snappy_uncompressed_length(doc->data.buf, doc->data.size, &rlen);
         char *decbuf = (char *) malloc(rlen);

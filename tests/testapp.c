@@ -272,7 +272,7 @@ static void test_compressed_doc_body(void)
     DocInfo *nfoptrs [2] =  { &testdocset.infos[0],
                               &testdocset.infos[1]
                             };
-    testdocset.infos[1].content_meta = 128; //Mark doc2 as to be snappied.
+    testdocset.infos[1].content_meta = COUCH_DOC_IS_COMPRESSED; //Mark doc2 as to be snappied.
     unlink(testfilepath);
     Db *db;
     try(couchstore_open_db(testfilepath, COUCHSTORE_OPEN_FLAG_CREATE, &db));

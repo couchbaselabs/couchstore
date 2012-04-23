@@ -12,8 +12,6 @@
 #include "reduces.h"
 #include "iobuffer.h"
 
-#define SNAPPY_META_FLAG 128
-
 sized_buf nil_atom = {
     (char *) "\x64\x00\x03nil",
     6
@@ -149,7 +147,7 @@ couchstore_error_t couchstore_commit(Db *db)
 
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_open_db(const char *filename,
-                                      uint64_t flags,
+                                      couchstore_open_flags flags,
                                       Db **pDb)
 {
     return couchstore_open_db_ex(filename, flags,
@@ -158,7 +156,7 @@ couchstore_error_t couchstore_open_db(const char *filename,
 
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_open_db_ex(const char *filename,
-                                         uint64_t flags,
+                                         couchstore_open_flags flags,
                                          const couch_file_ops *ops,
                                          Db **pDb)
 {
@@ -335,16 +333,15 @@ int by_id_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
     return 0;
 }
 
-#define COMPRESSED_BODY 1
 //Fill in doc from reading file.
-static couchstore_error_t bp_to_doc(Doc **pDoc, Db *db, off_t bp, uint64_t options)
+static couchstore_error_t bp_to_doc(Doc **pDoc, Db *db, off_t bp, couchstore_open_options options)
 {
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     int bodylen = 0;
     char *docbody = NULL;
     fatbuf *docbuf = NULL;
 
-    if (options & COMPRESSED_BODY) {
+    if (options & DECOMPRESS_DOC_BODIES) {
         bodylen = pread_compressed(db, bp, &docbody);
     } else {
         bodylen = pread_bin(db, bp, &docbody);
@@ -427,7 +424,7 @@ LIBCOUCHSTORE_API
 couchstore_error_t couchstore_open_doc_with_docinfo(Db *db,
                                                     DocInfo *docinfo,
                                                     Doc **pDoc,
-                                                    uint64_t options)
+                                                    couchstore_open_options options)
 {
     couchstore_error_t errcode;
 
@@ -436,12 +433,11 @@ couchstore_error_t couchstore_open_doc_with_docinfo(Db *db,
         return COUCHSTORE_ERROR_DOC_NOT_FOUND;
     }
 
-    int readopts = 0;
-    if ((options & DECOMPRESS_DOC_BODIES) && (docinfo->content_meta & SNAPPY_META_FLAG)) {
-        readopts = COMPRESSED_BODY;
+    if (!(docinfo->content_meta & COUCH_DOC_IS_COMPRESSED)) {
+        options &= ~DECOMPRESS_DOC_BODIES;
     }
 
-    errcode = bp_to_doc(pDoc, db, docinfo->bp, readopts);
+    errcode = bp_to_doc(pDoc, db, docinfo->bp, options);
     if (errcode == COUCHSTORE_SUCCESS) {
         (*pDoc)->id.buf = docinfo->id.buf;
         (*pDoc)->id.size = docinfo->id.size;
@@ -455,7 +451,7 @@ couchstore_error_t couchstore_open_document(Db *db,
                                             const void *id,
                                             size_t idlen,
                                             Doc **pDoc,
-                                            uint64_t options)
+                                            couchstore_open_options options)
 {
     couchstore_error_t errcode;
     DocInfo *info;
@@ -595,10 +591,10 @@ int assemble_id_index_value(DocInfo *docinfo, char *dst)
 }
 
 static couchstore_error_t write_doc(Db *db, const Doc *doc, uint64_t *bp,
-                                    size_t* disk_size, uint64_t writeopts)
+                                    size_t* disk_size, couchstore_save_options writeopts)
 {
     couchstore_error_t errcode;
-    if (writeopts & COMPRESSED_BODY) {
+    if (writeopts & COMPRESS_DOC_BODIES) {
         errcode = db_write_buf_compressed(db, &doc->data, (off_t *) bp, disk_size);
     } else {
         errcode = db_write_buf(db, &doc->data, (off_t *) bp, disk_size);
@@ -823,7 +819,7 @@ static couchstore_error_t add_doc_to_update_list(Db *db,
                                                  sized_buf *seqval,
                                                  sized_buf *idval,
                                                  uint64_t seq,
-                                                 uint64_t options)
+                                                 couchstore_save_options options)
 {
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     DocInfo updated = *info;
@@ -836,13 +832,13 @@ static couchstore_error_t add_doc_to_update_list(Db *db,
     set_bits(seqterm->buf, 0, 48, seq);
 
     if (doc) {
-        uint64_t writeopts = 0;
         size_t disk_size;
 
-        if ((options & COMPRESS_DOC_BODIES) && (info->content_meta & SNAPPY_META_FLAG)) {
-            writeopts = COMPRESSED_BODY;
+        // Don't compress a doc unless the meta flag is set
+        if (!(info->content_meta & COUCH_DOC_IS_COMPRESSED)) {
+            options &= ~COMPRESS_DOC_BODIES;
         }
-        errcode = write_doc(db, doc, &updated.bp, &disk_size, writeopts);
+        errcode = write_doc(db, doc, &updated.bp, &disk_size, options);
 
         if (errcode != COUCHSTORE_SUCCESS) {
             return errcode;
@@ -874,7 +870,7 @@ couchstore_error_t couchstore_save_documents(Db *db,
                                              Doc* const *docs,
                                              DocInfo* const *infos,
                                              long numdocs,
-                                             uint64_t options)
+                                             couchstore_save_options options)
 {
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     int ii;
@@ -938,7 +934,7 @@ couchstore_error_t couchstore_save_documents(Db *db,
 
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_save_document(Db *db, const Doc *doc,
-                                            const DocInfo *info, uint64_t options)
+                                            const DocInfo *info, couchstore_save_options options)
 {
     return couchstore_save_documents(db, (Doc**)&doc, (DocInfo**)&info, 1, options);
 }
