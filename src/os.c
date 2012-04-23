@@ -114,6 +114,7 @@ static couch_file_handle couch_constructor(void)
 static void couch_destructor(couch_file_handle handle)
 {
     // nothing to do here
+    (void)handle;
 }
 
 static const couch_file_ops default_file_ops = {

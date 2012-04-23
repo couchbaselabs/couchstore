@@ -18,13 +18,13 @@ static couchstore_error_t read_skipping_prefixes(Db* db, off_t *pos, ssize_t len
         ++*pos;
     }
     while (len > 0) {
-        size_t read_size = COUCH_BLOCK_SIZE - (*pos % COUCH_BLOCK_SIZE);
+        ssize_t read_size = COUCH_BLOCK_SIZE - (*pos % COUCH_BLOCK_SIZE);
         if (read_size > len) {
             read_size = len;
         }
         ssize_t got_bytes = db->file_ops->pread(db->file_handle, dst, read_size, *pos);
         if (got_bytes < 0) {
-            return got_bytes;
+            return (couchstore_error_t) got_bytes;
         } else if (got_bytes == 0) {
             return COUCHSTORE_ERROR_READ;
         }
@@ -108,7 +108,7 @@ int pread_compressed(Db *db, off_t pos, char **ret_ptr)
     }
 
     *ret_ptr = new_buf;
-    return uncompressed_len;
+    return (int) uncompressed_len;
 }
 
 int pread_bin(Db *db, off_t pos, char **ret_ptr)

@@ -17,14 +17,11 @@ sized_buf nil_atom = {
     6
 };
 
-int by_id_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v);
-int assemble_id_index_value(DocInfo *docinfo, char *dst);
-
 static couchstore_error_t find_header(Db *db)
 {
     uint64_t block = db->file_pos / COUCH_BLOCK_SIZE;
     int errcode = COUCHSTORE_SUCCESS;
-    int readsize;
+    ssize_t readsize;
     char *header_buf = NULL;
     uint8_t buf[2];
 
@@ -83,7 +80,7 @@ cleanup:
 static couchstore_error_t write_header(Db *db)
 {
     sized_buf writebuf;
-    int seqrootsize = 0, idrootsize = 0, localrootsize = 0;
+    size_t seqrootsize = 0, idrootsize = 0, localrootsize = 0;
     if (db->header.by_seq_root) {
         seqrootsize = 12 + db->header.by_seq_root->reduce_value.size;
     }
@@ -302,7 +299,7 @@ static int by_seq_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
     return 0;
 }
 
-int by_id_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
+static int by_id_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
 {
     uint32_t datasize, deleted, revnum;
     uint8_t content_meta;
@@ -562,7 +559,7 @@ void couchstore_free_docinfo(DocInfo *docinfo)
     free(docinfo);
 }
 
-static int assemble_seq_index_value(DocInfo *docinfo, char *dst)
+static size_t assemble_seq_index_value(DocInfo *docinfo, char *dst)
 {
     memset(dst, 0, 16);
     set_bits(dst, 0, 12, docinfo->id.size);
@@ -577,7 +574,7 @@ static int assemble_seq_index_value(DocInfo *docinfo, char *dst)
     return 16 + docinfo->id.size + docinfo->rev_meta.size;
 }
 
-int assemble_id_index_value(DocInfo *docinfo, char *dst)
+static size_t assemble_id_index_value(DocInfo *docinfo, char *dst)
 {
     memset(dst, 0, 21);
     set_bits(dst, 0, 48, docinfo->db_seq);
@@ -869,11 +866,11 @@ LIBCOUCHSTORE_API
 couchstore_error_t couchstore_save_documents(Db *db,
                                              Doc* const *docs,
                                              DocInfo* const *infos,
-                                             long numdocs,
+                                             unsigned numdocs,
                                              couchstore_save_options options)
 {
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
-    int ii;
+    unsigned ii;
     sized_buf *seqklist, *idklist, *seqvlist, *idvlist;
     size_t term_meta_size = 0;
     const Doc *curdoc;

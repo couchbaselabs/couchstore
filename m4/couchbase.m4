@@ -45,11 +45,11 @@ AC_DEFUN([COUCHBASE_GENERIC_COMPILER], [
   GCC_CXX_DEBUG="-O0 -fno-inline -g3"
   GCC_VISIBILITY="-DHAVE_VISIBILITY=1 -fvisibility=hidden"
   GCC_CPPFLAGS=""
-  GCC_CFLAGS="-std=gnu99"
+  GCC_CFLAGS=""
   GCC_CXXFLAGS=""
   GCC_CXX_LDFLAGS=""
   GCC_C89=-std=c89
-  GCC_C99=-std=gnu99
+  GCC_C99=-std=c99
   GCC_LDFLAGS=""
   GCC_CPP_WARNINGS="-Wall -pedantic -Wundef -Wshadow -fdiagnostics-show-option -Wformat -fno-strict-aliasing -Wno-strict-aliasing -Wextra"
   GCC_C_COMPILER_WARNINGS="-Wstrict-prototypes -Wmissing-prototypes -Wredundant-decls -Wmissing-declarations -Wcast-align"

@@ -47,13 +47,13 @@ static inline void set_bits(char *buf, const int bitpos, const int numbits, uint
     // bitpos and numbits, the 'if' tests will be resolved by the optimizer and only the
     // appropriate block will be compiled.
     if (bitpos + numbits <= 16) {
-        uint16_t num16 = num;
-        num16 = num16 << (16 - (numbits + bitpos));
+        uint16_t num16 = (uint16_t) num;
+        num16 <<= (16 - (numbits + bitpos));
         num16 = htons(num16);
         *(uint16_t*)buf |= num16;
     } else if (bitpos + numbits <= 32) {
-        uint32_t num32 = num;
-        num32 = num32 << (32 - (numbits + bitpos));
+        uint32_t num32 = (uint32_t) num;
+        num32 <<= (32 - (numbits + bitpos));
         num32 = htonl(num32);
         *(uint32_t*)buf |= num32;
     } else {

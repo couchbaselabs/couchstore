@@ -40,10 +40,13 @@ void* arena_alloc(arena*, size_t size);
  * In a debug build it at least checks that the pointers was (probably) allocated from the arena.
  * In a release build it's explicitly a no-op and there's no need to call it at all.
  */
-#if DEBUG
+#ifdef DEBUG
 void arena_free(arena*, void*);
 #else
-static inline void arena_free(arena* a, void* block) { }
+static inline void arena_free(arena* a, void* block) {
+    (void)a;
+    (void)block;
+}
 #endif
 
 #endif // COUCH_ARENA_H

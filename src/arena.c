@@ -28,7 +28,7 @@ struct arena {
     char* end;                  // End of the current chunk; can't allocate past here
     arena_chunk* cur_chunk;     // The current chunk
     size_t chunk_size;          // The size of chunks to allocate, as passed to new_arena
-#if DEBUG
+#ifdef DEBUG
     int blocks_allocated;       // Number of blocks allocated
     size_t bytes_allocated;     // Number of bytes allocated
 #endif
@@ -66,7 +66,7 @@ arena* new_arena(size_t chunk_size)
         a->chunk_size = chunk_size;
         a->cur_chunk = NULL;
         a->next_block = a->end = NULL;
-#if DEBUG
+#ifdef DEBUG
         a->blocks_allocated = 0;
         a->bytes_allocated = 0;
 #endif
@@ -76,13 +76,13 @@ arena* new_arena(size_t chunk_size)
 
 void delete_arena(arena* a)
 {
-#if DEBUG
+#ifdef DEBUG
     //assert(a->nblocks == 0);
     size_t total_allocated = 0;
 #endif
     arena_chunk* chunk = a->cur_chunk;
     while (chunk) {
-#if DEBUG
+#ifdef DEBUG
         total_allocated += a->chunk_size;
 #endif
         void* to_free = chunk;
@@ -109,14 +109,14 @@ void* arena_alloc(arena* a, size_t size)
         result = a->next_block;
         a->next_block += size;
     }
-#if DEBUG
+#ifdef DEBUG
     ++a->blocks_allocated;
     a->bytes_allocated += size;
 #endif
     return result;
 }
 
-#if DEBUG
+#ifdef DEBUG
 void arena_free(arena* a, void* block)
 {
     if (block) {

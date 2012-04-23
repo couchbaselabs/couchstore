@@ -197,8 +197,8 @@ extern "C" {
         if (rc < 0) {
             char buf[1024];
             snprintf(buf, sizeof(buf),
-                     "error get doc by docinfo (key=\"%s\", bp=%llu, size=%zd): %s",
-                     key, docinfo->bp, docinfo->size, couchstore_strerror(rc));
+                     "error get doc by docinfo (key=\"%s\", bp=%llu, size=%lld): %s",
+                     key, docinfo->bp, (uint64_t)docinfo->size, couchstore_strerror(rc));
             couchstore_free_docinfo(docinfo);
             lua_pushstring(ls, buf);
             lua_error(ls);
@@ -267,7 +267,7 @@ extern "C" {
         docinfo.deleted = 1;
 
         if (lua_gettop(ls) > 2) {
-            docinfo.rev_seq = luaL_checknumber(ls, 3);
+            docinfo.rev_seq = (uint64_t) luaL_checknumber(ls, 3);
         }
 
         Db *db = getDb(ls);
@@ -287,13 +287,13 @@ extern "C" {
     class BulkData
     {
     public:
-        BulkData(size_t n) : size(n),
+        BulkData(unsigned n) : size(n),
             docs(static_cast<Doc **>(calloc(size, sizeof(Doc *)))),
             infos(static_cast<DocInfo **>(calloc(size, sizeof(DocInfo *)))) {
             assert(docs);
             assert(infos);
 
-            for (size_t i = 0; i < size; ++i) {
+            for (unsigned i = 0; i < size; ++i) {
                 docs[i] = static_cast<Doc *>(calloc(1, sizeof(Doc)));
                 assert(docs[i]);
                 infos[i] = static_cast<DocInfo *>(calloc(1, sizeof(DocInfo)));
@@ -302,7 +302,7 @@ extern "C" {
         }
 
         ~BulkData() {
-            for (size_t i = 0; i < size; ++i) {
+            for (unsigned i = 0; i < size; ++i) {
                 free(docs[i]);
                 free(infos[i]);
             }
@@ -310,7 +310,7 @@ extern "C" {
             free(infos);
         }
 
-        size_t size;
+        unsigned size;
         Doc **docs;
         DocInfo **infos;
     };
@@ -360,13 +360,13 @@ extern "C" {
 
                 if (n > 3) {
                     lua_rawgeti(ls, -1, 4);
-                    docinfo->rev_seq = luaL_checknumber(ls, -1);
+                    docinfo->rev_seq = (uint64_t) luaL_checknumber(ls, -1);
                     lua_pop(ls, 1);
                 }
 
                 if (n > 4) {
                     lua_rawgeti(ls, -1, 5);
-                    revbuf.fields.cas = luaL_checknumber(ls, -1);
+                    revbuf.fields.cas = (uint64_t) luaL_checknumber(ls, -1);
                     revbuf.fields.cas = ntohll(revbuf.fields.cas);
                     lua_pop(ls, 1);
                 }
@@ -431,11 +431,11 @@ extern "C" {
         docinfo.content_meta = static_cast<uint8_t>(luaL_checkint(ls, 4));
 
         if (lua_gettop(ls) > 4) {
-            docinfo.rev_seq = luaL_checknumber(ls, 5);
+            docinfo.rev_seq = (uint64_t) luaL_checknumber(ls, 5);
         }
 
         if (lua_gettop(ls) > 5) {
-            revbuf.fields.cas = luaL_checknumber(ls, 6);
+            revbuf.fields.cas = (uint64_t) luaL_checknumber(ls, 6);
             revbuf.fields.cas = ntohll(revbuf.fields.cas);
         }
 
@@ -604,7 +604,7 @@ extern "C" {
 
         Db *db = getDb(ls);
 
-        uint64_t since(luaL_checknumber(ls, 2));
+        uint64_t since((uint64_t)luaL_checknumber(ls, 2));
 
         if (!lua_isfunction(ls, 3)) {
             lua_pushstring(ls, "I need a function to iterate over.");

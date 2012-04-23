@@ -152,7 +152,7 @@ extern "C" {
     couchstore_error_t couchstore_save_documents(Db *db,
                                                  Doc* const *docs,
                                                  DocInfo* const *infos,
-                                                 long numDocs,
+                                                 unsigned numDocs,
                                                  couchstore_save_options options);
     /**
      * Commit all pending changes and flush buffers to persistent storage.

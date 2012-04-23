@@ -22,8 +22,8 @@
 #define READ_BUFFER_CAPACITY (8*1024)
 
 
-static inline off_t min(off_t a, off_t b) {return a < b ? a : b;}
-static inline off_t max(off_t a, off_t b) {return a > b ? a : b;}
+static inline ssize_t min(ssize_t a, ssize_t b) {return a < b ? a : b;}
+static inline ssize_t max(ssize_t a, ssize_t b) {return a > b ? a : b;}
 
 
 typedef struct file_buffer {
@@ -81,18 +81,18 @@ static size_t write_to_buffer(file_buffer* buf, const void *bytes, size_t nbyte,
     if (buf->length == 0) {
         // If buffer is empty, align it to start at the current offset:
         buf->offset = offset;
-    } else if (offset < buf->offset || offset > buf->offset + buf->length) {
+    } else if (offset < buf->offset || offset > buf->offset + (off_t)buf->length) {
         // If it's out of range, don't write anything
         return 0;
     }
-    off_t buffer_offset = offset - buf->offset;
-    size_t buffer_nbyte = min(buf->capacity - buffer_offset, nbyte);
-    
-    memcpy(buf->bytes + buffer_offset, bytes, buffer_nbyte);
+    size_t offset_in_buffer = (size_t)(offset - buf->offset);
+    size_t buffer_nbyte = min(buf->capacity - offset_in_buffer, nbyte);
+
+    memcpy(buf->bytes + offset_in_buffer, bytes, buffer_nbyte);
     buf->dirty = 1;
-    buffer_offset += buffer_nbyte;
-    if (buffer_offset > buf->length)
-        buf->length = buffer_offset;
+    offset_in_buffer += buffer_nbyte;
+    if (offset_in_buffer > buf->length)
+        buf->length = offset_in_buffer;
     
     return buffer_nbyte;
 }
@@ -106,7 +106,7 @@ static couchstore_error_t flush_buffer(file_buffer* buf) {
                 buf, buf->length, buf->offset, raw_written);
 #endif
         if (raw_written <= 0)
-            return raw_written;
+            return (couchstore_error_t) raw_written;
         buf->length -= raw_written;
         buf->offset += raw_written;
         memmove(buf->bytes, buf->bytes + raw_written, buf->length);
@@ -120,13 +120,13 @@ static couchstore_error_t flush_buffer(file_buffer* buf) {
 
 
 static size_t read_from_buffer(file_buffer* buf, void *bytes, size_t nbyte, off_t offset) {
-    if (offset < buf->offset || offset >= buf->offset+buf->length) {
+    if (offset < buf->offset || offset >= buf->offset + (off_t)buf->length) {
         return 0;
     }
-    off_t buffer_offset = offset - buf->offset;
-    size_t buffer_nbyte = min(buf->length - buffer_offset, nbyte);
-    
-    memcpy(bytes, buf->bytes + buffer_offset, buffer_nbyte);
+    size_t offset_in_buffer = (size_t)(offset - buf->offset);
+    size_t buffer_nbyte = min(buf->length - offset_in_buffer, nbyte);
+
+    memcpy(bytes, buf->bytes + offset_in_buffer, buffer_nbyte);
     return buffer_nbyte;
 }
 
@@ -155,7 +155,7 @@ static couchstore_error_t load_buffer_from(file_buffer* buf, off_t offset, size_
     fprintf(stderr, "BUFFER: %p loaded %zd bytes from %zd\n", buf, bytes_read, offset + buf->length);
 #endif
     if (bytes_read < 0) {
-        return bytes_read;
+        return (couchstore_error_t) bytes_read;
     }
     buf->length += bytes_read;
     return COUCHSTORE_SUCCESS;
@@ -285,7 +285,7 @@ static ssize_t buffered_pread(couch_file_handle handle, void *buf, size_t nbyte,
             } else*/ {
                 // Move the buffer to cover the remainder of the data to be read.
                 off_t block_start = offset - (offset % READ_BUFFER_CAPACITY);
-                err = load_buffer_from(buffer, block_start, offset + nbyte - block_start);
+                err = load_buffer_from(buffer, block_start, (size_t)(offset + nbyte - block_start));
                 if (err < 0) {
                     return err;
                 }
@@ -294,7 +294,7 @@ static ssize_t buffered_pread(couch_file_handle handle, void *buf, size_t nbyte,
                     break;  // must be at EOF
             }
         }
-        buf += nbyte_read;
+        buf = (char*)buf + nbyte_read;
         nbyte -= nbyte_read;
         offset += nbyte_read;
         total_read += nbyte_read;
@@ -317,7 +317,7 @@ static ssize_t buffered_pwrite(couch_file_handle handle, const void *buf, size_t
     // Write data to the current buffer:
     size_t nbyte_written = write_to_buffer(buffer, buf, nbyte, offset);
     if (nbyte_written > 0) {
-        buf += nbyte_written;
+        buf = (char*)buf + nbyte_written;
         offset += nbyte_written;
         nbyte -= nbyte_written;
     }

@@ -16,11 +16,11 @@
 static ssize_t raw_write(Db *db, const sized_buf *buf, off_t pos)
 {
     off_t write_pos = pos;
-    off_t buf_pos = 0;
+    size_t buf_pos = 0;
     char blockprefix = 0;
     ssize_t written;
     size_t block_remain;
-    while (buf_pos < (off_t)buf->size) {
+    while (buf_pos < buf->size) {
         block_remain = COUCH_BLOCK_SIZE - (write_pos % COUCH_BLOCK_SIZE);
         if (block_remain > (buf->size - buf_pos)) {
             block_remain = buf->size - buf_pos;
@@ -43,7 +43,7 @@ static ssize_t raw_write(Db *db, const sized_buf *buf, off_t pos)
         write_pos += written;
     }
 
-    return write_pos - pos;
+    return (ssize_t)(write_pos - pos);
 }
 
 couchstore_error_t db_write_header(Db *db, sized_buf *buf, off_t *pos)
