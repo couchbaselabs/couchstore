@@ -329,7 +329,7 @@ extern "C" {
             return 1;
         }
 
-        BulkData bs(lua_objlen(ls, -1));
+        BulkData bs((unsigned)lua_objlen(ls, -1));
 
         int offset(0);
         for (lua_pushnil(ls); lua_next(ls, -2); lua_pop(ls, 1)) {
