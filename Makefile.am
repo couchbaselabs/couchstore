@@ -127,6 +127,22 @@ test: check-TESTS $(extra_tests)
 
 slow_test: $(slow_tests)
 
+VALGRIND=valgrind
+VALGRIND_OPTIONS=--tool=Memcheck --num-callers=50 \
+                 --error-limit=yes --track-origins=yes --malloc-fill=55 \
+                 --free-fill=aa --dsymutil=yes -q
+
+VALGRIND_TEST=.libs/testapp
+
+valgrind: ${check_PROGRAMS}
+	@for f in $(VALGRIND_TEST); \
+        do \
+           echo Running Valgrind on $$f; \
+           LD_LIBRARY_PATH=`pwd`/.libs \
+           DYLD_LIBRARY_PATH=`pwd`/.libs \
+           $(VALGRIND) $(VALGRIND_OPTIONS) --log-file=`basename $$f`.log $$f; \
+        done
+
 reformat:
 	astyle --mode=c \
                --quiet \
