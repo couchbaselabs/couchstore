@@ -313,8 +313,8 @@ cleanup:
 
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_save_documents(Db *db,
-                                             Doc* const *docs,
-                                             DocInfo* const *infos,
+                                             Doc* const docs[],
+                                             DocInfo *infos[],
                                              unsigned numdocs,
                                              couchstore_save_options options)
 {
@@ -372,6 +372,11 @@ couchstore_error_t couchstore_save_documents(Db *db,
 
     fatbuf_free(fb);
     if (errcode == COUCHSTORE_SUCCESS) {
+        // Fill in the assigned sequence numbers for caller's later use:
+        seq = db->header.update_seq;
+        for (ii = 0; ii < numdocs; ii++) {
+            infos[ii]->db_seq = ++seq;
+        }
         db->header.update_seq = seq;
     }
 
@@ -380,7 +385,7 @@ couchstore_error_t couchstore_save_documents(Db *db,
 
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_save_document(Db *db, const Doc *doc,
-                                            const DocInfo *info, couchstore_save_options options)
+                                            DocInfo *info, couchstore_save_options options)
 {
     return couchstore_save_documents(db, (Doc**)&doc, (DocInfo**)&info, 1, options);
 }

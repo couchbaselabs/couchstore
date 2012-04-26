@@ -77,10 +77,6 @@ static void setdoc(Doc *doc, DocInfo *info, char *id, size_t idlen,
     doc->data.size = datalen;
     info->rev_meta.buf = meta;
     info->rev_meta.size = metalen;
-    info->content_meta = 0;
-    info->rev_seq = 1;
-    info->size = 0;
-    info->deleted = 0;
     info->id = doc->id;
 }
 
@@ -147,7 +143,9 @@ cleanup:
     assert(errcode == 0);
     return errcode;
 }
-char zerometa[] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3};
+
+static char zerometa[] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3};
+
 static void test_save_docs(int count, const char *doc_tpl)
 {
     int errcode = 0;
@@ -164,10 +162,11 @@ static void test_save_docs(int count, const char *doc_tpl)
     fflush(stderr);
 
     docset_init(count);
+    srandom(0xdeadbeef);  // doc IDs should be consistent across runs
     for (i = 0; i < count; ++i) {
         idBuf = (char *) malloc(sizeof(char) * 32);
         assert(idBuf != NULL);
-        sprintf(idBuf, "doc%d", i + 1);
+        sprintf(idBuf, "doc%lu", (unsigned long)random());
         valueBuf = (char *) malloc(sizeof(char) * (strlen(doc_tpl) + 20));
         assert(valueBuf != NULL);
         sprintf(valueBuf, doc_tpl, i + 1);
@@ -194,8 +193,32 @@ static void test_save_docs(int count, const char *doc_tpl)
     try(couchstore_commit(db));
     couchstore_close_db(db);
 
-    //Read back
     try(couchstore_open_db(testfilepath, 0, &db));
+
+    // Read back by doc ID:
+    testdocset.pos = 0;
+    for (i = 0; i < count; ++i) {
+        DocInfo* out_info;
+        try(couchstore_docinfo_by_id(db, testdocset.docs[i].id.buf, testdocset.docs[i].id.size,
+                                     &out_info));
+        docset_check(db, out_info, &testdocset);
+        couchstore_free_docinfo(out_info);
+    }
+
+    // Read back by sequence:
+    testdocset.pos = 0;
+    for (i = 0; i < count; ++i) {
+        DocInfo* out_info;
+        assert(testdocset.infos[i].db_seq == (uint64_t)i + 1);
+        try(couchstore_docinfo_by_sequence(db, testdocset.infos[i].db_seq, &out_info));
+        docset_check(db, out_info, &testdocset);
+        couchstore_free_docinfo(out_info);
+    }
+
+    // Read back using changes_since:
+    testdocset.pos = 0;
+    ZERO(testdocset.counters);
+    testdocset.counters.totaldocs = 0;
     try(couchstore_changes_since(db, 0, 0, docset_check, &testdocset));
     assert(testdocset.counters.totaldocs == count);
     assert(testdocset.counters.deleted == 0);
@@ -249,6 +272,13 @@ static void test_save_doc(void)
                                      &testdocset.infos[3], 0));
     try(couchstore_commit(db));
     couchstore_close_db(db);
+
+    // Check that sequence numbers got filled in
+    unsigned i;
+    for (i = 0; i < 4; ++i) {
+        assert(testdocset.infos[i].db_seq == i + 1);
+    }
+
     //Read back
     try(couchstore_open_db(testfilepath, 0, &db));
     try(couchstore_changes_since(db, 0, 0, docset_check, &testdocset));
@@ -467,7 +497,7 @@ static void mb5086(void)
 
 int main(int argc, const char *argv[])
 {
-    int doc_counts[] = { 4, 69, 666, 9090, 99999, 666666 };
+    int doc_counts[] = { 4, 69, 666, 9090, 99999 };
     unsigned i;
     const char *small_doc_tpl = "{\"test_doc_index\":%d}";
     const char *large_doc_tpl =

@@ -336,9 +336,9 @@ cleanup:
     return errcode;
 }
 
-static couchstore_error_t docinfo_fetch(couchfile_lookup_request *rq,
-                                        void *k,
-                                        sized_buf *v)
+static couchstore_error_t docinfo_fetch_by_id(couchfile_lookup_request *rq,
+                                              void *k,
+                                              sized_buf *v)
 {
     sized_buf *id = (sized_buf *) k;
     DocInfo **pInfo = (DocInfo **) rq->callback_ctx;
@@ -346,6 +346,18 @@ static couchstore_error_t docinfo_fetch(couchfile_lookup_request *rq,
         return COUCHSTORE_ERROR_DOC_NOT_FOUND;
     }
     return by_id_read_docinfo(pInfo, id, v);
+}
+
+static couchstore_error_t docinfo_fetch_by_seq(couchfile_lookup_request *rq,
+                                               void *k,
+                                               sized_buf *v)
+{
+    sized_buf *id = (sized_buf *) k;
+    DocInfo **pInfo = (DocInfo **) rq->callback_ctx;
+    if (v == NULL) {
+        return COUCHSTORE_ERROR_DOC_NOT_FOUND;
+    }
+    return by_seq_read_docinfo(pInfo, id, v);
 }
 
 LIBCOUCHSTORE_API
@@ -373,10 +385,47 @@ couchstore_error_t couchstore_docinfo_by_id(Db *db,
     rq.num_keys = 1;
     rq.keys = &keylist;
     rq.callback_ctx = pInfo;
-    rq.fetch_callback = docinfo_fetch;
+    rq.fetch_callback = docinfo_fetch_by_id;
     rq.fold = 0;
 
     errcode = btree_lookup(&rq, db->header.by_id_root->pointer);
+    if (errcode == COUCHSTORE_SUCCESS) {
+        if (*pInfo == NULL) {
+            errcode = COUCHSTORE_ERROR_DOC_NOT_FOUND;
+        }
+    }
+    return errcode;
+}
+
+LIBCOUCHSTORE_API
+couchstore_error_t couchstore_docinfo_by_sequence(Db *db,
+                                                  uint64_t sequence,
+                                                  DocInfo **pInfo)
+{
+    sized_buf key;
+    sized_buf *keylist = &key;
+    couchfile_lookup_request rq;
+    sized_buf cmptmp;
+    couchstore_error_t errcode;
+
+    if (db->header.by_id_root == NULL) {
+        return COUCHSTORE_ERROR_DOC_NOT_FOUND;
+    }
+    
+    sequence = htonll(sequence);
+    key.buf = (char *)&sequence + 2;
+    key.size = 6;
+
+    rq.cmp.compare = seq_cmp;
+    rq.cmp.arg = &cmptmp;
+    rq.db = db;
+    rq.num_keys = 1;
+    rq.keys = &keylist;
+    rq.callback_ctx = pInfo;
+    rq.fetch_callback = docinfo_fetch_by_seq;
+    rq.fold = 0;
+
+    errcode = btree_lookup(&rq, db->header.by_seq_root->pointer);
     if (errcode == COUCHSTORE_SUCCESS) {
         if (*pInfo == NULL) {
             errcode = COUCHSTORE_ERROR_DOC_NOT_FOUND;

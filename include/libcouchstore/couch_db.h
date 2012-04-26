@@ -122,6 +122,9 @@ extern "C" {
      *
      * To delete a docuemnt, set doc to NULL.
      *
+     * On return, the db_seq field of the DocInfo will be filled in with the
+     * document's (or deletion's) sequence number.
+     *
      * @param db database to save the document in
      * @param doc the document to save
      * @param info document info
@@ -131,7 +134,7 @@ extern "C" {
     LIBCOUCHSTORE_API
     couchstore_error_t couchstore_save_document(Db *db,
                                                 const Doc *doc,
-                                                const DocInfo *info,
+                                                DocInfo *info,
                                                 couchstore_save_options options);
 
     /**
@@ -140,6 +143,9 @@ extern "C" {
      * To delete documents, set docs to NULL: the docs referenced by
      * the docinfos will be deleted. To intermix deletes and inserts
      * in a bulk update, pass docinfos with the deleted flag set.
+     *
+     * On return, the db_seq fields of the DocInfos will be filled in with the
+     * documents' (or deletions') sequence numbers.
      *
      * @param db the database to save documents in
      * @param docs an array of document pointers
@@ -150,8 +156,8 @@ extern "C" {
      */
     LIBCOUCHSTORE_API
     couchstore_error_t couchstore_save_documents(Db *db,
-                                                 Doc* const *docs,
-                                                 DocInfo* const *infos,
+                                                 Doc* const docs[],
+                                                 DocInfo *infos[],
                                                  unsigned numDocs,
                                                  couchstore_save_options options);
     /**
@@ -181,6 +187,20 @@ extern "C" {
                                                 const void *id,
                                                 size_t idlen,
                                                 DocInfo **pInfo);
+
+    /**
+     * Retrieve the document info for a given sequence number.
+     *
+     * The info should be freed with couchstore_free_docinfo().
+     *
+     * @param sequence the document sequence number
+     * @param pInfo where to store the result
+     * @return COUCHSTORE_SUCCESS on success.
+     */
+    LIBCOUCHSTORE_API
+    couchstore_error_t couchstore_docinfo_by_sequence(Db *db,
+                                                      uint64_t sequence,
+                                                      DocInfo **pInfo);
 
     /** Options flags for open_doc and open_doc_with_docinfo */
     typedef uint64_t couchstore_open_options;
