@@ -22,6 +22,18 @@
 #ifndef COUCHSTORE_CONFIG_STATIC_H
 #define COUCHSTORE_CONFIG_STATIC_H 1
 
+//Large File Support
+#define _LARGE_FILE 1
+#ifndef _FILE_OFFSET_BITS
+#  define _FILE_OFFSET_BITS 64
+#elif (_FILE_OFFSET_BITS != 64)
+#error "bad things"
+#endif
+#define _LARGEFILE_SOURCE 1
+#ifndef O_LARGEFILE
+# define O_LARGEFILE 0
+#endif
+
 #include <sys/types.h>
 
 #ifdef HAVE_NETINET_IN_H
@@ -66,16 +78,6 @@ extern "C" {
 #undef ntohl
 #undef htons
 #undef htonl
-#endif
-
-//Large File Support
-#define _LARGE_FILE 1
-#ifndef _FILE_OFFSET_BITS
-#  define _FILE_OFFSET_BITS 64
-#endif
-#define _LARGEFILE_SOURCE 1
-#ifndef O_LARGEFILE
-# define O_LARGEFILE 0
 #endif
 
 #ifdef WIN32

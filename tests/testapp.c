@@ -55,6 +55,7 @@ static void test_get_48(uint64_t value, const uint8_t expected[8])
 
 static void test_bitfield_fns(void)
 {
+    assert(sizeof(off_t) == 8);
     uint8_t expected1[8] = {0x12, 0x34, 0x56, 0x78, 0x90};
     test_get_40(0x1234567890LL, expected1);
     uint8_t expected2[8] = {0x09, 0x87, 0x65, 0x43, 0x21};

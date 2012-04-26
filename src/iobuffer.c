@@ -6,6 +6,7 @@
 //  Copyright (c) 2012 Couchbase, Inc. All rights reserved.
 //
 
+#include "config.h"
 #include "iobuffer.h"
 #include "internal.h"
 #include <stdlib.h>
