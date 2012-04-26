@@ -61,6 +61,8 @@ libcouchstore_la_SOURCES = \
                             src/llmsort.c \
                             src/mergesort.c \
                             src/mergesort.h \
+                            src/node_types.c \
+                            src/node_types.h \
                             src/reduces.c \
                             src/reduces.h \
                             src/strerror.c \

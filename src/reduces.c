@@ -3,14 +3,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include "reduces.h"
-#include "bitfield.h"
+#include "node_types.h"
+
 
 void by_seq_reduce (char *dst, size_t *size_r, nodelist *leaflist, int count)
 {
     (void)leaflist;
-    memset(dst, 0, 5);
-    set_bits(dst, 0, 40, count);
-    *size_r = 5;
+    raw_by_seq_reduce *raw = (raw_by_seq_reduce*)dst;
+    raw->count = encode_raw40(count);
+    *size_r = sizeof(*raw);
 }
 
 void by_seq_rereduce (char *dst, size_t *size_r, nodelist *ptrlist, int count)
@@ -19,35 +20,44 @@ void by_seq_rereduce (char *dst, size_t *size_r, nodelist *ptrlist, int count)
     uint64_t total = 0;
     nodelist *i = ptrlist;
     while (i != NULL) {
-        total += get_40(i->pointer->reduce_value.buf);
+        const raw_by_seq_reduce *reduce = (const raw_by_seq_reduce*) i->pointer->reduce_value.buf;
+        total += decode_raw40(reduce->count);
         i = i->next;
     }
-    memset(dst, 0, 5);
-    set_bits(dst, 0, 40, total);
-    *size_r = 5;
+    raw_by_seq_reduce *raw = (raw_by_seq_reduce*)dst;
+    raw->count = encode_raw40(total);
+    *size_r = sizeof(*raw);
+}
+
+
+static size_t encode_by_id_reduce(char *dst, uint64_t notdeleted, uint64_t deleted, uint64_t size)
+{
+    raw_by_id_reduce *raw = (raw_by_id_reduce*)dst;
+    raw->notdeleted = encode_raw40(notdeleted);
+    raw->deleted = encode_raw40(deleted);
+    raw->size = encode_raw48(size);
+    return sizeof(*raw);
 }
 
 void by_id_reduce(char *dst, size_t *size_r, nodelist *leaflist, int count)
 {
     (void)count;
     uint64_t notdeleted = 0, deleted = 0, size = 0;
+
     nodelist *i = leaflist;
     while (i != NULL) {
-        if ((i->data.buf[10] & 0x80) != 0) {
+        const raw_id_index_value *raw = (const raw_id_index_value*)i->data.buf;
+        if (decode_raw48(raw->bp) & BP_DELETED_FLAG) {
             deleted++;
         } else {
             notdeleted++;
         }
-        size += get_32(i->data.buf + 6);
+        size += decode_raw32(raw->size);
 
         i = i->next;
     }
 
-    memset(dst, 0, 16);
-    set_bits(dst, 0, 40, notdeleted);
-    set_bits(dst + 5, 0, 40, deleted);
-    set_bits(dst + 10, 0, 48, size);
-    *size_r = 16;
+    *size_r = encode_by_id_reduce(dst, notdeleted, deleted, size);
 }
 
 void by_id_rereduce(char *dst, size_t *size_r, nodelist *ptrlist, int count)
@@ -57,16 +67,13 @@ void by_id_rereduce(char *dst, size_t *size_r, nodelist *ptrlist, int count)
 
     nodelist *i = ptrlist;
     while (i != NULL) {
-        notdeleted += get_40(i->pointer->reduce_value.buf);
-        deleted += get_40(i->pointer->reduce_value.buf + 5);
-        size += get_48(i->pointer->reduce_value.buf + 10);
+        const raw_by_id_reduce *reduce = (const raw_by_id_reduce*) i->pointer->reduce_value.buf;
+        notdeleted += decode_raw40(reduce->notdeleted);
+        deleted += decode_raw40(reduce->deleted);
+        size += decode_raw48(reduce->size);
 
         i = i->next;
     }
 
-    memset(dst, 0, 16);
-    set_bits(dst, 0, 40, notdeleted);
-    set_bits(dst + 5, 0, 40, deleted);
-    set_bits(dst + 10, 0, 48, size);
-    *size_r = 16;
+    *size_r = encode_by_id_reduce(dst, notdeleted, deleted, size);
 }

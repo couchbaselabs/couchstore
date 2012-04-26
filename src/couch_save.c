@@ -5,36 +5,41 @@
 #include <stdlib.h>
 
 #include "internal.h"
-#include "bitfield.h"
+#include "node_types.h"
 #include "util.h"
 #include "reduces.h"
 
 static size_t assemble_seq_index_value(DocInfo *docinfo, char *dst)
 {
-    memset(dst, 0, 16);
-    set_bits(dst, 0, 12, docinfo->id.size);
-    set_bits(dst + 1, 4, 28, docinfo->size);
-    set_bits(dst + 5, 0, 1, docinfo->deleted);
-    set_bits(dst + 5, 1, 47, docinfo->bp);
-    dst[11] = docinfo->content_meta;
-    set_bits(dst + 12, 0, 32, docinfo->rev_seq); //16 bytes in.
-    memcpy(dst + 16, docinfo->id.buf, docinfo->id.size);
-    memcpy(dst + 16 + docinfo->id.size, docinfo->rev_meta.buf,
-           docinfo->rev_meta.size);
-    return 16 + docinfo->id.size + docinfo->rev_meta.size;
+    char* const start = dst;
+    raw_seq_index_value *raw = (raw_seq_index_value*)dst;
+    raw->sizes = encode_kv_length(docinfo->id.size, docinfo->size);
+    raw->bp = encode_raw48(docinfo->bp | (docinfo->deleted ? 1LL<<47 : 0));
+    raw->content_meta = encode_raw08(docinfo->content_meta);
+    raw->rev_seq = encode_raw32((uint32_t)docinfo->rev_seq);
+    dst += sizeof(*raw);
+
+    memcpy(dst, docinfo->id.buf, docinfo->id.size);
+    dst += docinfo->id.size;
+    memcpy(dst, docinfo->rev_meta.buf, docinfo->rev_meta.size);
+    dst += docinfo->rev_meta.size;
+    return dst - start;
 }
 
 static size_t assemble_id_index_value(DocInfo *docinfo, char *dst)
 {
-    memset(dst, 0, 21);
-    set_bits(dst, 0, 48, docinfo->db_seq);
-    set_bits(dst + 6, 0, 32, docinfo->size);
-    set_bits(dst + 10, 0, 1, docinfo->deleted);
-    set_bits(dst + 10, 1, 47, docinfo->bp);
-    dst[16] = docinfo->content_meta;
-    set_bits(dst + 17, 0, 32, docinfo->rev_seq); //21 bytes in
-    memcpy(dst + 21, docinfo->rev_meta.buf, docinfo->rev_meta.size);
-    return 21 + docinfo->rev_meta.size;
+    char* const start = dst;
+    raw_id_index_value *raw = (raw_id_index_value*)dst;
+    raw->db_seq = encode_raw48(docinfo->db_seq);
+    raw->size = encode_raw32((uint32_t)docinfo->size);
+    raw->bp = encode_raw48(docinfo->bp | (docinfo->deleted ? 1LL<<47 : 0));
+    raw->content_meta = encode_raw08(docinfo->content_meta);
+    raw->rev_seq = encode_raw32((uint32_t)docinfo->rev_seq);
+    dst += sizeof(*raw);
+
+    memcpy(dst, docinfo->rev_meta.buf, docinfo->rev_meta.size);
+    dst += docinfo->rev_meta.size;
+    return dst - start;
 }
 
 static couchstore_error_t write_doc(Db *db, const Doc *doc, uint64_t *bp,
@@ -65,8 +70,8 @@ static int seq_action_compare(const void *actv1, const void *actv2)
 
     uint64_t seq1, seq2;
 
-    seq1 = get_48(act1->key->buf);
-    seq2 = get_48(act2->key->buf);
+    seq1 = decode_sequence_key(act1->key);
+    seq2 = decode_sequence_key(act2->key);
 
     if (seq1 < seq2) {
         return -1;
@@ -111,13 +116,14 @@ static void idfetch_update_cb(couchfile_modify_request *rq,
         return;
     }
 
-    oldseq = get_48(v->buf);
+    const raw_id_index_value *raw = (raw_id_index_value*) v->buf;
+    oldseq = decode_raw48(raw->db_seq);
 
     delbuf = (sized_buf *) fatbuf_get(ctx->deltermbuf, sizeof(sized_buf));
     delbuf->buf = (char *) fatbuf_get(ctx->deltermbuf, 6);
     delbuf->size = 6;
     memset(delbuf->buf, 0, 6);
-    set_bits(delbuf->buf, 0, 48, oldseq);
+    *(raw_48*)delbuf->buf = encode_raw48(oldseq);
 
     ctx->seqacts[ctx->actpos].type = ACTION_REMOVE;
     ctx->seqacts[ctx->actpos].value.data = NULL;
@@ -257,8 +263,7 @@ static couchstore_error_t add_doc_to_update_list(Db *db,
     seqterm->buf = (char *) fatbuf_get(fb, 6);
     seqterm->size = 6;
     error_unless(seqterm->buf, COUCHSTORE_ERROR_ALLOC_FAIL);
-    memset(seqterm->buf, 0, 6);
-    set_bits(seqterm->buf, 0, 48, seq);
+    *(raw_48*)seqterm->buf = encode_raw48(seq);
 
     if (doc) {
         size_t disk_size;

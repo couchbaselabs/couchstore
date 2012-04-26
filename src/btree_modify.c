@@ -7,7 +7,7 @@
 #include "couch_btree.h"
 #include "util.h"
 #include "arena.h"
-#include "bitfield.h"
+#include "node_types.h"
 
 #define CHUNK_THRESHOLD 1279
 
@@ -109,15 +109,15 @@ couchstore_error_t mr_push_item(sized_buf *k, sized_buf *v, couchfile_modify_res
 
 static nodelist *encode_pointer(arena* a, node_pointer *ptr)
 {
-    nodelist *pel = make_nodelist(a, 14 + ptr->reduce_value.size);
+    nodelist *pel = make_nodelist(a, sizeof(raw_node_pointer) + ptr->reduce_value.size);
     if (!pel) {
         return NULL;
     }
-    memset(pel->data.buf, 0, 14);
-    set_bits(pel->data.buf +  0, 0, 48, ptr->pointer);
-    set_bits(pel->data.buf +  6, 0, 48, ptr->subtreesize);
-    set_bits(pel->data.buf + 12, 0, 16, ptr->reduce_value.size);
-    memcpy(pel->data.buf + 14, ptr->reduce_value.buf, ptr->reduce_value.size);
+    raw_node_pointer *raw = (raw_node_pointer*)pel->data.buf;
+    raw->pointer = encode_raw48(ptr->pointer);
+    raw->subtreesize = encode_raw48(ptr->subtreesize);
+    raw->reduce_value_size = encode_raw16((uint16_t)ptr->reduce_value.size);
+    memcpy(raw + 1, ptr->reduce_value.buf, ptr->reduce_value.size);
     pel->pointer = ptr;
     pel->key = ptr->key;
     return pel;
@@ -144,10 +144,11 @@ static node_pointer *read_pointer(arena* a, sized_buf *key, char *buf)
     if (!p) {
         return NULL;
     }
-    p->pointer = get_48(buf);
-    p->subtreesize = get_48(buf + 6);
-    p->reduce_value.size = get_16(buf + 12);
-    p->reduce_value.buf = buf + 14;
+    const raw_node_pointer *raw = (const raw_node_pointer*)buf;
+    p->pointer = decode_raw48(raw->pointer);
+    p->subtreesize = decode_raw48(raw->subtreesize);
+    p->reduce_value.size = decode_raw16(raw->reduce_value_size);
+    p->reduce_value.buf = buf + sizeof(*raw);
     p->key = *key;
     return p;
 }
@@ -156,7 +157,7 @@ static node_pointer *read_pointer(arena* a, sized_buf *key, char *buf)
 //and add the resulting pointer to the pointers list.
 static couchstore_error_t flush_mr(couchfile_modify_result *res)
 {
-    size_t bufpos = 0;
+    char *dst;
     int errcode = COUCHSTORE_SUCCESS;
     char *nodebuf = NULL;
     sized_buf writebuf;
@@ -181,17 +182,12 @@ static couchstore_error_t flush_mr(couchfile_modify_result *res)
     writebuf.buf = nodebuf;
     writebuf.size = res->node_len + 1;
 
-    nodebuf[0] = (char) res->node_type;
-    bufpos = 1;
+    dst = nodebuf;
+    *(dst++) = (char) res->node_type;
 
     nodelist *i = res->values->next;
     while (i != NULL) {
-        memset(nodebuf + bufpos, 0, 5);
-        set_bits(nodebuf + bufpos    , 0, 12, i->key.size);
-        set_bits(nodebuf + bufpos + 1, 4, 28, i->data.size);
-        memcpy(nodebuf + bufpos + 5, i->key.buf, i->key.size);
-        memcpy(nodebuf + bufpos + 5 + i->key.size, i->data.buf, i->data.size);
-        bufpos = bufpos + 5 + i->data.size + i->key.size;
+        dst = write_kv(dst, i->key, i->data);
         if (i->pointer) {
             subtreesize += i->pointer->subtreesize;
         }
@@ -306,11 +302,8 @@ static couchstore_error_t modify_node(couchfile_modify_request *rq,
     if (nptr == NULL || nodebuf[0] == 1) { //KV Node
         local_result->node_type = KV_NODE;
         while (bufpos < nodebuflen) {
-            uint32_t klen, vlen;
-            get_kvlen(nodebuf + bufpos, &klen, &vlen);
-            sized_buf cmp_key = {nodebuf + bufpos + 5, klen};
-            sized_buf val_buf = {nodebuf + bufpos + 5 + klen, vlen};
-            bufpos += 5 + klen + vlen;
+            sized_buf cmp_key, val_buf;
+            bufpos += read_kv(nodebuf + bufpos, &cmp_key, &val_buf);
             int advance = 0;
             while (!advance && start < end) {
                 advance = 1;
@@ -391,11 +384,8 @@ static couchstore_error_t modify_node(couchfile_modify_request *rq,
     } else if (nodebuf[0] == 0) { //KP Node
         local_result->node_type = KP_NODE;
         while (bufpos < nodebuflen && start < end) {
-            uint32_t klen, vlen;
-            get_kvlen(nodebuf + bufpos, &klen, &vlen);
-            sized_buf cmp_key = {nodebuf + bufpos + 5, klen};
-            sized_buf val_buf = {nodebuf + bufpos + 5 + klen, vlen};
-            bufpos += 5 + klen + vlen;
+            sized_buf cmp_key, val_buf;
+            bufpos += read_kv(nodebuf + bufpos, &cmp_key, &val_buf);
             int cmp_val = rq->cmp.compare(&cmp_key, rq->actions[start].key);
             if (bufpos == nodebuflen) {
                 //We're at the last item in the kpnode, must apply all our
@@ -450,11 +440,8 @@ static couchstore_error_t modify_node(couchfile_modify_request *rq,
             }
         }
         while (bufpos < nodebuflen) {
-            uint32_t klen, vlen;
-            get_kvlen(nodebuf + bufpos, &klen, &vlen);
-            sized_buf cmp_key = {nodebuf + bufpos + 5, klen};
-            sized_buf val_buf = {nodebuf + bufpos + 5 + klen, vlen};
-            bufpos += 5 + klen + vlen;
+            sized_buf cmp_key, val_buf;
+            bufpos += read_kv(nodebuf + bufpos, &cmp_key, &val_buf);
             node_pointer *add = read_pointer(dst->arena, &cmp_key, val_buf.buf);
             if (!add) {
                 errcode = COUCHSTORE_ERROR_ALLOC_FAIL;

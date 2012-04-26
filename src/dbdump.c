@@ -8,6 +8,12 @@
 #include <snappy-c.h>
 #include "bitfield.h"
 
+typedef struct {
+    raw_64 cas;
+    raw_32 expiry;
+    raw_32 flags;
+} CouchbaseRevMeta;
+
 static void printsb(sized_buf *sb)
 {
     if (sb->buf == NULL) {
@@ -29,10 +35,11 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
     printsb(&docinfo->id);
     printf("     rev: %"PRIu64"\n", docinfo->rev_seq);
     printf("     content_meta: %d\n", docinfo->content_meta);
-    if (docinfo->rev_meta.size == 16) {
-        cas = ntohll(*((uint64_t *)docinfo->rev_meta.buf));
-        expiry = get_32(docinfo->rev_meta.buf + 8);
-        flags = get_32(docinfo->rev_meta.buf + 12);
+    if (docinfo->rev_meta.size == sizeof(CouchbaseRevMeta)) {
+        const CouchbaseRevMeta* meta = (const CouchbaseRevMeta*)docinfo->rev_meta.buf;
+        cas = decode_raw64(meta->cas);
+        expiry = decode_raw32(meta->expiry);
+        flags = decode_raw32(meta->flags);
         printf("     cas: %"PRIu64", expiry: %"PRIu32", flags: %"PRIu32"\n", cas, expiry, flags);
     }
     if (docinfo->deleted) {
