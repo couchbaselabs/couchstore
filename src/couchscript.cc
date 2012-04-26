@@ -2,6 +2,7 @@
 #include "config.h"
 #include <iostream>
 #include <cassert>
+#include <errno.h>
 #include <string.h>
 #include <sysexits.h>
 #include <stdlib.h>
@@ -224,7 +225,7 @@ extern "C" {
 
         Db *db = getDb(ls);
 
-        ssize_t arg = static_cast<ssize_t>(luaL_checknumber(ls, 2));
+        int64_t arg = static_cast<int64_t>(luaL_checknumber(ls, 2));
         off_t location(0);
         if (arg < 1) {
             location = db->file_pos + arg;
@@ -236,8 +237,9 @@ extern "C" {
 
         int rv = truncate(path, location);
         if (rv != 0) {
-            char buf[256];
-            snprintf(buf, sizeof(buf), "error truncating DB: %d", rv);
+            char buf[1256];
+            snprintf(buf, sizeof(buf), "error truncating DB %s to %llu: %s (%d)",
+                     path, location, strerror(errno), errno);
             lua_pushstring(ls, buf);
             lua_error(ls);
             return 1;
