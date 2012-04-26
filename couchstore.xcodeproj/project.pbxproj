@@ -65,6 +65,8 @@
 		27AA1B1D1538EC4300D03755 /* arena.c in Sources */ = {isa = PBXBuildFile; fileRef = 27AA1B1C1538EC4300D03755 /* arena.c */; };
 		27B07E77159E75BD0084E054 /* libcouchstore.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 274F9758152E1CCA00247C46 /* libcouchstore.dylib */; };
 		27B07E80159E75EE0084E054 /* viewgen.c in Sources */ = {isa = PBXBuildFile; fileRef = 27B07E7F159E75EE0084E054 /* viewgen.c */; };
+		27D3316215DEC20500CDD3C2 /* node_types.c in Sources */ = {isa = PBXBuildFile; fileRef = 27D3316015DEC20500CDD3C2 /* node_types.c */; };
+		27D3316315DEC20500CDD3C2 /* node_types.h in Headers */ = {isa = PBXBuildFile; fileRef = 27D3316115DEC20500CDD3C2 /* node_types.h */; };
 		27D37EC71547292B00D3F0C8 /* libcouchstore.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 274F9758152E1CCA00247C46 /* libcouchstore.dylib */; };
 		27D37ED3154729F400D3F0C8 /* db_compact.c in Sources */ = {isa = PBXBuildFile; fileRef = 27D37ECF154729F400D3F0C8 /* db_compact.c */; };
 		27D37ED4154729F400D3F0C8 /* llmsort.c in Sources */ = {isa = PBXBuildFile; fileRef = 27D37ED0154729F400D3F0C8 /* llmsort.c */; };
@@ -226,6 +228,8 @@
 		27AA1B1E1538EC5600D03755 /* arena.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = arena.h; sourceTree = "<group>"; };
 		27B07E7C159E75BD0084E054 /* couch_viewgen */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = couch_viewgen; sourceTree = BUILT_PRODUCTS_DIR; };
 		27B07E7F159E75EE0084E054 /* viewgen.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = viewgen.c; sourceTree = "<group>"; };
+		27D3316015DEC20500CDD3C2 /* node_types.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = node_types.c; sourceTree = "<group>"; };
+		27D3316115DEC20500CDD3C2 /* node_types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = node_types.h; sourceTree = "<group>"; };
 		27D37ECC1547292B00D3F0C8 /* couch_compact */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = couch_compact; sourceTree = BUILT_PRODUCTS_DIR; };
 		27D37ECF154729F400D3F0C8 /* db_compact.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = db_compact.c; sourceTree = "<group>"; };
 		27D37ED0154729F400D3F0C8 /* llmsort.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = llmsort.c; sourceTree = "<group>"; };
@@ -354,6 +358,8 @@
 				274F9791152E1D1400247C46 /* crc32.h */,
 				274F9794152E1D1400247C46 /* fatbuf.h */,
 				274F9795152E1D1400247C46 /* internal.h */,
+				27D3316015DEC20500CDD3C2 /* node_types.c */,
+				27D3316115DEC20500CDD3C2 /* node_types.h */,
 				27093EF51537441A0087804E /* iobuffer.c */,
 				27093EF81537442E0087804E /* iobuffer.h */,
 				274F97A0152E1D1400247C46 /* os.c */,
@@ -476,6 +482,7 @@
 				274F97E4152E1D9200247C46 /* config.h in Headers */,
 				27A3A93215A3612800E1BDBC /* macros.h in Headers */,
 				27F28F1115C9F7B1007A4B95 /* json_reduce.h in Headers */,
+				27D3316315DEC20500CDD3C2 /* node_types.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -661,6 +668,7 @@
 				27F08CD315AB8FBC003C3E2B /* collate_json.c in Sources */,
 				27F00F1215B9D0AA008CDA68 /* couch_index.c in Sources */,
 				27F28F1415C9F92F007A4B95 /* json_reduce.c in Sources */,
+				27D3316215DEC20500CDD3C2 /* node_types.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -760,6 +768,7 @@
 					"DEBUG=1",
 					"$(inherited)",
 				);
+				GCC_STRICT_ALIASING = YES;
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
@@ -779,7 +788,10 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
-				WARNING_CFLAGS = "-Wall";
+				WARNING_CFLAGS = (
+					"-Wstrict-aliasing=2",
+					"-Wall",
+				);
 			};
 			name = Debug;
 		};
@@ -793,6 +805,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_C_LANGUAGE_STANDARD = c99;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_STRICT_ALIASING = YES;
 				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -810,7 +823,10 @@
 				LIBRARY_SEARCH_PATHS = /usr/local/lib;
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				SDKROOT = macosx;
-				WARNING_CFLAGS = "-Wall";
+				WARNING_CFLAGS = (
+					"-Wstrict-aliasing=2",
+					"-Wall",
+				);
 			};
 			name = Release;
 		};

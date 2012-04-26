@@ -5,8 +5,10 @@
 #include <stdlib.h>
 
 #include "internal.h"
+#include "node_types.h"
 #include "couch_btree.h"
 #include "bitfield.h"
+#include "reduces.h"
 #include "util.h"
 
 #define ROOT_BASE_SIZE 12
@@ -33,7 +35,7 @@ cleanup:
 static couchstore_error_t find_header_at_pos(Db *db, off_t pos)
 {
     int errcode = COUCHSTORE_SUCCESS;
-    char *header_buf = NULL;
+    raw_file_header *header_buf = NULL;
     uint8_t buf[2];
     ssize_t readsize = db->file.ops->pread(db->file.handle, buf, 2, pos);
     error_unless(readsize == 2, COUCHSTORE_ERROR_READ);
@@ -43,26 +45,26 @@ static couchstore_error_t find_header_at_pos(Db *db, off_t pos)
         return COUCHSTORE_ERROR_CORRUPT;
     }
 
-    int header_len = pread_header(&db->file, pos, &header_buf);
+    int header_len = pread_header(&db->file, pos, (char**)&header_buf);
     if (header_len < 0) {
         error_pass(header_len);
     }
 
     db->header.position = pos;
-    db->header.disk_version = header_buf[0];
+    db->header.disk_version = decode_raw08(header_buf->version);
     error_unless(db->header.disk_version == COUCH_DISK_VERSION,
                  COUCHSTORE_ERROR_HEADER_VERSION);
-    db->header.update_seq = get_48(header_buf + 1);
-    db->header.purge_seq = get_48(header_buf + 7);
-    db->header.purge_ptr = get_48(header_buf + 13);
+    db->header.update_seq = decode_raw48(header_buf->update_seq);
+    db->header.purge_seq = decode_raw48(header_buf->purge_seq);
+    db->header.purge_ptr = decode_raw48(header_buf->purge_ptr);
     error_unless(db->header.purge_ptr <= db->header.position, COUCHSTORE_ERROR_CORRUPT);
-    int seqrootsize = get_16(header_buf + 19);
-    int idrootsize = get_16(header_buf + 21);
-    int localrootsize = get_16(header_buf + 23);
+    int seqrootsize = decode_raw16(header_buf->seqrootsize);
+    int idrootsize = decode_raw16(header_buf->idrootsize);
+    int localrootsize = decode_raw16(header_buf->localrootsize);
     error_unless(header_len == HEADER_BASE_SIZE + seqrootsize + idrootsize + localrootsize,
                  COUCHSTORE_ERROR_CORRUPT);
 
-    char *root_data = header_buf + HEADER_BASE_SIZE;
+    char *root_data = (char*) (header_buf + 1);  // i.e. just past *header_buf
     error_pass(read_db_root(db, &db->header.by_seq_root, root_data, seqrootsize));
     root_data += seqrootsize;
     error_pass(read_db_root(db, &db->header.by_id_root, root_data, idrootsize));
@@ -114,19 +116,22 @@ static couchstore_error_t write_header(Db *db)
     if (db->header.local_docs_root) {
         localrootsize = ROOT_BASE_SIZE + db->header.local_docs_root->reduce_value.size;
     }
-    writebuf.size = HEADER_BASE_SIZE + seqrootsize + idrootsize + localrootsize;
+    writebuf.size = sizeof(raw_file_header) + seqrootsize + idrootsize + localrootsize;
     writebuf.buf = (char *) calloc(1, writebuf.size);
-    writebuf.buf[0] = COUCH_DISK_VERSION;
-    set_bits(writebuf.buf + 1, 0, 48, db->header.update_seq);
-    set_bits(writebuf.buf + 7, 0, 48, db->header.purge_seq);
-    set_bits(writebuf.buf + 13, 0, 48, db->header.purge_ptr);
-    set_bits(writebuf.buf + 19, 0, 16, seqrootsize);
-    set_bits(writebuf.buf + 21, 0, 16, idrootsize);
-    set_bits(writebuf.buf + 23, 0, 16, localrootsize);
-    encode_root(writebuf.buf + HEADER_BASE_SIZE, db->header.by_seq_root);
-    encode_root(writebuf.buf + HEADER_BASE_SIZE + seqrootsize, db->header.by_id_root);
-    encode_root(writebuf.buf + HEADER_BASE_SIZE + seqrootsize + idrootsize,
-                db->header.local_docs_root);
+    raw_file_header* header = (raw_file_header*)writebuf.buf;
+    header->version = encode_raw08(COUCH_DISK_VERSION);
+    header->update_seq = encode_raw48(db->header.update_seq);
+    header->purge_seq = encode_raw48(db->header.purge_seq);
+    header->purge_ptr = encode_raw48(db->header.purge_ptr);
+    header->seqrootsize = encode_raw16((uint16_t)seqrootsize);
+    header->idrootsize = encode_raw16((uint16_t)idrootsize);
+    header->localrootsize = encode_raw16((uint16_t)localrootsize);
+    uint8_t *root = (uint8_t*)(header + 1);
+    encode_root(root, db->header.by_seq_root);
+    root += seqrootsize;
+    encode_root(root, db->header.by_id_root);
+    root += idrootsize;
+    encode_root(root, db->header.local_docs_root);
     off_t pos;
     couchstore_error_t errcode = db_write_header(&db->file, &writebuf, &pos);
     if (errcode == COUCHSTORE_SUCCESS) {
@@ -272,29 +277,30 @@ const char* couchstore_get_db_filename(Db *db) {
 
 static int by_seq_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
 {
-    ssize_t extraSize = v->size - 16;
+    const raw_seq_index_value *raw = (const raw_seq_index_value*)v->buf;
+    ssize_t extraSize = v->size - sizeof(*raw);
     if (extraSize < 0) {
         return COUCHSTORE_ERROR_CORRUPT;
     }
 
-    uint32_t idsize, datasize, deleted, revnum;
-    uint8_t content_meta;
-    uint64_t bp, seq;
-    get_kvlen(v->buf, &idsize, &datasize);
-    deleted = (v->buf[5] & 0x80) != 0;
-    bp = get_48(v->buf + 5) &~ 0x800000000000;
-    content_meta = v->buf[11];
-    revnum = get_32(v->buf + 12);
-    seq = get_48(k->buf);
+    uint32_t idsize, datasize;
+    decode_kv_length(&raw->sizes, &idsize, &datasize);
+    uint64_t bp = decode_raw48(raw->bp);
+    int deleted = (bp & BP_DELETED_FLAG) != 0;
+    bp &= ~BP_DELETED_FLAG;
+    uint8_t content_meta = decode_raw08(raw->content_meta);
+    uint32_t rev_seq = decode_raw32(raw->rev_seq);
+    uint64_t db_seq = decode_sequence_key(k);
+
     DocInfo* docInfo = malloc(sizeof(DocInfo) + extraSize);
     if (!docInfo) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
     char *rbuf = (char *) docInfo;
-    memcpy(rbuf + sizeof(DocInfo), v->buf + 16, extraSize);
+    memcpy(rbuf + sizeof(DocInfo), v->buf + sizeof(*raw), extraSize);
     *pInfo = docInfo;
-    docInfo->db_seq = seq;
-    docInfo->rev_seq = revnum;
+    docInfo->db_seq = db_seq;
+    docInfo->rev_seq = rev_seq;
     docInfo->deleted = deleted;
     docInfo->bp = bp;
     docInfo->size = datasize;
@@ -308,7 +314,8 @@ static int by_seq_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
 
 static int by_id_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
 {
-    ssize_t revMetaSize = v->size - 21;
+    const raw_id_index_value *raw = (const raw_id_index_value*)v->buf;
+    ssize_t revMetaSize = v->size - sizeof(*raw);
     if (revMetaSize < 0) {
         return COUCHSTORE_ERROR_CORRUPT;
     }
@@ -316,18 +323,21 @@ static int by_id_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
     uint32_t datasize, deleted, revnum;
     uint8_t content_meta;
     uint64_t bp, seq;
-    seq = get_48(v->buf);
-    datasize = get_32(v->buf + 6);
-    deleted = (v->buf[10] & 0x80) != 0;
-    bp = get_48(v->buf + 10) &~ 0x800000000000;
-    content_meta = v->buf[16];
-    revnum = get_32(v->buf + 17);
+
+    seq = decode_raw48(raw->db_seq);
+    datasize = decode_raw32(raw->size);
+    bp = decode_raw48(raw->bp);
+    deleted = (bp & BP_DELETED_FLAG) != 0;
+    bp &= ~BP_DELETED_FLAG;
+    content_meta = decode_raw08(raw->content_meta);
+    revnum = decode_raw32(raw->rev_seq);
+
     DocInfo* docInfo = malloc(sizeof(DocInfo) + revMetaSize + k->size);
     if (!docInfo) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
     char *rbuf = (char *) docInfo;
-    memcpy(rbuf + sizeof(DocInfo), v->buf + 21, revMetaSize);
+    memcpy(rbuf + sizeof(DocInfo), v->buf + sizeof(*raw), revMetaSize);
     *pInfo = docInfo;
     docInfo->db_seq = seq;
     docInfo->rev_seq = revnum;
@@ -337,7 +347,7 @@ static int by_id_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
     docInfo->content_meta = content_meta;
     docInfo->rev_meta.buf = rbuf + sizeof(DocInfo);
     docInfo->rev_meta.size = revMetaSize;
-    docInfo->id.buf = docInfo->rev_meta.buf + revMetaSize;
+    docInfo->id.buf = docInfo->rev_meta.buf + docInfo->rev_meta.size;
     docInfo->id.size = k->size;
     memcpy(docInfo->id.buf, k->buf, k->size);
     return 0;
@@ -604,8 +614,7 @@ couchstore_error_t couchstore_changes_since(Db *db,
 
     since_term.buf = since_termbuf;
     since_term.size = 6;
-    memset(since_term.buf, 0, 6);
-    set_bits(since_term.buf, 0, 48, since);
+    *(raw_48*)since_term.buf = encode_raw48(since);
 
     rq.cmp.compare = seq_cmp;
     rq.cmp.arg = &cmptmp;
@@ -744,14 +753,14 @@ couchstore_error_t couchstore_docinfos_by_sequence(Db *db,
 {
     // Create the array of keys:
     sized_buf *keylist = malloc(numDocs * sizeof(sized_buf));
-    char *keyvalues = calloc(numDocs, 6);
+    raw_by_seq_key *keyvalues = malloc(numDocs * sizeof(raw_by_seq_key));
     couchstore_error_t errcode;
     error_unless(keylist && keyvalues, COUCHSTORE_ERROR_ALLOC_FAIL);
     unsigned i;
     for (i = 0; i< numDocs; ++i) {
-        keylist[i].buf = keyvalues + 6 * i;
-        keylist[i].size = 6;
-        set_bits(keylist[i].buf, 0, 48, sequence[i]);
+        keyvalues[i].sequence = encode_raw48(sequence[i]);
+        keylist[i].buf = (void*) &keyvalues[i];
+        keylist[i].size = sizeof(keyvalues[i]);
     }
     
     error_pass(iterate_docinfos(db, keylist, numDocs,
@@ -772,9 +781,10 @@ couchstore_error_t couchstore_db_info(Db *db, DbInfo* dbinfo) {
     dbinfo->header_position = db->header.position;
     dbinfo->last_sequence = db->header.update_seq;
     if (root) {
-        dbinfo->doc_count = get_40(root->reduce_value.buf);
-        dbinfo->deleted_count = get_40(root->reduce_value.buf + 5);
-        dbinfo->space_used = get_48(root->reduce_value.buf + 10);
+        const raw_by_id_reduce *reduce = (const raw_by_id_reduce*) root->reduce_value.buf;
+        dbinfo->doc_count = decode_raw40(reduce->notdeleted);
+        dbinfo->deleted_count = decode_raw40(reduce->deleted);
+        dbinfo->space_used = decode_raw48(reduce->size);
     } else {
         dbinfo->deleted_count = dbinfo->doc_count = dbinfo->space_used = 0;
     }

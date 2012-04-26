@@ -92,9 +92,6 @@ extern "C" {
     int db_write_buf(tree_file *file, const sized_buf *buf, off_t *pos, size_t *disk_size);
     int db_write_buf_compressed(tree_file *file, const sized_buf *buf, off_t *pos, size_t *disk_size);
 
-    node_pointer *read_root(char *buf, int size);
-    size_t encode_root(char *buf, node_pointer *node);
-
 #ifdef __cplusplus
 }
 #endif
