@@ -11,6 +11,8 @@
 #include "crc32.h"
 #include "util.h"
 
+#define MAX_HEADER_SIZE 1024    // Conservative estimate; just for sanity check
+
 /** Read bytes from the database file, skipping over the header-detection bytes at every block
     boundary. */
 static couchstore_error_t read_skipping_prefixes(Db* db, off_t *pos, ssize_t len, void *dst) {
@@ -55,6 +57,8 @@ static int pread_bin_internal(Db *db, off_t pos, char **ret_ptr, int header)
     
     info.chunk_len = ntohl(info.chunk_len) & ~0x80000000;
     if (header) {
+        if (info.chunk_len < 4 || info.chunk_len > MAX_HEADER_SIZE)
+            return COUCHSTORE_ERROR_CORRUPT;
         info.chunk_len -= 4;    //Header len includes CRC len.
     }
     info.crc32 = ntohl(info.crc32);

@@ -10,69 +10,101 @@
 #include "util.h"
 #include "iobuffer.h"
 
+#define ROOT_BASE_SIZE 12
+#define HEADER_BASE_SIZE 25
+
 sized_buf nil_atom = {
     (char *) "\x64\x00\x03nil",
     6
 };
 
-static couchstore_error_t find_header(Db *db)
+// Initializes one of the db's root node pointers from data in the file header
+static couchstore_error_t read_db_root(Db *db, node_pointer **root,
+                                       void *root_data, int root_size)
 {
-    uint64_t block = db->file_pos / COUCH_BLOCK_SIZE;
+    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
+    if (root_size > 0) {
+        error_unless(root_size >= ROOT_BASE_SIZE, COUCHSTORE_ERROR_CORRUPT);
+        *root = read_root(root_data, root_size);
+        error_unless(*root, COUCHSTORE_ERROR_ALLOC_FAIL);
+        error_unless((*root)->pointer < db->header.position, COUCHSTORE_ERROR_CORRUPT);
+    } else {
+        *root = NULL;
+    }
+cleanup:
+    return errcode;
+}
+
+// Attempts to initialize the database from a header at the given file position
+static couchstore_error_t find_header_at_pos(Db *db, off_t pos)
+{
     int errcode = COUCHSTORE_SUCCESS;
-    ssize_t readsize;
     char *header_buf = NULL;
     uint8_t buf[2];
-
-    while (1) {
-        readsize = db->file_ops->pread(db->file_handle, buf, 2, block * COUCH_BLOCK_SIZE);
-        if (readsize == 2 && buf[0] == 1) {
-            //Found a header block.
-            int header_len = pread_header(db, block * COUCH_BLOCK_SIZE, &header_buf);
-            if (header_len > 0) {
-                db->header.disk_version = header_buf[0];
-                error_unless(db->header.disk_version == COUCH_DISK_VERSION, COUCHSTORE_ERROR_HEADER_VERSION);
-                db->header.update_seq = get_48(header_buf + 1);
-                db->header.purge_seq = get_48(header_buf + 7);
-                db->header.purge_ptr = get_48(header_buf + 13);
-                int seqrootsize = get_16(header_buf + 19);
-                int idrootsize = get_16(header_buf + 21);
-                int localrootsize = get_16(header_buf + 23);
-                int rootpos = 25;
-                if (seqrootsize > 0) {
-                    db->header.by_seq_root = read_root(header_buf + rootpos, seqrootsize);
-                } else {
-                    db->header.by_seq_root = NULL;
-                }
-                rootpos += seqrootsize;
-                if (idrootsize > 0) {
-                    db->header.by_id_root = read_root(header_buf + rootpos, idrootsize);
-                } else {
-                    db->header.by_id_root = NULL;
-                }
-                rootpos += idrootsize;
-                if (localrootsize > 0) {
-                    db->header.local_docs_root = read_root(header_buf + rootpos, localrootsize);
-                } else {
-                    db->header.local_docs_root = NULL;
-                }
-                db->header.position = block * COUCH_BLOCK_SIZE;
-                break;
-            }
-        }
-
-        if (block == 0) {
-            /*
-             * We've read all of the blocks in the file from the end up to
-             * the beginning, and we still haven't found a header.
-             */
-            return COUCHSTORE_ERROR_NO_HEADER;
-        }
-        block--;
+    ssize_t readsize = db->file_ops->pread(db->file_handle, buf, 2, pos);
+    error_unless(readsize == 2, COUCHSTORE_ERROR_READ);
+    if (buf[0] == 0) {
+        return COUCHSTORE_ERROR_NO_HEADER;
+    } else if (buf[0] != 1) {
+        return COUCHSTORE_ERROR_CORRUPT;
     }
+
+    int header_len = pread_header(db, pos, &header_buf);
+    if (header_len < 0) {
+        error_pass(header_len);
+    }
+
+    db->header.position = pos;
+    db->header.disk_version = header_buf[0];
+    error_unless(db->header.disk_version == COUCH_DISK_VERSION,
+                 COUCHSTORE_ERROR_HEADER_VERSION);
+    db->header.update_seq = get_48(header_buf + 1);
+    db->header.purge_seq = get_48(header_buf + 7);
+    db->header.purge_ptr = get_48(header_buf + 13);
+    error_unless(db->header.purge_ptr <= db->header.position, COUCHSTORE_ERROR_CORRUPT);
+    int seqrootsize = get_16(header_buf + 19);
+    int idrootsize = get_16(header_buf + 21);
+    int localrootsize = get_16(header_buf + 23);
+    error_unless(header_len == HEADER_BASE_SIZE + seqrootsize + idrootsize + localrootsize,
+                 COUCHSTORE_ERROR_CORRUPT);
+
+    char *root_data = header_buf + HEADER_BASE_SIZE;
+    error_pass(read_db_root(db, &db->header.by_seq_root, root_data, seqrootsize));
+    root_data += seqrootsize;
+    error_pass(read_db_root(db, &db->header.by_id_root, root_data, idrootsize));
+    root_data += idrootsize;
+    error_pass(read_db_root(db, &db->header.local_docs_root, root_data, localrootsize));
 
 cleanup:
     free(header_buf);
     return errcode;
+}
+
+// Finds the database header by scanning back from the end of the file at 4k boundaries
+static couchstore_error_t find_header(Db *db)
+{
+    couchstore_error_t last_header_errcode = COUCHSTORE_ERROR_NO_HEADER;
+    int64_t pos = db->file_pos - 2;
+    pos -= pos % COUCH_BLOCK_SIZE;
+    for (; pos >= 0; pos -= COUCH_BLOCK_SIZE) {
+        couchstore_error_t errcode = find_header_at_pos(db, pos);
+        switch(errcode) {
+            case COUCHSTORE_SUCCESS:
+                // Found it!
+                return COUCHSTORE_SUCCESS;
+            case COUCHSTORE_ERROR_NO_HEADER:
+                // No header here, so keep going
+                break;
+            case COUCHSTORE_ERROR_ALLOC_FAIL:
+                // Fatal error
+                return errcode;
+            default:
+                // Invalid header; continue, but remember the last error
+                last_header_errcode = errcode;
+                break;
+        }
+    }
+    return last_header_errcode;
 }
 
 static couchstore_error_t write_header(Db *db)
@@ -80,15 +112,15 @@ static couchstore_error_t write_header(Db *db)
     sized_buf writebuf;
     size_t seqrootsize = 0, idrootsize = 0, localrootsize = 0;
     if (db->header.by_seq_root) {
-        seqrootsize = 12 + db->header.by_seq_root->reduce_value.size;
+        seqrootsize = ROOT_BASE_SIZE + db->header.by_seq_root->reduce_value.size;
     }
     if (db->header.by_id_root) {
-        idrootsize = 12 + db->header.by_id_root->reduce_value.size;
+        idrootsize = ROOT_BASE_SIZE + db->header.by_id_root->reduce_value.size;
     }
     if (db->header.local_docs_root) {
-        localrootsize = 12 + db->header.local_docs_root->reduce_value.size;
+        localrootsize = ROOT_BASE_SIZE + db->header.local_docs_root->reduce_value.size;
     }
-    writebuf.size = 25 + seqrootsize + idrootsize + localrootsize;
+    writebuf.size = HEADER_BASE_SIZE + seqrootsize + idrootsize + localrootsize;
     writebuf.buf = (char *) calloc(1, writebuf.size);
     writebuf.buf[0] = COUCH_DISK_VERSION;
     set_bits(writebuf.buf + 1, 0, 48, db->header.update_seq);
@@ -97,9 +129,9 @@ static couchstore_error_t write_header(Db *db)
     set_bits(writebuf.buf + 19, 0, 16, seqrootsize);
     set_bits(writebuf.buf + 21, 0, 16, idrootsize);
     set_bits(writebuf.buf + 23, 0, 16, localrootsize);
-    encode_root(writebuf.buf + 25, db->header.by_seq_root);
-    encode_root(writebuf.buf + 25 + seqrootsize, db->header.by_id_root);
-    encode_root(writebuf.buf + 25 + seqrootsize + idrootsize,
+    encode_root(writebuf.buf + HEADER_BASE_SIZE, db->header.by_seq_root);
+    encode_root(writebuf.buf + HEADER_BASE_SIZE + seqrootsize, db->header.by_id_root);
+    encode_root(writebuf.buf + HEADER_BASE_SIZE + seqrootsize + idrootsize,
                 db->header.local_docs_root);
     off_t pos;
     couchstore_error_t errcode = db_write_header(db, &writebuf, &pos);

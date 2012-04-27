@@ -1,6 +1,9 @@
 #ifndef TESTS_MACROS_H
 #define TESTS_MACROS_H
 
+/** Custom assert() macro -- can't use the one in <assert.h> because it's disabled when
+    NDEBUG is defined. */
+#undef assert
 #define assert(expr)                                        \
     do {                                                    \
         if (!(expr)) {                                      \

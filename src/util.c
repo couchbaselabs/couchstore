@@ -46,6 +46,9 @@ node_pointer *read_root(char *buf, int size)
     uint64_t subtreesize = get_48(buf + 6);
     int redsize = size - 12;
     ptr = (node_pointer *) malloc(sizeof(node_pointer) + redsize);
+    if (!ptr) {
+        return NULL;
+    }
     buf = (char *) memcpy(((char *)ptr) + sizeof(node_pointer), buf + 12, redsize);
     ptr->key.buf = NULL;
     ptr->key.size = 0;

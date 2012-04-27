@@ -380,10 +380,11 @@ static void test_dump_empty_db(void)
     fflush(stderr);
     unlink(testfilepath);
     Db *db;
-    couchstore_open_db(testfilepath, COUCHSTORE_OPEN_FLAG_CREATE, &db);
-    couchstore_close_db(db);
-    couchstore_open_db(testfilepath, 0, &db);
-
+    couchstore_error_t errcode;
+    
+    try(couchstore_open_db(testfilepath, COUCHSTORE_OPEN_FLAG_CREATE, &db));
+    try(couchstore_close_db(db));
+    try(couchstore_open_db(testfilepath, 0, &db));
     dump_count(db);
     assert(counters.totaldocs == 0);
     assert(counters.deleted == 0);
@@ -398,6 +399,8 @@ static void test_dump_empty_db(void)
     assert(info.header_position == 0);
 
     couchstore_close_db(db);
+cleanup:
+    assert(errcode == 0);
 }
 
 static void test_local_docs(void)
