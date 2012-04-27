@@ -485,32 +485,32 @@ couchstore_error_t couchstore_open_document(Db *db,
     return errcode;
 }
 
-/*
- * ISO C forbids conversion of function pointer to object pointer type, but
- * a union allows us to do this ;-)
- */
-union c99hack {
+// context info passed to lookup_callback via btree_lookup
+typedef struct {
+    Db *db;
     couchstore_changes_callback_fn callback;
-    void *voidptr;
-};
+    void* callback_context;
+    int by_id;
+} lookup_context;
 
-static couchstore_error_t byseq_do_callback(couchfile_lookup_request *rq,
-                                            void *k, sized_buf *v)
+// btree_lookup callback, called while iterating keys
+static couchstore_error_t lookup_callback(couchfile_lookup_request *rq,
+                                          void *k, sized_buf *v)
 {
     if (v == NULL) {
         return COUCHSTORE_SUCCESS;
     }
 
+    const lookup_context *context = rq->callback_ctx;
     sized_buf *seqterm = (sized_buf *) k;
     DocInfo *docinfo = NULL;
-    by_seq_read_docinfo(&docinfo, seqterm, v);
-
-    union c99hack hack;
-    hack.voidptr = ((void **)rq->callback_ctx)[0];
-    Db *db = ((void **)rq->callback_ctx)[1];
-    void *ctx = ((void **)rq->callback_ctx)[2];
-
-    if (hack.callback(db, docinfo, ctx) == 0) {
+    if (context->by_id) {
+        by_id_read_docinfo(&docinfo, seqterm, v);
+    } else {
+        by_seq_read_docinfo(&docinfo, seqterm, v);
+    }
+    
+    if (context->callback(context->db, docinfo, context->callback_context) == 0) {
         couchstore_free_docinfo(docinfo);
     }
 
@@ -528,12 +528,10 @@ couchstore_error_t couchstore_changes_since(Db *db,
     char since_termbuf[6];
     sized_buf since_term;
     sized_buf *keylist = &since_term;
-    void *cbctx[3];
+    lookup_context cbctx = {db, callback, ctx, 0};
     couchfile_lookup_request rq;
     sized_buf cmptmp;
     couchstore_error_t errcode;
-    union c99hack hack;
-    hack.callback = callback;
 
     if (db->header.by_seq_root == NULL) {
         return COUCHSTORE_SUCCESS;
@@ -544,21 +542,24 @@ couchstore_error_t couchstore_changes_since(Db *db,
     memset(since_term.buf, 0, 6);
     set_bits(since_term.buf, 0, 48, since);
 
-    cbctx[0] = hack.voidptr;
-    cbctx[1] = db;
-    cbctx[2] = ctx;
-
     rq.cmp.compare = seq_cmp;
     rq.cmp.arg = &cmptmp;
     rq.db = db;
     rq.num_keys = 1;
     rq.keys = &keylist;
-    rq.callback_ctx = cbctx;
-    rq.fetch_callback = byseq_do_callback;
+    rq.callback_ctx = &cbctx;
+    rq.fetch_callback = lookup_callback;
     rq.fold = 1;
 
     errcode = btree_lookup(&rq, db->header.by_seq_root->pointer);
     return errcode;
+}
+
+static int id_ptr_cmp(const void *a, const void *b)
+{
+    sized_buf **buf1 = (sized_buf**) a;
+    sized_buf **buf2 = (sized_buf**) b;
+    return ebin_cmp(*buf1, *buf2);
 }
 
 static int seq_ptr_cmp(const void *a, const void *b)
@@ -566,6 +567,67 @@ static int seq_ptr_cmp(const void *a, const void *b)
     sized_buf **buf1 = (sized_buf**) a;
     sized_buf **buf2 = (sized_buf**) b;
     return seq_cmp(*buf1, *buf2);
+}
+
+// Common subroutine of couchstore_docinfos_by_{ids, sequence}
+static couchstore_error_t iterate_docinfos(Db *db,
+                                           const sized_buf keys[],
+                                           unsigned numDocs,
+                                           node_pointer *tree,
+                                           int (*key_ptr_compare)(const void *, const void *),
+                                           int (*key_compare)(sized_buf *k1, sized_buf *k2),
+                                           couchstore_changes_callback_fn callback,
+                                           void *ctx)
+{
+    // Nothing to do if the tree is empty
+    if (tree == NULL) {
+        return COUCHSTORE_SUCCESS;
+    }
+    
+    // Create an array of *pointers to* sized_bufs, which is what btree_lookup wants:
+    const sized_buf **keyptrs = malloc(numDocs * sizeof(sized_buf*));
+    if (!keyptrs) {
+        return COUCHSTORE_ERROR_ALLOC_FAIL;
+    }
+    unsigned i;
+    for (i = 0; i< numDocs; ++i) {
+        keyptrs[i] = &keys[i];
+    }
+    // Sort the key pointers:
+    qsort(keyptrs, numDocs, sizeof(keyptrs[0]), key_ptr_compare);
+
+    // Construct the lookup request:
+    lookup_context cbctx = {db, callback, ctx, (tree == db->header.by_id_root)};
+    couchfile_lookup_request rq;
+    sized_buf cmptmp;
+    rq.cmp.compare = key_compare;
+    rq.cmp.arg = &cmptmp;
+    rq.db = db;
+    rq.num_keys = numDocs;
+    rq.keys = (sized_buf**) keyptrs;
+    rq.callback_ctx = &cbctx;
+    rq.fetch_callback = lookup_callback;
+    rq.fold = 0;
+    
+    // Go!
+    couchstore_error_t errcode = btree_lookup(&rq, tree->pointer);
+    
+    free(keyptrs);
+    return errcode;
+}
+
+LIBCOUCHSTORE_API
+couchstore_error_t couchstore_docinfos_by_id(Db *db,
+                                             const sized_buf ids[],
+                                             unsigned numDocs,
+                                             uint64_t options,
+                                             couchstore_changes_callback_fn callback,
+                                             void *ctx)
+{
+    (void) options;
+    return iterate_docinfos(db, ids, numDocs,
+                            db->header.by_id_root, id_ptr_cmp, ebin_cmp,
+                            callback, ctx);
 }
 
 LIBCOUCHSTORE_API
@@ -577,49 +639,22 @@ couchstore_error_t couchstore_docinfos_by_sequence(Db *db,
                                                    void *ctx)
 {
     (void) options;
-    sized_buf *keylist = NULL;
-    char *keyvalues = NULL;
-    sized_buf **keyptrs = NULL;
-    couchfile_lookup_request rq;
-    sized_buf cmptmp;
-    couchstore_error_t errcode;
-
-    if (db->header.by_id_root == NULL) {
-        return COUCHSTORE_ERROR_DOC_NOT_FOUND;
-    }
 
     // Create the array of keys:
-    keylist = malloc(numDocs * sizeof(sized_buf));
-    keyvalues = calloc(numDocs, 6);
-    keyptrs = malloc(numDocs * sizeof(sized_buf*));
-    error_unless(keylist && keyvalues && keyptrs, COUCHSTORE_ERROR_ALLOC_FAIL);
+    sized_buf *keylist = malloc(numDocs * sizeof(sized_buf));
+    char *keyvalues = calloc(numDocs, 6);
+    couchstore_error_t errcode;
+    error_unless(keylist && keyvalues, COUCHSTORE_ERROR_ALLOC_FAIL);
     unsigned i;
     for (i = 0; i< numDocs; ++i) {
         keylist[i].buf = keyvalues + 6 * i;
         keylist[i].size = 6;
         set_bits(keylist[i].buf, 0, 48, sequence[i]);
-        keyptrs[i] = &keylist[i];
     }
-    qsort(keyptrs, numDocs, sizeof(keyptrs[0]), &seq_ptr_cmp);
-
-    union c99hack hack;
-    hack.callback = callback;
-    void *cbctx[3];
-    cbctx[0] = hack.voidptr;
-    cbctx[1] = db;
-    cbctx[2] = ctx;
-
-    rq.cmp.compare = seq_cmp;
-    rq.cmp.arg = &cmptmp;
-    rq.db = db;
-    rq.num_keys = numDocs;
-    rq.keys = keyptrs;
-    rq.callback_ctx = cbctx;
-    rq.fetch_callback = byseq_do_callback;
-    rq.fold = 0;
-
-    error_pass(btree_lookup(&rq, db->header.by_seq_root->pointer));
-
+    
+    error_pass(iterate_docinfos(db, keylist, numDocs,
+                                db->header.by_seq_root, seq_ptr_cmp, seq_cmp,
+                                callback, ctx));
 cleanup:
     free(keylist);
     free(keyvalues);

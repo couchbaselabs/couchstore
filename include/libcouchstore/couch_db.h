@@ -276,8 +276,8 @@ extern "C" {
     /*////////////////////  ITERATING DOCUMENTS: */
 
     /**
-     * The callback function used by couchstore_changes_since() and
-     * couchstore_docinfos_by_sequence() to iterate through the documents.
+     * The callback function used by couchstore_changes_since(), couchstore_docinfos_by_id()
+     * and couchstore_docinfos_by_sequence() to iterate through the documents.
      *
      * The docinfo structure is automatically freed if the callback
      * returns 0. A non-zero return value will preserve the DocInfo
@@ -333,6 +333,30 @@ extern "C" {
                                                        uint64_t options,
                                                        couchstore_changes_callback_fn callback,
                                                        void *ctx);
+
+    /**
+     * Iterate over the document infos of a set of ids.
+     *
+     * The DocInfos will be presented to the callback in order of ascending document id,
+     * *not* in the order in which they appear in the ids[] array.
+     *
+     * The callback will not be invoked for nonexistent ids.
+     *
+     * @param ids array of document ids. Need not be sorted but must not contain
+     *          duplicates.
+     * @param numDocs number of documents to look up (size of ids[] array)
+     * @param options (not used; pass 0)
+     * @param callback the callback function used to iterate over document infos
+     * @param ctx client context (passed to the callback)
+     * @return COUCHSTORE_SUCCESS on success.
+     */
+    LIBCOUCHSTORE_API
+    couchstore_error_t couchstore_docinfos_by_id(Db *db,
+                                                 const sized_buf ids[],
+                                                 unsigned numDocs,
+                                                 uint64_t options,
+                                                 couchstore_changes_callback_fn callback,
+                                                 void *ctx);
 
 
     /*////////////////////  LOCAL DOCUMENTS: */

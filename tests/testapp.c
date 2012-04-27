@@ -134,6 +134,24 @@ cleanup:
     return 0;
 }
 
+static int dociter_check(Db *db, DocInfo *info, void *ctx)
+{
+    int errcode = 0;
+    docset *ds = ctx;
+    counterset *ctr = &ds->counters;
+    ctr->totaldocs++;
+    if (info->deleted) {
+        ctr->deleted++;
+    }
+    Doc *doc;
+    try(couchstore_open_doc_with_docinfo(db, info, &doc, DECOMPRESS_DOC_BODIES));
+    assert(doc);
+    couchstore_free_document(doc);
+cleanup:
+    assert(errcode == 0);
+    return 0;
+}
+
 static int dump_count(Db *db)
 {
     int errcode = 0;
@@ -153,6 +171,7 @@ static void test_save_docs(int count, const char *doc_tpl)
     char *idBuf, *valueBuf;
     Doc **docptrs;
     DocInfo **nfoptrs;
+    sized_buf *ids;
     uint64_t idtreesize = 0;
     uint64_t seqtreesize = 0;
     uint64_t docssize = 0;
@@ -197,6 +216,7 @@ static void test_save_docs(int count, const char *doc_tpl)
     try(couchstore_open_db(testfilepath, 0, &db));
 
     // Read back by doc ID:
+    fprintf(stderr, "get by ID... ");
     testdocset.pos = 0;
     for (i = 0; i < count; ++i) {
         DocInfo* out_info;
@@ -205,8 +225,20 @@ static void test_save_docs(int count, const char *doc_tpl)
         docset_check(db, out_info, &testdocset);
         couchstore_free_docinfo(out_info);
     }
+    
+    // Read back in bulk by doc ID:
+    fprintf(stderr, "bulk IDs... ");
+    ids = malloc(count * sizeof(sized_buf));
+    for (i = 0; i < count; ++i) {
+        ids[i] = docptrs[i]->id;
+    }
+    ZERO(testdocset.counters);
+    try(couchstore_docinfos_by_id(db, ids, count, 0, dociter_check, &testdocset));
+    assert(testdocset.counters.totaldocs == count);
+    assert(testdocset.counters.deleted == 0);
 
     // Read back by sequence:
+    fprintf(stderr, "get by sequence... ");
     sequences = malloc(count * sizeof(*sequences));
     testdocset.pos = 0;
     for (i = 0; i < count; ++i) {
@@ -219,6 +251,7 @@ static void test_save_docs(int count, const char *doc_tpl)
     }
 
     // Read back in bulk by sequence:
+    fprintf(stderr, "bulk sequences... ");
     testdocset.pos = 0;
     ZERO(testdocset.counters);
     try(couchstore_docinfos_by_sequence(db, sequences, count, 0, docset_check, &testdocset));
@@ -226,6 +259,7 @@ static void test_save_docs(int count, const char *doc_tpl)
     assert(testdocset.counters.deleted == 0);
 
     // Read back using changes_since:
+    fprintf(stderr, "changes_since... ");
     testdocset.pos = 0;
     ZERO(testdocset.counters);
     try(couchstore_changes_since(db, 0, 0, docset_check, &testdocset));
@@ -249,6 +283,7 @@ static void test_save_docs(int count, const char *doc_tpl)
 
     couchstore_close_db(db);
 cleanup:
+    free(ids);
     free(sequences);
     for (i = 0; i < count; ++i) {
         free(docptrs[i]->id.buf);
@@ -507,7 +542,7 @@ static void mb5086(void)
 
 int main(int argc, const char *argv[])
 {
-    int doc_counts[] = { 4, 69, 666, 9090, 99999 };
+    int doc_counts[] = { 4, 69, 666, 9090 };
     unsigned i;
     const char *small_doc_tpl = "{\"test_doc_index\":%d}";
     const char *large_doc_tpl =
