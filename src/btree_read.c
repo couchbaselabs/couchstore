@@ -46,7 +46,7 @@ static couchstore_error_t btree_lookup_inner(couchfile_lookup_request *rq,
                 pointer = get_48(val_buf.buf);
                 error_pass(btree_lookup_inner(rq, pointer, current, last_item));
                 if (!rq->in_fold) {
-                    current = last_item + 1;
+                    current = last_item;
                 }
             }
         }
