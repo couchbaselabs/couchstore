@@ -191,10 +191,10 @@ extern "C" {
     /**
      * Retrieve the document info for a given sequence number.
      *
-     * The info should be freed with couchstore_free_docinfo().
+     * To look up multiple sequences, it's more efficient to call couchstore_docinfos_by_sequence.
      *
      * @param sequence the document sequence number
-     * @param pInfo where to store the result
+     * @param pInfo where to store the result. Must be freed with couchstore_free_docinfo().
      * @return COUCHSTORE_SUCCESS on success.
      */
     LIBCOUCHSTORE_API
@@ -276,8 +276,8 @@ extern "C" {
     /*////////////////////  ITERATING DOCUMENTS: */
 
     /**
-     * The callback function used by couchstore_changes_since() to iterate
-     * through the documents.
+     * The callback function used by couchstore_changes_since() and
+     * couchstore_docinfos_by_sequence() to iterate through the documents.
      *
      * The docinfo structure is automatically freed if the callback
      * returns 0. A non-zero return value will preserve the DocInfo
@@ -287,7 +287,7 @@ extern "C" {
      * @param db the database being traversed
      * @param docinfo the current document
      * @param ctx user context
-     * @return 0 or 1. See description above
+     * @return 1 to preserve the DocInfo, 0 to free it (see above).
      */
     typedef int (*couchstore_changes_callback_fn)(Db *db,
                                                   DocInfo *docinfo,
@@ -309,6 +309,30 @@ extern "C" {
                                                 uint64_t options,
                                                 couchstore_changes_callback_fn callback,
                                                 void *ctx);
+
+    /**
+     * Iterate over the document infos of a set of sequence numbers.
+     *
+     * The DocInfos will be presented to the callback in order of ascending sequence
+     * number, *not* in the order in which they appear in the sequence[] array.
+     *
+     * The callback will not be invoked for nonexistent sequence numbers.
+     *
+     * @param sequence array of document sequence numbers. Need not be sorted but must not contain
+     *          duplicates.
+     * @param numDocs number of documents to look up (size of sequence[] array)
+     * @param options (not used; pass 0)
+     * @param callback the callback function used to iterate over document infos
+     * @param ctx client context (passed to the callback)
+     * @return COUCHSTORE_SUCCESS on success.
+     */
+    LIBCOUCHSTORE_API
+    couchstore_error_t couchstore_docinfos_by_sequence(Db *db,
+                                                       const uint64_t sequence[],
+                                                       unsigned numDocs,
+                                                       uint64_t options,
+                                                       couchstore_changes_callback_fn callback,
+                                                       void *ctx);
 
 
     /*////////////////////  LOCAL DOCUMENTS: */

@@ -157,6 +157,7 @@ static void test_save_docs(int count, const char *doc_tpl)
     uint64_t seqtreesize = 0;
     uint64_t docssize = 0;
     uint64_t dbfilesize = 0;
+    uint64_t *sequences = NULL;
 
     fprintf(stderr, "save_docs (doc count %d)... ", count);
     fflush(stderr);
@@ -206,19 +207,27 @@ static void test_save_docs(int count, const char *doc_tpl)
     }
 
     // Read back by sequence:
+    sequences = malloc(count * sizeof(*sequences));
     testdocset.pos = 0;
     for (i = 0; i < count; ++i) {
         DocInfo* out_info;
-        assert(testdocset.infos[i].db_seq == (uint64_t)i + 1);
+        sequences[i] = testdocset.infos[i].db_seq;
+        assert(sequences[i] == (uint64_t)i + 1);
         try(couchstore_docinfo_by_sequence(db, testdocset.infos[i].db_seq, &out_info));
         docset_check(db, out_info, &testdocset);
         couchstore_free_docinfo(out_info);
     }
 
+    // Read back in bulk by sequence:
+    testdocset.pos = 0;
+    ZERO(testdocset.counters);
+    try(couchstore_docinfos_by_sequence(db, sequences, count, 0, docset_check, &testdocset));
+    assert(testdocset.counters.totaldocs == count);
+    assert(testdocset.counters.deleted == 0);
+
     // Read back using changes_since:
     testdocset.pos = 0;
     ZERO(testdocset.counters);
-    testdocset.counters.totaldocs = 0;
     try(couchstore_changes_since(db, 0, 0, docset_check, &testdocset));
     assert(testdocset.counters.totaldocs == count);
     assert(testdocset.counters.deleted == 0);
@@ -240,6 +249,7 @@ static void test_save_docs(int count, const char *doc_tpl)
 
     couchstore_close_db(db);
 cleanup:
+    free(sequences);
     for (i = 0; i < count; ++i) {
         free(docptrs[i]->id.buf);
         free(docptrs[i]->data.buf);

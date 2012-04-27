@@ -411,7 +411,7 @@ couchstore_error_t couchstore_docinfo_by_sequence(Db *db,
     if (db->header.by_id_root == NULL) {
         return COUCHSTORE_ERROR_DOC_NOT_FOUND;
     }
-    
+
     sequence = htonll(sequence);
     key.buf = (char *)&sequence + 2;
     key.size = 6;
@@ -558,6 +558,71 @@ couchstore_error_t couchstore_changes_since(Db *db,
     rq.fold = 1;
 
     errcode = btree_lookup(&rq, db->header.by_seq_root->pointer);
+    return errcode;
+}
+
+static int seq_ptr_cmp(const void *a, const void *b)
+{
+    sized_buf **buf1 = (sized_buf**) a;
+    sized_buf **buf2 = (sized_buf**) b;
+    return seq_cmp(*buf1, *buf2);
+}
+
+LIBCOUCHSTORE_API
+couchstore_error_t couchstore_docinfos_by_sequence(Db *db,
+                                                   const uint64_t sequence[],
+                                                   unsigned numDocs,
+                                                   uint64_t options,
+                                                   couchstore_changes_callback_fn callback,
+                                                   void *ctx)
+{
+    (void) options;
+    sized_buf *keylist = NULL;
+    char *keyvalues = NULL;
+    sized_buf **keyptrs = NULL;
+    couchfile_lookup_request rq;
+    sized_buf cmptmp;
+    couchstore_error_t errcode;
+
+    if (db->header.by_id_root == NULL) {
+        return COUCHSTORE_ERROR_DOC_NOT_FOUND;
+    }
+
+    // Create the array of keys:
+    keylist = malloc(numDocs * sizeof(sized_buf));
+    keyvalues = calloc(numDocs, 6);
+    keyptrs = malloc(numDocs * sizeof(sized_buf*));
+    error_unless(keylist && keyvalues && keyptrs, COUCHSTORE_ERROR_ALLOC_FAIL);
+    unsigned i;
+    for (i = 0; i< numDocs; ++i) {
+        keylist[i].buf = keyvalues + 6 * i;
+        keylist[i].size = 6;
+        set_bits(keylist[i].buf, 0, 48, sequence[i]);
+        keyptrs[i] = &keylist[i];
+    }
+    qsort(keyptrs, numDocs, sizeof(keyptrs[0]), &seq_ptr_cmp);
+
+    union c99hack hack;
+    hack.callback = callback;
+    void *cbctx[3];
+    cbctx[0] = hack.voidptr;
+    cbctx[1] = db;
+    cbctx[2] = ctx;
+
+    rq.cmp.compare = seq_cmp;
+    rq.cmp.arg = &cmptmp;
+    rq.db = db;
+    rq.num_keys = numDocs;
+    rq.keys = keyptrs;
+    rq.callback_ctx = cbctx;
+    rq.fetch_callback = byseq_do_callback;
+    rq.fold = 0;
+
+    error_pass(btree_lookup(&rq, db->header.by_seq_root->pointer));
+
+cleanup:
+    free(keylist);
+    free(keyvalues);
     return errcode;
 }
 
