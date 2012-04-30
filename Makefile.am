@@ -63,10 +63,13 @@ libcouchstore_la_SOURCES = \
                             src/os.c \
                             src/util.c \
                             src/util.h
-if WINDOWS
-libcouchstore_la_LDFLAGS = $(AM_LDFLAGS) -version-info $(LIBCOUCHSTORE_API_CURRENT):$(LIBCOUCHSTORE_API_REVISION):$(LIBCOUCHSTORE_API_AGE) -no-undefined -lsnappy -lws2_32
-else
+
+
 libcouchstore_la_LDFLAGS = $(AM_LDFLAGS) -version-info $(LIBCOUCHSTORE_API_CURRENT):$(LIBCOUCHSTORE_API_REVISION):$(LIBCOUCHSTORE_API_AGE) -no-undefined -lsnappy
+
+if WINDOWS
+libcouchstore_la_SOURCES += win32/win32.c
+libcouchstore_la_LDFLAGS += -lws2_32
 endif
 
 libcouchstore_la_CFLAGS = $(AM_CFLAGS) -DLIBCOUCHSTORE_INTERNAL=1
