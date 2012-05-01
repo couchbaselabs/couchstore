@@ -30,7 +30,7 @@ static couchstore_error_t find_header(Db *db)
             int header_len = pread_header(db, block * COUCH_BLOCK_SIZE, &header_buf);
             if (header_len > 0) {
                 db->header.disk_version = header_buf[0];
-                error_unless(db->header.disk_version == COUCH_DISK_VERSION, COUCHSTORE_ERROR_HEADER_VERSION)
+                error_unless(db->header.disk_version == COUCH_DISK_VERSION, COUCHSTORE_ERROR_HEADER_VERSION);
                 db->header.update_seq = get_48(header_buf + 1);
                 db->header.purge_seq = get_48(header_buf + 7);
                 db->header.purge_ptr = get_48(header_buf + 13);

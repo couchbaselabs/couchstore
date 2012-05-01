@@ -58,6 +58,7 @@
 		2794AD06153395780047643C /* libsnappy.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 274F97E5152E1E3E00247C46 /* libsnappy.dylib */; };
 		2794AD07153395780047643C /* libcouchstore.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 274F9758152E1CCA00247C46 /* libcouchstore.dylib */; };
 		2794AD0E153395940047643C /* testapp.c in Sources */ = {isa = PBXBuildFile; fileRef = 2794ACFF15338E640047643C /* testapp.c */; };
+		27A3A93215A3612800E1BDBC /* macros.h in Headers */ = {isa = PBXBuildFile; fileRef = 27A3A93115A3612800E1BDBC /* macros.h */; };
 		27AA1B101538DE0700D03755 /* libcouchstore.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 274F9758152E1CCA00247C46 /* libcouchstore.dylib */; };
 		27AA1B171538DE2500D03755 /* couchscript.cc in Sources */ = {isa = PBXBuildFile; fileRef = 274F978F152E1D1400247C46 /* couchscript.cc */; };
 		27AA1B191538DE3900D03755 /* liblua.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 27AA1B181538DE3900D03755 /* liblua.dylib */; };
@@ -196,6 +197,7 @@
 		2794ACFF15338E640047643C /* testapp.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = testapp.c; path = tests/testapp.c; sourceTree = SOURCE_ROOT; };
 		2794AD011533901D0047643C /* config_static.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = config_static.h; sourceTree = SOURCE_ROOT; };
 		2794AD0C153395780047643C /* testapp */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testapp; sourceTree = BUILT_PRODUCTS_DIR; };
+		27A3A93115A3612800E1BDBC /* macros.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = macros.h; path = tests/macros.h; sourceTree = SOURCE_ROOT; };
 		27AA1B151538DE0700D03755 /* couchscript */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = couchscript; sourceTree = BUILT_PRODUCTS_DIR; };
 		27AA1B181538DE3900D03755 /* liblua.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = liblua.dylib; path = usr/local/lib/liblua.dylib; sourceTree = SDKROOT; };
 		27AA1B1C1538EC4300D03755 /* arena.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = arena.c; sourceTree = "<group>"; };
@@ -364,6 +366,7 @@
 				274F9793152E1D1400247C46 /* dbinfo.c */,
 				2794ACFF15338E640047643C /* testapp.c */,
 				274F978F152E1D1400247C46 /* couchscript.cc */,
+				27A3A93115A3612800E1BDBC /* macros.h */,
 			);
 			name = tools;
 			path = src;
@@ -395,6 +398,7 @@
 				274F97D5152E1D1400247C46 /* md5.h in Headers */,
 				274F97DA152E1D1400247C46 /* util.h in Headers */,
 				274F97E4152E1D9200247C46 /* config.h in Headers */,
+				27A3A93215A3612800E1BDBC /* macros.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

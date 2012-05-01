@@ -471,7 +471,7 @@ static couchstore_error_t modify_node(couchfile_modify_request *rq,
         goto cleanup;
     }
     //If we've done modifications, write out the last leaf node.
-    error_pass(flush_mr(local_result))
+    error_pass(flush_mr(local_result));
     if (!local_result->modified && nptr != NULL) {
         //If we didn't do anything, give back the pointer to the original
         mr_push_pointerinfo(nptr, dst);

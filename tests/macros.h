@@ -11,10 +11,18 @@
         }                                                   \
     }  while (0)
 
-#define try(C) if((errcode = (C)) < 0) { \
-                            fprintf(stderr, "Couchstore error `%s' at %s:%d\r\n", \
-                            couchstore_strerror(errcode), __FILE__, __LINE__); goto cleanup; }
+#define try(C)                                                      \
+    do {                                                            \
+        if((errcode = (C)) < 0) {                                   \
+            fprintf(stderr, "Couchstore error `%s' at %s:%d\r\n",   \
+            couchstore_strerror(errcode), __FILE__, __LINE__);      \
+            goto cleanup;                                           \
+        }                                                           \
+    } while (0)
 
-#define error_unless(C, E) if(!(C)) { try(E); }
+#define error_unless(C, E)                                  \
+    do {                                                    \
+        if(!(C)) { try(E); }                                \
+    } while (0)
 
 #endif
