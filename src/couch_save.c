@@ -1,6 +1,7 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include "config.h"
 #include <string.h>
+#include <stddef.h>
 #include <stdlib.h>
 
 #include "internal.h"
@@ -49,22 +50,11 @@ static couchstore_error_t write_doc(Db *db, const Doc *doc, uint64_t *bp,
     return errcode;
 }
 
-static int id_action_compare(const void *actv1, const void *actv2)
+static int ebin_ptr_compare(const void *a, const void *b)
 {
-    const couchfile_modify_action *act1, *act2;
-    act1 = (const couchfile_modify_action *) actv1;
-    act2 = (const couchfile_modify_action *) actv2;
-
-    int cmp = ebin_cmp(act1->key, act2->key);
-    if (cmp == 0) {
-        if (act1->type < act2->type) {
-            return -1;
-        }
-        if (act1->type > act2->type) {
-            return 1;
-        }
-    }
-    return cmp;
+    const sized_buf* const* buf1 = a;
+    const sized_buf* const* buf2 = b;
+    return ebin_cmp(*buf1, *buf2);
 }
 
 static int seq_action_compare(const void *actv1, const void *actv2)
@@ -145,7 +135,7 @@ static couchstore_error_t update_indexes(Db *db,
 {
     couchfile_modify_action *idacts;
     couchfile_modify_action *seqacts;
-    sized_buf *idcmps;
+    const sized_buf **sorted_ids = NULL;
     size_t size;
     fatbuf *actbuf;
     node_pointer *new_id_root;
@@ -162,38 +152,37 @@ static couchstore_error_t update_indexes(Db *db,
     */
     size = 4 * sizeof(couchfile_modify_action) + 2 * sizeof(sized_buf) + 10;
 
-    if ((actbuf = fatbuf_alloc(numdocs * size)) == NULL) {
-        return COUCHSTORE_ERROR_ALLOC_FAIL;
-    }
+    actbuf = fatbuf_alloc(numdocs * size);
+    error_unless(actbuf, COUCHSTORE_ERROR_ALLOC_FAIL);
 
     idacts = fatbuf_get(actbuf, numdocs * sizeof(couchfile_modify_action) * 2);
     seqacts = fatbuf_get(actbuf, numdocs * sizeof(couchfile_modify_action) * 2);
-    idcmps = fatbuf_get(actbuf, numdocs * sizeof(sized_buf));
-
-    if (idacts == NULL || seqacts == NULL || idcmps == NULL) {
-        fatbuf_free(actbuf);
-        return COUCHSTORE_ERROR_ALLOC_FAIL;
-    }
+    error_unless(idacts && seqacts, COUCHSTORE_ERROR_ALLOC_FAIL);
 
     index_update_ctx fetcharg = {
         seqacts, 0, &seqs, &seqvals, 0, actbuf
     };
 
+    // Sort the array indexes of ids[] by ascending id. Since we can't pass context info to qsort,
+    // actually sort an array of pointers to the elements of ids[], rather than the array indexes.
+    sorted_ids = malloc(numdocs * sizeof(sized_buf*));
+    error_unless(sorted_ids, COUCHSTORE_ERROR_ALLOC_FAIL);
+    for (ii = 0; ii < numdocs; ++ii) {
+        sorted_ids[ii] = &ids[ii];
+    }
+    qsort(sorted_ids, numdocs, sizeof(sorted_ids[0]), &ebin_ptr_compare);
+
+    // Assemble idacts[] array, in sorted order by id:
     for (ii = 0; ii < numdocs; ii++) {
-        idcmps[ii].buf = ids[ii].buf + 5;
-        idcmps[ii].size = ids[ii].size - 5;
+        ptrdiff_t isorted = sorted_ids[ii] - ids;   // recover index of ii'th id in sort order
 
         idacts[ii * 2].type = ACTION_FETCH;
         idacts[ii * 2].value.arg = &fetcharg;
         idacts[ii * 2 + 1].type = ACTION_INSERT;
-        idacts[ii * 2 + 1].value.data = &idvals[ii];
-
-        idacts[ii * 2].key = &ids[ii];
-        idacts[ii * 2 + 1].key = &ids[ii];
+        idacts[ii * 2 + 1].value.data = &idvals[isorted];
+        idacts[ii * 2].key = &ids[isorted];
+        idacts[ii * 2 + 1].key = &ids[isorted];
     }
-
-    qsort(idacts, numdocs * 2, sizeof(couchfile_modify_action),
-          id_action_compare);
 
     idrq.cmp.compare = ebin_cmp;
     idrq.cmp.arg = &tmpsb;
@@ -206,10 +195,7 @@ static couchstore_error_t update_indexes(Db *db,
     idrq.db = db;
 
     new_id_root = modify_btree(&idrq, db->header.by_id_root, &errcode);
-    if (errcode != COUCHSTORE_SUCCESS) {
-        fatbuf_free(actbuf);
-        return errcode;
-    }
+    error_pass(errcode);
 
     while (fetcharg.valpos < numdocs) {
         seqacts[fetcharg.actpos].type = ACTION_INSERT;
@@ -247,6 +233,8 @@ static couchstore_error_t update_indexes(Db *db,
         db->header.by_seq_root = new_seq_root;
     }
 
+cleanup:
+    free(sorted_ids);
     fatbuf_free(actbuf);
     return errcode;
 }
@@ -321,7 +309,7 @@ couchstore_error_t couchstore_save_documents(Db *db,
     uint64_t seq = db->header.update_seq;
 
     fatbuf *fb;
-
+    
     for (ii = 0; ii < numdocs; ii++) {
         // Get additional size for terms to be inserted into indexes
         // IMPORTANT: This must match the sizes of the fatbuf_get calls in add_doc_to_update_list!
