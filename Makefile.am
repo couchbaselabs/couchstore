@@ -80,6 +80,11 @@ couch_dbdump_DEPENDENCIES = libcouchstore.la
 couch_dbdump_CFLAGS = $(AM_CFLAGS) -D__STDC_FORMAT_MACROS
 couch_dbdump_LDADD = libcouchstore.la libbyteswap.la -lsnappy
 
+if WINDOWS
+couch_dbdump_SOURCES += win32/win32.c
+couch_dbdump_LDFLAGS += -lws2_32
+endif
+
 couch_dbinfo_SOURCES = src/dbinfo.c src/util.c
 couch_dbinfo_CFLAGS = $(AM_CFLAGS) -D__STDC_FORMAT_MACROS
 couch_dbinfo_DEPENDENCIES = libcouchstore.la libbyteswap.la
