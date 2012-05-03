@@ -82,7 +82,7 @@ couch_dbdump_LDADD = libcouchstore.la libbyteswap.la -lsnappy
 
 if WINDOWS
 couch_dbdump_SOURCES += win32/win32.c
-couch_dbdump_LDFLAGS += -lws2_32
+couch_dbdump_LDADD += -lws2_32
 endif
 
 couch_dbinfo_SOURCES = src/dbinfo.c src/util.c
