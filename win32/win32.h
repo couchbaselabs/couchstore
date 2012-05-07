@@ -17,7 +17,8 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <io.h>
-#include <Winsock2.h>                 // for ntohl
+#include <errno.h>                    // for errno definition
+#include <winsock2.h>                 // for ntohl
 
 #define inline __inline
 
