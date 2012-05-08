@@ -13,4 +13,9 @@ uint64_t couchstore_byteswap64(uint64_t val)
     }
     return ret;
 }
+#elif defined(__GNUC__)
+// solaris boxes contains a ntohll/htonll method, but
+// it seems like the gnu linker doesn't like to use
+// an archive without _any_ symbols in it ;)
+int unreferenced_symbol_to_satisfy_the_linker;
 #endif
