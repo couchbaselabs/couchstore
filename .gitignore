@@ -29,6 +29,7 @@
 /config/missing
 /config/mkinstalldirs
 /config/plugin.ac
+/config/ar-lib
 /configure
 /couch_dbdump
 /couch_dbinfo
