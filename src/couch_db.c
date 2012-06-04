@@ -132,7 +132,30 @@ uint64_t couchstore_get_header_position(Db *db)
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_commit(Db *db)
 {
-    couchstore_error_t errcode = write_header(db);
+    off_t curpos = db->file_pos;
+    sized_buf zerobyte = {"\0", 1};
+    size_t seqrootsize = 0, idrootsize = 0, localrootsize = 0;
+    if (db->header.by_seq_root) {
+        seqrootsize = 12 + db->header.by_seq_root->reduce_value.size;
+    }
+    if (db->header.by_id_root) {
+        idrootsize = 12 + db->header.by_id_root->reduce_value.size;
+    }
+    if (db->header.local_docs_root) {
+        localrootsize = 12 + db->header.local_docs_root->reduce_value.size;
+    }
+    db->file_pos += 25 + seqrootsize + idrootsize + localrootsize;
+    //Extend file size to where end of header will land before we do first sync
+    db_write_buf(db, &zerobyte, NULL, NULL);
+
+    couchstore_error_t errcode = db->file_ops->sync(db->file_handle);
+
+    //Set the pos back to where it was when we started to write the real header.
+    db->file_pos = curpos;
+    if (errcode == COUCHSTORE_SUCCESS) {
+        errcode = write_header(db);
+    }
+
     if (errcode == COUCHSTORE_SUCCESS) {
         errcode = db->file_ops->sync(db->file_handle);
     }

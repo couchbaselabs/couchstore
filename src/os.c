@@ -95,7 +95,7 @@ static couchstore_error_t couch_sync(couch_file_handle handle)
     int fd = handle_to_fd(handle);
     int rv;
     do {
-        rv = fsync(fd);
+        rv = fdatasync(fd);
     } while (rv == -1 && errno == EINTR);
 
     if (rv == -1) {

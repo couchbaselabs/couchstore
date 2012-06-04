@@ -34,6 +34,11 @@ AC_CONFIG_MACRO_DIR([m4])
 ac_cv_func_malloc_0_nonnull=yes
 ac_cv_func_realloc_0_nonnull=yes
 
+AC_CHECK_FUNCS_ONCE([fdatasync])
+if test $ac_cv_func_fdatasync = no; then
+ AC_DEFINE([fdatasync], [fsync], [Define to fsync if you lack fdatasync])
+fi
+
 COUCHBASE_GENERIC_COMPILER(c99)
 
 PANDORA_HAVE_LIBLUA
