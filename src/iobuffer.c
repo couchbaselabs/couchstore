@@ -22,9 +22,11 @@
 #define WRITE_BUFFER_CAPACITY (128*1024)
 #define READ_BUFFER_CAPACITY (8*1024)
 
+#ifdef min
+#undef min
+#endif
 
 static inline ssize_t min(ssize_t a, ssize_t b) {return a < b ? a : b;}
-static inline ssize_t max(ssize_t a, ssize_t b) {return a > b ? a : b;}
 
 
 typedef struct file_buffer {
