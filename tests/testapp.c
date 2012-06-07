@@ -182,11 +182,11 @@ static void test_save_docs(int count, const char *doc_tpl)
     fflush(stderr);
 
     docset_init(count);
-    srandom(0xdeadbeef);  // doc IDs should be consistent across runs
+    srand(0xdeadbeef);  // doc IDs should be consistent across runs
     for (i = 0; i < count; ++i) {
         idBuf = (char *) malloc(sizeof(char) * 32);
         assert(idBuf != NULL);
-        sprintf(idBuf, "doc%lu", (unsigned long)random());
+        sprintf(idBuf, "doc%lu", (unsigned long)rand());
         valueBuf = (char *) malloc(sizeof(char) * (strlen(doc_tpl) + 20));
         assert(valueBuf != NULL);
         sprintf(valueBuf, doc_tpl, i + 1);
