@@ -265,19 +265,22 @@ static couchstore_error_t compact_seq_fetchcb(couchfile_lookup_request *rq, void
     size_t new_size = 0;
     sized_buf item;
     item.buf = NULL;
-    int itemsize = pread_bin(rq->db, bp, &item.buf);
-    if(itemsize < 0)
-    {
-        return itemsize;
-    }
-    item.size = itemsize;
+    if(bp != 0) {
+        int itemsize = pread_bin(rq->db, bp, &item.buf);
+        if(itemsize < 0)
+        {
+            return itemsize;
+        }
+        item.size = itemsize;
 
-    db_write_buf(ctx->target_mr->rq->db, &item, &new_bp, &new_size);
-    //Preserve high bit
-    v->buf[5] &= 0x80;
-    memset(v->buf + 6, 0, 5);
-    set_bits(v->buf + 5, 1, 47, new_bp);
-    free(item.buf);
+        db_write_buf(ctx->target_mr->rq->db, &item, &new_bp, &new_size);
+
+        //Preserve high bit
+        v->buf[5] &= 0x80;
+        memset(v->buf + 6, 0, 5);
+        set_bits(v->buf + 5, 1, 47, new_bp);
+        free(item.buf);
+    }
 
     return output_seqtree_item(k, v, ctx);
 }
