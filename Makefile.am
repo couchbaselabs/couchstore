@@ -128,6 +128,11 @@ slow_lua_tests: couchscript tests/largefile.lua tests/large.lua
 
 endif
 
+python_tests: python/*.py
+	@LD_LIBRARY_PATH=`pwd`/.libs \
+		DYLD_LIBRARY_PATH=`pwd`/.libs \
+		python python/couchstore_test.py
+
 #tests
 
 CLEANFILES = test.couch
