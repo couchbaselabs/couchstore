@@ -281,7 +281,7 @@ static int by_seq_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
     (*pInfo)->rev_seq = revnum;
     (*pInfo)->deleted = deleted;
     (*pInfo)->bp = bp;
-    (*pInfo)->size = datasize;
+    (*pInfo)->physical_size = datasize;
     (*pInfo)->content_meta = content_meta;
     (*pInfo)->id.buf = rbuf + sizeof(DocInfo);
     (*pInfo)->id.size = idsize;
@@ -311,7 +311,7 @@ static int by_id_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
     (*pInfo)->rev_seq = revnum;
     (*pInfo)->deleted = deleted;
     (*pInfo)->bp = bp;
-    (*pInfo)->size = datasize;
+    (*pInfo)->physical_size = datasize;
     (*pInfo)->content_meta = content_meta;
     (*pInfo)->rev_meta.buf = rbuf + sizeof(DocInfo);
     (*pInfo)->rev_meta.size = v->size - 21;
