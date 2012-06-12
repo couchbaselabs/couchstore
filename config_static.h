@@ -45,6 +45,7 @@
 #endif
 
 #ifdef __APPLE__
+#define fdatasync(FD) fsync(FD)  // autoconf things OS X has fdatasync but it doesn't
 #ifndef HAVE_HTONLL
 // On Darwin, use built-in functions for 64-bit byte-swap:
 #include <libkern/OSByteOrder.h>
