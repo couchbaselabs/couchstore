@@ -1,4 +1,4 @@
-from couchstore import CouchStore, CouchStoreException
+from couchstore import CouchStore, CouchStoreException, DocumentInfo
 import os
 import unittest
 
@@ -63,6 +63,31 @@ class CouchStoreTest (unittest.TestCase):
         self.store.save("foo", "value")
         self.assertRaises(KeyError, self.store.getInfoBySequence, 99999)
         self.assertRaises(TypeError, self.store.getInfoBySequence, "huh")
+
+    def testNoContents(self):
+        info = DocumentInfo("howdy")
+        self.assertRaises(Exception, info.getContents)
+
+    def testMetadata(self):
+        info = DocumentInfo("meta")
+        info.revSequence = 23
+        info.revMeta = "fancy metadata here"
+        info.contentType = DocumentInfo.INVALID_JSON
+        self.store[info] = "the regular non-meta data"
+
+        gotInfo = self.store.getInfo("meta")
+        self.assertEquals(gotInfo.id, "meta")
+        self.assertEquals(gotInfo.revSequence, info.revSequence)
+        self.assertEquals(gotInfo.revMeta, info.revMeta)
+        self.assertEquals(gotInfo.contentType, info.contentType)
+        self.assertFalse(gotInfo.compressed)
+
+    def testCompression(self):
+        value = "this value is text and text is valued"
+        self.store.save("key", value, CouchStore.COMPRESS)
+        self.assertEqual(self.store.get("key", CouchStore.DECOMPRESS), value)
+        info = self.store.getInfo("key")
+        self.assertTrue(info.compressed)
 
     def expectedKey(self, i):
         return "key_%d" % (i+1)

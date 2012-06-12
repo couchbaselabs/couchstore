@@ -78,24 +78,44 @@ class DocInfoStruct (Structure):
 class DocumentInfo (object):
     """Metadata of a document in a CouchStore database."""
 
+    # Values for contentType:
+    IS_JSON = 0
+    INVALID_JSON = 1
+    INVALID_JSON_KEY = 2
+    NON_JSON = 3
+
+    def __init__ (self, id):
+        self.id = id
+        self.deleted = False
+        self.contentType = DocumentInfo.NON_JSON
+        self.revSequence = 0
+
     @staticmethod
     def _fromStruct (info, store = None):
-        self = DocumentInfo()
+        self = DocumentInfo(str(info.id))
         self.store = store
-        self.id = str(info.id)
         self.sequence = info.db_seq
         self.revSequence = info.rev_seq
         self.revMeta = str(info.rev_meta)
         self.deleted = (info.deleted != 0)
-        self.contentMeta = info.content_meta
+        self.contentType = info.content_meta & 0x0F
+        self.compressed = (info.content_meta & 0x80) != 0
         self._bp = info.bp
-        self.size = info.size
+        self.physSize = info.size
         return self
 
     def _asStruct(self):
-        return DocInfoStruct(SizedBuf(self.id), self.sequence, self.revSequence,
-                             SizedBuf(self.revMeta), self.deleted,
-                             self.contentMeta, self._bp, self.size)
+        struct = DocInfoStruct(SizedBuf(self.id))
+        if hasattr(self, "sequence"): struct.db_seq = self.sequence
+        if hasattr(self, "revMeta"): struct.rev_meta = SizedBuf(self.revMeta)
+        struct.rev_seq = self.revSequence
+        struct.deleted = self.deleted
+        struct.content_meta = self.contentType & 0x0F
+        if hasattr(self, "compressed") and self.compressed:
+            struct.content_meta |= 0x80
+        if hasattr(self, "_bp"): struct.bp = self._bp
+        if hasattr(self, "physSize"): struct.size = self.physSize
+        return struct
 
     def __str__ (self):
         return "DocumentInfo('%s', %d bytes)" % (self.id, self.size)
@@ -104,18 +124,16 @@ class DocumentInfo (object):
         return "DocumentInfo('%s', %d bytes)" % (self.id, self.size)
 
     def dump (self):
-        return "DocumentInfo('%s', %d bytes, seq=%d, revSeq=%d, deleted=%s, contentMeta=%d, bp=%d)" % \
-                 (self.id, self.size, self.sequence, self.revSequence, self.deleted, \
-                  self.contentMeta, self._bp)
+        return "DocumentInfo('%s', %d bytes, seq=%d, revSeq=%d, deleted=%s, contentType=%d, compressed=%d, bp=%d)" % \
+                 (self.id, self.physSize, self.sequence, self.revSequence, self.deleted, \
+                  self.contentType, self.compressed, self._bp)
 
     def getContents(self, options =0):
         """Fetches and returns the contents of a DocumentInfo returned from CouchStore's getInfo
            or getInfoBySequence methods."""
-        if not self.store or not self._bp:
+        if not hasattr(self, "store") or not hasattr(self, "_bp"):
             raise Exception("Contents unknown")
-        info = DocInfoStruct()
-        info.contentMeta = self.contentMeta
-        info.bp = self._bp
+        info = self._asStruct()
         docptr = pointer(DocStruct())
         _lib.couchstore_open_doc_with_docinfo(self.store, byref(info), byref(docptr), options)
         contents = str(docptr.contents.data)
@@ -160,7 +178,7 @@ class CouchStore (object):
     def save (self, id, data, options =0):
         """Saves a document with the given ID. Returns the sequence number."""
         if isinstance(id, DocumentInfo):
-            infoStruct = id._asStruct
+            infoStruct = id._asStruct()
             idbuf = infoStruct.id
         else:
             idbuf = SizedBuf(id)
@@ -168,6 +186,8 @@ class CouchStore (object):
         if data != None:
             doc = DocStruct(idbuf, SizedBuf(data))
             docref = byref(doc)
+            if options & CouchStore.COMPRESS:
+                infoStruct.content_meta |= 0x80
         else:
             docref = None
         _check(_lib.couchstore_save_document(self, docref, byref(infoStruct), options))
