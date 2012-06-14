@@ -13,6 +13,11 @@
 #include <stdio.h>
 #endif
 
+/* If this flag exists, use it. (Windows). Otherwise it's not important. */
+#ifndef O_BINARY
+#define O_BINARY 0
+#endif
+
 static inline int handle_to_fd(couch_file_handle handle)
 {
     return (int)(intptr_t)handle;
@@ -55,7 +60,7 @@ static couchstore_error_t couch_open(couch_file_handle* handle, const char *path
 {
     int fd;
     do {
-        fd = open(path, oflag | O_LARGEFILE, 0666);
+        fd = open(path, oflag | O_BINARY | O_LARGEFILE, 0666);
     } while (fd == -1 && errno == EINTR);
 
     if (fd == -1) {
