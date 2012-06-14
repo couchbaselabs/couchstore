@@ -12,7 +12,7 @@ static size_t assemble_seq_index_value(DocInfo *docinfo, char *dst)
 {
     memset(dst, 0, 16);
     set_bits(dst, 0, 12, docinfo->id.size);
-    set_bits(dst + 1, 4, 28, docinfo->physical_size);
+    set_bits(dst + 1, 4, 28, docinfo->size);
     set_bits(dst + 5, 0, 1, docinfo->deleted);
     set_bits(dst + 5, 1, 47, docinfo->bp);
     dst[11] = docinfo->content_meta;
@@ -27,7 +27,7 @@ static size_t assemble_id_index_value(DocInfo *docinfo, char *dst)
 {
     memset(dst, 0, 21);
     set_bits(dst, 0, 48, docinfo->db_seq);
-    set_bits(dst + 6, 0, 32, docinfo->physical_size);
+    set_bits(dst + 6, 0, 32, docinfo->size);
     set_bits(dst + 10, 0, 1, docinfo->deleted);
     set_bits(dst + 10, 1, 47, docinfo->bp);
     dst[16] = docinfo->content_meta;
@@ -289,11 +289,11 @@ static couchstore_error_t add_doc_to_update_list(Db *db,
         if (errcode != COUCHSTORE_SUCCESS) {
             return errcode;
         }
-        updated.physical_size = disk_size;
+        updated.size = disk_size;
     } else {
         updated.deleted = 1;
         updated.bp = 0;
-        updated.physical_size = 0;
+        updated.size = 0;
     }
 
     *idterm = updated.id;

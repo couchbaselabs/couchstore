@@ -70,7 +70,7 @@ class DocInfoStruct (Structure):
                 ("deleted", c_int),
                 ("content_meta", c_ubyte),
                 ("bp", c_ulonglong),
-                ("physical_size", c_ulonglong) ]
+                ("size", c_ulonglong) ]
 
 
 ### DOCUMENT INFO CLASS:
@@ -101,7 +101,7 @@ class DocumentInfo (object):
         self.contentType = info.content_meta & 0x0F
         self.compressed = (info.content_meta & 0x80) != 0
         self._bp = info.bp
-        self.physicalSize = info.physical_size
+        self.physSize = info.size
         return self
 
     def _asStruct(self):
@@ -114,18 +114,18 @@ class DocumentInfo (object):
         if hasattr(self, "compressed") and self.compressed:
             struct.content_meta |= 0x80
         if hasattr(self, "_bp"): struct.bp = self._bp
-        if hasattr(self, "physicalSize"): struct.physical_size = self.physicalSize
+        if hasattr(self, "physSize"): struct.size = self.physSize
         return struct
 
     def __str__ (self):
-        return "DocumentInfo('%s', seq=%d)" % (self.id, self.sequence)
+        return "DocumentInfo('%s', %d bytes)" % (self.id, self.size)
 
     def __repr__ (self):
-        return str(self)
+        return "DocumentInfo('%s', %d bytes)" % (self.id, self.size)
 
     def dump (self):
         return "DocumentInfo('%s', %d bytes, seq=%d, revSeq=%d, deleted=%s, contentType=%d, compressed=%d, bp=%d)" % \
-                 (self.id, self.physicalSize, self.sequence, self.revSequence, self.deleted, \
+                 (self.id, self.physSize, self.sequence, self.revSequence, self.deleted, \
                   self.contentType, self.compressed, self._bp)
 
     def getContents(self, options =0):

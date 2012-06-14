@@ -199,7 +199,7 @@ extern "C" {
             char buf[1024];
             snprintf(buf, sizeof(buf),
                      "error get doc by docinfo (key=\"%s\", bp=%llu, size=%lld): %s",
-                     key, docinfo->bp, (uint64_t)docinfo->physical_size, couchstore_strerror(rc));
+                     key, docinfo->bp, (uint64_t)docinfo->size, couchstore_strerror(rc));
             couchstore_free_docinfo(docinfo);
             lua_pushstring(ls, buf);
             lua_error(ls);
@@ -690,7 +690,7 @@ extern "C" {
     static int docinfo_len(lua_State *ls)
     {
         DocInfo *di = getDocInfo(ls);
-        lua_pushinteger(ls, di->physical_size);
+        lua_pushinteger(ls, di->size);
         return 1;
     }
 
