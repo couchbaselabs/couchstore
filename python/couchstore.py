@@ -72,6 +72,11 @@ class DocInfoStruct (Structure):
                 ("bp", c_ulonglong),
                 ("size", c_ulonglong) ]
 
+class LocalDocStruct (Structure):
+    _fields_ = [("id", SizedBuf),
+                ("json", SizedBuf),
+                ("deleted", c_int) ]
+
 
 ### DOCUMENT INFO CLASS:
 
@@ -139,6 +144,39 @@ class DocumentInfo (object):
         contents = str(docptr.contents.data)
         _lib.couchstore_free_document(docptr)
         return contents
+
+
+### LOCAL-DOCUMENTS CLASS:
+
+class LocalDocs (object):
+    """Collection that represents the local documents of a CouchStore."""
+    def __init__(self, couchstore):
+        self.couchstore = couchstore
+
+    def __getitem__ (self, key):
+        """Returns the contents of a local document (as a string) given its ID."""
+        id = _toString(key)
+        docptr = pointer(LocalDocStruct())
+        err = _lib.couchstore_open_local_document(self.couchstore, id, len(id), byref(docptr))
+        if err == -5 or (err == 0 and docptr.contents.deleted):
+            raise KeyError(id)
+        _check(err)
+        value = str(docptr.contents.json)
+        _lib.couchstore_free_document(docptr)
+        return value
+
+    def __setitem__ (self, key, value):
+        """Saves a local document with the given ID, or deletes it if the value is None."""
+        idbuf = SizedBuf(key)
+        doc = LocalDocStruct(idbuf)
+        if value != None:
+            doc.json = SizedBuf(value)
+        else:
+            doc.deleted = True
+        _check(_lib.couchstore_save_local_document(self.couchstore, byref(doc)))
+
+    def __delitem__ (self, key):
+        self.__setitem__(key, None)
 
 
 ### COUCHSTORE CLASS:
@@ -293,3 +331,8 @@ class CouchStore (object):
         changes = []
         self.forEachChange(since, lambda docInfo: changes.append(docInfo))
         return changes
+
+    @property
+    def localDocs(self):
+        """A simple dictionary-like object that accesses the CouchStore's local documents."""
+        return LocalDocs(self)

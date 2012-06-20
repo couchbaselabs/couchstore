@@ -126,6 +126,15 @@ class CouchStoreTest (unittest.TestCase):
         for i in xrange(50):
             self.assertEqual(changes[i].id, self.expectedKey(i))
 
+    def testLocalDocs(self):
+        locals = self.store.localDocs
+        self.assertRaises(KeyError, locals.__getitem__, "hello")
+        locals["hello"] = "goodbye"
+        self.assertEqual(locals["hello"], "goodbye")
+        locals["hello"] = "bonjour"
+        self.assertEqual(locals["hello"], "bonjour")
+        del locals["hello"]
+        self.assertRaises(KeyError, locals.__getitem__, "hello")
 
 if __name__ == '__main__':
     unittest.main()
