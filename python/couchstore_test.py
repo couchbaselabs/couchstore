@@ -90,7 +90,7 @@ class CouchStoreTest (unittest.TestCase):
         self.assertTrue(info.compressed)
 
     def expectedKey(self, i):
-        return "key_%d" % (i+1)
+        return "key_%2d" % (i+1)
     def expectedValue(self, i):
         return "Hi there! I'm value #%d!" % (i+1)
     def addDocs(self, n):
@@ -106,6 +106,12 @@ class CouchStoreTest (unittest.TestCase):
         for i in xrange(1000):
             self.assertEqual(self.store[self.expectedKey(i)], self.expectedValue(i))
 
+        info = self.store.getDbInfo()
+        self.assertEquals(info.filename, "/tmp/test.couch")
+        self.assertEquals(info.last_sequence, 1000)
+        self.assertEquals(info.doc_count, 1000)
+        self.assertEquals(info.deleted_count, 0)
+
     def testBulkDocs(self):
         self.addBulkDocs(1000)
         for i in xrange(1000):
@@ -119,12 +125,45 @@ class CouchStoreTest (unittest.TestCase):
         self.assertTrue(info.deleted)
         self.assertEqual(info.id, "key")
 
+        info = self.store.getDbInfo()
+        self.assertEquals(info.last_sequence, 2)
+        self.assertEquals(info.doc_count, 0)
+        self.assertEquals(info.deleted_count, 1)
+        self.assertEquals(info.space_used, 0)
+
     def testChangesSince(self):
         self.addDocs(50)
         changes = self.store.changesSince(0)
         self.assertEqual(len(changes), 50)
         for i in xrange(50):
             self.assertEqual(changes[i].id, self.expectedKey(i))
+
+    def testForAllDocs(self):
+        self.addDocs(50)
+        docCount = [0]
+        def checkDoc(docInfo):
+            self.assertEquals(docInfo.id, self.expectedKey(docCount[0]))
+            docCount[0] += 1
+        self.store.forEachDoc(None, None, checkDoc)
+        self.assertEqual(docCount[0], 50)
+
+    def testForSomeDocs(self):
+        self.addDocs(50)
+        docCount = [0]
+        def checkDoc(docInfo):
+            self.assertEquals(docInfo.id, self.expectedKey(docCount[0]))
+            docCount[0] += 1
+
+        self.store.forEachDoc(None, self.expectedKey(10), checkDoc)
+        self.assertEqual(docCount[0], 11)
+
+        docCount = [10]
+        self.store.forEachDoc(self.expectedKey(10), None, checkDoc)
+        self.assertEqual(docCount[0], 50)
+
+        docCount = [10]
+        self.store.forEachDoc(self.expectedKey(10), self.expectedKey(20), checkDoc)
+        self.assertEqual(docCount[0], 21)
 
     def testLocalDocs(self):
         locals = self.store.localDocs

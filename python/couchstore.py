@@ -77,6 +77,14 @@ class LocalDocStruct (Structure):
                 ("json", SizedBuf),
                 ("deleted", c_int) ]
 
+class DbInfoStruct (Structure):
+    _fields_ = [("filename", c_char_p),
+                ("last_sequence", c_ulonglong),
+                ("doc_count", c_ulonglong),
+                ("deleted_count", c_ulonglong),
+                ("space_used", c_ulonglong),
+                ("header_position", c_ulonglong) ]
+
 
 ### DOCUMENT INFO CLASS:
 
@@ -211,6 +219,13 @@ class CouchStore (object):
     def __str__(self):
         return "CouchStore(%s)" % self.path
 
+    def getDbInfo(self):
+        """Returns an object with information about the database.
+           Its properties are filename, last_sequence, doc_count, deleted_count, space_used, header_position."""
+        info = DbInfoStruct()
+        _check(_lib.couchstore_db_info(self, byref(info)))
+        return info
+
     COMPRESS = 1
 
     def save (self, id, data, options =0):
@@ -331,6 +346,21 @@ class CouchStore (object):
         changes = []
         self.forEachChange(since, lambda docInfo: changes.append(docInfo))
         return changes
+
+    def forEachDoc(self, startKey, endKey, fn):
+        def callback (dbPtr, docInfoPtr, context):
+            fn(DocumentInfo._fromStruct(docInfoPtr.contents, self))
+            return 0
+
+        ids = (SizedBuf * 2)()
+        numIDs = 1
+        if startKey:
+            ids[0] = SizedBuf(startKey)
+        if endKey:
+            ids[1] = SizedBuf(endKey)
+            numIDs = 2
+        _check(_lib.couchstore_docinfos_by_id(self, ids, numIDs, 1, \
+               CouchStore.ITERATORFUNC(callback), c_void_p(0)))
 
     @property
     def localDocs(self):

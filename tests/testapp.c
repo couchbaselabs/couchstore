@@ -225,7 +225,7 @@ static void test_save_docs(int count, const char *doc_tpl)
         docset_check(db, out_info, &testdocset);
         couchstore_free_docinfo(out_info);
     }
-    
+
     // Read back in bulk by doc ID:
     fprintf(stderr, "bulk IDs... ");
     ids = malloc(count * sizeof(sized_buf));
@@ -329,6 +329,14 @@ static void test_save_doc(void)
     try(couchstore_changes_since(db, 0, 0, docset_check, &testdocset));
     assert(testdocset.counters.totaldocs == 4);
     assert(testdocset.counters.deleted == 0);
+
+    DbInfo info;
+    assert(couchstore_db_info(db, &info) == COUCHSTORE_SUCCESS);
+    assert(info.last_sequence == 4);
+    assert(info.doc_count == 4);
+    assert(info.deleted_count == 0);
+    assert(info.header_position == 4096);
+
     couchstore_close_db(db);
 cleanup:
     assert(errcode == 0);
@@ -375,9 +383,20 @@ static void test_dump_empty_db(void)
     couchstore_open_db(testfilepath, COUCHSTORE_OPEN_FLAG_CREATE, &db);
     couchstore_close_db(db);
     couchstore_open_db(testfilepath, 0, &db);
+
     dump_count(db);
     assert(counters.totaldocs == 0);
     assert(counters.deleted == 0);
+
+    DbInfo info;
+    assert(couchstore_db_info(db, &info) == COUCHSTORE_SUCCESS);
+    assert(strcmp(info.filename, testfilepath) == 0);
+    assert(info.last_sequence == 0);
+    assert(info.doc_count == 0);
+    assert(info.deleted_count == 0);
+    assert(info.space_used == 0);
+    assert(info.header_position == 0);
+
     couchstore_close_db(db);
 }
 
@@ -507,6 +526,13 @@ static void test_changes_no_dups(void)
         memset(docmap, 0, numdocs);
         try(couchstore_changes_since(db, 0, 0, docmap_check, docmap));
     }
+
+    DbInfo info;
+    assert(couchstore_db_info(db, &info) == COUCHSTORE_SUCCESS);
+    assert(info.last_sequence == numdocs + numdocs/2);
+    assert(info.doc_count == numdocs);
+    assert(info.deleted_count == 0);
+
     couchstore_close_db(db);
 cleanup:
     for (i=0; i < numdocs; i++) {

@@ -600,6 +600,7 @@ static couchstore_error_t iterate_docinfos(Db *db,
                                            int (*key_ptr_compare)(const void *, const void *),
                                            int (*key_compare)(sized_buf *k1, sized_buf *k2),
                                            couchstore_changes_callback_fn callback,
+                                           int fold,
                                            void *ctx)
 {
     // Nothing to do if the tree is empty
@@ -616,8 +617,10 @@ static couchstore_error_t iterate_docinfos(Db *db,
     for (i = 0; i< numDocs; ++i) {
         keyptrs[i] = &keys[i];
     }
-    // Sort the key pointers:
-    qsort(keyptrs, numDocs, sizeof(keyptrs[0]), key_ptr_compare);
+    if (!fold) {
+        // Sort the key pointers:
+        qsort(keyptrs, numDocs, sizeof(keyptrs[0]), key_ptr_compare);
+    }
 
     // Construct the lookup request:
     lookup_context cbctx = {db, callback, ctx, (tree == db->header.by_id_root)};
@@ -630,7 +633,7 @@ static couchstore_error_t iterate_docinfos(Db *db,
     rq.keys = (sized_buf**) keyptrs;
     rq.callback_ctx = &cbctx;
     rq.fetch_callback = lookup_callback;
-    rq.fold = 0;
+    rq.fold = fold;
     
     // Go!
     couchstore_error_t errcode = btree_lookup(&rq, tree->pointer);
@@ -643,26 +646,25 @@ LIBCOUCHSTORE_API
 couchstore_error_t couchstore_docinfos_by_id(Db *db,
                                              const sized_buf ids[],
                                              unsigned numDocs,
-                                             uint64_t options,
+                                             couchstore_docinfos_options options,
                                              couchstore_changes_callback_fn callback,
                                              void *ctx)
 {
-    (void) options;
     return iterate_docinfos(db, ids, numDocs,
                             db->header.by_id_root, id_ptr_cmp, ebin_cmp,
-                            callback, ctx);
+                            callback,
+                            (options & RANGES) != 0,
+                            ctx);
 }
 
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_docinfos_by_sequence(Db *db,
                                                    const uint64_t sequence[],
                                                    unsigned numDocs,
-                                                   uint64_t options,
+                                                   couchstore_docinfos_options options,
                                                    couchstore_changes_callback_fn callback,
                                                    void *ctx)
 {
-    (void) options;
-
     // Create the array of keys:
     sized_buf *keylist = malloc(numDocs * sizeof(sized_buf));
     char *keyvalues = calloc(numDocs, 6);
@@ -677,11 +679,29 @@ couchstore_error_t couchstore_docinfos_by_sequence(Db *db,
     
     error_pass(iterate_docinfos(db, keylist, numDocs,
                                 db->header.by_seq_root, seq_ptr_cmp, seq_cmp,
-                                callback, ctx));
+                                callback,
+                                (options & RANGES) != 0,
+                                ctx));
 cleanup:
     free(keylist);
     free(keyvalues);
     return errcode;
+}
+
+LIBCOUCHSTORE_API
+couchstore_error_t couchstore_db_info(Db *db, DbInfo* dbinfo) {
+    const node_pointer *root = db->header.by_id_root;
+    dbinfo->filename = db->filename;
+    dbinfo->header_position = db->header.position;
+    dbinfo->last_sequence = db->header.update_seq;
+    if (root) {
+        dbinfo->doc_count = get_40(root->reduce_value.buf);
+        dbinfo->deleted_count = get_40(root->reduce_value.buf + 5);
+        dbinfo->space_used = get_48(root->reduce_value.buf + 10);
+    } else {
+        dbinfo->deleted_count = dbinfo->doc_count = dbinfo->space_used = 0;
+    }
+    return COUCHSTORE_SUCCESS;
 }
 
 LIBCOUCHSTORE_API

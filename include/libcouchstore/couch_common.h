@@ -56,6 +56,16 @@ extern "C" {
         int deleted;
     } LocalDoc;
 
+    /** Information about the database as a whole. */
+    typedef struct {
+        const char* filename;       /**< Filesystem path */
+        uint64_t last_sequence;     /**< Last sequence number allocated */
+        uint64_t doc_count;         /**< Total number of (non-deleted) documents */
+        uint64_t deleted_count;     /**< Total number of deleted documents */
+        uint64_t space_used;        /**< Disk space actively used by docs */
+        off_t header_position;      /**< File offset of current header */
+    } DbInfo;
+
 
     /** Opaque reference to an open database. */
     typedef struct _db Db;

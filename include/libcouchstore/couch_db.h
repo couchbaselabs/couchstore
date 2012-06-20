@@ -79,6 +79,17 @@ extern "C" {
 
 
     /**
+     * Get information about the database.
+     *
+     * @param db Pointer to the database handle.
+     * @param info Pointer to where you want the info to be stored.
+     * @return COUCHSTORE_SUCCESS upon success
+     */
+    LIBCOUCHSTORE_API
+    couchstore_error_t couchstore_db_info(Db *db, DbInfo* info);
+
+
+    /**
      * Returns the filename of the database, as given when it was opened.
      *
      * @param db Pointer to the database handle.
@@ -293,6 +304,14 @@ extern "C" {
                                                   DocInfo *docinfo,
                                                   void *ctx);
 
+    /** Options flags for document iteration */
+    typedef uint64_t couchstore_docinfos_options;
+    enum {
+        /* If set, the sequences/ids lists are interpreted as pairs of range endpoints,
+         * and all documents within those ranges will be iterated over. */
+        RANGES = 1
+    };
+    
     /**
      * Iterate through the changes since sequence number `since`.
      *
@@ -316,12 +335,17 @@ extern "C" {
      * The DocInfos will be presented to the callback in order of ascending sequence
      * number, *not* in the order in which they appear in the sequence[] array.
      *
+     * If the RANGES option flag is set, the sequences array is interpreted as
+     * alternating begin/end points of ranges, and all DocInfos within those ranges
+     * are iterated over. (If there is an odd number of sequences, the iteration will
+     * stop at the last sequence.)
+     *
      * The callback will not be invoked for nonexistent sequence numbers.
      *
      * @param sequence array of document sequence numbers. Need not be sorted but must not contain
      *          duplicates.
      * @param numDocs number of documents to look up (size of sequence[] array)
-     * @param options (not used; pass 0)
+     * @param options Set the RANGES bit for range mode (see above)
      * @param callback the callback function used to iterate over document infos
      * @param ctx client context (passed to the callback)
      * @return COUCHSTORE_SUCCESS on success.
@@ -330,7 +354,7 @@ extern "C" {
     couchstore_error_t couchstore_docinfos_by_sequence(Db *db,
                                                        const uint64_t sequence[],
                                                        unsigned numDocs,
-                                                       uint64_t options,
+                                                       couchstore_docinfos_options options,
                                                        couchstore_changes_callback_fn callback,
                                                        void *ctx);
 
@@ -340,12 +364,17 @@ extern "C" {
      * The DocInfos will be presented to the callback in order of ascending document id,
      * *not* in the order in which they appear in the ids[] array.
      *
+     * If the RANGES option flag is set, the ids array is interpreted as alternating
+     * begin/end points of ranges, and all DocInfos with IDs within those ranges
+     * are iterated over. (If there is an odd number of IDs, the iteration will
+     * stop at the last ID.)
+     *
      * The callback will not be invoked for nonexistent ids.
      *
      * @param ids array of document ids. Need not be sorted but must not contain
      *          duplicates.
      * @param numDocs number of documents to look up (size of ids[] array)
-     * @param options (not used; pass 0)
+     * @param options Set the RANGES bit for range mode (see above)
      * @param callback the callback function used to iterate over document infos
      * @param ctx client context (passed to the callback)
      * @return COUCHSTORE_SUCCESS on success.
@@ -354,7 +383,7 @@ extern "C" {
     couchstore_error_t couchstore_docinfos_by_id(Db *db,
                                                  const sized_buf ids[],
                                                  unsigned numDocs,
-                                                 uint64_t options,
+                                                 couchstore_docinfos_options options,
                                                  couchstore_changes_callback_fn callback,
                                                  void *ctx);
 
