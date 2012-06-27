@@ -532,12 +532,12 @@ static couchstore_error_t lookup_callback(couchfile_lookup_request *rq,
     } else {
         by_seq_read_docinfo(&docinfo, seqterm, v);
     }
-    
-    if (context->callback(context->db, docinfo, context->callback_context) == 0) {
+
+    int rc = context->callback(context->db, docinfo, context->callback_context);
+    if (rc <= 0) {
         couchstore_free_docinfo(docinfo);
     }
-
-    return COUCHSTORE_SUCCESS;
+    return rc;
 }
 
 LIBCOUCHSTORE_API

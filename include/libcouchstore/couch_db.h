@@ -291,14 +291,15 @@ extern "C" {
      * and couchstore_docinfos_by_sequence() to iterate through the documents.
      *
      * The docinfo structure is automatically freed if the callback
-     * returns 0. A non-zero return value will preserve the DocInfo
+     * returns 0. A positive return value will preserve the DocInfo
      * for future use (should be freed with free_docinfo by the
-     * caller)
+     * caller). A negative return value will cancel the iteration and
+     * pass the error value back to the caller.
      *
      * @param db the database being traversed
      * @param docinfo the current document
      * @param ctx user context
-     * @return 1 to preserve the DocInfo, 0 to free it (see above).
+     * @return 1 to preserve the DocInfo, 0 or negative error value to free it (see above).
      */
     typedef int (*couchstore_changes_callback_fn)(Db *db,
                                                   DocInfo *docinfo,
