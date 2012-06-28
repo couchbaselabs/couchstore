@@ -14,19 +14,44 @@
 #endif
 
 /* Do special cases for windows */
-#ifndef O_BINARY
+#ifndef _O_BINARY
 #define open_int open
+#define close_int close
 #else
 #include <io.h>
 #include <share.h>
+
 static int win_open(const char* filename, int oflag, int pmode) {
-    int fd = -1;
-    errno_t err;
-    err = _sopen_s(&fd, filename, O_BINARY | oflag, _SH_DENYNO, pmode);
-    if(err) return -1;
+    int creationflag = OPEN_EXISTING;
+    if(oflag & O_CREAT) {
+        creationflag = OPEN_ALWAYS;
+    }
+
+    HANDLE os_handle = CreateFileA(filename, GENERIC_READ | GENERIC_WRITE,
+                                   FILE_SHARE_DELETE | FILE_SHARE_WRITE | FILE_SHARE_READ,
+                                   NULL, creationflag, 0, NULL);
+
+    if(os_handle == INVALID_HANDLE_VALUE) {
+        return -1;
+    }
+
+    int fd = _open_osfhandle(os_handle, oflag | _O_BINARY);
+    if(fd < 0) {
+        CloseHandle(os_handle);
+    }
+
     return fd;
 }
+
+static int win_close(int fd) {
+    int os_handle = _get_osfhandle(fd);
+    int close_result = close(fd);
+    CloseHandle(os_handle);
+    return close_result;
+
+}
 #define open_int win_open
+#define close_int win_close
 #endif
 
 static inline int handle_to_fd(couch_file_handle handle)
@@ -94,7 +119,7 @@ static void couch_close(couch_file_handle handle)
     if (fd != -1) {
         do {
             assert(fd >= 3);
-            rv = close(fd);
+            rv = close_int(fd);
         } while (rv == -1 && errno == EINTR);
     }
 }
