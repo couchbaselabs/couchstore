@@ -536,6 +536,9 @@ static couchstore_error_t lookup_callback(couchfile_lookup_request *rq,
     int rc = context->callback(context->db, docinfo, context->callback_context);
     if (rc <= 0) {
         couchstore_free_docinfo(docinfo);
+    } else {
+        // User requested docinfo not be freed, don't free it, return success
+        return COUCHSTORE_SUCCESS;
     }
     return rc;
 }
