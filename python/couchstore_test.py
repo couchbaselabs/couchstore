@@ -1,5 +1,6 @@
-from couchstore import CouchStore, CouchStoreException, DocumentInfo
+from couchstore import CouchStore, CouchStoreException, DocumentInfo, SizedBuf
 import os
+import struct
 import unittest
 
 def removeIfExists(path):
@@ -74,6 +75,24 @@ class CouchStoreTest (unittest.TestCase):
         info.revMeta = "fancy metadata here"
         info.contentType = DocumentInfo.INVALID_JSON
         self.store[info] = "the regular non-meta data"
+
+        gotInfo = self.store.getInfo("meta")
+        self.assertEquals(gotInfo.id, "meta")
+        self.assertEquals(gotInfo.revSequence, info.revSequence)
+        self.assertEquals(gotInfo.revMeta, info.revMeta)
+        self.assertEquals(gotInfo.contentType, info.contentType)
+        self.assertFalse(gotInfo.compressed)
+
+    def testMetadataSave(self):
+        info = DocumentInfo("meta")
+        info.revSequence = 23
+        info.revMeta = "fancy metadata here"
+        info.contentType = DocumentInfo.INVALID_JSON
+        self.store[info] = "the regular non-meta data"
+
+        self.store.commit()
+        self.store.close()
+        self.store = CouchStore("/tmp/test.couch", 'r')
 
         gotInfo = self.store.getInfo("meta")
         self.assertEquals(gotInfo.id, "meta")
@@ -174,6 +193,73 @@ class CouchStoreTest (unittest.TestCase):
         self.assertEqual(locals["hello"], "bonjour")
         del locals["hello"]
         self.assertRaises(KeyError, locals.__getitem__, "hello")
+
+    def testSizedBuf(self):
+        # Converting Python strings to/from SizedBufs is tricky enough (when the strings might
+        # contain null bytes) that it's worth a unit test of its own.
+        data = "foooooobarrrr"
+        buf = SizedBuf(data)
+        self.assertEqual(buf.size, len(data))
+        self.assertEqual(str(buf), data)
+        # Now try some binary data with nul bytes in it:
+        data = "foo\000bar"
+        buf = SizedBuf(data)
+        self.assertEqual(buf.size, len(data))
+        self.assertEqual(str(buf), data)
+
+    def testBinaryMeta(self):
+        # Make sure binary data, as produced by Python's struct module, works in revMeta.
+        packed = struct.pack(">QII", 0, 1, 2)
+        d = DocumentInfo("bin")
+        d.revMeta = packed
+        self.store[d] = "value"
+
+        doc_info = self.store.getInfo("bin")
+        self.assertEqual(doc_info.revMeta, packed)
+        i1, i2, i3 = struct.unpack(">QII", doc_info.revMeta)
+        self.assertEqual(i1, 0)
+        self.assertEqual(i2, 1)
+        self.assertEqual(i3, 2)
+
+    def testMultipleMeta(self):
+        k = []
+        v = []
+        for i in range(1000):
+            d = DocumentInfo(str(i))
+            d.revMeta = "hello-%s" % (i)
+            k.append(d)
+            v.append("world-%s" % (i))
+        self.store.saveMultiple(k, v)
+        self.store.commit()
+        self.store.close()
+        self.store = CouchStore("/tmp/test.couch", 'r')
+        for doc_info in self.store.changesSince(0):
+            i = int(doc_info.id)
+            self.assertEqual(doc_info.revMeta, "hello-%s" % (i))
+            doc_contents = doc_info.getContents()
+            self.assertEqual(doc_contents, "world-%s" % (i))
+
+    def testMultipleMetaStruct(self):
+        k = []
+        v = []
+        for i in range(1000):
+            d = DocumentInfo(str(i))
+            d.revMeta = struct.pack(">QII", i*3, i*2, i)
+            k.append(d)
+            v.append("world-%s" % (i))
+        self.store.saveMultiple(k, v)
+        self.store.commit()
+        self.store.close()
+        self.store = CouchStore("/tmp/test.couch", 'r')
+        for doc_info in self.store.changesSince(0):
+            i = int(doc_info.id)
+            i3, i2, i1 = struct.unpack(">QII", doc_info.revMeta)
+            self.assertEqual(i3, i*3)
+            self.assertEqual(i2, i*2)
+            self.assertEqual(i1, i*1)
+            doc_contents = doc_info.getContents()
+            self.assertEqual(doc_contents, "world-%s" % (doc_info.id))
+
 
 if __name__ == '__main__':
     unittest.main()

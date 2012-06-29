@@ -47,12 +47,14 @@ def _toString (key):
 ### INTERNAL STRUCTS:
 
 class SizedBuf (Structure):
-    _fields_ = [("buf", c_char_p), ("size", c_ulonglong)]
+    _fields_ = [("buf", POINTER(c_char)), ("size", c_ulonglong)]
 
     def __init__(self, string):
         if string != None:
             string = _toString(string)
-            Structure.__init__(self, string, len(string))
+            length = len(string)
+            buf = create_string_buffer(string, length)
+            Structure.__init__(self, buf, length)
         else:
             Structure.__init__(self, None, 0)
 
