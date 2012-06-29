@@ -75,6 +75,8 @@ couchfile_modify_result *new_btree_modres(arena *a, arena *transient_arena, Db* 
     rq->rereduce = rereduce;
 
     couchfile_modify_result* mr = make_modres(a, rq);
+    if (!mr)
+        return NULL;
     mr->arena_transient = transient_arena;
     mr->modified = 1;
     mr->node_type = KV_NODE;
@@ -557,6 +559,10 @@ node_pointer* complete_new_btree(couchfile_modify_result* mr, couchstore_error_t
     }
 
     couchfile_modify_result* targ_mr = make_modres(mr->arena, mr->rq);
+    if (!targ_mr) {
+        *errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
+        return NULL;
+    }
     targ_mr->modified = 1;
     targ_mr->node_type = KP_NODE;
 

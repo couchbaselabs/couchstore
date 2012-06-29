@@ -90,7 +90,7 @@ int merge_sort(FILE *unsorted_file, FILE *sorted_file,
             int record_size = (*read)(unsorted_file, record[0], pointer);
             if (record_size > 0) {
                 struct record_in_memory *p = (struct record_in_memory *)
-                                             malloc(sizeof(struct record_in_memory *) + record_size);
+                                             malloc(sizeof(struct record_in_memory) + record_size);
                 if (p == NULL) {
                     fclose(source_tape[0].fp);
                     fclose(source_tape[1].fp);

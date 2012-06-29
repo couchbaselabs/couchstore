@@ -271,22 +271,23 @@ static int by_seq_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
     content_meta = v->buf[11];
     revnum = get_32(v->buf + 12);
     seq = get_48(k->buf);
-    char *rbuf = (char *) malloc(sizeof(DocInfo) + (v->size - 16));
-    if (!rbuf) {
+    DocInfo* docInfo = malloc(sizeof(DocInfo) + (v->size - 16));
+    if (!docInfo) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
+    char *rbuf = (char *) docInfo;
     memcpy(rbuf + sizeof(DocInfo), v->buf + 16, v->size - 16);
-    *pInfo = (DocInfo *) rbuf;
-    (*pInfo)->db_seq = seq;
-    (*pInfo)->rev_seq = revnum;
-    (*pInfo)->deleted = deleted;
-    (*pInfo)->bp = bp;
-    (*pInfo)->size = datasize;
-    (*pInfo)->content_meta = content_meta;
-    (*pInfo)->id.buf = rbuf + sizeof(DocInfo);
-    (*pInfo)->id.size = idsize;
-    (*pInfo)->rev_meta.buf = rbuf + sizeof(DocInfo) + idsize;
-    (*pInfo)->rev_meta.size = v->size - 16 - idsize;
+    *pInfo = docInfo;
+    docInfo->db_seq = seq;
+    docInfo->rev_seq = revnum;
+    docInfo->deleted = deleted;
+    docInfo->bp = bp;
+    docInfo->size = datasize;
+    docInfo->content_meta = content_meta;
+    docInfo->id.buf = rbuf + sizeof(DocInfo);
+    docInfo->id.size = idsize;
+    docInfo->rev_meta.buf = rbuf + sizeof(DocInfo) + idsize;
+    docInfo->rev_meta.size = v->size - 16 - idsize;
     return 0;
 }
 
@@ -301,23 +302,24 @@ static int by_id_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
     bp = get_48(v->buf + 10) &~ 0x800000000000;
     content_meta = v->buf[16];
     revnum = get_32(v->buf + 17);
-    char *rbuf = (char *) malloc(sizeof(DocInfo) + (v->size - 21) + k->size);
-    if (!rbuf) {
+    DocInfo* docInfo = malloc(sizeof(DocInfo) + (v->size - 21) + k->size);
+    if (!docInfo) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
+    char *rbuf = (char *) docInfo;
     memcpy(rbuf + sizeof(DocInfo), v->buf + 21, v->size - 21);
-    *pInfo = (DocInfo *) rbuf;
-    (*pInfo)->db_seq = seq;
-    (*pInfo)->rev_seq = revnum;
-    (*pInfo)->deleted = deleted;
-    (*pInfo)->bp = bp;
-    (*pInfo)->size = datasize;
-    (*pInfo)->content_meta = content_meta;
-    (*pInfo)->rev_meta.buf = rbuf + sizeof(DocInfo);
-    (*pInfo)->rev_meta.size = v->size - 21;
-    (*pInfo)->id.buf = (*pInfo)->rev_meta.buf + (*pInfo)->rev_meta.size;
-    (*pInfo)->id.size = k->size;
-    memcpy((*pInfo)->id.buf, k->buf, k->size);
+    *pInfo = docInfo;
+    docInfo->db_seq = seq;
+    docInfo->rev_seq = revnum;
+    docInfo->deleted = deleted;
+    docInfo->bp = bp;
+    docInfo->size = datasize;
+    docInfo->content_meta = content_meta;
+    docInfo->rev_meta.buf = rbuf + sizeof(DocInfo);
+    docInfo->rev_meta.size = v->size - 21;
+    docInfo->id.buf = docInfo->rev_meta.buf + docInfo->rev_meta.size;
+    docInfo->id.size = k->size;
+    memcpy(docInfo->id.buf, k->buf, k->size);
     return 0;
 }
 

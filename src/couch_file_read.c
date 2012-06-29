@@ -49,7 +49,7 @@ static int pread_bin_internal(Db *db, off_t pos, char **ret_ptr, int header)
     } info;
     
     couchstore_error_t err = read_skipping_prefixes(db, &pos, sizeof(info), &info);
-    if (err) {
+    if (err < 0) {
         return err;
     }
     
@@ -67,7 +67,7 @@ static int pread_bin_internal(Db *db, off_t pos, char **ret_ptr, int header)
     if (!err && info.crc32 && info.crc32 != hash_crc32(buf, info.chunk_len)) {
         err = COUCHSTORE_ERROR_CHECKSUM_FAIL;
     }
-    if (err) {
+    if (err < 0) {
         free(buf);
         return err;
     }
