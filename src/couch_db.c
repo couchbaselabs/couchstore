@@ -525,6 +525,7 @@ couchstore_error_t couchstore_open_document(Db *db,
 // context info passed to lookup_callback via btree_lookup
 typedef struct {
     Db *db;
+    couchstore_docinfos_options options;
     couchstore_changes_callback_fn callback;
     void* callback_context;
     int by_id;
@@ -547,6 +548,14 @@ static couchstore_error_t lookup_callback(couchfile_lookup_request *rq,
         by_seq_read_docinfo(&docinfo, seqterm, v);
     }
 
+    if ((context->options & COUCHSTORE_DELETES_ONLY) && docinfo->deleted == 0) {
+        return COUCHSTORE_SUCCESS;
+    }
+
+    if ((context->options & COUCHSTORE_NO_DELETES) && docinfo->deleted == 1) {
+        return COUCHSTORE_SUCCESS;
+    }
+
     int rc = context->callback(context->db, docinfo, context->callback_context);
     if (rc <= 0) {
         couchstore_free_docinfo(docinfo);
@@ -560,15 +569,14 @@ static couchstore_error_t lookup_callback(couchfile_lookup_request *rq,
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_changes_since(Db *db,
                                             uint64_t since,
-                                            uint64_t options,
+                                            couchstore_docinfos_options options,
                                             couchstore_changes_callback_fn callback,
                                             void *ctx)
 {
-    (void) options;
     char since_termbuf[6];
     sized_buf since_term;
     sized_buf *keylist = &since_term;
-    lookup_context cbctx = {db, callback, ctx, 0};
+    lookup_context cbctx = {db, options, callback, ctx, 0};
     couchfile_lookup_request rq;
     sized_buf cmptmp;
     couchstore_error_t errcode;
@@ -639,7 +647,7 @@ static couchstore_error_t iterate_docinfos(Db *db,
     }
 
     // Construct the lookup request:
-    lookup_context cbctx = {db, callback, ctx, (tree == db->header.by_id_root)};
+    lookup_context cbctx = {db, 0, callback, ctx, (tree == db->header.by_id_root)};
     couchfile_lookup_request rq;
     sized_buf cmptmp;
     rq.cmp.compare = key_compare;

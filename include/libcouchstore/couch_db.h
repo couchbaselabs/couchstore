@@ -309,8 +309,17 @@ extern "C" {
     typedef uint64_t couchstore_docinfos_options;
     enum {
         /* If set, the sequences/ids lists are interpreted as pairs of range endpoints,
-         * and all documents within those ranges will be iterated over. */
-        RANGES = 1
+         * and all documents within those ranges will be iterated over.
+         */
+        RANGES = 1,
+        /**
+         * Send only deleted items.
+         */
+        COUCHSTORE_DELETES_ONLY = 2,
+        /**
+         * Send only non-deleted items.
+         */
+        COUCHSTORE_NO_DELETES = 4
     };
     
     /**
@@ -326,7 +335,7 @@ extern "C" {
     LIBCOUCHSTORE_API
     couchstore_error_t couchstore_changes_since(Db *db,
                                                 uint64_t since,
-                                                uint64_t options,
+                                                couchstore_docinfos_options options,
                                                 couchstore_changes_callback_fn callback,
                                                 void *ctx);
 

@@ -594,12 +594,12 @@ extern "C" {
 
     static int couch_func_id(0);
 
-    // db:changes(since, function(docinfo) something end)
+    // db:changes(since, options, function(docinfo) something end)
     static int couch_changes(lua_State *ls)
     {
-        if (lua_gettop(ls) < 3) {
-            lua_pushstring(ls, "couch:changes takes two arguments: "
-                           "rev_seq, function(docinfo)...");
+        if (lua_gettop(ls) < 4) {
+            lua_pushstring(ls, "couch:changes takes three arguments: "
+                           "rev_seq, options, function(docinfo)...");
             lua_error(ls);
             return 1;
         }
@@ -607,8 +607,9 @@ extern "C" {
         Db *db = getDb(ls);
 
         uint64_t since((uint64_t)luaL_checknumber(ls, 2));
+        couchstore_docinfos_options options((uint64_t)luaL_checknumber(ls, 3));
 
-        if (!lua_isfunction(ls, 3)) {
+        if (!lua_isfunction(ls, 4)) {
             lua_pushstring(ls, "I need a function to iterate over.");
             lua_error(ls);
             return 1;
@@ -618,7 +619,7 @@ extern "C" {
         snprintf(fun_buf, sizeof(fun_buf), "couch_fun_%d", ++couch_func_id);
         ChangesState changes_state(ls, fun_buf);
 
-        int rc = couchstore_changes_since(db, since, 0,
+        int rc = couchstore_changes_since(db, since, options,
                                           couch_changes_each, &changes_state);
         if (rc != 0) {
             char buf[128];

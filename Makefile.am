@@ -121,6 +121,7 @@ lua_tests: couchscript couch_compact tests/localdoc.lua
 	@./couchscript tests/localdoc.lua
 	@./couchscript tests/corrupt.lua
 	@./couchscript tests/bulk.lua
+	@./couchscript tests/changessincefilter.lua
 	@./couchscript tests/compact.lua
 
 slow_lua_tests: couchscript tests/largefile.lua tests/large.lua

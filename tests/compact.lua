@@ -8,7 +8,7 @@ local function check_table(db, t)
    end
 
    local found = 0
-   db:changes(0, function(di) found = found + 1 end)
+   db:changes(0, 0, function(di) found = found + 1 end)
    if found ~= #t then
       error("Expected " .. #t .. " results, found " .. found)
    end
@@ -35,7 +35,7 @@ end
 
 function into_table(db)
    local t = {}
-   db:changes(0, function(di)
+   db:changes(0, 0, function(di)
        table.insert(t, {di:id(), db:get_from_docinfo(di), di:rev()})
    end)
    return t

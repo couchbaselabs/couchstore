@@ -15,7 +15,7 @@ local function check_table(db, t)
    end
 
    local found = 0
-   db:changes(0, function(di) found = found + 1 end)
+   db:changes(0, 0, function(di) found = found + 1 end)
    if found ~= #t then
       error("Expected " .. #t .. " results, found " .. found)
    end
