@@ -59,6 +59,8 @@ libcouchstore_la_SOURCES = \
                             src/iobuffer.c \
                             src/iobuffer.h \
                             src/llmsort.c \
+                            src/tree_writer.c \
+                            src/tree_writer.h \
                             src/mergesort.c \
                             src/mergesort.h \
                             src/reduces.c \

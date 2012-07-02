@@ -25,6 +25,7 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		270770E615A221090058085F /* tree_writer.c in Sources */ = {isa = PBXBuildFile; fileRef = 270770E515A221090058085F /* tree_writer.c */; };
 		27093EF61537441A0087804E /* iobuffer.c in Sources */ = {isa = PBXBuildFile; fileRef = 27093EF51537441A0087804E /* iobuffer.c */; };
 		274F97BD152E1D1400247C46 /* bitfield.h in Headers */ = {isa = PBXBuildFile; fileRef = 274F9782152E1D1400247C46 /* bitfield.h */; };
 		274F97BE152E1D1400247C46 /* btree_modify.c in Sources */ = {isa = PBXBuildFile; fileRef = 274F9783152E1D1400247C46 /* btree_modify.c */; };
@@ -169,6 +170,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		270770E515A221090058085F /* tree_writer.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = tree_writer.c; sourceTree = "<group>"; };
+		270770E815A2211F0058085F /* tree_writer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = tree_writer.h; sourceTree = "<group>"; };
 		27093EF51537441A0087804E /* iobuffer.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = iobuffer.c; sourceTree = "<group>"; };
 		27093EF81537442E0087804E /* iobuffer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = iobuffer.h; sourceTree = "<group>"; };
 		274F9758152E1CCA00247C46 /* libcouchstore.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libcouchstore.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -328,7 +331,6 @@
 				274F978D152E1D1400247C46 /* couch_file_write.c */,
 				274F9790152E1D1400247C46 /* crc32.c */,
 				274F9791152E1D1400247C46 /* crc32.h */,
-				27D37ECF154729F400D3F0C8 /* db_compact.c */,
 				274F9794152E1D1400247C46 /* fatbuf.h */,
 				274F9795152E1D1400247C46 /* internal.h */,
 				27093EF51537441A0087804E /* iobuffer.c */,
@@ -336,6 +338,9 @@
 				27D37ED0154729F400D3F0C8 /* llmsort.c */,
 				27D37ED2154729F400D3F0C8 /* mergesort.c */,
 				D960D28F1547399900DDDF1E /* mergesort.h */,
+				270770E515A221090058085F /* tree_writer.c */,
+				270770E815A2211F0058085F /* tree_writer.h */,
+				27D37ECF154729F400D3F0C8 /* db_compact.c */,
 				274F97A0152E1D1400247C46 /* os.c */,
 				274F97A1152E1D1400247C46 /* reduces.c */,
 				274F97A2152E1D1400247C46 /* reduces.h */,
@@ -603,6 +608,7 @@
 				27D37ED3154729F400D3F0C8 /* db_compact.c in Sources */,
 				27D37ED4154729F400D3F0C8 /* llmsort.c in Sources */,
 				27D37ED6154729F400D3F0C8 /* mergesort.c in Sources */,
+				270770E615A221090058085F /* tree_writer.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -4,28 +4,18 @@
 #include "reduces.h"
 #include "bitfield.h"
 #include "arena.h"
-#include "mergesort.h"
+#include "tree_writer.h"
 #include "util.h"
 
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
 
-#define ID_SORT_CHUNK_SIZE (100 * 1024 * 1024) // 100MB. Make tuneable?
-#define ID_SORT_MAX_RECORD_SIZE 4196
-
-typedef struct extsort_record {
-    sized_buf k;
-    sized_buf v;
-    char buf[1];
-} extsort_record;
-
 typedef struct compact_ctx {
-    FILE* id_tmp;
+    TreeWriter* tree_writer;
     /* Using this for stuff that doesn't need to live longer than it takes to write
      * out a b-tree node (the k/v pairs) */
     arena *transient_arena;
-    const arena_position *transient_zero;
     /* This is for stuff that lasts the duration of the b-tree writing (node pointers) */
     arena *persistent_arena;
     couchfile_modify_result *target_mr;
@@ -33,14 +23,13 @@ typedef struct compact_ctx {
 
 static couchstore_error_t compact_seq_tree(Db* source, Db* target, compact_ctx *ctx);
 static couchstore_error_t compact_localdocs_tree(Db* source, Db* target, compact_ctx *ctx);
-static couchstore_error_t write_id_tree(Db* target, compact_ctx *ctx);
 
 couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filename, const couch_file_ops *ops)
 {
     Db* target = NULL;
     couchstore_error_t errcode;
-    compact_ctx ctx;
-    ctx.id_tmp = NULL;
+    compact_ctx ctx = {NULL, new_arena(0), new_arena(0)};
+    error_unless(ctx.transient_arena && ctx.persistent_arena, COUCHSTORE_ERROR_ALLOC_FAIL);
 
     error_pass(couchstore_open_db_ex(target_filename, COUCHSTORE_OPEN_FLAG_CREATE, ops, &target));
 
@@ -50,11 +39,12 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
     target->header.purge_ptr = source->header.purge_ptr;
 
     if(source->header.by_seq_root) {
-        ctx.id_tmp = tmpfile();
+        error_pass(TreeWriterOpen(NULL, &ctx.tree_writer));
         error_pass(compact_seq_tree(source, target, &ctx));
-        error_pass(write_id_tree(target, &ctx));
-        fclose(ctx.id_tmp);
-        ctx.id_tmp = NULL;
+        error_pass(TreeWriterSort(ctx.tree_writer));
+        error_pass(TreeWriterWrite(ctx.tree_writer, target));
+        TreeWriterFree(ctx.tree_writer);
+        ctx.tree_writer = NULL;
     }
 
     if(source->header.local_docs_root) {
@@ -62,9 +52,9 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
     }
     error_pass(couchstore_commit(target));
 cleanup:
-    if(ctx.id_tmp) {
-        fclose(ctx.id_tmp);
-    }
+    TreeWriterFree(ctx.tree_writer);
+    delete_arena(ctx.transient_arena);
+    delete_arena(ctx.persistent_arena);
     couchstore_close_db(target);
     if(errcode != COUCHSTORE_SUCCESS) {
         unlink(target_filename);
@@ -75,123 +65,6 @@ cleanup:
 couchstore_error_t couchstore_compact_db(Db* source, const char* target_filename)
 {
     return couchstore_compact_db_ex(source, target_filename, couch_get_default_file_ops());
-}
-
-static int read_id_record(FILE *in, void *buf, void *ctx)
-{
-    (void) ctx;
-    uint16_t klen;
-    uint32_t vlen;
-    extsort_record *rec = (extsort_record *) buf;
-    if(fread(&klen, 2, 1, in) != 1) {
-        return 0;
-    }
-    if(fread(&vlen, 4, 1, in) != 1) {
-        return 0;
-    }
-    if(fread(rec->buf, klen, 1, in) != 1) {
-        return 0;
-    }
-    if(fread(rec->buf + klen, vlen, 1, in) != 1) {
-        return 0;
-    }
-    rec->k.size = klen;
-    rec->k.buf = NULL;
-    rec->v.size = vlen;
-    rec->v.buf = NULL;
-    return sizeof(extsort_record) + klen + vlen;
-}
-
-static int write_id_record(FILE *out, void *ptr, void *ctx)
-{
-    (void) ctx;
-    extsort_record *rec = (extsort_record *) ptr;
-    uint16_t klen = (uint16_t) rec->k.size;
-    uint32_t vlen = (uint32_t) rec->v.size;
-    if(fwrite(&klen, 2, 1, out) != 1) {
-        return 0;
-    }
-    if(fwrite(&vlen, 4, 1, out) != 1) {
-        return 0;
-    }
-    if(fwrite(rec->buf, vlen + klen, 1, out) != 1) {
-        return 0;
-    }
-    return 1;
-}
-
-static int compare_id_record(void* r1, void* r2, void *ctx)
-{
-    (void) ctx;
-    extsort_record *e1 = (extsort_record *) r1, *e2 = (extsort_record *) r2;
-    e1->k.buf = e1->buf;
-    e1->v.buf = e1->buf + e1->k.size;
-    e2->k.buf = e2->buf;
-    e2->v.buf = e2->buf + e2->k.size;
-    return ebin_cmp(&e1->k, &e2->k);
-}
-
-static couchstore_error_t write_id_tree(Db* target, compact_ctx *ctx)
-{
-    int readerr = 0;
-    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
-    ctx->transient_arena = new_arena(0);
-    ctx->persistent_arena = new_arena(0);
-    ctx->transient_zero = arena_mark(ctx->transient_arena);
-    rewind(ctx->id_tmp);
-    error_pass(merge_sort(ctx->id_tmp, ctx->id_tmp, read_id_record, write_id_record, compare_id_record,
-                          NULL, ID_SORT_MAX_RECORD_SIZE, ID_SORT_CHUNK_SIZE, NULL));
-
-    rewind(ctx->id_tmp);
-
-    compare_info idcmp;
-    sized_buf tmp;
-    idcmp.compare = ebin_cmp;
-    idcmp.arg = &tmp;
-
-    ctx->target_mr = new_btree_modres(ctx->persistent_arena, ctx->transient_arena, target,
-            &idcmp, by_id_reduce, by_id_rereduce);
-    if(ctx->target_mr == NULL) {
-        error_pass(COUCHSTORE_ERROR_ALLOC_FAIL);
-    }
-
-    uint16_t klen;
-    uint32_t vlen;
-    sized_buf k, v;
-    while(1) {
-        if(fread(&klen, 2, 1, ctx->id_tmp) != 1) {
-            break;
-        }
-        if(fread(&vlen, 4, 1, ctx->id_tmp) != 1) {
-            break;
-        }
-        k.size = klen;
-        k.buf = arena_alloc(ctx->transient_arena, klen);
-        v.size = vlen;
-        v.buf = arena_alloc(ctx->transient_arena, vlen);
-        if(fread(k.buf, klen, 1, ctx->id_tmp) != 1) {
-            error_pass(COUCHSTORE_ERROR_READ);
-        }
-        if(fread(v.buf, vlen, 1, ctx->id_tmp) != 1) {
-            error_pass(COUCHSTORE_ERROR_READ);
-        }
-        //printf("K: '%.*s'\n", klen, k.buf);
-        mr_push_item(&k, &v, ctx->target_mr);
-        if(ctx->target_mr->count == 0) {
-            /* No items queued, we must have just flushed. We can safely rewind the transient arena. */
-            arena_free_from_mark(ctx->transient_arena, ctx->transient_zero);
-        }
-    }
-    readerr = ferror(ctx->id_tmp);
-    if(readerr != 0 && readerr != EOF) {
-        error_pass(COUCHSTORE_ERROR_READ);
-    }
-
-    target->header.by_id_root = complete_new_btree(ctx->target_mr, &errcode);
-cleanup:
-    delete_arena(ctx->transient_arena);
-    delete_arena(ctx->persistent_arena);
-    return errcode;
 }
 
 //Copy buffer to arena
@@ -241,16 +114,11 @@ static couchstore_error_t output_seqtree_item(sized_buf* k, sized_buf *v, compac
     memcpy(id_v.buf + 17, v->buf + 12, 4); //Copy rev_seq
     memcpy(id_v.buf + 21, v->buf + 16 + idsize, v->size - 16 - idsize); //Copy rev_meta
 
-    uint16_t klen = (uint16_t) id_k.size;
-    uint32_t vlen = (uint32_t) id_v.size;
-    error_unless(fwrite(&klen, 2, 1, ctx->id_tmp) == 1, COUCHSTORE_ERROR_WRITE);
-    error_unless(fwrite(&vlen, 4, 1, ctx->id_tmp) == 1, COUCHSTORE_ERROR_WRITE);
-    error_unless(fwrite(id_k.buf, id_k.size, 1, ctx->id_tmp) == 1, COUCHSTORE_ERROR_WRITE);
-    error_unless(fwrite(id_v.buf, id_v.size, 1, ctx->id_tmp) == 1, COUCHSTORE_ERROR_WRITE);
+    error_pass(TreeWriterAddItem(ctx->tree_writer, id_k, id_v));
 
     if(ctx->target_mr->count == 0) {
         /* No items queued, we must have just flushed. We can safely rewind the transient arena. */
-        arena_free_from_mark(ctx->transient_arena, ctx->transient_zero);
+        arena_free_all(ctx->transient_arena);
     }
 
 cleanup:
@@ -288,11 +156,6 @@ static couchstore_error_t compact_seq_fetchcb(couchfile_lookup_request *rq, void
 static couchstore_error_t compact_seq_tree(Db* source, Db* target, compact_ctx *ctx)
 {
     couchstore_error_t errcode;
-    ctx->transient_arena = new_arena(0);
-    ctx->persistent_arena = new_arena(0);
-    error_unless(ctx->transient_arena, COUCHSTORE_ERROR_ALLOC_FAIL);
-    error_unless(ctx->persistent_arena, COUCHSTORE_ERROR_ALLOC_FAIL);
-    ctx->transient_zero = arena_mark(ctx->transient_arena);
     compare_info seqcmp;
     sized_buf tmp;
     seqcmp.compare = seq_cmp;
@@ -324,8 +187,8 @@ static couchstore_error_t compact_seq_tree(Db* source, Db* target, compact_ctx *
         target->header.by_seq_root = complete_new_btree(ctx->target_mr, &errcode);
     }
 cleanup:
-    delete_arena(ctx->persistent_arena);
-    delete_arena(ctx->transient_arena);
+    arena_free_all(ctx->persistent_arena);
+    arena_free_all(ctx->transient_arena);
     return errcode;
 }
 
@@ -340,8 +203,6 @@ static couchstore_error_t compact_localdocs_fetchcb(couchfile_lookup_request *rq
 static couchstore_error_t compact_localdocs_tree(Db* source, Db* target, compact_ctx *ctx)
 {
     couchstore_error_t errcode;
-    ctx->persistent_arena = new_arena(0);
-    error_unless(ctx->persistent_arena, COUCHSTORE_ERROR_ALLOC_FAIL);
     compare_info idcmp;
     sized_buf tmp;
     idcmp.compare = ebin_cmp;
@@ -354,7 +215,7 @@ static couchstore_error_t compact_localdocs_tree(Db* source, Db* target, compact
     sized_buf *low_key_list = &low_key;
 
     ctx->target_mr = new_btree_modres(ctx->persistent_arena, NULL, target,
-            &idcmp, NULL, NULL);
+                                      &idcmp, NULL, NULL);
     if(ctx->target_mr == NULL) {
         error_pass(COUCHSTORE_ERROR_ALLOC_FAIL);
     }
@@ -373,7 +234,7 @@ static couchstore_error_t compact_localdocs_tree(Db* source, Db* target, compact
         target->header.local_docs_root = complete_new_btree(ctx->target_mr, &errcode);
     }
 cleanup:
-    delete_arena(ctx->persistent_arena);
+    arena_free_all(ctx->persistent_arena);
     return errcode;
 }
 
