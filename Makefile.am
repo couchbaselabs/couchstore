@@ -15,7 +15,7 @@
 #   limitations under the License.
 ACLOCAL_AMFLAGS = -I m4 --force
 
-bin_PROGRAMS = couch_dbdump couch_dbinfo couch_compact
+bin_PROGRAMS = couch_dbdump couch_dbinfo couch_compact couch_viewgen
 EXTRA_DIST = LICENSE README.md
 
 pkginclude_HEADERS = \
@@ -98,6 +98,11 @@ couch_compact_SOURCES = src/compactor.c
 couch_compact_DEPENDENCIES = libcouchstore.la
 couch_compact_CFLAGS = $(AM_CFLAGS) -D__STDC_FORMAT_MACROS
 couch_compact_LDADD = libcouchstore.la libbyteswap.la -lsnappy
+
+couch_viewgen_SOURCES = src/viewgen.c
+couch_viewgen_DEPENDENCIES = libcouchstore.la
+couch_viewgen_CFLAGS = $(AM_CFLAGS) -D__STDC_FORMAT_MACROS
+couch_viewgen_LDADD = libcouchstore.la libbyteswap.la -lsnappy
 
 extra_tests=
 slow_tests=

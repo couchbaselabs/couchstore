@@ -63,6 +63,8 @@
 		27AA1B171538DE2500D03755 /* couchscript.cc in Sources */ = {isa = PBXBuildFile; fileRef = 274F978F152E1D1400247C46 /* couchscript.cc */; };
 		27AA1B191538DE3900D03755 /* liblua.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 27AA1B181538DE3900D03755 /* liblua.dylib */; };
 		27AA1B1D1538EC4300D03755 /* arena.c in Sources */ = {isa = PBXBuildFile; fileRef = 27AA1B1C1538EC4300D03755 /* arena.c */; };
+		27B07E77159E75BD0084E054 /* libcouchstore.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 274F9758152E1CCA00247C46 /* libcouchstore.dylib */; };
+		27B07E80159E75EE0084E054 /* viewgen.c in Sources */ = {isa = PBXBuildFile; fileRef = 27B07E7F159E75EE0084E054 /* viewgen.c */; };
 		27D37EC71547292B00D3F0C8 /* libcouchstore.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 274F9758152E1CCA00247C46 /* libcouchstore.dylib */; };
 		27D37ED3154729F400D3F0C8 /* db_compact.c in Sources */ = {isa = PBXBuildFile; fileRef = 27D37ECF154729F400D3F0C8 /* db_compact.c */; };
 		27D37ED4154729F400D3F0C8 /* llmsort.c in Sources */ = {isa = PBXBuildFile; fileRef = 27D37ED0154729F400D3F0C8 /* llmsort.c */; };
@@ -146,6 +148,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 		};
+		27B07E78159E75BD0084E054 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
 		27D37EC81547292B00D3F0C8 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -202,6 +213,8 @@
 		27AA1B181538DE3900D03755 /* liblua.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = liblua.dylib; path = usr/local/lib/liblua.dylib; sourceTree = SDKROOT; };
 		27AA1B1C1538EC4300D03755 /* arena.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = arena.c; sourceTree = "<group>"; };
 		27AA1B1E1538EC5600D03755 /* arena.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = arena.h; sourceTree = "<group>"; };
+		27B07E7C159E75BD0084E054 /* viewgen */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = viewgen; sourceTree = BUILT_PRODUCTS_DIR; };
+		27B07E7F159E75EE0084E054 /* viewgen.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = viewgen.c; sourceTree = "<group>"; };
 		27D37ECC1547292B00D3F0C8 /* couch_compact */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = couch_compact; sourceTree = BUILT_PRODUCTS_DIR; };
 		27D37ECF154729F400D3F0C8 /* db_compact.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = db_compact.c; sourceTree = "<group>"; };
 		27D37ED0154729F400D3F0C8 /* llmsort.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = llmsort.c; sourceTree = "<group>"; };
@@ -256,6 +269,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		27B07E76159E75BD0084E054 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				27B07E77159E75BD0084E054 /* libcouchstore.dylib in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		27D37EC51547292B00D3F0C8 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -287,6 +308,7 @@
 				2794AD0C153395780047643C /* testapp */,
 				27AA1B151538DE0700D03755 /* couchscript */,
 				27D37ECC1547292B00D3F0C8 /* couch_compact */,
+				27B07E7C159E75BD0084E054 /* viewgen */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -367,6 +389,7 @@
 				2794ACFF15338E640047643C /* testapp.c */,
 				274F978F152E1D1400247C46 /* couchscript.cc */,
 				27A3A93115A3612800E1BDBC /* macros.h */,
+				27B07E7F159E75EE0084E054 /* viewgen.c */,
 			);
 			name = tools;
 			path = src;
@@ -490,6 +513,23 @@
 			productReference = 27AA1B151538DE0700D03755 /* couchscript */;
 			productType = "com.apple.product-type.tool";
 		};
+		27B07E73159E75BD0084E054 /* viewgen */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 27B07E79159E75BD0084E054 /* Build configuration list for PBXNativeTarget "viewgen" */;
+			buildPhases = (
+				27B07E74159E75BD0084E054 /* Sources */,
+				27B07E76159E75BD0084E054 /* Frameworks */,
+				27B07E78159E75BD0084E054 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = viewgen;
+			productName = dbdump;
+			productReference = 27B07E7C159E75BD0084E054 /* viewgen */;
+			productType = "com.apple.product-type.tool";
+		};
 		27D37EC21547292B00D3F0C8 /* couch_compact */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 27D37EC91547292B00D3F0C8 /* Build configuration list for PBXNativeTarget "couch_compact" */;
@@ -534,6 +574,7 @@
 				274F97FA152E235600247C46 /* dbinfo */,
 				2794AD02153395780047643C /* testapp */,
 				27AA1B0B1538DE0700D03755 /* couchscript */,
+				27B07E73159E75BD0084E054 /* viewgen */,
 				27F0C71E15339B34004EBA89 /* All */,
 			);
 		};
@@ -594,6 +635,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				27AA1B171538DE2500D03755 /* couchscript.cc in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		27B07E74159E75BD0084E054 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				27B07E80159E75EE0084E054 /* viewgen.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -785,6 +834,23 @@
 			};
 			name = Release;
 		};
+		27B07E7A159E75BD0084E054 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				PRODUCT_NAME = viewgen;
+			};
+			name = Debug;
+		};
+		27B07E7B159E75BD0084E054 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = viewgen;
+			};
+			name = Release;
+		};
 		27D37ECA1547292B00D3F0C8 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -869,6 +935,15 @@
 			buildConfigurations = (
 				27AA1B131538DE0700D03755 /* Debug */,
 				27AA1B141538DE0700D03755 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		27B07E79159E75BD0084E054 /* Build configuration list for PBXNativeTarget "viewgen" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				27B07E7A159E75BD0084E054 /* Debug */,
+				27B07E7B159E75BD0084E054 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
