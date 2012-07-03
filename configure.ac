@@ -30,6 +30,8 @@ AC_PROG_LIBTOOL
 AM_CONFIG_HEADER([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
+AC_CANONICAL_HOST
+
 # the malloc tests seems to be broken for cross compilation.. ignore them
 ac_cv_func_malloc_0_nonnull=yes
 ac_cv_func_realloc_0_nonnull=yes
@@ -72,13 +74,10 @@ AS_IF([test "$with_docs" = "yes" -a "$POD2MAN" = "missing" ],
       [ AC_MSG_ERROR([pod2man is required for building docs])])
 AM_CONDITIONAL(BUILD_DOCS, test "$with_docs" = "yes")
 
-AS_CASE( [$(uname -s)],
-  [CYGWIN*], [
+AS_CASE([$host_os],
+  [mingw*], [
     IS_WINDOWS="TRUE"
-  ] ,
-  [*], [
-    IS_WINDOWS="FALSE"
-])
+  ])
 
 AM_CONDITIONAL([WINDOWS], [test x$IS_WINDOWS = xTRUE])
 
@@ -87,8 +86,9 @@ AC_CHECK_HEADERS_ONCE([snappy-c.h netinet/in.h inttypes.h])
 dnl Check that we're able to find a usable libsnappy
 AC_CACHE_CHECK([for libsnappy], [ac_cv_have_libsnappy],
   [ saved_libs="$LIBS"
-    AS_IF([test "x${IS_WINDOWS}" = "xTRUE"], [LIBS="-lsnappy -lstdc++.dll"],
-          [test "x${IS_WINDOWS}" != "xTRUE"],[LIBS="-lsnappy"])
+    LIBS="-lsnappy"
+    AC_LANG_SAVE
+    AC_LANG_CPLUSPLUS
     AC_TRY_LINK([
       #include <snappy-c.h>
       #include <stddef.h>
@@ -99,6 +99,7 @@ AC_CACHE_CHECK([for libsnappy], [ac_cv_have_libsnappy],
             ], [
       ac_cv_have_libsnappy="no"
       ])
+    AC_LANG_RESTORE
     LIBS="$saved_libs"
   ])
 
