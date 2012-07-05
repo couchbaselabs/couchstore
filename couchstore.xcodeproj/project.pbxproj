@@ -26,7 +26,6 @@
 
 /* Begin PBXBuildFile section */
 		27093EF61537441A0087804E /* iobuffer.c in Sources */ = {isa = PBXBuildFile; fileRef = 27093EF51537441A0087804E /* iobuffer.c */; };
-		270F88E51548CC0C000836F4 /* node_types.c in Sources */ = {isa = PBXBuildFile; fileRef = 270F88E41548CC0C000836F4 /* node_types.c */; };
 		274F97BD152E1D1400247C46 /* bitfield.h in Headers */ = {isa = PBXBuildFile; fileRef = 274F9782152E1D1400247C46 /* bitfield.h */; };
 		274F97BE152E1D1400247C46 /* btree_modify.c in Sources */ = {isa = PBXBuildFile; fileRef = 274F9783152E1D1400247C46 /* btree_modify.c */; };
 		274F97BF152E1D1400247C46 /* btree_read.c in Sources */ = {isa = PBXBuildFile; fileRef = 274F9784152E1D1400247C46 /* btree_read.c */; };
@@ -161,7 +160,6 @@
 /* Begin PBXFileReference section */
 		27093EF51537441A0087804E /* iobuffer.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = iobuffer.c; sourceTree = "<group>"; };
 		27093EF81537442E0087804E /* iobuffer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = iobuffer.h; sourceTree = "<group>"; };
-		270F88E41548CC0C000836F4 /* node_types.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = node_types.c; sourceTree = "<group>"; };
 		274F9758152E1CCA00247C46 /* libcouchstore.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libcouchstore.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		274F9782152E1D1400247C46 /* bitfield.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bitfield.h; sourceTree = "<group>"; };
 		274F9783152E1D1400247C46 /* btree_modify.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = btree_modify.c; sourceTree = "<group>"; };
@@ -211,7 +209,6 @@
 		27D37ED715472A3300D3F0C8 /* compactor.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = compactor.c; sourceTree = "<group>"; };
 		27E659FF1544F2F0000A7658 /* couch_save.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = couch_save.c; sourceTree = "<group>"; };
 		D960D28F1547399900DDDF1E /* mergesort.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mergesort.h; sourceTree = "<group>"; };
-		27D37F161548781D00D3F0C8 /* node_types.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = node_types.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -317,8 +314,6 @@
 				27D37ED0154729F400D3F0C8 /* llmsort.c */,
 				27D37ED2154729F400D3F0C8 /* mergesort.c */,
 				D960D28F1547399900DDDF1E /* mergesort.h */,
-				270F88E41548CC0C000836F4 /* node_types.c */,
-				27D37F161548781D00D3F0C8 /* node_types.h */,
 				274F97A0152E1D1400247C46 /* os.c */,
 				274F97A1152E1D1400247C46 /* reduces.c */,
 				274F97A2152E1D1400247C46 /* reduces.h */,
@@ -567,7 +562,6 @@
 				27D37ED3154729F400D3F0C8 /* db_compact.c in Sources */,
 				27D37ED4154729F400D3F0C8 /* llmsort.c in Sources */,
 				27D37ED6154729F400D3F0C8 /* mergesort.c in Sources */,
-				270F88E51548CC0C000836F4 /* node_types.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -706,7 +700,6 @@
 				);
 				LIBRARY_SEARCH_PATHS = /usr/local/lib;
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
-				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
 				WARNING_CFLAGS = "-Wall";
 			};

@@ -3,17 +3,6 @@
 
 #include <libcouchstore/couch_common.h>
 #include "couch_btree.h"
-#include "bitfield.h"
-
-typedef struct {
-    raw_40 count;
-} raw_by_seq_reduce;
-
-typedef struct {
-    raw_40 notdeleted;
-    raw_40 deleted;
-    raw_48 size;
-} raw_by_id_reduce;
 
 #ifdef __cplusplus
 extern "C" {

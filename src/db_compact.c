@@ -5,7 +5,6 @@
 #include "bitfield.h"
 #include "arena.h"
 #include "mergesort.h"
-#include "node_types.h"
 #include "util.h"
 
 #include <stdlib.h>
@@ -224,31 +223,24 @@ static couchstore_error_t output_seqtree_item(sized_buf* k, sized_buf *v, compac
     }
 
     error_pass(mr_push_item(k_c, v_c, ctx->target_mr));
-    
-    // Decode the by-sequence index value. See the file format doc or
-    // assemble_id_index_value in couch_db.c:
-    const raw_seq_index_value* rawSeq = (const raw_seq_index_value*)v->buf;
-    uint32_t idsize, datasize;
-    decode_kv_length(&rawSeq->sizes, &idsize, &datasize);
-    uint32_t revMetaSize = (uint32_t)v->size - (sizeof(raw_seq_index_value) + idsize);
-    
-    // Set up sized_bufs for the ID tree key and value:
-    sized_buf id_k, id_v;
-    id_k.buf = (char*)(rawSeq + 1);
-    id_k.size = idsize;
-    id_v.size = sizeof(raw_id_index_value) + revMetaSize;
-    id_v.buf = arena_alloc(ctx->transient_arena, id_v.size);
-    
-    // Fill in the fields of the ID tree value:
-    raw_id_index_value *raw = (raw_id_index_value*)id_v.buf;
-    raw->db_seq = *(raw_48*)k->buf;  //Copy db seq from seq tree key
-    raw->size = encode_raw32(datasize);
-    raw->bp = rawSeq->bp;
-    raw->content_meta = rawSeq->content_meta;
-    raw->rev_seq = rawSeq->rev_seq;
-    memcpy(raw + 1, (uint8_t*)(rawSeq + 1) + idsize, revMetaSize); //Copy rev_meta
 
-    // Now write the ID tree key/value pair to the mergesort file:
+    //Assembling a ID tree k,v pair. See the file format doc or
+    //assemble_id_index_value in couch_db.c
+    uint32_t idsize, datasize;
+    sized_buf id_k, id_v;
+    get_kvlen(v->buf, &idsize, &datasize);
+    id_k.buf = v->buf + 16;
+    id_k.size = idsize;
+    id_v.size = (v->size - (16 + idsize)) + 21;
+    id_v.buf = arena_alloc(ctx->transient_arena, id_v.size);
+    memset(id_v.buf, 0, id_v.size);
+    memcpy(id_v.buf, k->buf, 6);//Copy db seq from seq tree key
+    set_bits(id_v.buf + 6, 0, 32, datasize);
+    memcpy(id_v.buf + 10, v->buf + 5, 6); //Copy bp and deleted flag from seq tree value
+    id_v.buf[16] = v->buf[11]; //Copy content_meta
+    memcpy(id_v.buf + 17, v->buf + 12, 4); //Copy rev_seq
+    memcpy(id_v.buf + 21, v->buf + 16 + idsize, v->size - 16 - idsize); //Copy rev_meta
+
     uint16_t klen = (uint16_t) id_k.size;
     uint32_t vlen = (uint32_t) id_v.size;
     error_unless(fwrite(&klen, 2, 1, ctx->id_tmp) == 1, COUCHSTORE_ERROR_WRITE);
@@ -268,16 +260,12 @@ cleanup:
 static couchstore_error_t compact_seq_fetchcb(couchfile_lookup_request *rq, void *k, sized_buf *v)
 {
     compact_ctx *ctx = (compact_ctx *) rq->callback_ctx;
-    raw_seq_index_value* rawSeq = (raw_seq_index_value*)v->buf;
-    uint64_t bpWithDeleted = decode_raw48(rawSeq->bp);
-    uint64_t bp = bpWithDeleted & ~BP_DELETED_FLAG;
-    if(bp != 0) {
+    uint64_t bp = get_48(v->buf + 5) &~ 0x800000000000;
     off_t new_bp = 0;
-        // Copy the document from the old db file to the new one:
-        size_t new_size = 0;
-        sized_buf item;
-        item.buf = NULL;
-
+    size_t new_size = 0;
+    sized_buf item;
+    item.buf = NULL;
+    if(bp != 0) {
         int itemsize = pread_bin(rq->db, bp, &item.buf);
         if(itemsize < 0)
         {
@@ -287,8 +275,10 @@ static couchstore_error_t compact_seq_fetchcb(couchfile_lookup_request *rq, void
 
         db_write_buf(ctx->target_mr->rq->db, &item, &new_bp, &new_size);
 
-        bpWithDeleted = (bpWithDeleted & BP_DELETED_FLAG) | new_bp;  //Preserve high bit
-        rawSeq->bp = encode_raw48(bpWithDeleted);
+        //Preserve high bit
+        v->buf[5] &= 0x80;
+        memset(v->buf + 6, 0, 5);
+        set_bits(v->buf + 5, 1, 47, new_bp);
         free(item.buf);
     }
 

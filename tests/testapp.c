@@ -4,8 +4,7 @@
 #include <libcouchstore/couch_db.h>
 #include "../src/fatbuf.h"
 #include "../src/internal.h"
-#include "../src/node_types.h"
-#include "../src/reduces.h"
+#include "../src/bitfield.h"
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,96 +35,35 @@ docset testdocset;
 fatbuf *docsetbuf = NULL;
 char testfilepath[1024] = "testfile.couch";
 
-static void test_raw_08(uint8_t value)
+static void test_get_40(uint64_t value, const uint8_t expected[8])
 {
-    raw_08 raw;
-    raw = encode_raw08(value);
-    assert(decode_raw08(raw) == value);
+    char buffer[8];
+    memset(buffer, 0, sizeof(buffer));
+    set_bits(buffer, 0, 40, value);
+    assert(memcmp(buffer, expected, 8) == 0);
+    assert(get_40(buffer) == value);
 }
 
-static void test_raw_16(uint16_t value)
+static void test_get_48(uint64_t value, const uint8_t expected[8])
 {
-    raw_16 raw;
-    raw = encode_raw16(value);
-    assert(decode_raw16(raw) == value);
-}
-
-static void test_raw_32(uint32_t value)
-{
-    raw_32 raw;
-    raw = encode_raw32(value);
-    assert(decode_raw32(raw) == value);
-}
-
-static void test_raw_40(uint64_t value, const uint8_t expected[8])
-{
-    union {
-        raw_40 raw;
-        uint8_t bytes[8];
-    } data;
-    memset(&data, 0, sizeof(data));
-    data.raw = encode_raw40(value);
-    assert(memcmp(data.bytes, expected, 8) == 0);
-    assert(decode_raw40(data.raw) == value);
-}
-
-static void test_raw_48(uint64_t value, const uint8_t expected[8])
-{
-    union {
-        raw_48 raw;
-        uint8_t bytes[8];
-    } data;
-    memset(&data, 0, sizeof(data));
-    data.raw = encode_raw48(value);
-    assert(memcmp(data.bytes, expected, 8) == 0);
-    assert(decode_raw48(data.raw) == value);
+    char buffer[8];
+    memset(buffer, 0, sizeof(buffer));
+    set_bits(buffer, 0, 48, value);
+    assert(memcmp(buffer, expected, 8) == 0);
+    assert(get_48(buffer) == value);
 }
 
 static void test_bitfield_fns(void)
 {
     assert(sizeof(off_t) == 8);
-
-    assert(sizeof(raw_08) == 1);
-    assert(sizeof(raw_16) == 2);
-    assert(sizeof(raw_32) == 4);
-    assert(sizeof(raw_40) == 5);
-    assert(sizeof(raw_48) == 6);
-    
-    struct {
-        raw_08 a;
-        raw_48 b;
-        raw_16 c;
-        raw_40 d;
-        raw_32 e;
-        raw_08 f;
-    } packed;
-    assert(sizeof(packed) == 19);
-    
-    raw_kv_length kv;
-    assert(sizeof(kv) == 5);
-    kv = encode_kv_length(1234, 123456);
-    uint32_t klen, vlen;
-    decode_kv_length(&kv, &klen, &vlen);
-    assert(klen == 1234);
-    assert(vlen == 123456);
-    
-    test_raw_08(0);
-    test_raw_08(UINT8_MAX);
-    test_raw_16(0);
-    test_raw_16(12345);
-    test_raw_16(UINT16_MAX);
-    test_raw_32(0);
-    test_raw_32(12345678);
-    test_raw_32(UINT32_MAX);
-    
     uint8_t expected1[8] = {0x12, 0x34, 0x56, 0x78, 0x90};
-    test_raw_40(0x1234567890LL, expected1);
+    test_get_40(0x1234567890LL, expected1);
     uint8_t expected2[8] = {0x09, 0x87, 0x65, 0x43, 0x21};
-    test_raw_40(0x0987654321LL, expected2);
+    test_get_40(0x0987654321LL, expected2);
     uint8_t expected3[8] = {0x12, 0x34, 0x56, 0x78, 0x90, 0xAB};
-    test_raw_48(0x1234567890ABLL, expected3);
+    test_get_48(0x1234567890ABLL, expected3);
     uint8_t expected4[8] = {0xBA, 0x98, 0x76, 0x54, 0x32, 0x10};
-    test_raw_48(0xBA9876543210LL, expected4);
+    test_get_48(0xBA9876543210LL, expected4);
 }
 
 static void setdoc(Doc *doc, DocInfo *info, char *id, size_t idlen,
@@ -330,8 +268,7 @@ static void test_save_docs(int count, const char *doc_tpl)
 
     idtreesize = db->header.by_id_root->subtreesize;
     seqtreesize = db->header.by_seq_root->subtreesize;
-    const raw_by_id_reduce *reduce = (const raw_by_id_reduce*)db->header.by_id_root->reduce_value.buf;
-    docssize = decode_raw48(reduce->size);
+    docssize = get_48(db->header.by_id_root->reduce_value.buf + 10);
     dbfilesize = db->file_pos;
 
     assert(dbfilesize > 0);
