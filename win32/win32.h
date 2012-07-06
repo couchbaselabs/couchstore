@@ -22,9 +22,6 @@
 
 #define inline __inline
 
-#define ssize_t long
-#define off_t   long
-
 ssize_t pread(int fd, void *buf, size_t count, off_t offset);
 ssize_t pwrite(int fd, const void *buf, size_t nbytes, off_t offset);
 int fsync(int fd);
