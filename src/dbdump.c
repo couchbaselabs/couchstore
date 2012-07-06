@@ -23,7 +23,6 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
     Doc *doc = NULL;
     uint64_t cas;
     uint32_t expiry, flags;
-    couchstore_open_doc_with_docinfo(db, docinfo, &doc, 0);
     printf("Doc seq: %"PRIu64"\n", docinfo->db_seq);
     printf("     id: ");
     printsb(&docinfo->id);
@@ -39,7 +38,10 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
         printf("     doc deleted\n");
     }
 
-    if (doc && (docinfo->content_meta & COUCH_DOC_IS_COMPRESSED)) {
+    couchstore_error_t docerr = couchstore_open_doc_with_docinfo(db, docinfo, &doc, 0);
+    if(docerr != COUCHSTORE_SUCCESS) {
+        printf("     error reading document body: %s\n", couchstore_strerror(docerr));
+    } else if (doc && (docinfo->content_meta & COUCH_DOC_IS_COMPRESSED)) {
         size_t rlen;
         snappy_uncompressed_length(doc->data.buf, doc->data.size, &rlen);
         char *decbuf = (char *) malloc(rlen);
