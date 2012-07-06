@@ -13,7 +13,7 @@
 #define CHUNK_SIZE (CHUNK_THRESHOLD * 2 / 3)
 
 
-static couchstore_error_t flush_mr_partial(couchfile_modify_result *res, int mr_quota);
+static couchstore_error_t flush_mr_partial(couchfile_modify_result *res, size_t mr_quota);
 static couchstore_error_t flush_mr(couchfile_modify_result *res);
 
 static couchstore_error_t maybe_flush(couchfile_modify_result *mr)
@@ -171,7 +171,7 @@ static couchstore_error_t flush_mr(couchfile_modify_result *res)
 
 //Write a node using enough items from the values list to create a node
 //with uncompressed size of at least mr_quota
-static couchstore_error_t flush_mr_partial(couchfile_modify_result *res, int mr_quota)
+static couchstore_error_t flush_mr_partial(couchfile_modify_result *res, size_t mr_quota)
 {
     size_t bufpos = 0;
     int errcode = COUCHSTORE_SUCCESS;

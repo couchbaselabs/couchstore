@@ -532,8 +532,8 @@ static void test_changes_no_dups(void)
 
     DbInfo info;
     assert(couchstore_db_info(db, &info) == COUCHSTORE_SUCCESS);
-    assert(info.last_sequence == numdocs + numdocs/2);
-    assert(info.doc_count == numdocs);
+    assert(info.last_sequence == (uint64_t)(numdocs + numdocs/2));
+    assert(info.doc_count == (uint64_t)numdocs);
     assert(info.deleted_count == 0);
 
     couchstore_close_db(db);
