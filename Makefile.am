@@ -18,6 +18,8 @@ ACLOCAL_AMFLAGS = -I m4 --force
 bin_PROGRAMS = couch_dbdump couch_dbinfo couch_compact couch_viewgen
 EXTRA_DIST = LICENSE README.md
 
+ICU_LOCAL_LIBS=-licuuc -licudata -licui18n
+
 pkginclude_HEADERS = \
                      include/libcouchstore/couch_db.h \
                      include/libcouchstore/couch_common.h \
@@ -46,6 +48,8 @@ libcouchstore_la_SOURCES = \
                             src/arena.h \
                             src/btree_modify.c \
                             src/btree_read.c \
+							src/collate_json.c \
+							src/collate_json.h \
                             src/couch_btree.h \
                             src/couch_db.c \
                             src/couch_save.c \
@@ -71,15 +75,15 @@ libcouchstore_la_SOURCES = \
                             src/util.h
 
 
-libcouchstore_la_LDFLAGS = $(AM_LDFLAGS) -version-info $(LIBCOUCHSTORE_API_CURRENT):$(LIBCOUCHSTORE_API_REVISION):$(LIBCOUCHSTORE_API_AGE) -no-undefined -lsnappy
+libcouchstore_la_LDFLAGS = $(AM_LDFLAGS) $(ICU_LOCAL_LDFLAGS) -version-info $(LIBCOUCHSTORE_API_CURRENT):$(LIBCOUCHSTORE_API_REVISION):$(LIBCOUCHSTORE_API_AGE) -no-undefined -lsnappy
 
 if WINDOWS
 libcouchstore_la_SOURCES += win32/win32.c
 libcouchstore_la_LDFLAGS += -lws2_32
 endif
 
-libcouchstore_la_CFLAGS = $(AM_CFLAGS) -DLIBCOUCHSTORE_INTERNAL=1
-libcouchstore_la_LIBADD = librfc1321.la libbyteswap.la
+libcouchstore_la_CFLAGS = $(AM_CFLAGS) $(ICU_LOCAL_CFLAGS) -DLIBCOUCHSTORE_INTERNAL=1
+libcouchstore_la_LIBADD = librfc1321.la libbyteswap.la $(ICU_LOCAL_LIBS)
 
 couch_dbdump_SOURCES = src/dbdump.c
 couch_dbdump_DEPENDENCIES = libcouchstore.la
@@ -150,7 +154,7 @@ CLEANFILES = test.couch
 check_PROGRAMS = testapp
 TESTS = ${check_PROGRAMS}
 
-testapp_SOURCES = tests/testapp.c src/util.c tests/macros.h
+testapp_SOURCES = tests/testapp.c src/util.c tests/macros.h tests/collate_json_test.c
 testapp_CFLAGS = $(AM_CFLAGS)
 testapp_DEPENDENCIES = libcouchstore.la libbyteswap.la
 testapp_LDADD = libcouchstore.la libbyteswap.la

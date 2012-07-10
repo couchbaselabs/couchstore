@@ -72,6 +72,10 @@
 		27D37ED6154729F400D3F0C8 /* mergesort.c in Sources */ = {isa = PBXBuildFile; fileRef = 27D37ED2154729F400D3F0C8 /* mergesort.c */; };
 		27D37ED815472A3300D3F0C8 /* compactor.c in Sources */ = {isa = PBXBuildFile; fileRef = 27D37ED715472A3300D3F0C8 /* compactor.c */; };
 		27E65A001544F2F0000A7658 /* couch_save.c in Sources */ = {isa = PBXBuildFile; fileRef = 27E659FF1544F2F0000A7658 /* couch_save.c */; };
+		27F08CD315AB8FBC003C3E2B /* collate_json.c in Sources */ = {isa = PBXBuildFile; fileRef = 27F08CD215AB8FBC003C3E2B /* collate_json.c */; };
+		27F08CD715ABA25A003C3E2B /* collate_json_test.c in Sources */ = {isa = PBXBuildFile; fileRef = 27F08CD615ABA25A003C3E2B /* collate_json_test.c */; };
+		27F08CDF15ABAF8C003C3E2B /* libicui18n.44.1.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 27F08CDE15ABAF8C003C3E2B /* libicui18n.44.1.dylib */; };
+		27F08CE015ABAFA9003C3E2B /* libicuuc.44.1.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 27F08CDA15ABAF55003C3E2B /* libicuuc.44.1.dylib */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -224,6 +228,11 @@
 		27D37ED2154729F400D3F0C8 /* mergesort.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mergesort.c; sourceTree = "<group>"; };
 		27D37ED715472A3300D3F0C8 /* compactor.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = compactor.c; sourceTree = "<group>"; };
 		27E659FF1544F2F0000A7658 /* couch_save.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = couch_save.c; sourceTree = "<group>"; };
+		27F08CD215AB8FBC003C3E2B /* collate_json.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = collate_json.c; sourceTree = "<group>"; };
+		27F08CD515AB8FFE003C3E2B /* collate_json.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = collate_json.h; sourceTree = "<group>"; };
+		27F08CD615ABA25A003C3E2B /* collate_json_test.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = collate_json_test.c; path = ../tests/collate_json_test.c; sourceTree = "<group>"; };
+		27F08CDA15ABAF55003C3E2B /* libicuuc.44.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libicuuc.44.1.dylib; path = /usr/local/Cellar/icu4c/4.4.1/lib/libicuuc.44.1.dylib; sourceTree = "<absolute>"; };
+		27F08CDE15ABAF8C003C3E2B /* libicui18n.44.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libicui18n.44.1.dylib; path = /usr/local/Cellar/icu4c/4.4.1/lib/libicui18n.44.1.dylib; sourceTree = "<absolute>"; };
 		D960D28F1547399900DDDF1E /* mergesort.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mergesort.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -232,6 +241,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				27F08CE015ABAFA9003C3E2B /* libicuuc.44.1.dylib in Frameworks */,
+				27F08CDF15ABAF8C003C3E2B /* libicui18n.44.1.dylib in Frameworks */,
 				274F97E6152E1E3E00247C46 /* libsnappy.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -350,6 +361,8 @@
 				274F97B1152E1D1400247C46 /* util.h */,
 				27AA1B1C1538EC4300D03755 /* arena.c */,
 				27AA1B1E1538EC5600D03755 /* arena.h */,
+				27F08CD215AB8FBC003C3E2B /* collate_json.c */,
+				27F08CD515AB8FFE003C3E2B /* collate_json.h */,
 			);
 			path = src;
 			sourceTree = "<group>";
@@ -392,6 +405,7 @@
 				274F9792152E1D1400247C46 /* dbdump.c */,
 				274F9793152E1D1400247C46 /* dbinfo.c */,
 				2794ACFF15338E640047643C /* testapp.c */,
+				27F08CD615ABA25A003C3E2B /* collate_json_test.c */,
 				274F978F152E1D1400247C46 /* couchscript.cc */,
 				27A3A93115A3612800E1BDBC /* macros.h */,
 				27B07E7F159E75EE0084E054 /* viewgen.c */,
@@ -404,6 +418,8 @@
 			isa = PBXGroup;
 			children = (
 				274F97E5152E1E3E00247C46 /* libsnappy.dylib */,
+				27F08CDE15ABAF8C003C3E2B /* libicui18n.44.1.dylib */,
+				27F08CDA15ABAF55003C3E2B /* libicuuc.44.1.dylib */,
 				27AA1B181538DE3900D03755 /* liblua.dylib */,
 			);
 			name = Frameworks;
@@ -609,6 +625,7 @@
 				27D37ED4154729F400D3F0C8 /* llmsort.c in Sources */,
 				27D37ED6154729F400D3F0C8 /* mergesort.c in Sources */,
 				270770E615A221090058085F /* tree_writer.c in Sources */,
+				27F08CD315AB8FBC003C3E2B /* collate_json.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -633,6 +650,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				2794AD0E153395940047643C /* testapp.c in Sources */,
+				27F08CD715ABA25A003C3E2B /* collate_json_test.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -764,6 +782,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXECUTABLE_PREFIX = lib;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					/usr/local/Cellar/icu4c/4.4.1/lib,
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -772,6 +794,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXECUTABLE_PREFIX = lib;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					/usr/local/Cellar/icu4c/4.4.1/lib,
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;

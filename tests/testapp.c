@@ -11,6 +11,8 @@
 #include <string.h>
 #include "macros.h"
 
+extern void TestCollateJSON(void);
+
 #define ZERO(V) memset(&(V), 0, sizeof(V))
 #define SETDOC(N, I, D, M)  \
    setdoc(&testdocset.docs[N], &testdocset.infos[N], I, strlen(I), \
@@ -615,6 +617,8 @@ int main(int argc, const char *argv[])
     mb5086();
     fprintf(stderr, " OK\n");
     unlink(testfilepath);
+    
+    TestCollateJSON();
 
     // make sure os.c didn't accidentally call close(0):
     assert(lseek(0, 0, SEEK_CUR) >= 0 || errno != EBADF);
