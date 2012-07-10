@@ -129,6 +129,9 @@ slow_lua_tests: couchscript tests/largefile.lua tests/large.lua
 
 endif
 
+python_pythonlibdir = $(libdir)/python
+python_pythonlib_DATA = python/couchstore.py
+
 python_tests: python/*.py
 	@LD_LIBRARY_PATH=`pwd`/.libs \
 		DYLD_LIBRARY_PATH=`pwd`/.libs \
