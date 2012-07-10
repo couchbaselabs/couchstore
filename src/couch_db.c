@@ -562,10 +562,14 @@ static couchstore_error_t lookup_callback(couchfile_lookup_request *rq,
     const lookup_context *context = rq->callback_ctx;
     sized_buf *seqterm = (sized_buf *) k;
     DocInfo *docinfo = NULL;
+    couchstore_error_t errcode;
     if (context->by_id) {
-        by_id_read_docinfo(&docinfo, seqterm, v);
+        errcode = by_id_read_docinfo(&docinfo, seqterm, v);
     } else {
-        by_seq_read_docinfo(&docinfo, seqterm, v);
+        errcode = by_seq_read_docinfo(&docinfo, seqterm, v);
+    }
+    if (errcode) {
+        return errcode;
     }
 
     if ((context->options & COUCHSTORE_DELETES_ONLY) && docinfo->deleted == 0) {
@@ -576,14 +580,14 @@ static couchstore_error_t lookup_callback(couchfile_lookup_request *rq,
         return COUCHSTORE_SUCCESS;
     }
 
-    int rc = context->callback(context->db, docinfo, context->callback_context);
-    if (rc <= 0) {
+    errcode = context->callback(context->db, docinfo, context->callback_context);
+    if (errcode <= 0) {
         couchstore_free_docinfo(docinfo);
     } else {
         // User requested docinfo not be freed, don't free it, return success
         return COUCHSTORE_SUCCESS;
     }
-    return rc;
+    return errcode;
 }
 
 LIBCOUCHSTORE_API
