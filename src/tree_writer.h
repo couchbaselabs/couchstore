@@ -2,6 +2,7 @@
 #define LIBCOUCHSTORE_TREE_WRITER_H
 
 #include <libcouchstore/couch_db.h>
+#include "couch_btree.h"
 
 
 typedef struct TreeWriter TreeWriter;
@@ -12,10 +13,13 @@ typedef struct TreeWriter TreeWriter;
  * @param unsortedFilePath If non-NULL, the path to an existing file containing a series of unsorted
  * key/value pairs in TreeWriter format. If NULL, an empty TreeWriter will be created (using a
  * temporary file for the external sorting.)
+ * @param key_compare Callback function that compares two keys.
  * @param out_writer The new TreeWriter pointer will be stored here.
  * @return Error code or COUCHSTORE_SUCCESS.
  */
-couchstore_error_t TreeWriterOpen(const char* unsortedFilePath, TreeWriter** out_writer);
+couchstore_error_t TreeWriterOpen(const char* unsortedFilePath,
+                                  compare_callback key_compare,
+                                  TreeWriter** out_writer);
 
 /**
  * Frees a TreeWriter instance. It is safe to pass a NULL pointer.

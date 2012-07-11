@@ -8,13 +8,15 @@
 extern "C" {
 #endif
 
+    typedef int (*compare_callback)(const sized_buf *k1, const sized_buf *k2);
+
     typedef struct compare_info {
         /* used by find_first_gteq */
         int last_cmp_val;
         sized_buf *last_cmp_key;
         int list_pos;
         /* Compare function */
-        int (*compare)(const sized_buf *k1, const sized_buf *k2);
+        compare_callback compare;
         void *arg;
     } compare_info;
 

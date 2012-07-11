@@ -24,10 +24,13 @@ static int compare_id_record(void* r1, void* r2, void *ctx);
 
 struct TreeWriter {
     FILE* file;
+    compare_callback key_compare;
 };
 
 
-couchstore_error_t TreeWriterOpen(const char* unsortedFilePath, TreeWriter** out_writer)
+couchstore_error_t TreeWriterOpen(const char* unsortedFilePath,
+                                  compare_callback key_compare,
+                                  TreeWriter** out_writer)
 {
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     TreeWriter* writer = calloc(1, sizeof(TreeWriter));
@@ -40,6 +43,7 @@ couchstore_error_t TreeWriterOpen(const char* unsortedFilePath, TreeWriter** out
     if (unsortedFilePath) {
         fseek(writer->file, 0, SEEK_END);  // in case more items will be added
     }
+    writer->key_compare = (key_compare ? key_compare : ebin_cmp);
     *out_writer = writer;
 cleanup:
     return errcode;
@@ -76,7 +80,8 @@ couchstore_error_t TreeWriterSort(TreeWriter* writer)
     rewind(writer->file);
     return merge_sort(writer->file, writer->file,
                       read_id_record, write_id_record, compare_id_record,
-                      NULL, ID_SORT_MAX_RECORD_SIZE, ID_SORT_CHUNK_SIZE, NULL);
+                      writer,  // 'context' parameter to the above callbacks
+                      ID_SORT_MAX_RECORD_SIZE, ID_SORT_CHUNK_SIZE, NULL);
 }
 
 
@@ -92,7 +97,7 @@ couchstore_error_t TreeWriterWrite(TreeWriter* writer, Db* target)
     // Create the structure to write the tree to the db:
     compare_info idcmp;
     sized_buf tmp;
-    idcmp.compare = ebin_cmp;
+    idcmp.compare = writer->key_compare;
     idcmp.arg = &tmp;
 
     couchfile_modify_result* target_mr = new_btree_modres(persistent_arena,
@@ -202,9 +207,9 @@ static int write_id_record(FILE *out, void *ptr, void *ctx)
 
 static int compare_id_record(void* r1, void* r2, void *ctx)
 {
-    (void) ctx;
+    TreeWriter* writer = ctx;
     extsort_record *e1 = (extsort_record *) r1, *e2 = (extsort_record *) r2;
     e1->k.buf = e1->buf;
     e2->k.buf = e2->buf;
-    return ebin_cmp(&e1->k, &e2->k);
+    return writer->key_compare(&e1->k, &e2->k);
 }
