@@ -15,12 +15,12 @@ void by_seq_reduce (char *dst, size_t *size_r, nodelist *leaflist, int count)
 
 void by_seq_rereduce (char *dst, size_t *size_r, nodelist *ptrlist, int count)
 {
-    (void)count;
     uint64_t total = 0;
     nodelist *i = ptrlist;
-    while (i != NULL) {
+    while (i != NULL && count > 0) {
         total += get_40(i->pointer->reduce_value.buf);
         i = i->next;
+        count--;
     }
     memset(dst, 0, 5);
     set_bits(dst, 0, 40, total);
@@ -29,10 +29,9 @@ void by_seq_rereduce (char *dst, size_t *size_r, nodelist *ptrlist, int count)
 
 void by_id_reduce(char *dst, size_t *size_r, nodelist *leaflist, int count)
 {
-    (void)count;
     uint64_t notdeleted = 0, deleted = 0, size = 0;
     nodelist *i = leaflist;
-    while (i != NULL) {
+    while (i != NULL && count > 0) {
         if ((i->data.buf[10] & 0x80) != 0) {
             deleted++;
         } else {
@@ -41,6 +40,7 @@ void by_id_reduce(char *dst, size_t *size_r, nodelist *leaflist, int count)
         size += get_32(i->data.buf + 6);
 
         i = i->next;
+        count--;
     }
 
     memset(dst, 0, 16);
@@ -52,16 +52,16 @@ void by_id_reduce(char *dst, size_t *size_r, nodelist *leaflist, int count)
 
 void by_id_rereduce(char *dst, size_t *size_r, nodelist *ptrlist, int count)
 {
-    (void)count;
     uint64_t notdeleted = 0, deleted = 0, size = 0;
 
     nodelist *i = ptrlist;
-    while (i != NULL) {
+    while (i != NULL && count > 0) {
         notdeleted += get_40(i->pointer->reduce_value.buf);
         deleted += get_40(i->pointer->reduce_value.buf + 5);
         size += get_48(i->pointer->reduce_value.buf + 10);
 
         i = i->next;
+        count--;
     }
 
     memset(dst, 0, 16);

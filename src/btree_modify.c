@@ -10,15 +10,24 @@
 #include "bitfield.h"
 
 #define CHUNK_THRESHOLD 1279
+#define CHUNK_SIZE (CHUNK_THRESHOLD * 2 / 3)
 
 
+static couchstore_error_t flush_mr_partial(couchfile_modify_result *res, int mr_quota);
 static couchstore_error_t flush_mr(couchfile_modify_result *res);
-
 
 static couchstore_error_t maybe_flush(couchfile_modify_result *mr)
 {
-    if (mr->modified && mr->node_len > CHUNK_THRESHOLD) {
-        return flush_mr(mr);
+    if(mr->rq->compacting) {
+        /* The compactor can (and should), just write out nodes
+         * of size CHUNK_SIZE as soon as it can, so that it can
+         * free memory it no longer needs. */
+        if (mr->modified && mr->node_len > CHUNK_SIZE) {
+            return flush_mr(mr);
+        }
+    } else if (mr->modified && mr->node_len > CHUNK_THRESHOLD && mr->count > 3) {
+        /* Don't write out a partial node unless we've collected at least three items */
+        return flush_mr_partial(mr, CHUNK_SIZE);
     }
 
     return COUCHSTORE_SUCCESS;
@@ -73,6 +82,7 @@ couchfile_modify_result *new_btree_modres(arena *a, arena *transient_arena, Db* 
     rq->fetch_callback = NULL;
     rq->reduce = reduce;
     rq->rereduce = rereduce;
+    rq->compacting = 1;
 
     couchfile_modify_result* mr = make_modres(a, rq);
     if (!mr)
@@ -156,8 +166,16 @@ static node_pointer *read_pointer(arena* a, sized_buf *key, char *buf)
 //and add the resulting pointer to the pointers list.
 static couchstore_error_t flush_mr(couchfile_modify_result *res)
 {
+    return flush_mr_partial(res, res->node_len);
+}
+
+//Write a node using enough items from the values list to create a node
+//with uncompressed size of at least mr_quota
+static couchstore_error_t flush_mr_partial(couchfile_modify_result *res, int mr_quota)
+{
     size_t bufpos = 0;
     int errcode = COUCHSTORE_SUCCESS;
+    int itmcount = 0;
     char *nodebuf = NULL;
     sized_buf writebuf;
     char reducebuf[30];
@@ -179,13 +197,14 @@ static couchstore_error_t flush_mr(couchfile_modify_result *res)
     }
 
     writebuf.buf = nodebuf;
-    writebuf.size = res->node_len + 1;
 
     nodebuf[0] = (char) res->node_type;
     bufpos = 1;
 
     nodelist *i = res->values->next;
-    while (i != NULL) {
+    //We don't care that we've reached mr_quota if we haven't written out
+    //at least two items and we're not writing a leaf node.
+    while (i != NULL && (mr_quota > 0 || (itmcount < 2 && res->node_type == KP_NODE))) {
         memset(nodebuf + bufpos, 0, 5);
         set_bits(nodebuf + bufpos    , 0, 12, i->key.size);
         set_bits(nodebuf + bufpos + 1, 4, 28, i->data.size);
@@ -195,11 +214,14 @@ static couchstore_error_t flush_mr(couchfile_modify_result *res)
         if (i->pointer) {
             subtreesize += i->pointer->subtreesize;
         }
-        if (i->next == NULL) {
-            final_key = i->key;
-        }
+        mr_quota -= i->key.size + i->data.size + 5;
+        final_key = i->key;
         i = i->next;
+        res->count--;
+        itmcount++;
     }
+
+    writebuf.size = bufpos;
 
     errcode = db_write_buf_compressed(res->rq->db, &writebuf, &diskpos, &disk_size);
     free(nodebuf);  // here endeth the nodebuf.
@@ -208,11 +230,11 @@ static couchstore_error_t flush_mr(couchfile_modify_result *res)
     }
 
     if (res->node_type == KV_NODE && res->rq->reduce) {
-        res->rq->reduce(reducebuf, &reducesize, res->values->next, res->count);
+        res->rq->reduce(reducebuf, &reducesize, res->values->next, itmcount);
     }
 
     if (res->node_type == KP_NODE && res->rq->rereduce) {
-        res->rq->rereduce(reducebuf, &reducesize, res->values->next, res->count);
+        res->rq->rereduce(reducebuf, &reducesize, res->values->next, itmcount);
     }
 
     node_pointer *ptr = (node_pointer *) arena_alloc(res->arena, sizeof(node_pointer) + final_key.size + reducesize);
@@ -240,11 +262,12 @@ static couchstore_error_t flush_mr(couchfile_modify_result *res)
     res->pointers_end->next = pel;
     res->pointers_end = pel;
 
-    res->node_len = 0;
-    res->count = 0;
+    res->node_len -= (bufpos - 1);
 
-    res->values_end = res->values;
-    res->values->next = NULL;
+    res->values->next = i;
+    if(i == NULL) {
+        res->values_end = res->values;
+    }
 
     return COUCHSTORE_SUCCESS;
 }

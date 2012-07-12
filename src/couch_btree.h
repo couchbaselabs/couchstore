@@ -71,6 +71,8 @@ extern "C" {
         void (*fetch_callback) (struct couchfile_modify_request *rq, sized_buf *k, sized_buf *v, void *arg);
         reduce_fn reduce;
         reduce_fn rereduce;
+        /*  We're in the compactor */
+        int compacting;
     } couchfile_modify_request;
 
 #define KP_NODE 0

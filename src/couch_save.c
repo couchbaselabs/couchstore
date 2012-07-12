@@ -193,6 +193,7 @@ static couchstore_error_t update_indexes(Db *db,
     idrq.rereduce = by_id_rereduce;
     idrq.fetch_callback = idfetch_update_cb;
     idrq.db = db;
+    idrq.compacting = 0;
 
     new_id_root = modify_btree(&idrq, db->header.by_id_root, &errcode);
     error_pass(errcode);
@@ -216,6 +217,7 @@ static couchstore_error_t update_indexes(Db *db,
     seqrq.reduce = by_seq_reduce;
     seqrq.rereduce = by_seq_rereduce;
     seqrq.db = db;
+    seqrq.compacting = 0;
 
     new_seq_root = modify_btree(&seqrq, db->header.by_seq_root, &errcode);
     if (errcode != COUCHSTORE_SUCCESS) {

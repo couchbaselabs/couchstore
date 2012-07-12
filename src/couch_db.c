@@ -827,6 +827,7 @@ couchstore_error_t couchstore_save_local_document(Db *db, LocalDoc *lDoc)
     rq.reduce = NULL;
     rq.rereduce = NULL;
     rq.db = db;
+    rq.compacting = 0;
 
     nroot = modify_btree(&rq, db->header.local_docs_root, &errcode);
     if (errcode == COUCHSTORE_SUCCESS && nroot != db->header.local_docs_root) {
