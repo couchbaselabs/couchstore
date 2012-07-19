@@ -578,7 +578,12 @@ static couchstore_error_t lookup_callback(couchfile_lookup_request *rq,
     } else {
         errcode = by_seq_read_docinfo(&docinfo, seqterm, v);
     }
-    if (errcode) {
+    if (errcode == COUCHSTORE_ERROR_CORRUPT && (context->options & COUCHSTORE_INCLUDE_CORRUPT_DOCS)) {
+        // Invoke callback even if doc info is corrupted/unreadable, if magic flag is set
+        docinfo = calloc(sizeof(DocInfo), 1);
+        docinfo->id = *seqterm;
+        docinfo->rev_meta = *v;
+    } else if (errcode) {
         return errcode;
     }
 

@@ -17,15 +17,37 @@ static void printsb(sized_buf *sb)
     printf("%.*s\n", (int) sb->size, sb->buf);
 }
 
+static void printsbhex(sized_buf *sb)
+{
+    if (sb->buf == NULL) {
+        printf("null\n");
+        return;
+    }
+    for (size_t i = 0; i < sb->size; ++i) {
+        printf("%02x", sb->buf[i]);
+        if (i % 4 == 3) {
+            printf(" ");
+        }
+    }
+    printf("\n");
+}
+
 static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
 {
     int *count = (int *) ctx;
+    (*count)++;
     Doc *doc = NULL;
     uint64_t cas;
     uint32_t expiry, flags;
     printf("Doc seq: %"PRIu64"\n", docinfo->db_seq);
     printf("     id: ");
     printsb(&docinfo->id);
+    if (docinfo->bp == 0) {
+        printf("         ** This b-tree node is corrupt; raw node value follows:*\n");
+        printf("    raw: ");
+        printsbhex(&docinfo->rev_meta);
+        return 0;
+    }
     printf("     rev: %"PRIu64"\n", docinfo->rev_seq);
     printf("     content_meta: %d\n", docinfo->content_meta);
     if (docinfo->rev_meta.size == 16) {
@@ -54,7 +76,6 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
     }
 
     couchstore_free_document(doc);
-    (*count)++;
     return 0;
 }
 

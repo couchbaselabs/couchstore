@@ -15,6 +15,11 @@
 #define COUCH_DISK_VERSION 10
 #define COUCH_SNAPPY_THRESHOLD 64
 
+enum {
+    /** Additional couchstore_docinfos_options flag */ 
+    COUCHSTORE_INCLUDE_CORRUPT_DOCS = 0x80000000
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -327,7 +327,7 @@ extern "C" {
      *
      * @param db the database to iterate through
      * @param since the sequence number to start iterating from
-     * @param options (not used; pass 0)
+     * @param options COUCHSTORE_DELETES_ONLY and COUCHSTORE_NO_DELETES are supported
      * @param callback the callback function used to iterate over all changes
      * @param ctx client context (passed to the callback)
      * @return COUCHSTORE_SUCCESS upon success
