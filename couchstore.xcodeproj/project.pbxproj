@@ -72,6 +72,7 @@
 		27D37ED6154729F400D3F0C8 /* mergesort.c in Sources */ = {isa = PBXBuildFile; fileRef = 27D37ED2154729F400D3F0C8 /* mergesort.c */; };
 		27D37ED815472A3300D3F0C8 /* compactor.c in Sources */ = {isa = PBXBuildFile; fileRef = 27D37ED715472A3300D3F0C8 /* compactor.c */; };
 		27E65A001544F2F0000A7658 /* couch_save.c in Sources */ = {isa = PBXBuildFile; fileRef = 27E659FF1544F2F0000A7658 /* couch_save.c */; };
+		27F00F1215B9D0AA008CDA68 /* view_indexer.c in Sources */ = {isa = PBXBuildFile; fileRef = 27F00F1115B9D0AA008CDA68 /* view_indexer.c */; };
 		27F08CD315AB8FBC003C3E2B /* collate_json.c in Sources */ = {isa = PBXBuildFile; fileRef = 27F08CD215AB8FBC003C3E2B /* collate_json.c */; };
 		27F08CD715ABA25A003C3E2B /* collate_json_test.c in Sources */ = {isa = PBXBuildFile; fileRef = 27F08CD615ABA25A003C3E2B /* collate_json_test.c */; };
 		27F08CDF15ABAF8C003C3E2B /* libicui18n.44.1.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 27F08CDE15ABAF8C003C3E2B /* libicui18n.44.1.dylib */; };
@@ -210,8 +211,8 @@
 		274F97E2152E1D5100247C46 /* visibility.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = visibility.h; sourceTree = "<group>"; };
 		274F97E3152E1D9200247C46 /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = SOURCE_ROOT; };
 		274F97E5152E1E3E00247C46 /* libsnappy.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libsnappy.dylib; path = /usr/local/lib/libsnappy.dylib; sourceTree = "<absolute>"; };
-		274F97ED152E22E500247C46 /* dbdump */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = dbdump; sourceTree = BUILT_PRODUCTS_DIR; };
-		274F9804152E235600247C46 /* dbinfo */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = dbinfo; sourceTree = BUILT_PRODUCTS_DIR; };
+		274F97ED152E22E500247C46 /* couch_dbdump */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = couch_dbdump; sourceTree = BUILT_PRODUCTS_DIR; };
+		274F9804152E235600247C46 /* couch_dbinfo */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = couch_dbinfo; sourceTree = BUILT_PRODUCTS_DIR; };
 		2794ACFF15338E640047643C /* testapp.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = testapp.c; path = tests/testapp.c; sourceTree = SOURCE_ROOT; };
 		2794AD011533901D0047643C /* config_static.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = config_static.h; sourceTree = SOURCE_ROOT; };
 		2794AD0C153395780047643C /* testapp */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testapp; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -220,7 +221,7 @@
 		27AA1B181538DE3900D03755 /* liblua.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = liblua.dylib; path = usr/local/lib/liblua.dylib; sourceTree = SDKROOT; };
 		27AA1B1C1538EC4300D03755 /* arena.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = arena.c; sourceTree = "<group>"; };
 		27AA1B1E1538EC5600D03755 /* arena.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = arena.h; sourceTree = "<group>"; };
-		27B07E7C159E75BD0084E054 /* viewgen */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = viewgen; sourceTree = BUILT_PRODUCTS_DIR; };
+		27B07E7C159E75BD0084E054 /* couch_viewgen */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = couch_viewgen; sourceTree = BUILT_PRODUCTS_DIR; };
 		27B07E7F159E75EE0084E054 /* viewgen.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = viewgen.c; sourceTree = "<group>"; };
 		27D37ECC1547292B00D3F0C8 /* couch_compact */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = couch_compact; sourceTree = BUILT_PRODUCTS_DIR; };
 		27D37ECF154729F400D3F0C8 /* db_compact.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = db_compact.c; sourceTree = "<group>"; };
@@ -228,6 +229,8 @@
 		27D37ED2154729F400D3F0C8 /* mergesort.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mergesort.c; sourceTree = "<group>"; };
 		27D37ED715472A3300D3F0C8 /* compactor.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = compactor.c; sourceTree = "<group>"; };
 		27E659FF1544F2F0000A7658 /* couch_save.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = couch_save.c; sourceTree = "<group>"; };
+		27F00F0F15B9CFA6008CDA68 /* view_format.md */ = {isa = PBXFileReference; lastKnownFileType = text; path = view_format.md; sourceTree = SOURCE_ROOT; };
+		27F00F1115B9D0AA008CDA68 /* view_indexer.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = view_indexer.c; sourceTree = "<group>"; };
 		27F08CD215AB8FBC003C3E2B /* collate_json.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = collate_json.c; sourceTree = "<group>"; };
 		27F08CD515AB8FFE003C3E2B /* collate_json.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = collate_json.h; sourceTree = "<group>"; };
 		27F08CD615ABA25A003C3E2B /* collate_json_test.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = collate_json_test.c; path = ../tests/collate_json_test.c; sourceTree = "<group>"; };
@@ -317,12 +320,12 @@
 			isa = PBXGroup;
 			children = (
 				274F9758152E1CCA00247C46 /* libcouchstore.dylib */,
-				274F97ED152E22E500247C46 /* dbdump */,
-				274F9804152E235600247C46 /* dbinfo */,
+				274F97ED152E22E500247C46 /* couch_dbdump */,
+				274F9804152E235600247C46 /* couch_dbinfo */,
 				2794AD0C153395780047643C /* testapp */,
 				27AA1B151538DE0700D03755 /* couchscript */,
 				27D37ECC1547292B00D3F0C8 /* couch_compact */,
-				27B07E7C159E75BD0084E054 /* viewgen */,
+				27B07E7C159E75BD0084E054 /* couch_viewgen */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -346,12 +349,6 @@
 				274F9795152E1D1400247C46 /* internal.h */,
 				27093EF51537441A0087804E /* iobuffer.c */,
 				27093EF81537442E0087804E /* iobuffer.h */,
-				27D37ED0154729F400D3F0C8 /* llmsort.c */,
-				27D37ED2154729F400D3F0C8 /* mergesort.c */,
-				D960D28F1547399900DDDF1E /* mergesort.h */,
-				270770E515A221090058085F /* tree_writer.c */,
-				270770E815A2211F0058085F /* tree_writer.h */,
-				27D37ECF154729F400D3F0C8 /* db_compact.c */,
 				274F97A0152E1D1400247C46 /* os.c */,
 				274F97A1152E1D1400247C46 /* reduces.c */,
 				274F97A2152E1D1400247C46 /* reduces.h */,
@@ -361,8 +358,8 @@
 				274F97B1152E1D1400247C46 /* util.h */,
 				27AA1B1C1538EC4300D03755 /* arena.c */,
 				27AA1B1E1538EC5600D03755 /* arena.h */,
-				27F08CD215AB8FBC003C3E2B /* collate_json.c */,
-				27F08CD515AB8FFE003C3E2B /* collate_json.h */,
+				27F00F1515B9E1A9008CDA68 /* compactor */,
+				27F00F1415B9E189008CDA68 /* view indexer */,
 			);
 			path = src;
 			sourceTree = "<group>";
@@ -425,6 +422,30 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		27F00F1415B9E189008CDA68 /* view indexer */ = {
+			isa = PBXGroup;
+			children = (
+				27F08CD215AB8FBC003C3E2B /* collate_json.c */,
+				27F08CD515AB8FFE003C3E2B /* collate_json.h */,
+				27F00F1115B9D0AA008CDA68 /* view_indexer.c */,
+				27F00F0F15B9CFA6008CDA68 /* view_format.md */,
+			);
+			name = "view indexer";
+			sourceTree = "<group>";
+		};
+		27F00F1515B9E1A9008CDA68 /* compactor */ = {
+			isa = PBXGroup;
+			children = (
+				27D37ECF154729F400D3F0C8 /* db_compact.c */,
+				27D37ED0154729F400D3F0C8 /* llmsort.c */,
+				27D37ED2154729F400D3F0C8 /* mergesort.c */,
+				D960D28F1547399900DDDF1E /* mergesort.h */,
+				270770E515A221090058085F /* tree_writer.c */,
+				270770E815A2211F0058085F /* tree_writer.h */,
+			);
+			name = compactor;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -480,7 +501,7 @@
 			);
 			name = dbdump;
 			productName = dbdump;
-			productReference = 274F97ED152E22E500247C46 /* dbdump */;
+			productReference = 274F97ED152E22E500247C46 /* couch_dbdump */;
 			productType = "com.apple.product-type.tool";
 		};
 		274F97FA152E235600247C46 /* dbinfo */ = {
@@ -497,7 +518,7 @@
 			);
 			name = dbinfo;
 			productName = dbdump;
-			productReference = 274F9804152E235600247C46 /* dbinfo */;
+			productReference = 274F9804152E235600247C46 /* couch_dbinfo */;
 			productType = "com.apple.product-type.tool";
 		};
 		2794AD02153395780047643C /* testapp */ = {
@@ -548,7 +569,7 @@
 			);
 			name = viewgen;
 			productName = dbdump;
-			productReference = 27B07E7C159E75BD0084E054 /* viewgen */;
+			productReference = 27B07E7C159E75BD0084E054 /* couch_viewgen */;
 			productType = "com.apple.product-type.tool";
 		};
 		27D37EC21547292B00D3F0C8 /* couch_compact */ = {
@@ -626,6 +647,7 @@
 				27D37ED6154729F400D3F0C8 /* mergesort.c in Sources */,
 				270770E615A221090058085F /* tree_writer.c in Sources */,
 				27F08CD315AB8FBC003C3E2B /* collate_json.c in Sources */,
+				27F00F1215B9D0AA008CDA68 /* view_indexer.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -806,7 +828,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				GCC_C_LANGUAGE_STANDARD = gnu99;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = couch_dbdump;
 			};
 			name = Debug;
 		};
@@ -814,7 +836,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				GCC_C_LANGUAGE_STANDARD = gnu99;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = couch_dbdump;
 			};
 			name = Release;
 		};
@@ -822,7 +844,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				GCC_C_LANGUAGE_STANDARD = gnu99;
-				PRODUCT_NAME = dbinfo;
+				PRODUCT_NAME = couch_dbinfo;
 			};
 			name = Debug;
 		};
@@ -830,7 +852,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				GCC_C_LANGUAGE_STANDARD = gnu99;
-				PRODUCT_NAME = dbinfo;
+				PRODUCT_NAME = couch_dbinfo;
 			};
 			name = Release;
 		};
@@ -870,7 +892,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				GCC_C_LANGUAGE_STANDARD = gnu99;
-				PRODUCT_NAME = viewgen;
+				PRODUCT_NAME = couch_viewgen;
 			};
 			name = Debug;
 		};
@@ -879,7 +901,7 @@
 			buildSettings = {
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				ONLY_ACTIVE_ARCH = YES;
-				PRODUCT_NAME = viewgen;
+				PRODUCT_NAME = couch_viewgen;
 			};
 			name = Release;
 		};

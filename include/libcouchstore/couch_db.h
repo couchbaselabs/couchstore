@@ -455,7 +455,10 @@ extern "C" {
     LIBCOUCHSTORE_API
     void couchstore_free_local_document(LocalDoc *lDoc);
 
-    /*
+    
+    /*////////////////////  UTILITIES: */
+
+    /**
      * Compact a database. This creates a new DB file with the same data as the
      * source db, omitting data that is no longer needed.
      * Will use default couch_file_ops to create and write the target db.
@@ -467,7 +470,7 @@ extern "C" {
     LIBCOUCHSTORE_API
     couchstore_error_t couchstore_compact_db(Db* source, const char* target_filename);
 
-    /*
+    /**
      * Compact a database. This creates a new DB file with the same data as the
      * source db, omitting data that is no longer needed.
      * Will use specified couch_file_ops to create and write the target db.
@@ -481,6 +484,18 @@ extern "C" {
     LIBCOUCHSTORE_API
     couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filename,
                                                 const couch_file_ops *ops);
+
+    /**
+     * Read an unsorted key-value file and add its contents to a view index.
+     *
+     * @param inputPath The path to the key-value file
+     * @param outputDb The database to write to
+     * @return COUCHSTORE_SUCCESS on success, else an error code
+     */
+    LIBCOUCHSTORE_API
+    couchstore_error_t couchstore_index_view(const char *inputPath, Db* outputDb);
+    
+
     /*////////////////////  MISC: */
 
     /**

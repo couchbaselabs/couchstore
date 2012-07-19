@@ -72,7 +72,8 @@ libcouchstore_la_SOURCES = \
                             src/strerror.c \
                             src/os.c \
                             src/util.c \
-                            src/util.h
+                            src/util.h \
+                            src/view_indexer.c
 
 
 libcouchstore_la_LDFLAGS = $(AM_LDFLAGS) $(ICU_LOCAL_LDFLAGS) -version-info $(LIBCOUCHSTORE_API_CURRENT):$(LIBCOUCHSTORE_API_REVISION):$(LIBCOUCHSTORE_API_AGE) -no-undefined -lsnappy
