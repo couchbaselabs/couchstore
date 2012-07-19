@@ -7,6 +7,12 @@
 #include <libcouchstore/couch_db.h>
 #include <snappy-c.h>
 #include "bitfield.h"
+#include "internal.h"
+
+typedef enum {
+    DumpBySequence,
+    DumpByID
+} DumpMode;
 
 static void printsb(sized_buf *sb)
 {
@@ -79,7 +85,7 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
     return 0;
 }
 
-static int process_file(const char *file, int *total)
+static int process_file(const char *file, int *total, DumpMode mode)
 {
     Db *db;
     couchstore_error_t errcode;
@@ -91,7 +97,17 @@ static int process_file(const char *file, int *total)
     }
 
     int count = 0;
-    errcode = couchstore_changes_since(db, 0, 0, foldprint, &count);
+
+    switch (mode) {
+        case DumpBySequence:
+            errcode = couchstore_changes_since(db, 0, COUCHSTORE_INCLUDE_CORRUPT_DOCS,
+                                               foldprint, &count);
+            break;
+        case DumpByID:
+            errcode = couchstore_all_docs(db, NULL, COUCHSTORE_INCLUDE_CORRUPT_DOCS,
+                                          foldprint, &count);
+            break;
+    }
     (void)couchstore_close_db(db);
 
     if (errcode < 0) {
@@ -104,17 +120,39 @@ static int process_file(const char *file, int *total)
     return 0;
 }
 
+static int usage(void) {
+    printf("USAGE: couch_dbdump [--byid | --byseq] <file.couch>\n");
+    exit(EXIT_FAILURE);
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 2) {
-        printf("USAGE: %s <file.couch>\n", argv[0]);
-        exit(EXIT_FAILURE);
+        usage();
+    }
+
+    DumpMode mode = DumpBySequence;
+
+    int ii = 1;
+    if (strncmp(argv[ii], "-", 1) == 0) {
+        if (strcmp(argv[ii], "--byid") == 0) {
+            mode = DumpByID;
+        } else if (strcmp(argv[ii], "--byseq") == 0) {
+            mode = DumpBySequence;
+        } else {
+            usage();
+        }
+        ++ii;
+    }
+
+    if (ii >= argc) {
+        usage();
     }
 
     int error = 0;
     int count = 0;
-    for (int ii = 1; ii < argc; ++ii) {
-        error += process_file(argv[ii], &count);
+    for (; ii < argc; ++ii) {
+        error += process_file(argv[ii], &count, mode);
     }
 
     printf("\nTotal docs: %d\n", count);

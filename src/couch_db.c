@@ -642,6 +642,41 @@ couchstore_error_t couchstore_changes_since(Db *db,
     return errcode;
 }
 
+LIBCOUCHSTORE_API
+couchstore_error_t couchstore_all_docs(Db *db,
+                                       const sized_buf* startKeyPtr,
+                                       couchstore_docinfos_options options,
+                                       couchstore_changes_callback_fn callback,
+                                       void *ctx)
+{
+    sized_buf startKey = {NULL, 0};
+    sized_buf *keylist = &startKey;
+    lookup_context cbctx = {db, options, callback, ctx, 1};
+    couchfile_lookup_request rq;
+    sized_buf cmptmp;
+    couchstore_error_t errcode;
+
+    if (db->header.by_id_root == NULL) {
+        return COUCHSTORE_SUCCESS;
+    }
+
+    if (startKeyPtr) {
+        startKey = *startKeyPtr;
+    }
+
+    rq.cmp.compare = ebin_cmp;
+    rq.cmp.arg = &cmptmp;
+    rq.db = db;
+    rq.num_keys = 1;
+    rq.keys = &keylist;
+    rq.callback_ctx = &cbctx;
+    rq.fetch_callback = lookup_callback;
+    rq.fold = 1;
+
+    errcode = btree_lookup(&rq, db->header.by_id_root->pointer);
+    return errcode;
+}
+
 static int id_ptr_cmp(const void *a, const void *b)
 {
     sized_buf **buf1 = (sized_buf**) a;

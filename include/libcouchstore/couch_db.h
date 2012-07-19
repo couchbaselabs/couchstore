@@ -340,6 +340,23 @@ extern "C" {
                                                 void *ctx);
 
     /**
+     * Iterate through all documents in order by key.
+     *
+     * @param db the database to iterate through
+     * @param startKeyPtr  The key to start at, or NULL to start from the beginning
+     * @param options COUCHSTORE_DELETES_ONLY and COUCHSTORE_NO_DELETES are supported
+     * @param callback the callback function used to iterate over all documents
+     * @param ctx client context (passed to the callback)
+     * @return COUCHSTORE_SUCCESS upon success
+     */
+    LIBCOUCHSTORE_API
+    couchstore_error_t couchstore_all_docs(Db *db,
+                                           const sized_buf* startKeyPtr,
+                                           couchstore_docinfos_options options,
+                                           couchstore_changes_callback_fn callback,
+                                           void *ctx);
+
+    /**
      * Iterate over the document infos of a set of sequence numbers.
      *
      * The DocInfos will be presented to the callback in order of ascending sequence
