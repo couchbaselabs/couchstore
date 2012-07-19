@@ -294,6 +294,11 @@ const char* couchstore_get_db_filename(Db *db) {
 
 static int by_seq_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
 {
+    ssize_t extraSize = v->size - 16;
+    if (extraSize < 0) {
+        return COUCHSTORE_ERROR_CORRUPT;
+    }
+
     uint32_t idsize, datasize, deleted, revnum;
     uint8_t content_meta;
     uint64_t bp, seq;
@@ -303,12 +308,12 @@ static int by_seq_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
     content_meta = v->buf[11];
     revnum = get_32(v->buf + 12);
     seq = get_48(k->buf);
-    DocInfo* docInfo = malloc(sizeof(DocInfo) + (v->size - 16));
+    DocInfo* docInfo = malloc(sizeof(DocInfo) + extraSize);
     if (!docInfo) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
     char *rbuf = (char *) docInfo;
-    memcpy(rbuf + sizeof(DocInfo), v->buf + 16, v->size - 16);
+    memcpy(rbuf + sizeof(DocInfo), v->buf + 16, extraSize);
     *pInfo = docInfo;
     docInfo->db_seq = seq;
     docInfo->rev_seq = revnum;
@@ -319,12 +324,17 @@ static int by_seq_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
     docInfo->id.buf = rbuf + sizeof(DocInfo);
     docInfo->id.size = idsize;
     docInfo->rev_meta.buf = rbuf + sizeof(DocInfo) + idsize;
-    docInfo->rev_meta.size = v->size - 16 - idsize;
+    docInfo->rev_meta.size = extraSize - idsize;
     return 0;
 }
 
 static int by_id_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
 {
+    ssize_t revMetaSize = v->size - 21;
+    if (revMetaSize < 0) {
+        return COUCHSTORE_ERROR_CORRUPT;
+    }
+
     uint32_t datasize, deleted, revnum;
     uint8_t content_meta;
     uint64_t bp, seq;
@@ -334,12 +344,12 @@ static int by_id_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
     bp = get_48(v->buf + 10) &~ 0x800000000000;
     content_meta = v->buf[16];
     revnum = get_32(v->buf + 17);
-    DocInfo* docInfo = malloc(sizeof(DocInfo) + (v->size - 21) + k->size);
+    DocInfo* docInfo = malloc(sizeof(DocInfo) + revMetaSize + k->size);
     if (!docInfo) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
     char *rbuf = (char *) docInfo;
-    memcpy(rbuf + sizeof(DocInfo), v->buf + 21, v->size - 21);
+    memcpy(rbuf + sizeof(DocInfo), v->buf + 21, revMetaSize);
     *pInfo = docInfo;
     docInfo->db_seq = seq;
     docInfo->rev_seq = revnum;
@@ -348,8 +358,8 @@ static int by_id_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
     docInfo->size = datasize;
     docInfo->content_meta = content_meta;
     docInfo->rev_meta.buf = rbuf + sizeof(DocInfo);
-    docInfo->rev_meta.size = v->size - 21;
-    docInfo->id.buf = docInfo->rev_meta.buf + docInfo->rev_meta.size;
+    docInfo->rev_meta.size = revMetaSize;
+    docInfo->id.buf = docInfo->rev_meta.buf + revMetaSize;
     docInfo->id.size = k->size;
     memcpy(docInfo->id.buf, k->buf, k->size);
     return 0;
