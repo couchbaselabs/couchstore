@@ -3,6 +3,8 @@
 
 from ctypes import *        # <http://docs.python.org/library/ctypes.html>
 import errno
+import os
+import traceback
 
 # Load the couchstore library and customize return types:
 try:
@@ -11,7 +13,13 @@ except OSError:
     try:
         _lib = CDLL("libcouchstore.dylib")  # Mac OS
     except OSError:
-        _lib = CDLL("couchstore")           # Windows (?)
+        try:
+            folder = os.path.dirname(os.path.abspath(__file__))
+            dll_path = os.path.join(folder, "libcouchstore-1.dll")
+            _lib = CDLL(dll_path)           # Windows (?)
+        except Exception, err:
+            traceback.print_exc()
+            exit(1)
 
 _lib.couchstore_strerror.restype = c_char_p
 
