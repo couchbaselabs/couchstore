@@ -17,7 +17,7 @@
 
 enum {
     /** Additional couchstore_docinfos_options flag */ 
-    COUCHSTORE_INCLUDE_CORRUPT_DOCS = 0x80000000
+    COUCHSTORE_INCLUDE_CORRUPT_DOCS = 0x40000000
 };
 
 #ifdef __cplusplus
