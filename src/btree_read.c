@@ -43,10 +43,21 @@ static couchstore_error_t btree_lookup_inner(couchfile_lookup_request *rq,
                     last_item++;
                 } while (last_item < end && rq->cmp.compare(&cmp_key, rq->keys[last_item]) >= 0);
 
+                if (rq->node_callback) {
+                    // Invoke the node_callback on entry to the child node (and later on exit)
+                    uint64_t subtreeSize = get_48(val_buf.buf + 6);
+                    sized_buf reduce_value = {val_buf.buf + 14, get_16(val_buf.buf + 12)};
+                    error_pass(rq->node_callback(rq, subtreeSize, &reduce_value));
+                }
+                
                 pointer = get_48(val_buf.buf);
                 error_pass(btree_lookup_inner(rq, pointer, current, last_item));
                 if (!rq->in_fold) {
                     current = last_item;
+                }
+
+                if (rq->node_callback) {
+                    error_pass(rq->node_callback(rq, 0, NULL));
                 }
             }
         }

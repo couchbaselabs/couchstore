@@ -414,6 +414,82 @@ extern "C" {
                                                  couchstore_changes_callback_fn callback,
                                                  void *ctx);
 
+    /*////////////////////  ITERATING TREES: */
+
+    /**
+     * The callback function used by couchstore_walk_id_tree() and couchstore_walk_seq_tree()
+     * to iterate through the B-tree.
+     *
+     * This function is called both for documents and tree nodes. reduce_value will be non-NULL
+     * for a node; doc_info will be non-NULL for a document.
+     *
+     * The docinfo structure is automatically freed if the callback
+     * returns 0. A positive return value will preserve the DocInfo
+     * for future use (should be freed with free_docinfo by the
+     * caller). A negative return value will cancel the iteration and
+     * pass the error value back to the caller.
+     *
+     * @param db the database being traversed
+     * @param depth the current depth in the tree (the root node is 0, and documents are one level
+     *          deeper than their leaf nodes)
+     * @param doc_info the current document, or NULL if this is a tree node
+     * @param subtree_size the on-disk size of this tree node and its children, or 0 for a document
+     * @param reduce_value the reduce data of this node, or NULL for a document
+     * @param ctx user context
+     * @return 1 to preserve the DocInfo, 0 to free it, or a negative error code to abort iteration.
+     */
+    typedef int (*couchstore_walk_tree_callback_fn)(Db *db,
+                                                    int depth,
+                                                    const DocInfo* doc_info,
+                                                    uint64_t subtree_size,
+                                                    const sized_buf* reduce_value,
+                                                    void *ctx);
+
+    /**
+     * Iterate through the by-ID B-tree, including interior and leaf nodes as well as documents.
+     *
+     * The iteration is depth-first, in order by document ID. The callback is invoked on a tree
+     * node before its children. The first call is for the root node.
+     *
+     * This is only useful for tools that want to examine the B-tree structure or reduced values,
+     * such as couch_dbdump. It's unlikely that applications will need to use it.
+     *
+     * @param db the database to iterate through
+     * @param startDocID  The key to start at, or NULL to start from the beginning
+     * @param options COUCHSTORE_DELETES_ONLY and COUCHSTORE_NO_DELETES are supported
+     * @param callback the callback function used to iterate over all documents
+     * @param ctx client context (passed to the callback)
+     * @return COUCHSTORE_SUCCESS upon success
+     */
+    LIBCOUCHSTORE_API
+    couchstore_error_t couchstore_walk_id_tree(Db *db,
+                                               const sized_buf* startDocID,
+                                               couchstore_docinfos_options options,
+                                               couchstore_walk_tree_callback_fn callback,
+                                               void *ctx);
+
+    /**
+     * Iterate through the by-sequence B-tree, including interior and leaf nodes as well as documents.
+     *
+     * The iteration is depth-first, in order by sequence. The callback is invoked on a tree
+     * node before its children. The first call is for the root node.
+     *
+     * This is only useful for tools that want to examine the B-tree structure or reduced values,
+     * such as couch_dbdump. It's unlikely that applications will need to use it.
+     *
+     * @param db the database to iterate through
+     * @param startSequence the sequence number to start from
+     * @param options COUCHSTORE_DELETES_ONLY and COUCHSTORE_NO_DELETES are supported
+     * @param callback the callback function used to iterate over all documents
+     * @param ctx client context (passed to the callback)
+     * @return COUCHSTORE_SUCCESS upon success
+     */
+    LIBCOUCHSTORE_API
+    couchstore_error_t couchstore_walk_seq_tree(Db *db,
+                                                uint64_t startSequence,
+                                                couchstore_docinfos_options options,
+                                                couchstore_walk_tree_callback_fn callback,
+                                                void *ctx);
 
     /*////////////////////  LOCAL DOCUMENTS: */
 

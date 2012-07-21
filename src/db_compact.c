@@ -318,6 +318,7 @@ static couchstore_error_t compact_seq_tree(Db* source, Db* target, compact_ctx *
     srcfold.in_fold = 1;
     srcfold.callback_ctx = ctx;
     srcfold.fetch_callback = compact_seq_fetchcb;
+    srcfold.node_callback = NULL;
 
     errcode = btree_lookup(&srcfold, source->header.by_seq_root->pointer);
     if(errcode == COUCHSTORE_SUCCESS) {
@@ -367,6 +368,7 @@ static couchstore_error_t compact_localdocs_tree(Db* source, Db* target, compact
     srcfold.in_fold = 1;
     srcfold.callback_ctx = ctx;
     srcfold.fetch_callback = compact_localdocs_fetchcb;
+    srcfold.node_callback = NULL;
 
     errcode = btree_lookup(&srcfold, source->header.local_docs_root->pointer);
     if(errcode == COUCHSTORE_SUCCESS) {

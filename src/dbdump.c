@@ -1,6 +1,7 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include "config.h"
 #include <string.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
@@ -11,10 +12,13 @@
 
 typedef enum {
     DumpBySequence,
-    DumpByID
+    DumpByID,
 } DumpMode;
 
-static void printsb(sized_buf *sb)
+static DumpMode mode = DumpBySequence;
+static bool dumpTree = false;
+
+static void printsb(const sized_buf *sb)
 {
     if (sb->buf == NULL) {
         printf("null\n");
@@ -23,17 +27,30 @@ static void printsb(sized_buf *sb)
     printf("%.*s\n", (int) sb->size, sb->buf);
 }
 
-static void printsbhex(sized_buf *sb)
+static void printsbhex(const sized_buf *sb, int with_ascii)
 {
     if (sb->buf == NULL) {
         printf("null\n");
         return;
     }
+    printf("{");
     for (size_t i = 0; i < sb->size; ++i) {
-        printf("%02x", sb->buf[i]);
+        printf("%.02x", (uint8_t)sb->buf[i]);
         if (i % 4 == 3) {
             printf(" ");
         }
+    }
+    printf("}");
+    if (with_ascii) {
+        printf("  (\"");
+        for (size_t i = 0; i < sb->size; ++i) {
+            uint8_t ch = sb->buf[i];
+            if (ch < 32 || ch >= 127) {
+                ch = '?';
+            }
+            printf("%c", ch);
+        }
+        printf("\")");
     }
     printf("\n");
 }
@@ -45,13 +62,21 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
     Doc *doc = NULL;
     uint64_t cas;
     uint32_t expiry, flags;
-    printf("Doc seq: %"PRIu64"\n", docinfo->db_seq);
-    printf("     id: ");
-    printsb(&docinfo->id);
+    if (mode == DumpBySequence) {
+        printf("Doc seq: %"PRIu64"\n", docinfo->db_seq);
+        printf("     id: ");
+        printsb(&docinfo->id);
+    } else {
+        printf(" Doc ID: ");
+        printsb(&docinfo->id);
+        if (docinfo->db_seq > 0) {
+            printf("    seq: %"PRIu64"\n", docinfo->db_seq);
+        }
+    }
     if (docinfo->bp == 0) {
         printf("         ** This b-tree node is corrupt; raw node value follows:*\n");
         printf("    raw: ");
-        printsbhex(&docinfo->rev_meta);
+        printsbhex(&docinfo->rev_meta, 1);
         return 0;
     }
     printf("     rev: %"PRIu64"\n", docinfo->rev_seq);
@@ -85,7 +110,40 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
     return 0;
 }
 
-static int process_file(const char *file, int *total, DumpMode mode)
+
+static int visit_node(Db *db,
+                      int depth,
+                      const DocInfo* docinfo,
+                      uint64_t subtreeSize,
+                      const sized_buf* reduceValue,
+                      void *ctx)
+{
+    for (int i = 0; i < depth; ++i)
+        printf("  ");
+    if (reduceValue) {
+        // This is a tree node:
+        printf("+ (%llu) ", subtreeSize);
+        printsbhex(reduceValue, 0);
+    } else if (docinfo->bp > 0) {
+        // This is a document:
+        printf("%c (%llu) ", (docinfo->deleted ? 'x' : '*'), (uint64_t)docinfo->size);
+        if (mode == DumpBySequence) {
+            printf("#%lld ", docinfo->db_seq);
+        }
+        printsb(&docinfo->id);
+
+        int *count = (int *) ctx;
+        (*count)++;
+    } else {
+        // Document, but not in a known format:
+        printf("**corrupt?** ");
+        printsbhex(&docinfo->rev_meta, 1);
+    }
+    return 0;
+}
+
+
+static int process_file(const char *file, int *total)
 {
     Db *db;
     couchstore_error_t errcode;
@@ -100,12 +158,22 @@ static int process_file(const char *file, int *total, DumpMode mode)
 
     switch (mode) {
         case DumpBySequence:
-            errcode = couchstore_changes_since(db, 0, COUCHSTORE_INCLUDE_CORRUPT_DOCS,
-                                               foldprint, &count);
+            if (dumpTree) {
+                errcode = couchstore_walk_seq_tree(db, 0, COUCHSTORE_INCLUDE_CORRUPT_DOCS,
+                                                   visit_node, &count);
+            } else {
+                errcode = couchstore_changes_since(db, 0, COUCHSTORE_INCLUDE_CORRUPT_DOCS,
+                                                   foldprint, &count);
+            }
             break;
         case DumpByID:
-            errcode = couchstore_all_docs(db, NULL, COUCHSTORE_INCLUDE_CORRUPT_DOCS,
-                                          foldprint, &count);
+            if (dumpTree) {
+                errcode = couchstore_walk_id_tree(db, NULL, COUCHSTORE_INCLUDE_CORRUPT_DOCS,
+                                                  visit_node, &count);
+            } else {
+                errcode = couchstore_all_docs(db, NULL, COUCHSTORE_INCLUDE_CORRUPT_DOCS,
+                                              foldprint, &count);
+            }
             break;
     }
     (void)couchstore_close_db(db);
@@ -121,7 +189,7 @@ static int process_file(const char *file, int *total, DumpMode mode)
 }
 
 static void usage(void) {
-    printf("USAGE: couch_dbdump [--byid | --byseq] <file.couch>\n");
+    printf("USAGE: couch_dbdump [--byid | --byseq] [--tree] <file.couch>\n");
     exit(EXIT_FAILURE);
 }
 
@@ -131,14 +199,14 @@ int main(int argc, char **argv)
         usage();
     }
 
-    DumpMode mode = DumpBySequence;
-
     int ii = 1;
-    if (strncmp(argv[ii], "-", 1) == 0) {
+    while (strncmp(argv[ii], "-", 1) == 0) {
         if (strcmp(argv[ii], "--byid") == 0) {
             mode = DumpByID;
         } else if (strcmp(argv[ii], "--byseq") == 0) {
             mode = DumpBySequence;
+        } else if (strcmp(argv[ii], "--tree") == 0) {
+            dumpTree = true;
         } else {
             usage();
         }
@@ -152,7 +220,7 @@ int main(int argc, char **argv)
     int error = 0;
     int count = 0;
     for (; ii < argc; ++ii) {
-        error += process_file(argv[ii], &count, mode);
+        error += process_file(argv[ii], &count);
     }
 
     printf("\nTotal docs: %d\n", count);

@@ -458,6 +458,7 @@ couchstore_error_t couchstore_docinfo_by_id(Db *db,
     rq.keys = &keylist;
     rq.callback_ctx = pInfo;
     rq.fetch_callback = docinfo_fetch_by_id;
+    rq.node_callback = NULL;
     rq.fold = 0;
 
     errcode = btree_lookup(&rq, db->header.by_id_root->pointer);
@@ -495,6 +496,7 @@ couchstore_error_t couchstore_docinfo_by_sequence(Db *db,
     rq.keys = &keylist;
     rq.callback_ctx = pInfo;
     rq.fetch_callback = docinfo_fetch_by_seq;
+    rq.node_callback = NULL;
     rq.fold = 0;
 
     errcode = btree_lookup(&rq, db->header.by_seq_root->pointer);
@@ -564,6 +566,8 @@ typedef struct {
     couchstore_changes_callback_fn callback;
     void* callback_context;
     int by_id;
+    int depth;
+    couchstore_walk_tree_callback_fn walk_callback;
 } lookup_context;
 
 // btree_lookup callback, called while iterating keys
@@ -600,7 +604,16 @@ static couchstore_error_t lookup_callback(couchfile_lookup_request *rq,
         return COUCHSTORE_SUCCESS;
     }
 
-    errcode = context->callback(context->db, docinfo, context->callback_context);
+    if (context->walk_callback) {
+        errcode = context->walk_callback(context->db,
+                                         context->depth,
+                                         docinfo,
+                                         0,
+                                         NULL,
+                                         context->callback_context);
+    } else {
+        errcode = context->callback(context->db, docinfo, context->callback_context);
+    }
     if (errcode <= 0) {
         couchstore_free_docinfo(docinfo);
     } else {
@@ -641,6 +654,7 @@ couchstore_error_t couchstore_changes_since(Db *db,
     rq.keys = &keylist;
     rq.callback_ctx = &cbctx;
     rq.fetch_callback = lookup_callback;
+    rq.node_callback = NULL;
     rq.fold = 1;
 
     errcode = btree_lookup(&rq, db->header.by_seq_root->pointer);
@@ -676,10 +690,106 @@ couchstore_error_t couchstore_all_docs(Db *db,
     rq.keys = &keylist;
     rq.callback_ctx = &cbctx;
     rq.fetch_callback = lookup_callback;
+    rq.node_callback = NULL;
     rq.fold = 1;
 
     errcode = btree_lookup(&rq, db->header.by_id_root->pointer);
     return errcode;
+}
+
+static couchstore_error_t walk_node_callback(struct couchfile_lookup_request *rq,
+                                                 uint64_t subtreeSize,
+                                                 const sized_buf *reduceValue)
+{
+    lookup_context* context = rq->callback_ctx;
+    if (reduceValue) {
+        int result = context->walk_callback(context->db,
+                                            context->depth,
+                                            NULL,
+                                            subtreeSize,
+                                            reduceValue,
+                                            context->callback_context);
+        context->depth++;
+        if (result < 0)
+            return result;
+    } else {
+        context->depth--;
+    }
+    return COUCHSTORE_SUCCESS;
+}
+
+static
+couchstore_error_t couchstore_walk_tree(Db *db,
+                                        int by_id,
+                                        const node_pointer* root,
+                                        const sized_buf* startKeyPtr,
+                                        couchstore_docinfos_options options,
+                                        int (*compare)(const sized_buf *k1, const sized_buf *k2),
+                                        couchstore_walk_tree_callback_fn callback,
+                                        void *ctx)
+{
+    couchstore_error_t errcode;
+
+    if (root == NULL) {
+        return COUCHSTORE_SUCCESS;
+    }
+
+    // Invoke the callback on the root node:
+    errcode = callback(db, 0, NULL,
+                       root->subtreesize,
+                       &root->reduce_value,
+                       ctx);
+    if (errcode < 0) {
+        return errcode;
+    }
+
+    sized_buf startKey = {NULL, 0};
+    if (startKeyPtr) {
+        startKey = *startKeyPtr;
+    }
+    sized_buf *keylist = &startKey;
+
+    lookup_context lookup_ctx = {db, options, NULL, ctx, by_id, 1, callback};
+    sized_buf cmptmp;
+    couchfile_lookup_request rq;
+    
+    rq.cmp.compare = compare;
+    rq.cmp.arg = &cmptmp;
+    rq.db = db;
+    rq.num_keys = 1;
+    rq.keys = &keylist;
+    rq.callback_ctx = &lookup_ctx;
+    rq.fetch_callback = lookup_callback;
+    rq.node_callback = walk_node_callback;
+    rq.fold = 1;
+
+    return btree_lookup(&rq, root->pointer);
+}
+
+LIBCOUCHSTORE_API
+couchstore_error_t couchstore_walk_id_tree(Db *db,
+                                           const sized_buf* startDocID,
+                                           couchstore_docinfos_options options,
+                                           couchstore_walk_tree_callback_fn callback,
+                                           void *ctx)
+{
+    return couchstore_walk_tree(db, 1, db->header.by_id_root, startDocID,
+                                options, ebin_cmp, callback, ctx);
+}
+
+LIBCOUCHSTORE_API
+couchstore_error_t couchstore_walk_seq_tree(Db *db,
+                                           uint64_t startSequence,
+                                           couchstore_docinfos_options options,
+                                           couchstore_walk_tree_callback_fn callback,
+                                           void *ctx)
+{
+    char start_termbuf[6] = {};
+    sized_buf start_term = {start_termbuf, 6};
+    set_bits(start_term.buf, 0, 48, startSequence);
+
+    return couchstore_walk_tree(db, 0, db->header.by_seq_root, &start_term,
+                                options, seq_cmp, callback, ctx);
 }
 
 static int id_ptr_cmp(const void *a, const void *b)
@@ -737,6 +847,7 @@ static couchstore_error_t iterate_docinfos(Db *db,
     rq.keys = (sized_buf**) keyptrs;
     rq.callback_ctx = &cbctx;
     rq.fetch_callback = lookup_callback;
+    rq.node_callback = NULL;
     rq.fold = fold;
     
     // Go!
@@ -881,6 +992,7 @@ couchstore_error_t couchstore_open_local_document(Db *db,
     rq.keys = &keylist;
     rq.callback_ctx = pDoc;
     rq.fetch_callback = local_doc_fetch;
+    rq.node_callback = NULL;
     rq.fold = 0;
 
     errcode = btree_lookup(&rq, db->header.local_docs_root->pointer);

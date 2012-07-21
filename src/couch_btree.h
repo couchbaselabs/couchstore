@@ -34,6 +34,9 @@ extern "C" {
         sized_buf **keys;
         void *callback_ctx;
         couchstore_error_t (*fetch_callback) (struct couchfile_lookup_request *rq, void *k, sized_buf *v);
+        couchstore_error_t (*node_callback) (struct couchfile_lookup_request *rq,
+                                             uint64_t subtreeSize,
+                                             const sized_buf *reduce_value);
     } couchfile_lookup_request;
 
     couchstore_error_t btree_lookup(couchfile_lookup_request *rq,
