@@ -120,7 +120,7 @@ static int process_file(const char *file, int *total, DumpMode mode)
     return 0;
 }
 
-static int usage(void) {
+static void usage(void) {
     printf("USAGE: couch_dbdump [--byid | --byseq] <file.couch>\n");
     exit(EXIT_FAILURE);
 }
