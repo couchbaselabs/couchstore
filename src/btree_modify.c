@@ -1,5 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include "config.h"
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
@@ -178,7 +179,7 @@ static couchstore_error_t flush_mr_partial(couchfile_modify_result *res, size_t 
     int itmcount = 0;
     char *nodebuf = NULL;
     sized_buf writebuf;
-    char reducebuf[30];
+    char reducebuf[150];    // view_indexer.c's reduce fns need 133 bytes of room
     size_t reducesize = 0;
     uint64_t subtreesize = 0;
     off_t diskpos;
@@ -231,10 +232,12 @@ static couchstore_error_t flush_mr_partial(couchfile_modify_result *res, size_t 
 
     if (res->node_type == KV_NODE && res->rq->reduce) {
         res->rq->reduce(reducebuf, &reducesize, res->values->next, itmcount);
+        assert(reducesize <= sizeof(reducebuf));
     }
 
     if (res->node_type == KP_NODE && res->rq->rereduce) {
         res->rq->rereduce(reducebuf, &reducesize, res->values->next, itmcount);
+        assert(reducesize <= sizeof(reducebuf));
     }
 
     node_pointer *ptr = (node_pointer *) arena_alloc(res->arena, sizeof(node_pointer) + final_key.size + reducesize);

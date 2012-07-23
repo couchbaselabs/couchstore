@@ -19,6 +19,8 @@ typedef struct TreeWriter TreeWriter;
  */
 couchstore_error_t TreeWriterOpen(const char* unsortedFilePath,
                                   compare_callback key_compare,
+                                  reduce_fn reduce,
+                                  reduce_fn rereduce,
                                   TreeWriter** out_writer);
 
 /**

@@ -25,6 +25,13 @@ static inline uint32_t get_32(const char *buf)
     return ntohl(*(const uint32_t*)buf);
 }
 
+/** Read a 24-bit big-endian integer from the address pointed to by buf. */
+static inline uint32_t get_24(const char *buf)
+{
+    const uint16_t* shorts = (const uint16_t*)buf;
+    return ((uint32_t)ntohs(shorts[0]) << 8) | (uint8_t)buf[2];
+}
+
 /** Read a 16-bit big-endian integer from the address pointed to by buf. */
 static inline uint32_t get_16(const char *buf)
 {

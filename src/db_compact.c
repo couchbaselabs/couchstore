@@ -39,7 +39,7 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
     target->header.purge_ptr = source->header.purge_ptr;
 
     if(source->header.by_seq_root) {
-        error_pass(TreeWriterOpen(NULL, ebin_cmp, &ctx.tree_writer));
+        error_pass(TreeWriterOpen(NULL, ebin_cmp, by_id_reduce, by_id_rereduce, &ctx.tree_writer));
         error_pass(compact_seq_tree(source, target, &ctx));
         error_pass(TreeWriterSort(ctx.tree_writer));
         error_pass(TreeWriterWrite(ctx.tree_writer, target));

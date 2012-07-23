@@ -25,11 +25,15 @@ static int compare_id_record(void* r1, void* r2, void *ctx);
 struct TreeWriter {
     FILE* file;
     compare_callback key_compare;
+    reduce_fn reduce;
+    reduce_fn rereduce;
 };
 
 
 couchstore_error_t TreeWriterOpen(const char* unsortedFilePath,
                                   compare_callback key_compare,
+                                  reduce_fn reduce,
+                                  reduce_fn rereduce,
                                   TreeWriter** out_writer)
 {
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
@@ -44,6 +48,8 @@ couchstore_error_t TreeWriterOpen(const char* unsortedFilePath,
         fseek(writer->file, 0, SEEK_END);  // in case more items will be added
     }
     writer->key_compare = (key_compare ? key_compare : ebin_cmp);
+    writer->reduce = reduce;
+    writer->rereduce = rereduce;
     *out_writer = writer;
 cleanup:
     return errcode;
@@ -103,7 +109,7 @@ couchstore_error_t TreeWriterWrite(TreeWriter* writer, Db* target)
     couchfile_modify_result* target_mr = new_btree_modres(persistent_arena,
                                                           transient_arena,
                                                           target, &idcmp,
-                                                          by_id_reduce, by_id_rereduce);
+                                                          writer->reduce, writer->rereduce);
     if(target_mr == NULL) {
         error_pass(COUCHSTORE_ERROR_ALLOC_FAIL);
     }
