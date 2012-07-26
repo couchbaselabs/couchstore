@@ -42,7 +42,12 @@ static couchstore_error_t find_header_at_pos(Db *db, off_t pos)
     char *header_buf = NULL;
     uint8_t buf[2];
     ssize_t readsize = db->file_ops->pread(db->file_handle, buf, 2, pos);
-    error_unless(readsize == 2, COUCHSTORE_ERROR_READ);
+    if(readsize != 2) {
+        if(readsize < 0) {
+            error_pass((couchstore_error_t) readsize);
+        }
+        error_pass(COUCHSTORE_ERROR_READ);
+    }
     if (buf[0] == 0) {
         return COUCHSTORE_ERROR_NO_HEADER;
     } else if (buf[0] != 1) {

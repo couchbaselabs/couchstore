@@ -29,7 +29,7 @@ static ssize_t raw_write(Db *db, const sized_buf *buf, off_t pos)
         if (write_pos % COUCH_BLOCK_SIZE == 0) {
             written = db->file_ops->pwrite(db->file_handle, &blockprefix, 1, write_pos);
             if (written < 0) {
-                return COUCHSTORE_ERROR_WRITE;
+                return written;
             }
             write_pos += 1;
             continue;
@@ -37,7 +37,7 @@ static ssize_t raw_write(Db *db, const sized_buf *buf, off_t pos)
 
         written = db->file_ops->pwrite(db->file_handle, buf->buf + buf_pos, block_remain, write_pos);
         if (written < 0) {
-            return COUCHSTORE_ERROR_WRITE;
+            return written;
         }
         buf_pos += written;
         write_pos += written;
@@ -66,14 +66,14 @@ couchstore_error_t db_write_header(Db *db, sized_buf *buf, off_t *pos)
 
     written = db->file_ops->pwrite(db->file_handle, &headerbuf, sizeof(headerbuf), write_pos);
     if (written < 0) {
-        return COUCHSTORE_ERROR_WRITE;
+        return written;
     }
     write_pos += written;
 
     //Write actual header
     written = raw_write(db, buf, write_pos);
     if (written < 0) {
-        return COUCHSTORE_ERROR_WRITE;
+        return written;
     }
     write_pos += written;
     db->file_pos = write_pos;
@@ -97,14 +97,14 @@ int db_write_buf(Db *db, const sized_buf *buf, off_t *pos, size_t *disk_size)
     sized_buf sized_headerbuf = { headerbuf, 8 };
     written = raw_write(db, &sized_headerbuf, end_pos);
     if (written < 0) {
-        return COUCHSTORE_ERROR_WRITE;
+        return written;
     }
     end_pos += written;
 
     // Write actual buffer:
     written = raw_write(db, buf, end_pos);
     if (written < 0) {
-        return COUCHSTORE_ERROR_WRITE;
+        return written;
     }
     end_pos += written;
 

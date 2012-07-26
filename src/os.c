@@ -75,6 +75,7 @@ static ssize_t couch_pread(couch_file_handle handle, void *buf, size_t nbyte, of
         rv = pread(fd, buf, nbyte, offset);
     } while (rv == -1 && errno == EINTR);
 
+    if(rv < 0) return (ssize_t) COUCHSTORE_ERROR_READ;
     return rv;
 }
 
@@ -89,6 +90,7 @@ static ssize_t couch_pwrite(couch_file_handle handle, const void *buf, size_t nb
         rv = pwrite(fd, buf, nbyte, offset);
     } while (rv == -1 && errno == EINTR);
 
+    if(rv < 0) return (ssize_t) COUCHSTORE_ERROR_WRITE;
     return rv;
 }
 
