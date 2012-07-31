@@ -14,8 +14,15 @@ static void view_reduce(char *dst, size_t *size_r, nodelist *leaflist, int count
 static void view_rereduce(char *dst, size_t *size_r, nodelist *leaflist, int count);
 
 
+static inline sized_buf getJSONKey(sized_buf buf) {
+    assert(buf.size >= 2);
+    sized_buf key = {buf.buf + 2, get_16(buf.buf)};
+    assert(key.size > 0 && key.size < buf.size - 2);
+    return key;
+}
+
 static int keyCompare(const sized_buf *k1, const sized_buf *k2) {
-    return CollateJSON(*k1, *k2, kCollateJSON_Unicode);
+    return CollateJSON(getJSONKey(*k1), getJSONKey(*k2), kCollateJSON_Unicode);
 }
 
 

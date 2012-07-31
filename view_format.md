@@ -16,11 +16,11 @@ The underlying b-tree format is the same as already used in CouchStore.
 In leaf nodes, `KeyValues` have the following format:
 
 * `Key`:
-  * `KeyId` -- A JSON string -- The JSON is the format of `[EmittedJSONKey, JSONQuotedDocId]`.  
-    The `EmittedJSONKey` is the JSON value emitted by the emit function. The `JSONQuotedDocId` is the docId JSON-quoted and escaped.
-
+  *  `EmittedJsonKeyLength` -- 16bit integer
+  *  `EmittedJSONKey` -– JSON -– The key emitted by the map function
+  *  `UnquotedDocId` –- String -– The raw doc ID (occupies the remaining bytes)
 * Value:
-  *  `PartitionId` -- 16bit Integer -- This is the partitionId (vbucket) from which this document id maps to.
+  *  `PartitionId` -- 16bit integer -- This is the partitionId (vbucket) from which this document id maps to.
   *  1 to infinity `JSONStringValue`s -- These are all the values that were emitted for this `EmittedJSONKey`.  
      Each `JSONStringValue` is of the form:
 		* `ValueLength` -- 24bit unsigned integer
