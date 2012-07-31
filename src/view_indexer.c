@@ -32,7 +32,7 @@ couchstore_error_t couchstore_index_view(const char *inputPath, Db* outputDb) {
 
     error_pass(TreeWriterOpen(inputPath, &keyCompare, view_reduce, view_rereduce, &treeWriter));
     error_pass(TreeWriterSort(treeWriter));
-    error_pass(TreeWriterWrite(treeWriter, outputDb));
+    error_pass(TreeWriterWrite(treeWriter, &outputDb->file, &outputDb->header.by_id_root));
     error_pass(couchstore_commit(outputDb));
 
 cleanup:

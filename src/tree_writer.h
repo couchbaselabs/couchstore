@@ -41,10 +41,12 @@ couchstore_error_t TreeWriterAddItem(TreeWriter* writer, sized_buf key, sized_bu
 couchstore_error_t TreeWriterSort(TreeWriter* writer);
 
 /**
- * Writes the key/value pairs to the by-ID tree of the target database.
+ * Writes the key/value pairs to a tree file, returning a pointer to the new root.
  * The items should first have been sorted.
  */
-couchstore_error_t TreeWriterWrite(TreeWriter* writer, Db* target);
+couchstore_error_t TreeWriterWrite(TreeWriter* writer,
+                                   tree_file* to_file,
+                                   node_pointer** out_root);
 
 
 /*

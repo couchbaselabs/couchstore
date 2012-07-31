@@ -41,7 +41,7 @@ static couchstore_error_t find_header_at_pos(Db *db, off_t pos)
     int errcode = COUCHSTORE_SUCCESS;
     char *header_buf = NULL;
     uint8_t buf[2];
-    ssize_t readsize = db->file_ops->pread(db->file_handle, buf, 2, pos);
+    ssize_t readsize = db->file.ops->pread(db->file.handle, buf, 2, pos);
     error_unless(readsize == 2, COUCHSTORE_ERROR_READ);
     if (buf[0] == 0) {
         return COUCHSTORE_ERROR_NO_HEADER;
@@ -49,7 +49,7 @@ static couchstore_error_t find_header_at_pos(Db *db, off_t pos)
         return COUCHSTORE_ERROR_CORRUPT;
     }
 
-    int header_len = pread_header(db, pos, &header_buf);
+    int header_len = pread_header(&db->file, pos, &header_buf);
     if (header_len < 0) {
         error_pass(header_len);
     }
@@ -84,7 +84,7 @@ cleanup:
 static couchstore_error_t find_header(Db *db)
 {
     couchstore_error_t last_header_errcode = COUCHSTORE_ERROR_NO_HEADER;
-    int64_t pos = db->file_pos - 2;
+    int64_t pos = db->file.pos - 2;
     pos -= pos % COUCH_BLOCK_SIZE;
     for (; pos >= 0; pos -= COUCH_BLOCK_SIZE) {
         couchstore_error_t errcode = find_header_at_pos(db, pos);
@@ -134,7 +134,7 @@ static couchstore_error_t write_header(Db *db)
     encode_root(writebuf.buf + HEADER_BASE_SIZE + seqrootsize + idrootsize,
                 db->header.local_docs_root);
     off_t pos;
-    couchstore_error_t errcode = db_write_header(db, &writebuf, &pos);
+    couchstore_error_t errcode = db_write_header(&db->file, &writebuf, &pos);
     if (errcode == COUCHSTORE_SUCCESS) {
         db->header.position = pos;
     }
@@ -164,7 +164,7 @@ uint64_t couchstore_get_header_position(Db *db)
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_commit(Db *db)
 {
-    off_t curpos = db->file_pos;
+    off_t curpos = db->file.pos;
     sized_buf zerobyte = {"\0", 1};
     size_t seqrootsize = 0, idrootsize = 0, localrootsize = 0;
     if (db->header.by_seq_root) {
@@ -176,20 +176,20 @@ couchstore_error_t couchstore_commit(Db *db)
     if (db->header.local_docs_root) {
         localrootsize = 12 + db->header.local_docs_root->reduce_value.size;
     }
-    db->file_pos += 25 + seqrootsize + idrootsize + localrootsize;
+    db->file.pos += 25 + seqrootsize + idrootsize + localrootsize;
     //Extend file size to where end of header will land before we do first sync
-    db_write_buf(db, &zerobyte, NULL, NULL);
+    db_write_buf(&db->file, &zerobyte, NULL, NULL);
 
-    couchstore_error_t errcode = db->file_ops->sync(db->file_handle);
+    couchstore_error_t errcode = db->file.ops->sync(db->file.handle);
 
     //Set the pos back to where it was when we started to write the real header.
-    db->file_pos = curpos;
+    db->file.pos = curpos;
     if (errcode == COUCHSTORE_SUCCESS) {
         errcode = write_header(db);
     }
 
     if (errcode == COUCHSTORE_SUCCESS) {
-        errcode = db->file_ops->sync(db->file_handle);
+        errcode = db->file.ops->sync(db->file.handle);
     }
 
     return errcode;
@@ -239,15 +239,15 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
         openflags |= O_CREAT;
     }
 
-    db->filename = strdup(filename);
-    error_unless(db->filename, COUCHSTORE_ERROR_ALLOC_FAIL);
+    db->file.path = strdup(filename);
+    error_unless(db->file.path, COUCHSTORE_ERROR_ALLOC_FAIL);
 
-    db->file_ops = couch_get_buffered_file_ops(ops, &db->file_handle);
-    error_unless(db->file_ops, COUCHSTORE_ERROR_ALLOC_FAIL);
+    db->file.ops = couch_get_buffered_file_ops(ops, &db->file.handle);
+    error_unless(db->file.ops, COUCHSTORE_ERROR_ALLOC_FAIL);
 
-    error_pass(db->file_ops->open(&db->file_handle, filename, openflags));
+    error_pass(db->file.ops->open(&db->file.handle, filename, openflags));
 
-    if ((db->file_pos = db->file_ops->goto_eof(db->file_handle)) == 0) {
+    if ((db->file.pos = db->file.ops->goto_eof(db->file.handle)) == 0) {
         /* This is an empty file. Create a new fileheader unless the
          * user wanted a read-only version of the file
          */
@@ -271,11 +271,11 @@ cleanup:
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_close_db(Db *db)
 {
-    if (db->file_ops) {
-        db->file_ops->close(db->file_handle);
-        db->file_ops->destructor(db->file_handle);
+    if (db->file.ops) {
+        db->file.ops->close(db->file.handle);
+        db->file.ops->destructor(db->file.handle);
     }
-    free((char*)db->filename);
+    free((char*)db->file.path);
 
     free(db->header.by_id_root);
     free(db->header.by_seq_root);
@@ -289,7 +289,7 @@ couchstore_error_t couchstore_close_db(Db *db)
 
 LIBCOUCHSTORE_API
 const char* couchstore_get_db_filename(Db *db) {
-    return db->filename;
+    return db->file.path;
 }
 
 static int by_seq_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
@@ -374,9 +374,9 @@ static couchstore_error_t bp_to_doc(Doc **pDoc, Db *db, off_t bp, couchstore_ope
     fatbuf *docbuf = NULL;
 
     if (options & DECOMPRESS_DOC_BODIES) {
-        bodylen = pread_compressed(db, bp, &docbody);
+        bodylen = pread_compressed(&db->file, bp, &docbody);
     } else {
-        bodylen = pread_bin(db, bp, &docbody);
+        bodylen = pread_bin(&db->file, bp, &docbody);
     }
 
     error_unless(bodylen >= 0, bodylen);    // if bodylen is negative it's an error code
@@ -448,7 +448,7 @@ couchstore_error_t couchstore_docinfo_by_id(Db *db,
 
     rq.cmp.compare = ebin_cmp;
     rq.cmp.arg = &cmptmp;
-    rq.db = db;
+    rq.file = &db->file;
     rq.num_keys = 1;
     rq.keys = &keylist;
     rq.callback_ctx = pInfo;
@@ -485,7 +485,7 @@ couchstore_error_t couchstore_docinfo_by_sequence(Db *db,
 
     rq.cmp.compare = seq_cmp;
     rq.cmp.arg = &cmptmp;
-    rq.db = db;
+    rq.file = &db->file;
     rq.num_keys = 1;
     rq.keys = &keylist;
     rq.callback_ctx = pInfo;
@@ -631,7 +631,7 @@ couchstore_error_t couchstore_changes_since(Db *db,
 
     rq.cmp.compare = seq_cmp;
     rq.cmp.arg = &cmptmp;
-    rq.db = db;
+    rq.file = &db->file;
     rq.num_keys = 1;
     rq.keys = &keylist;
     rq.callback_ctx = &cbctx;
@@ -666,7 +666,7 @@ couchstore_error_t couchstore_all_docs(Db *db,
 
     rq.cmp.compare = ebin_cmp;
     rq.cmp.arg = &cmptmp;
-    rq.db = db;
+    rq.file = &db->file;
     rq.num_keys = 1;
     rq.keys = &keylist;
     rq.callback_ctx = &cbctx;
@@ -727,7 +727,7 @@ static couchstore_error_t iterate_docinfos(Db *db,
     sized_buf cmptmp;
     rq.cmp.compare = key_compare;
     rq.cmp.arg = &cmptmp;
-    rq.db = db;
+    rq.file = &db->file;
     rq.num_keys = numDocs;
     rq.keys = (sized_buf**) keyptrs;
     rq.callback_ctx = &cbctx;
@@ -790,7 +790,7 @@ cleanup:
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_db_info(Db *db, DbInfo* dbinfo) {
     const node_pointer *root = db->header.by_id_root;
-    dbinfo->filename = db->filename;
+    dbinfo->filename = db->file.path;
     dbinfo->header_position = db->header.position;
     dbinfo->last_sequence = db->header.update_seq;
     if (root) {
@@ -871,7 +871,7 @@ couchstore_error_t couchstore_open_local_document(Db *db,
 
     rq.cmp.compare = ebin_cmp;
     rq.cmp.arg = &cmptmp;
-    rq.db = db;
+    rq.file = &db->file;
     rq.num_keys = 1;
     rq.keys = &keylist;
     rq.callback_ctx = pDoc;
@@ -912,7 +912,7 @@ couchstore_error_t couchstore_save_local_document(Db *db, LocalDoc *lDoc)
     rq.fetch_callback = NULL;
     rq.reduce = NULL;
     rq.rereduce = NULL;
-    rq.db = db;
+    rq.file = &db->file;
     rq.compacting = 0;
 
     nroot = modify_btree(&rq, db->header.local_docs_root, &errcode);

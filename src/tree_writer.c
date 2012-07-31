@@ -91,7 +91,9 @@ couchstore_error_t TreeWriterSort(TreeWriter* writer)
 }
 
 
-couchstore_error_t TreeWriterWrite(TreeWriter* writer, Db* target)
+couchstore_error_t TreeWriterWrite(TreeWriter* writer,
+                                   tree_file* treefile,
+                                   node_pointer** out_root)
 {
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     arena* transient_arena = new_arena(0);
@@ -108,7 +110,7 @@ couchstore_error_t TreeWriterWrite(TreeWriter* writer, Db* target)
 
     couchfile_modify_result* target_mr = new_btree_modres(persistent_arena,
                                                           transient_arena,
-                                                          target, &idcmp,
+                                                          treefile, &idcmp,
                                                           writer->reduce, writer->rereduce);
     if(target_mr == NULL) {
         error_pass(COUCHSTORE_ERROR_ALLOC_FAIL);
@@ -150,7 +152,7 @@ couchstore_error_t TreeWriterWrite(TreeWriter* writer, Db* target)
     }
 
     // Finish up the tree:
-    target->header.by_id_root = complete_new_btree(target_mr, &errcode);
+    *out_root = complete_new_btree(target_mr, &errcode);
 
 cleanup:
     delete_arena(transient_arena);

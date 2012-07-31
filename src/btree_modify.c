@@ -73,12 +73,12 @@ static couchfile_modify_result *make_modres(arena* a, couchfile_modify_request *
     return res;
 }
 
-couchfile_modify_result *new_btree_modres(arena *a, arena *transient_arena, Db* db, compare_info* cmp, reduce_fn reduce,
-        reduce_fn rereduce)
+couchfile_modify_result *new_btree_modres(arena *a, arena *transient_arena, tree_file *file,
+                                          compare_info* cmp, reduce_fn reduce, reduce_fn rereduce)
 {
     couchfile_modify_request* rq = arena_alloc(a, sizeof(couchfile_modify_request));
     rq->cmp = *cmp;
-    rq->db = db;
+    rq->file = file;
     rq->num_actions = 0;
     rq->fetch_callback = NULL;
     rq->reduce = reduce;
@@ -224,7 +224,7 @@ static couchstore_error_t flush_mr_partial(couchfile_modify_result *res, size_t 
 
     writebuf.size = bufpos;
 
-    errcode = db_write_buf_compressed(res->rq->db, &writebuf, &diskpos, &disk_size);
+    errcode = db_write_buf_compressed(res->rq->file, &writebuf, &diskpos, &disk_size);
     free(nodebuf);  // here endeth the nodebuf.
     if (errcode != COUCHSTORE_SUCCESS) {
         return errcode;
@@ -321,7 +321,7 @@ static couchstore_error_t modify_node(couchfile_modify_request *rq,
     }
 
     if (nptr) {
-        if ((nodebuflen = pread_compressed(rq->db, nptr->pointer, (char **) &nodebuf)) < 0) {
+        if ((nodebuflen = pread_compressed(rq->file, nptr->pointer, (char **) &nodebuf)) < 0) {
             error_pass(COUCHSTORE_ERROR_READ);
         }
     }

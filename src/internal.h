@@ -24,6 +24,14 @@ enum {
 extern "C" {
 #endif
 
+    // Structure representing an open file; "superclass" of Db
+    typedef struct _treefile {
+        uint64_t pos;
+        const couch_file_ops *ops;
+        couch_file_handle handle;
+        const char* path;
+    } tree_file;
+
     typedef struct _nodepointer {
         sized_buf key;
         uint64_t pointer;
@@ -43,10 +51,7 @@ extern "C" {
     } db_header;
 
     struct _db {
-        uint64_t file_pos;
-        const couch_file_ops *file_ops;
-        couch_file_handle file_handle;
-        const char* filename;
+        tree_file file;
         db_header header;
         void *userdata;
     };
@@ -54,25 +59,25 @@ extern "C" {
     const couch_file_ops *couch_get_default_file_ops(void);
 
     /** Reads a chunk from the file at a given position.
-        @param db The database to read from
+        @param file The tree_file to read from
         @param pos The byte position to read from
         @param ret_ptr On success, will be set to a malloced buffer containing the chunk data,
                 or to NULL if the length is zero. Caller is responsible for freeing this buffer!
                 On failure, value pointed to is unaltered.
         @return The length of the chunk (zero is a valid length!), or a negative error code */
-    int pread_bin(Db *db, off_t pos, char **ret_ptr);
+    int pread_bin(tree_file *file, off_t pos, char **ret_ptr);
 
     /** Reads a compressed chunk from the file at a given position.
         Parameters and return value are the same as for pread_bin. */
-    int pread_compressed(Db *db, off_t pos, char **ret_ptr);
+    int pread_compressed(tree_file *file, off_t pos, char **ret_ptr);
 
     /** Reads a file header from the file at a given position.
         Parameters and return value are the same as for pread_bin. */
-    int pread_header(Db *db, off_t pos, char **ret_ptr);
+    int pread_header(tree_file *file, off_t pos, char **ret_ptr);
 
-    couchstore_error_t db_write_header(Db *db, sized_buf *buf, off_t *pos);
-    int db_write_buf(Db *db, const sized_buf *buf, off_t *pos, size_t *disk_size);
-    int db_write_buf_compressed(Db *db, const sized_buf *buf, off_t *pos, size_t *disk_size);
+    couchstore_error_t db_write_header(tree_file *file, sized_buf *buf, off_t *pos);
+    int db_write_buf(tree_file *file, const sized_buf *buf, off_t *pos, size_t *disk_size);
+    int db_write_buf_compressed(tree_file *file, const sized_buf *buf, off_t *pos, size_t *disk_size);
 
     node_pointer *read_root(char *buf, int size);
     void encode_root(char *buf, node_pointer *node);

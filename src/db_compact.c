@@ -33,7 +33,7 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
 
     error_pass(couchstore_open_db_ex(target_filename, COUCHSTORE_OPEN_FLAG_CREATE, ops, &target));
 
-    target->file_pos = 1;
+    target->file.pos = 1;
     target->header.update_seq = source->header.update_seq;
     target->header.purge_seq = source->header.purge_seq;
     target->header.purge_ptr = source->header.purge_ptr;
@@ -42,7 +42,7 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
         error_pass(TreeWriterOpen(NULL, ebin_cmp, by_id_reduce, by_id_rereduce, &ctx.tree_writer));
         error_pass(compact_seq_tree(source, target, &ctx));
         error_pass(TreeWriterSort(ctx.tree_writer));
-        error_pass(TreeWriterWrite(ctx.tree_writer, target));
+        error_pass(TreeWriterWrite(ctx.tree_writer, &target->file, &target->header.by_id_root));
         TreeWriterFree(ctx.tree_writer);
         ctx.tree_writer = NULL;
     }
@@ -134,14 +134,14 @@ static couchstore_error_t compact_seq_fetchcb(couchfile_lookup_request *rq, void
     sized_buf item;
     item.buf = NULL;
     if(bp != 0) {
-        int itemsize = pread_bin(rq->db, bp, &item.buf);
+        int itemsize = pread_bin(rq->file, bp, &item.buf);
         if(itemsize < 0)
         {
             return itemsize;
         }
         item.size = itemsize;
 
-        db_write_buf(ctx->target_mr->rq->db, &item, &new_bp, &new_size);
+        db_write_buf(ctx->target_mr->rq->file, &item, &new_bp, &new_size);
 
         //Preserve high bit
         v->buf[5] &= 0x80;
@@ -167,14 +167,14 @@ static couchstore_error_t compact_seq_tree(Db* source, Db* target, compact_ctx *
     low_key.size = 6;
     sized_buf *low_key_list = &low_key;
 
-    ctx->target_mr = new_btree_modres(ctx->persistent_arena, ctx->transient_arena, target,
+    ctx->target_mr = new_btree_modres(ctx->persistent_arena, ctx->transient_arena, &target->file,
             &seqcmp, by_seq_reduce, by_seq_rereduce);
     if(ctx->target_mr == NULL) {
         error_pass(COUCHSTORE_ERROR_ALLOC_FAIL);
     }
 
     srcfold.cmp = seqcmp;
-    srcfold.db = source;
+    srcfold.file = &source->file;
     srcfold.num_keys = 1;
     srcfold.keys = &low_key_list;
     srcfold.fold = 1;
@@ -214,14 +214,14 @@ static couchstore_error_t compact_localdocs_tree(Db* source, Db* target, compact
     low_key.size = 0;
     sized_buf *low_key_list = &low_key;
 
-    ctx->target_mr = new_btree_modres(ctx->persistent_arena, NULL, target,
+    ctx->target_mr = new_btree_modres(ctx->persistent_arena, NULL, &target->file,
                                       &idcmp, NULL, NULL);
     if(ctx->target_mr == NULL) {
         error_pass(COUCHSTORE_ERROR_ALLOC_FAIL);
     }
 
     srcfold.cmp = idcmp;
-    srcfold.db = source;
+    srcfold.file = &source->file;
     srcfold.num_keys = 1;
     srcfold.keys = &low_key_list;
     srcfold.fold = 1;

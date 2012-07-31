@@ -271,7 +271,7 @@ static void test_save_docs(int count, const char *doc_tpl)
     idtreesize = db->header.by_id_root->subtreesize;
     seqtreesize = db->header.by_seq_root->subtreesize;
     docssize = get_48(db->header.by_id_root->reduce_value.buf + 10);
-    dbfilesize = db->file_pos;
+    dbfilesize = db->file.pos;
 
     assert(dbfilesize > 0);
     assert(idtreesize > 0);

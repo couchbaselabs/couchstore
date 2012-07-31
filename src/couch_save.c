@@ -42,9 +42,9 @@ static couchstore_error_t write_doc(Db *db, const Doc *doc, uint64_t *bp,
 {
     couchstore_error_t errcode;
     if (writeopts & COMPRESS_DOC_BODIES) {
-        errcode = db_write_buf_compressed(db, &doc->data, (off_t *) bp, disk_size);
+        errcode = db_write_buf_compressed(&db->file, &doc->data, (off_t *) bp, disk_size);
     } else {
-        errcode = db_write_buf(db, &doc->data, (off_t *) bp, disk_size);
+        errcode = db_write_buf(&db->file, &doc->data, (off_t *) bp, disk_size);
     }
 
     return errcode;
@@ -186,13 +186,13 @@ static couchstore_error_t update_indexes(Db *db,
 
     idrq.cmp.compare = ebin_cmp;
     idrq.cmp.arg = &tmpsb;
-    idrq.db = db;
+    idrq.file = &db->file;
     idrq.actions = idacts;
     idrq.num_actions = numdocs * 2;
     idrq.reduce = by_id_reduce;
     idrq.rereduce = by_id_rereduce;
     idrq.fetch_callback = idfetch_update_cb;
-    idrq.db = db;
+    idrq.file = &db->file;
     idrq.compacting = 0;
 
     new_id_root = modify_btree(&idrq, db->header.by_id_root, &errcode);
@@ -216,7 +216,7 @@ static couchstore_error_t update_indexes(Db *db,
     seqrq.num_actions = fetcharg.actpos;
     seqrq.reduce = by_seq_reduce;
     seqrq.rereduce = by_seq_rereduce;
-    seqrq.db = db;
+    seqrq.file = &db->file;
     seqrq.compacting = 0;
 
     new_seq_root = modify_btree(&seqrq, db->header.by_seq_root, &errcode);

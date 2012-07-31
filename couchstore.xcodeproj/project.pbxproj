@@ -61,7 +61,6 @@
 		2794AD0E153395940047643C /* testapp.c in Sources */ = {isa = PBXBuildFile; fileRef = 2794ACFF15338E640047643C /* testapp.c */; };
 		27A3A93215A3612800E1BDBC /* macros.h in Headers */ = {isa = PBXBuildFile; fileRef = 27A3A93115A3612800E1BDBC /* macros.h */; };
 		27AA1B101538DE0700D03755 /* libcouchstore.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 274F9758152E1CCA00247C46 /* libcouchstore.dylib */; };
-		27AA1B171538DE2500D03755 /* couchscript.cc in Sources */ = {isa = PBXBuildFile; fileRef = 274F978F152E1D1400247C46 /* couchscript.cc */; };
 		27AA1B191538DE3900D03755 /* liblua.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 27AA1B181538DE3900D03755 /* liblua.dylib */; };
 		27AA1B1D1538EC4300D03755 /* arena.c in Sources */ = {isa = PBXBuildFile; fileRef = 27AA1B1C1538EC4300D03755 /* arena.c */; };
 		27B07E77159E75BD0084E054 /* libcouchstore.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 274F9758152E1CCA00247C46 /* libcouchstore.dylib */; };
@@ -77,6 +76,7 @@
 		27F08CD715ABA25A003C3E2B /* collate_json_test.c in Sources */ = {isa = PBXBuildFile; fileRef = 27F08CD615ABA25A003C3E2B /* collate_json_test.c */; };
 		27F08CDF15ABAF8C003C3E2B /* libicui18n.44.1.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 27F08CDE15ABAF8C003C3E2B /* libicui18n.44.1.dylib */; };
 		27F08CE015ABAFA9003C3E2B /* libicuuc.44.1.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 27F08CDA15ABAF55003C3E2B /* libicuuc.44.1.dylib */; };
+		27F28E9615C861AD007A4B95 /* couchscript.cc in Sources */ = {isa = PBXBuildFile; fileRef = 274F978F152E1D1400247C46 /* couchscript.cc */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -680,7 +680,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				27AA1B171538DE2500D03755 /* couchscript.cc in Sources */,
+				27F28E9615C861AD007A4B95 /* couchscript.cc in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
