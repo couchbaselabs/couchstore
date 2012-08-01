@@ -53,8 +53,8 @@ couchstore_error_t TreeWriterWrite(TreeWriter* writer,
  * The input file format for TreeWriterOpen is as follows:
  * The file is binary and consists of nothing more than a series of records.
  * Each record looks like this:
- *     2 bytes: Key length (native byte order)
- *     4 bytes: Value length (native byte order)
+ *     2 bytes: Key length (big-endian)
+ *     4 bytes: Value length (big-endian)
  *     <key bytes>
  *     <value bytes>
  */

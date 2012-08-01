@@ -69,8 +69,8 @@ couchstore_error_t TreeWriterAddItem(TreeWriter* writer, sized_buf key, sized_bu
 {
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
 
-    uint16_t klen = (uint16_t) key.size;
-    uint32_t vlen = (uint32_t) value.size;
+    uint16_t klen = htons((uint16_t) key.size);
+    uint32_t vlen = htonl((uint32_t) value.size);
     error_unless(fwrite(&klen, sizeof(klen), 1, writer->file) == 1, COUCHSTORE_ERROR_WRITE);
     error_unless(fwrite(&vlen, sizeof(vlen), 1, writer->file) == 1, COUCHSTORE_ERROR_WRITE);
     error_unless(fwrite(key.buf, key.size, 1, writer->file) == 1, COUCHSTORE_ERROR_WRITE);
@@ -127,17 +127,17 @@ couchstore_error_t TreeWriterWrite(TreeWriter* writer,
         if(fread(&vlen, sizeof(vlen), 1, writer->file) != 1) {
             break;
         }
-        k.size = klen;
-        k.buf = arena_alloc(transient_arena, klen);
-        v.size = vlen;
-        v.buf = arena_alloc(transient_arena, vlen);
-        if(fread(k.buf, klen, 1, writer->file) != 1) {
+        k.size = ntohs(klen);
+        k.buf = arena_alloc(transient_arena, k.size);
+        v.size = ntohl(vlen);
+        v.buf = arena_alloc(transient_arena, v.size);
+        if(fread(k.buf, k.size, 1, writer->file) != 1) {
             error_pass(COUCHSTORE_ERROR_READ);
         }
-        if(fread(v.buf, vlen, 1, writer->file) != 1) {
+        if(fread(v.buf, v.size, 1, writer->file) != 1) {
             error_pass(COUCHSTORE_ERROR_READ);
         }
-        //printf("K: '%.*s'\n", klen, k.buf);
+        //printf("K: '%.*s'\n", k.size, k.buf);
         mr_push_item(&k, &v, target_mr);
         if(target_mr->count == 0) {
             /* No items queued, we must have just flushed. We can safely rewind the transient arena. */
@@ -182,6 +182,8 @@ static int read_id_record(FILE *in, void *buf, void *ctx)
     if(fread(&vlen, 4, 1, in) != 1) {
         return 0;
     }
+    klen = ntohs(klen);
+    vlen = ntohl(vlen);
     rec->k.size = klen;
     rec->k.buf = rec->buf;
     rec->v.size = vlen;
@@ -199,15 +201,15 @@ static int write_id_record(FILE *out, void *ptr, void *ctx)
 {
     (void) ctx;
     extsort_record *rec = (extsort_record *) ptr;
-    uint16_t klen = (uint16_t) rec->k.size;
-    uint32_t vlen = (uint32_t) rec->v.size;
+    uint16_t klen = htons((uint16_t) rec->k.size);
+    uint32_t vlen = htonl((uint32_t) rec->v.size);
     if(fwrite(&klen, 2, 1, out) != 1) {
         return 0;
     }
     if(fwrite(&vlen, 4, 1, out) != 1) {
         return 0;
     }
-    if(fwrite(rec->buf, vlen + klen, 1, out) != 1) {
+    if(fwrite(rec->buf, rec->k.size + rec->v.size, 1, out) != 1) {
         return 0;
     }
     return 1;
