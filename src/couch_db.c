@@ -8,15 +8,9 @@
 #include "couch_btree.h"
 #include "bitfield.h"
 #include "util.h"
-#include "iobuffer.h"
 
 #define ROOT_BASE_SIZE 12
 #define HEADER_BASE_SIZE 25
-
-sized_buf nil_atom = {
-    (char *) "\x64\x00\x03nil",
-    6
-};
 
 // Initializes one of the db's root node pointers from data in the file header
 static couchstore_error_t read_db_root(Db *db, node_pointer **root,
@@ -214,14 +208,8 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
     Db *db;
     int openflags;
 
-    /* Sanity check input parameters */
-    if (filename == NULL || pDb == NULL || ops == NULL ||
-            ops->version != 2 || ops->constructor == NULL || ops->open == NULL ||
-            ops->close == NULL || ops->pread == NULL ||
-            ops->pwrite == NULL || ops->goto_eof == NULL ||
-            ops->sync == NULL || ops->destructor == NULL ||
-            ((flags & COUCHSTORE_OPEN_FLAG_RDONLY) &&
-             (flags & COUCHSTORE_OPEN_FLAG_CREATE))) {
+    if ((flags & COUCHSTORE_OPEN_FLAG_RDONLY) &&
+        (flags & COUCHSTORE_OPEN_FLAG_CREATE)) {
         return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
     }
 
@@ -238,14 +226,8 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
     if (flags & COUCHSTORE_OPEN_FLAG_CREATE) {
         openflags |= O_CREAT;
     }
-
-    db->file.path = strdup(filename);
-    error_unless(db->file.path, COUCHSTORE_ERROR_ALLOC_FAIL);
-
-    db->file.ops = couch_get_buffered_file_ops(ops, &db->file.handle);
-    error_unless(db->file.ops, COUCHSTORE_ERROR_ALLOC_FAIL);
-
-    error_pass(db->file.ops->open(&db->file.handle, filename, openflags));
+    
+    error_pass(tree_file_open(&db->file, filename, openflags, ops));
 
     if ((db->file.pos = db->file.ops->goto_eof(db->file.handle)) == 0) {
         /* This is an empty file. Create a new fileheader unless the
@@ -271,11 +253,7 @@ cleanup:
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_close_db(Db *db)
 {
-    if (db->file.ops) {
-        db->file.ops->close(db->file.handle);
-        db->file.ops->destructor(db->file.handle);
-    }
-    free((char*)db->file.path);
+    tree_file_close(&db->file);
 
     free(db->header.by_id_root);
     free(db->header.by_seq_root);

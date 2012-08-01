@@ -22,6 +22,7 @@ ICU_LOCAL_LIBS=-licuuc -licudata -licui18n
 
 pkginclude_HEADERS = \
                      include/libcouchstore/couch_db.h \
+                     include/libcouchstore/couch_index.h \
                      include/libcouchstore/couch_common.h \
                      include/libcouchstore/error.h \
                      include/libcouchstore/file_ops.h \
@@ -73,7 +74,7 @@ libcouchstore_la_SOURCES = \
                             src/os.c \
                             src/util.c \
                             src/util.h \
-                            src/view_indexer.c
+                            src/couch_index.c
 
 
 libcouchstore_la_LDFLAGS = $(AM_LDFLAGS) $(ICU_LOCAL_LDFLAGS) -version-info $(LIBCOUCHSTORE_API_CURRENT):$(LIBCOUCHSTORE_API_REVISION):$(LIBCOUCHSTORE_API_AGE) -no-undefined -lsnappy

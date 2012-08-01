@@ -58,6 +58,19 @@ extern "C" {
 
     const couch_file_ops *couch_get_default_file_ops(void);
 
+    /** Opens or creates a tree_file.
+        @param file  Pointer to tree_file struct to initialize.
+        @param filename  Path to the file
+        @param flags  POSIX open-mode flags
+        @param ops  File I/O operations to use */
+    couchstore_error_t tree_file_open(tree_file* file,
+                                      const char *filename,
+                                      int openflags,
+                                      const couch_file_ops *ops);
+    /** Closes a tree_file.
+        @param file  Pointer to open tree_file. Does not free this pointer! */
+    void tree_file_close(tree_file* file);
+
     /** Reads a chunk from the file at a given position.
         @param file The tree_file to read from
         @param pos The byte position to read from
@@ -80,7 +93,7 @@ extern "C" {
     int db_write_buf_compressed(tree_file *file, const sized_buf *buf, off_t *pos, size_t *disk_size);
 
     node_pointer *read_root(char *buf, int size);
-    void encode_root(char *buf, node_pointer *node);
+    size_t encode_root(char *buf, node_pointer *node);
 
 #ifdef __cplusplus
 }

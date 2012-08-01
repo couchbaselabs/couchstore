@@ -59,14 +59,17 @@ node_pointer *read_root(char *buf, int size)
     return ptr;
 }
 
-void encode_root(char *buf, node_pointer *node)
+size_t encode_root(char *buf, node_pointer *node)
 {
-    if (node) {
+    if (!node)
+        return 0;
+    if (buf) {
         memset(buf, 0, 12);
         set_bits(buf, 0, 48, node->pointer);
         set_bits(buf + 6, 0, 48, node->subtreesize);
         memcpy(buf + 12, node->reduce_value.buf, node->reduce_value.size);
     }
+    return 12 + node->reduce_value.size;
 }
 
 fatbuf *fatbuf_alloc(size_t bytes)

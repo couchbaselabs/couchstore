@@ -1,5 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include "config.h"
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -7,11 +8,51 @@
 #include <snappy-c.h>
 
 #include "internal.h"
+#include "iobuffer.h"
 #include "bitfield.h"
 #include "crc32.h"
 #include "util.h"
 
 #define MAX_HEADER_SIZE 1024    // Conservative estimate; just for sanity check
+
+couchstore_error_t tree_file_open(tree_file* file,
+                                  const char *filename,
+                                  int openflags,
+                                  const couch_file_ops *ops)
+{
+    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
+
+    /* Sanity check input parameters */
+    if (filename == NULL || file == NULL || ops == NULL ||
+            ops->version != 2 || ops->constructor == NULL || ops->open == NULL ||
+            ops->close == NULL || ops->pread == NULL ||
+            ops->pwrite == NULL || ops->goto_eof == NULL ||
+            ops->sync == NULL || ops->destructor == NULL) {
+        return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
+    }
+
+    memset(file, 0, sizeof(*file));
+
+    file->path = strdup(filename);
+    error_unless(file->path, COUCHSTORE_ERROR_ALLOC_FAIL);
+
+    file->ops = couch_get_buffered_file_ops(ops, &file->handle);
+    error_unless(file->ops, COUCHSTORE_ERROR_ALLOC_FAIL);
+
+    error_pass(file->ops->open(&file->handle, filename, openflags));
+
+cleanup:
+    return errcode;
+}
+
+void tree_file_close(tree_file* file)
+{
+    if (file->ops) {
+        file->ops->close(file->handle);
+        file->ops->destructor(file->handle);
+    }
+    free((char*)file->path);
+}
 
 /** Read bytes from the database file, skipping over the header-detection bytes at every block
     boundary. */

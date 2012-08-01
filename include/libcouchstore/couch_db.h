@@ -485,16 +485,6 @@ extern "C" {
     couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filename,
                                                 const couch_file_ops *ops);
 
-    /**
-     * Read an unsorted key-value file and add its contents to a view index.
-     *
-     * @param inputPath The path to the key-value file
-     * @param outputDb The database to write to
-     * @return COUCHSTORE_SUCCESS on success, else an error code
-     */
-    LIBCOUCHSTORE_API
-    couchstore_error_t couchstore_index_view(const char *inputPath, Db* outputDb);
-    
 
     /*////////////////////  MISC: */
 
