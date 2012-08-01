@@ -185,3 +185,8 @@ reformat:
                $(top_srcdir)/src/*.[ch] \
                $(top_srcdir)/src/*.cc \
                $(top_srcdir)/tests/*.[ch]
+
+if WINDOWS
+install-data-hook:
+	$(INSTALL) $(python_pythonlib_DATA) $(bindir)
+endif
