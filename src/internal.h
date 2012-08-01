@@ -51,8 +51,6 @@ extern "C" {
         void *userdata;
     };
 
-    const couch_file_ops *couch_get_default_file_ops(void);
-
     /** Reads a chunk from the file at a given position.
         @param db The database to read from
         @param pos The byte position to read from

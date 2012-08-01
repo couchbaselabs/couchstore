@@ -148,8 +148,9 @@ static couchstore_error_t couch_sync(couch_file_handle handle)
     return COUCHSTORE_SUCCESS;
 }
 
-static couch_file_handle couch_constructor(void)
+static couch_file_handle couch_constructor(void* cookie)
 {
+    (void) cookie;
     // We don't have a file descriptor till couch_open runs, so return an invalid value for now.
     return fd_to_handle(-1);
 }
@@ -161,7 +162,7 @@ static void couch_destructor(couch_file_handle handle)
 }
 
 static const couch_file_ops default_file_ops = {
-    (uint64_t)2,
+    (uint64_t)3,
     couch_constructor,
     couch_open,
     couch_close,
@@ -169,10 +170,12 @@ static const couch_file_ops default_file_ops = {
     couch_pwrite,
     couch_goto_eof,
     couch_sync,
-    couch_destructor
+    couch_destructor,
+    NULL
 };
 
-const couch_file_ops *couch_get_default_file_ops(void)
+LIBCOUCHSTORE_API
+const couch_file_ops *couchstore_get_default_file_ops(void)
 {
     return &default_file_ops;
 }

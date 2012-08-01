@@ -226,7 +226,7 @@ static couch_file_handle buffered_constructor_with_raw_ops(const couch_file_ops*
     buffered_file_handle *h = malloc(sizeof(buffered_file_handle));
     if (h) {
         h->raw_ops = raw_ops;
-        h->raw_ops_handle = raw_ops->constructor();
+        h->raw_ops_handle = raw_ops->constructor(raw_ops->cookie);
         h->nbuffers = 1;
         h->write_buffer = new_buffer(h, WRITE_BUFFER_CAPACITY);
         h->first_buffer = new_buffer(h, READ_BUFFER_CAPACITY);
@@ -239,9 +239,10 @@ static couch_file_handle buffered_constructor_with_raw_ops(const couch_file_ops*
     return (couch_file_handle) h;
 }
 
-static couch_file_handle buffered_constructor(void)
+static couch_file_handle buffered_constructor(void* cookie)
 {
-    return buffered_constructor_with_raw_ops(couch_get_default_file_ops());
+    (void) cookie;
+    return buffered_constructor_with_raw_ops(couchstore_get_default_file_ops());
 }
 
 static couchstore_error_t buffered_open(couch_file_handle* handle, const char *path, int oflag)
@@ -370,7 +371,7 @@ static couchstore_error_t buffered_sync(couch_file_handle handle)
 }
 
 static const couch_file_ops ops = {
-    (uint64_t)2,
+    (uint64_t)3,
     buffered_constructor,
     buffered_open,
     buffered_close,
@@ -378,7 +379,8 @@ static const couch_file_ops ops = {
     buffered_pwrite,
     buffered_goto_eof,
     buffered_sync,
-    buffered_destructor
+    buffered_destructor,
+    NULL
 };
 
 const couch_file_ops *couch_get_buffered_file_ops(const couch_file_ops* raw_ops,

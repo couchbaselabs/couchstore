@@ -22,7 +22,7 @@ extern "C" {
     typedef struct {
         /**
          * Version number that describes the layout of the structure. Should be set
-         * to 2.
+         * to 3.
          */
         uint64_t version;
 
@@ -31,7 +31,7 @@ extern "C" {
          * This callback is optional and doesn't need to do anything at all; it can just return
          * NULL if there isn't anything to do.
          */
-        couch_file_handle (*constructor)(void);
+        couch_file_handle (*constructor)(void* cookie);
 
         /**
          * Open a file.
@@ -99,6 +99,12 @@ extern "C" {
          * @param handle file handle to be released
          */
         void (*destructor)(couch_file_handle handle);
+
+        /**
+         * Will be passed to handle constructor. Can be used to keep global state across
+         * all handles.
+         */
+        void *cookie;
     } couch_file_ops;
 
 #ifdef __cplusplus

@@ -206,7 +206,7 @@ couchstore_error_t couchstore_open_db(const char *filename,
                                       Db **pDb)
 {
     return couchstore_open_db_ex(filename, flags,
-                                 couch_get_default_file_ops(), pDb);
+                                 couchstore_get_default_file_ops(), pDb);
 }
 
 LIBCOUCHSTORE_API
@@ -221,7 +221,7 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
 
     /* Sanity check input parameters */
     if (filename == NULL || pDb == NULL || ops == NULL ||
-            ops->version != 2 || ops->constructor == NULL || ops->open == NULL ||
+            ops->version != 3 || ops->constructor == NULL || ops->open == NULL ||
             ops->close == NULL || ops->pread == NULL ||
             ops->pwrite == NULL || ops->goto_eof == NULL ||
             ops->sync == NULL || ops->destructor == NULL ||

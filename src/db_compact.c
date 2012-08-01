@@ -74,7 +74,7 @@ cleanup:
 
 couchstore_error_t couchstore_compact_db(Db* source, const char* target_filename)
 {
-    return couchstore_compact_db_ex(source, target_filename, couch_get_default_file_ops());
+    return couchstore_compact_db_ex(source, target_filename, couchstore_get_default_file_ops());
 }
 
 static int read_id_record(FILE *in, void *buf, void *ctx)

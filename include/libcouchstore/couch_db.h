@@ -77,6 +77,11 @@ extern "C" {
     LIBCOUCHSTORE_API
     couchstore_error_t couchstore_close_db(Db *db);
 
+    /**
+     * Get the default couch_file_ops object
+     */
+    LIBCOUCHSTORE_API
+    const couch_file_ops *couchstore_get_default_file_ops(void);
 
     /**
      * Get information about the database.
