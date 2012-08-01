@@ -33,7 +33,8 @@ couchstore_error_t couchstore_create_index(const char *filename,
 
     CouchStoreIndex* file = calloc(1, sizeof(*file));
     error_unless(file != NULL, COUCHSTORE_ERROR_ALLOC_FAIL);
-    error_pass(tree_file_open(&file->file, filename, O_CREAT, couch_get_default_file_ops()));
+    error_pass(tree_file_open(&file->file, filename, O_RDWR | O_CREAT,
+                              couch_get_default_file_ops()));
     *index = file;
 cleanup:
     return errcode;

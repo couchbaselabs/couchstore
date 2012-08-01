@@ -156,7 +156,7 @@ CLEANFILES = test.couch
 check_PROGRAMS = testapp
 TESTS = ${check_PROGRAMS}
 
-testapp_SOURCES = tests/testapp.c src/util.c tests/macros.h tests/collate_json_test.c
+testapp_SOURCES = tests/testapp.c src/util.c tests/macros.h tests/collate_json_test.c tests/indexer_test.c
 testapp_CFLAGS = $(AM_CFLAGS)
 testapp_DEPENDENCIES = libcouchstore.la libbyteswap.la
 testapp_LDADD = libcouchstore.la libbyteswap.la

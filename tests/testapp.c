@@ -11,7 +11,8 @@
 #include <string.h>
 #include "macros.h"
 
-extern void TestCollateJSON(void);
+extern void TestCollateJSON(void);  // collate_json_test.c
+extern void TestCouchIndexer(void); // indexer_test.c
 
 #define ZERO(V) memset(&(V), 0, sizeof(V))
 #define SETDOC(N, I, D, M)  \
@@ -593,7 +594,7 @@ int main(int argc, const char *argv[])
     if (argc > 1)
         strcpy(testfilepath, argv[1]);
     printf("Using test database at %s\n", testfilepath);
-
+    
     test_bitfield_fns();
 
     test_open_file_error();
@@ -619,6 +620,7 @@ int main(int argc, const char *argv[])
     unlink(testfilepath);
     
     TestCollateJSON();
+    TestCouchIndexer();
 
     // make sure os.c didn't accidentally call close(0):
     assert(lseek(0, 0, SEEK_CUR) >= 0 || errno != EBADF);
