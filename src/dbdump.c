@@ -118,6 +118,7 @@ static int visit_node(Db *db,
                       const sized_buf* reduceValue,
                       void *ctx)
 {
+    (void) db;
     for (int i = 0; i < depth; ++i)
         printf("  ");
     if (reduceValue) {

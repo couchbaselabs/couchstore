@@ -633,7 +633,7 @@ couchstore_error_t couchstore_changes_since(Db *db,
     char since_termbuf[6];
     sized_buf since_term;
     sized_buf *keylist = &since_term;
-    lookup_context cbctx = {db, options, callback, ctx, 0};
+    lookup_context cbctx = {db, options, callback, ctx, 0, 0, NULL};
     couchfile_lookup_request rq;
     sized_buf cmptmp;
     couchstore_error_t errcode;
@@ -670,7 +670,7 @@ couchstore_error_t couchstore_all_docs(Db *db,
 {
     sized_buf startKey = {NULL, 0};
     sized_buf *keylist = &startKey;
-    lookup_context cbctx = {db, options, callback, ctx, 1};
+    lookup_context cbctx = {db, options, callback, ctx, 1, 0, NULL};
     couchfile_lookup_request rq;
     sized_buf cmptmp;
     couchstore_error_t errcode;
@@ -784,7 +784,7 @@ couchstore_error_t couchstore_walk_seq_tree(Db *db,
                                            couchstore_walk_tree_callback_fn callback,
                                            void *ctx)
 {
-    char start_termbuf[6] = {};
+    char start_termbuf[6] = {0,0,0,0,0,0};
     sized_buf start_term = {start_termbuf, 6};
     set_bits(start_term.buf, 0, 48, startSequence);
 
@@ -837,7 +837,7 @@ static couchstore_error_t iterate_docinfos(Db *db,
     }
 
     // Construct the lookup request:
-    lookup_context cbctx = {db, 0, callback, ctx, (tree == db->header.by_id_root)};
+    lookup_context cbctx = {db, 0, callback, ctx, (tree == db->header.by_id_root), 0, NULL};
     couchfile_lookup_request rq;
     sized_buf cmptmp;
     rq.cmp.compare = key_compare;
