@@ -78,6 +78,8 @@
 		27F08CE015ABAFA9003C3E2B /* libicuuc.44.1.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 27F08CDA15ABAF55003C3E2B /* libicuuc.44.1.dylib */; };
 		27F28E9615C861AD007A4B95 /* couchscript.cc in Sources */ = {isa = PBXBuildFile; fileRef = 274F978F152E1D1400247C46 /* couchscript.cc */; };
 		27F28EED15C9B5AC007A4B95 /* indexer_test.c in Sources */ = {isa = PBXBuildFile; fileRef = 27F28EEC15C9B5AC007A4B95 /* indexer_test.c */; };
+		27F28F1115C9F7B1007A4B95 /* json_reduce.h in Headers */ = {isa = PBXBuildFile; fileRef = 27F28F1015C9F7B1007A4B95 /* json_reduce.h */; };
+		27F28F1415C9F92F007A4B95 /* json_reduce.c in Sources */ = {isa = PBXBuildFile; fileRef = 27F28F1315C9F92F007A4B95 /* json_reduce.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -239,6 +241,8 @@
 		27F08CDE15ABAF8C003C3E2B /* libicui18n.44.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libicui18n.44.1.dylib; path = /usr/local/Cellar/icu4c/4.4.1/lib/libicui18n.44.1.dylib; sourceTree = "<absolute>"; };
 		27F28EC415C88867007A4B95 /* couch_index.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = couch_index.h; sourceTree = "<group>"; };
 		27F28EEC15C9B5AC007A4B95 /* indexer_test.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = indexer_test.c; path = ../tests/indexer_test.c; sourceTree = "<group>"; };
+		27F28F1015C9F7B1007A4B95 /* json_reduce.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = json_reduce.h; sourceTree = "<group>"; };
+		27F28F1315C9F92F007A4B95 /* json_reduce.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = json_reduce.c; sourceTree = "<group>"; };
 		D960D28F1547399900DDDF1E /* mergesort.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mergesort.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -433,6 +437,8 @@
 				27F08CD215AB8FBC003C3E2B /* collate_json.c */,
 				27F08CD515AB8FFE003C3E2B /* collate_json.h */,
 				27F00F1115B9D0AA008CDA68 /* couch_index.c */,
+				27F28F1315C9F92F007A4B95 /* json_reduce.c */,
+				27F28F1015C9F7B1007A4B95 /* json_reduce.h */,
 				27F00F0F15B9CFA6008CDA68 /* view_format.md */,
 			);
 			name = "view indexer";
@@ -469,6 +475,7 @@
 				274F97DA152E1D1400247C46 /* util.h in Headers */,
 				274F97E4152E1D9200247C46 /* config.h in Headers */,
 				27A3A93215A3612800E1BDBC /* macros.h in Headers */,
+				27F28F1115C9F7B1007A4B95 /* json_reduce.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -653,6 +660,7 @@
 				270770E615A221090058085F /* tree_writer.c in Sources */,
 				27F08CD315AB8FBC003C3E2B /* collate_json.c in Sources */,
 				27F00F1215B9D0AA008CDA68 /* couch_index.c in Sources */,
+				27F28F1415C9F92F007A4B95 /* json_reduce.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

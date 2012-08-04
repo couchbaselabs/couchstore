@@ -2,6 +2,7 @@
 #include "config.h"
 #include <assert.h>
 #include <fcntl.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <libcouchstore/couch_index.h>
@@ -9,8 +10,12 @@
 #include "collate_json.h"
 #include "couch_btree.h"
 #include "internal.h"
+#include "json_reduce.h"
 #include "tree_writer.h"
 #include "util.h"
+
+
+#define DST_SIZE 500
 
 
 /* Private data of the CouchStoreIndex structure */
@@ -19,6 +24,9 @@ struct _CouchStoreIndex {
     uint32_t root_count;
     node_pointer** roots;
 };
+
+
+static const JSONReducer* CurrentReducer;
 
 
 static void view_reduce(char *dst, size_t *size_r, nodelist *leaflist, int count);
@@ -33,7 +41,7 @@ couchstore_error_t couchstore_create_index(const char *filename,
 
     CouchStoreIndex* file = calloc(1, sizeof(*file));
     error_unless(file != NULL, COUCHSTORE_ERROR_ALLOC_FAIL);
-    error_pass(tree_file_open(&file->file, filename, O_RDWR | O_CREAT,
+    error_pass(tree_file_open(&file->file, filename, O_RDWR | O_CREAT | O_TRUNC,
                               couch_get_default_file_ops()));
     *index = file;
 cleanup:
@@ -112,15 +120,33 @@ static int keyCompare(const sized_buf *k1, const sized_buf *k2) {
 }
 
 
-couchstore_error_t couchstore_index_add(const char *inputPath, CouchStoreIndex* index) {
+couchstore_error_t couchstore_index_add(const char *inputPath,
+                                        couchstore_json_reducer reduce_function,
+                                        CouchStoreIndex* index) {
     couchstore_error_t errcode;
     TreeWriter* treeWriter = NULL;
     node_pointer* rootNode = NULL;
+
+    switch (reduce_function) {
+        case COUCHSTORE_REDUCE_COUNT:
+            CurrentReducer = &JSONCountReducer;
+            break;
+        case COUCHSTORE_REDUCE_SUM:
+            CurrentReducer = &JSONSumReducer;
+            break;
+        case COUCHSTORE_REDUCE_STATS:
+            CurrentReducer = &JSONStatsReducer;
+            break;
+        default:
+            CurrentReducer = NULL;
+            break;
+    }
 
     error_pass(TreeWriterOpen(inputPath, &keyCompare, view_reduce, view_rereduce, &treeWriter));
     error_pass(TreeWriterSort(treeWriter));
     error_pass(TreeWriterWrite(treeWriter, &index->file, &rootNode));
 
+    // Add new root pointer to the roots array:
     node_pointer** roots;
     if (index->roots) {
         roots = realloc(index->roots, (index->root_count + 1) * sizeof(node_pointer*));
@@ -130,9 +156,10 @@ couchstore_error_t couchstore_index_add(const char *inputPath, CouchStoreIndex* 
     error_unless(roots, COUCHSTORE_ERROR_ALLOC_FAIL);
     roots[index->root_count++] = rootNode;
     index->roots = roots;
-    rootNode = NULL;  // don't free it
+    rootNode = NULL;  // don't free it in cleanup
 
 cleanup:
+    CurrentReducer = NULL;
     free(rootNode);
     TreeWriterFree(treeWriter);
     return errcode;
@@ -164,47 +191,78 @@ static void VBucketMap_Union(VBucketMap* map, const VBucketMap* src) {
 }
 
 
-static void view_reduce (char *dst, size_t *size_r, nodelist *leaflist, int count)
+static void view_reduce_common(char *dst, size_t *size_r, nodelist *leaflist, int count,
+                               bool rereduce)
 {
+    // Format of dst is shown in "Primary Index Inner Node Reductions" in view_format.md
     uint64_t subtreeCount = 0;
     VBucketMap* subtreeBitmap = (VBucketMap*)(dst + 5);
     *size_r = 5 + sizeof(VBucketMap);
     memset(dst, 0, *size_r);
+    
+    sized_buf jsonReduceBuf = {dst + *size_r + 2, DST_SIZE - *size_r - 2};
+    if (CurrentReducer) {
+        CurrentReducer->init(jsonReduceBuf);
+    }
 
     for (nodelist *i = leaflist; i != NULL && count > 0; i = i->next, count--) {
-        assert(i->data.size >= 5);
-        unsigned bucketID = get_16(i->data.buf);
-        VBucketMap_SetBit(subtreeBitmap, bucketID);
+        if (!rereduce) {
+            // First-level reduce; i->data is a primary-index Value, as per view_format.md
+            assert(i->data.size >= 5);
+            unsigned bucketID = get_16(i->data.buf);
+            VBucketMap_SetBit(subtreeBitmap, bucketID);
 
-        // Count the emitted values. Each is prefixed with its length.
-        const char* pos = i->data.buf + sizeof(uint16_t);
-        const char* end = i->data.buf + i->data.size;
-        while (pos < end) {
-            ++subtreeCount;
-            pos += 3 + get_24(pos);
+            // i->key is a primary-index key
+            sized_buf jsonKey = {i->key.buf + 2, get_16(i->key.buf)};
+
+            // Count the emitted values. Each is prefixed with its length.
+            const char* pos = i->data.buf + sizeof(uint16_t);
+            const char* end = i->data.buf + i->data.size;
+            while (pos < end) {
+                ++subtreeCount;
+                sized_buf jsonValue = {(char*)pos + 3, get_24(pos)};
+                pos += 3 + jsonValue.size;
+                // JSON reduction:
+                if (CurrentReducer) {
+                    CurrentReducer->add(jsonReduceBuf, jsonKey, jsonValue);
+                }
+            }
+            assert(pos == end);
+
+        } else {
+            // Re-reduce:
+            const char* reduce_value = i->pointer->reduce_value.buf;
+            subtreeCount += get_40(reduce_value);
+            reduce_value += 5;
+
+            const VBucketMap* srcMap = (const VBucketMap*)(reduce_value);
+            VBucketMap_Union(subtreeBitmap, srcMap);
+            reduce_value += sizeof(VBucketMap);
+
+            // JSON re-reduction:
+            if (CurrentReducer) {
+                sized_buf jsonReduceValue = {(char*)reduce_value + 2, get_16(reduce_value)};
+                CurrentReducer->add_reduced(jsonReduceBuf, jsonReduceValue);
+            }
         }
-        assert(pos == end);
     }
 
     set_bits(dst, 0, 40, subtreeCount);
+
+    if (CurrentReducer) {
+        jsonReduceBuf.size = CurrentReducer->finish(jsonReduceBuf);
+        *(uint16_t*)(dst + *size_r) = htons(jsonReduceBuf.size);
+        *size_r += 2 + jsonReduceBuf.size;
+    }
 }
 
 
+static void view_reduce (char *dst, size_t *size_r, nodelist *leaflist, int count)
+{
+    view_reduce_common(dst, size_r, leaflist, count, false);
+}
+
 static void view_rereduce (char *dst, size_t *size_r, nodelist *ptrlist, int count)
 {
-    uint64_t subtreeCount = 0;
-    VBucketMap* subtreeBitmap = (VBucketMap*)(dst + 5);
-    *size_r = 5 + sizeof(VBucketMap);
-    memset(dst, 0, *size_r);
-
-    for (nodelist *i = ptrlist; i != NULL && count > 0; i = i->next, count--) {
-        assert(i->pointer->reduce_value.size == 5 + sizeof(VBucketMap));
-        const char* reduce_value = i->pointer->reduce_value.buf;
-        subtreeCount += get_40(reduce_value);
-
-        const VBucketMap* srcMap = (const VBucketMap*)(reduce_value + 5);
-        VBucketMap_Union(subtreeBitmap, srcMap);
-    }
-
-    set_bits(dst, 0, 40, subtreeCount);
+    view_reduce_common(dst, size_r, ptrlist, count, true);
 }

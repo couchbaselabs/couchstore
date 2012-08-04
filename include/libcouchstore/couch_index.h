@@ -13,6 +13,19 @@ extern "C" {
      */
     typedef struct _CouchStoreIndex CouchStoreIndex;
 
+    /*
+     * Available built-in reduce functions to use on the JSON values.
+     * These are documented at <http://wiki.apache.org/couchdb/Built-In_Reduce_Functions>
+     */
+    typedef uint64_t couchstore_json_reducer;
+    enum {
+        COUCHSTORE_REDUCE_NONE = 0,     /**< No reduction */
+        COUCHSTORE_REDUCE_COUNT = 1,    /**< Count rows */
+        COUCHSTORE_REDUCE_SUM = 2,      /**< Sum numeric values */
+        COUCHSTORE_REDUCE_STATS = 3,    /**< Compute count, min, max, sum, sum of squares */
+    };
+
+    
     /**
      * Create a new index file.
      *
@@ -53,6 +66,7 @@ extern "C" {
      */
     LIBCOUCHSTORE_API
     couchstore_error_t couchstore_index_add(const char *inputPath,
+                                            couchstore_json_reducer reduce_function,
                                             CouchStoreIndex* index);
 
 #ifdef __cplusplus

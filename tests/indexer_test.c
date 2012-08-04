@@ -24,7 +24,8 @@
 void TestCouchIndexer(void);
 
 
-static void GenerateKVFile(const char* path, unsigned numKeys) {
+static void GenerateKVFile(const char* path, unsigned numKeys)
+{
     FILE* out = fopen(path, "wb");
     for (unsigned i = 0; i < numKeys; ++i) {
         // See "Primary Key Index Values" in view_format.md for the data format.
@@ -32,7 +33,7 @@ static void GenerateKVFile(const char* path, unsigned numKeys) {
         char docid[100], key[100], value[100];
         sprintf(docid, "doc%u", i);
         sprintf(key, "[%d,%d]", k1, k2);
-        sprintf(value, "The value for [%d, %d]", k1, k2);
+        sprintf(value, "%lf", k1 + k2 / 100.0);
 
         // Write key and value lengths:
         uint16_t klen = htons(2 + strlen(key) + strlen(docid));
@@ -57,12 +58,15 @@ static void GenerateKVFile(const char* path, unsigned numKeys) {
 }
 
 
-static void IndexKVFile(const char* kvPath, const char* indexPath) {
+static void IndexKVFile(const char* kvPath,
+                        const char* indexPath,
+                        couchstore_json_reducer reducer)
+{
     couchstore_error_t errcode;
     CouchStoreIndex* index = NULL;
 
     try(couchstore_create_index(indexPath, &index));
-    try(couchstore_index_add(kvPath, index));
+    try(couchstore_index_add(kvPath, reducer, index));
     try(couchstore_close_index(index));
 
 cleanup:
@@ -70,7 +74,8 @@ cleanup:
 }
 
 
-static void ReadIndexFile(const char *indexPath) {
+static void ReadIndexFile(const char *indexPath)
+{
     // See write_index_header in couch_index.c
     FILE *file = fopen(indexPath, "rb");
     fseek(file, 0, SEEK_END);
@@ -113,8 +118,26 @@ static void ReadIndexFile(const char *indexPath) {
     check_read(fread(reduce.buf, reduce.size, 1, file));
     assert_eq(ftell(file), eof);
 
-    printf("Root: pointer=%llu, subtreesize=%llu, reduce=%llu bytes\n",
+    printf("\tRoot: pointer=%llu, subtreesize=%llu, reduce=%llu bytes\n",
            pointer, subtreesize, (uint64_t)reduce.size);
+    assert((off_t)pointer < headerPos);
+    assert((off_t)subtreesize < headerPos);
+
+    // Examine the reduce values in the root node:
+    assert(reduce.size > 5 + 1024/8 + 2);
+    uint64_t subtreeCount = 0;
+    memcpy((uint8_t*)&subtreeCount + 3, reduce.buf, 5);
+    subtreeCount = ntohll(subtreeCount);
+    printf("\t      SubTreeCount = %llu\n", subtreeCount);
+    assert_eq(subtreeCount, 1000);
+    char* jsonReduceStart = reduce.buf + 5 + 1024/8;
+    sized_buf jsonReduce = {jsonReduceStart + 2, ntohs(*(uint16_t*)jsonReduceStart)};
+    assert(jsonReduce.size < 1000);
+    printf("\t      JSONReduction = '%.*s'\n", (int)jsonReduce.size, jsonReduce.buf);
+
+    const char* expectedReduce = "{\"count\":1000,\"max\":99.51,\"min\":0.18,\"sum\":49547.93,\"sumsqr\":3272610.9289}";
+    assert_eq(jsonReduce.size, strlen(expectedReduce));
+    assert(strncmp(jsonReduce.buf, expectedReduce, strlen(expectedReduce)) == 0);
 
     assert(pointer < (uint64_t)headerPos);
 
@@ -123,10 +146,10 @@ static void ReadIndexFile(const char *indexPath) {
 
 
 void TestCouchIndexer(void) {
-    srandom(42);  // get a consistent sequence of random numbers
+    srandom(42);  // to get a consistent sequence of random numbers
     fprintf(stderr, "Indexer: ");
     GenerateKVFile(KVPATH, 1000);
-    IndexKVFile(KVPATH, INDEXPATH);
+    IndexKVFile(KVPATH, INDEXPATH, COUCHSTORE_REDUCE_STATS);
     ReadIndexFile(INDEXPATH);
     unlink(KVPATH);
     unlink(INDEXPATH);

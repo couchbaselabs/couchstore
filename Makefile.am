@@ -63,6 +63,8 @@ libcouchstore_la_SOURCES = \
                             src/internal.h \
                             src/iobuffer.c \
                             src/iobuffer.h \
+							src/json_reduce.c \
+							src/json_reduce.h \
                             src/llmsort.c \
                             src/tree_writer.c \
                             src/tree_writer.h \
