@@ -21,12 +21,14 @@
 /* Private data of the CouchStoreIndex structure */
 struct _CouchStoreIndex {
     tree_file file;
+    uint32_t back_root_index;
     uint32_t root_count;
     node_pointer** roots;
 };
 
 
 static const JSONReducer* CurrentReducer;
+static couchstore_index_type CurrentIndexType;
 
 
 static void view_reduce(char *dst, size_t *size_r, nodelist *leaflist, int count);
@@ -43,6 +45,7 @@ couchstore_error_t couchstore_create_index(const char *filename,
     error_unless(file != NULL, COUCHSTORE_ERROR_ALLOC_FAIL);
     error_pass(tree_file_open(&file->file, filename, O_RDWR | O_CREAT | O_TRUNC,
                               couch_get_default_file_ops()));
+    file->back_root_index = UINT32_MAX;
     *index = file;
 cleanup:
     return errcode;
@@ -52,13 +55,14 @@ cleanup:
 static couchstore_error_t write_index_header(CouchStoreIndex* index)
 {
     // Header consists of a 32-bit root count, followed by the roots.
-    // Each root has a 16-bit size followed by its data (pointer, subtree size, reduce value.)
+    // Each root has a 1-byte type field (0 for primary, 1 for back-index),
+    // a 16-bit size, then its data (pointer, subtree size, reduce value.)
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
 
     // Compute header size and allocate a buffer:
     sized_buf writebuf = {NULL, 4};
     for (uint32_t i = 0; i < index->root_count; ++i) {
-        writebuf.size += 2 + encode_root(NULL, index->roots[i]);
+        writebuf.size += 3 + encode_root(NULL, index->roots[i]);
     }
     writebuf.buf = calloc(1, writebuf.size);
     error_unless(writebuf.buf, COUCHSTORE_ERROR_ALLOC_FAIL);
@@ -70,9 +74,11 @@ static couchstore_error_t write_index_header(CouchStoreIndex* index)
     
     // Write the roots:
     for (uint32_t i = 0; i < index->root_count; ++i) {
-        size_t rootSize = encode_root(dst + 2, index->roots[i]);
-        set_bits(dst, 0, 16, rootSize);
-        dst += 2 + rootSize;
+        dst[0] = (i == index->back_root_index) ? COUCHSTORE_VIEW_BACK_INDEX
+                                               : COUCHSTORE_VIEW_PRIMARY_INDEX;
+        size_t rootSize = encode_root(dst + 3, index->roots[i]);
+        set_bits(dst + 1, 0, 16, rootSize);
+        dst += 3 + rootSize;
     }
 
     // Write the header to the file, on a 4k block boundary:
@@ -121,28 +127,38 @@ static int keyCompare(const sized_buf *k1, const sized_buf *k2) {
 
 
 couchstore_error_t couchstore_index_add(const char *inputPath,
+                                        couchstore_index_type index_type,
                                         couchstore_json_reducer reduce_function,
-                                        CouchStoreIndex* index) {
+                                        CouchStoreIndex* index)
+{
+    if (index_type == COUCHSTORE_VIEW_BACK_INDEX && index->back_root_index < UINT32_MAX) {
+        return COUCHSTORE_ERROR_INVALID_ARGUMENTS;  // Can only have one back index
+    }
     couchstore_error_t errcode;
     TreeWriter* treeWriter = NULL;
     node_pointer* rootNode = NULL;
 
-    switch (reduce_function) {
-        case COUCHSTORE_REDUCE_COUNT:
-            CurrentReducer = &JSONCountReducer;
-            break;
-        case COUCHSTORE_REDUCE_SUM:
-            CurrentReducer = &JSONSumReducer;
-            break;
-        case COUCHSTORE_REDUCE_STATS:
-            CurrentReducer = &JSONStatsReducer;
-            break;
-        default:
-            CurrentReducer = NULL;
-            break;
+    CurrentIndexType = index_type;
+    CurrentReducer = NULL;
+    if (index_type == COUCHSTORE_VIEW_PRIMARY_INDEX) {
+        switch (reduce_function) {
+            case COUCHSTORE_REDUCE_COUNT:
+                CurrentReducer = &JSONCountReducer;
+                break;
+            case COUCHSTORE_REDUCE_SUM:
+                CurrentReducer = &JSONSumReducer;
+                break;
+            case COUCHSTORE_REDUCE_STATS:
+                CurrentReducer = &JSONStatsReducer;
+                break;
+        }
     }
-
-    error_pass(TreeWriterOpen(inputPath, &keyCompare, view_reduce, view_rereduce, &treeWriter));
+    
+    error_pass(TreeWriterOpen(inputPath,
+                              (index_type == COUCHSTORE_VIEW_PRIMARY_INDEX) ? keyCompare : ebin_cmp,
+                              view_reduce,
+                              view_rereduce,
+                              &treeWriter));
     error_pass(TreeWriterSort(treeWriter));
     error_pass(TreeWriterWrite(treeWriter, &index->file, &rootNode));
 
@@ -154,6 +170,8 @@ couchstore_error_t couchstore_index_add(const char *inputPath,
         roots = malloc(sizeof(node_pointer*));
     }
     error_unless(roots, COUCHSTORE_ERROR_ALLOC_FAIL);
+    if (index_type == COUCHSTORE_VIEW_BACK_INDEX)
+        index->back_root_index = index->root_count;
     roots[index->root_count++] = rootNode;
     index->roots = roots;
     rootNode = NULL;  // don't free it in cleanup
@@ -191,8 +209,8 @@ static void VBucketMap_Union(VBucketMap* map, const VBucketMap* src) {
 }
 
 
-static void view_reduce_common(char *dst, size_t *size_r, nodelist *leaflist, int count,
-                               bool rereduce)
+static void primary_reduce_common(char *dst, size_t *size_r, nodelist *leaflist, int count,
+                                  bool rereduce)
 {
     // Format of dst is shown in "Primary Index Inner Node Reductions" in view_format.md
     uint64_t subtreeCount = 0;
@@ -208,26 +226,31 @@ static void view_reduce_common(char *dst, size_t *size_r, nodelist *leaflist, in
     for (nodelist *i = leaflist; i != NULL && count > 0; i = i->next, count--) {
         if (!rereduce) {
             // First-level reduce; i->data is a primary-index Value, as per view_format.md
-            assert(i->data.size >= 5);
+            assert(i->data.size >= 2);
             unsigned bucketID = get_16(i->data.buf);
             VBucketMap_SetBit(subtreeBitmap, bucketID);
 
-            // i->key is a primary-index key
-            sized_buf jsonKey = {i->key.buf + 2, get_16(i->key.buf)};
+            if (CurrentIndexType == COUCHSTORE_VIEW_PRIMARY_INDEX) {
+                assert(i->data.size >= 5);
+                // i->key is a primary-index key
+                sized_buf jsonKey = {i->key.buf + 2, get_16(i->key.buf)};
 
-            // Count the emitted values. Each is prefixed with its length.
-            const char* pos = i->data.buf + sizeof(uint16_t);
-            const char* end = i->data.buf + i->data.size;
-            while (pos < end) {
-                ++subtreeCount;
-                sized_buf jsonValue = {(char*)pos + 3, get_24(pos)};
-                pos += 3 + jsonValue.size;
-                // JSON reduction:
-                if (CurrentReducer) {
-                    CurrentReducer->add(jsonReduceBuf, jsonKey, jsonValue);
+                // Count the emitted values. Each is prefixed with its length.
+                const char* pos = i->data.buf + sizeof(uint16_t);
+                const char* end = i->data.buf + i->data.size;
+                while (pos < end) {
+                    ++subtreeCount;
+                    sized_buf jsonValue = {(char*)pos + 3, get_24(pos)};
+                    pos += 3 + jsonValue.size;
+                    // JSON reduction:
+                    if (CurrentReducer) {
+                        CurrentReducer->add(jsonReduceBuf, jsonKey, jsonValue);
+                    }
                 }
+                assert(pos == end);
+            } else {
+                ++subtreeCount;
             }
-            assert(pos == end);
 
         } else {
             // Re-reduce:
@@ -259,10 +282,10 @@ static void view_reduce_common(char *dst, size_t *size_r, nodelist *leaflist, in
 
 static void view_reduce (char *dst, size_t *size_r, nodelist *leaflist, int count)
 {
-    view_reduce_common(dst, size_r, leaflist, count, false);
+    primary_reduce_common(dst, size_r, leaflist, count, false);
 }
 
 static void view_rereduce (char *dst, size_t *size_r, nodelist *ptrlist, int count)
 {
-    view_reduce_common(dst, size_r, ptrlist, count, true);
+    primary_reduce_common(dst, size_r, ptrlist, count, true);
 }

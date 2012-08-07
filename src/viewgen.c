@@ -1,5 +1,6 @@
 #include "config.h"
 #include <libcouchstore/couch_index.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,7 +11,8 @@ static int usage() {
     fprintf(stderr, "Usage: couch_viewgen [flag] <input file> [[flag] <input file> ...] <output file>\n"
             "       flags: --reduce=count\n"
             "              --reduce=sum\n"
-            "              --reduce=stats\n");
+            "              --reduce=stats\n"
+            "              --back\n");
     return EXIT_FAILURE;
 }
 
@@ -23,6 +25,7 @@ int main(int argc, char** argv)
     couchstore_error_t errcode;
     CouchStoreIndex* index = NULL;
 
+    // Process last arg first: the output filename
     const char* indexPath = argv[argc - 1];
     errcode = couchstore_create_index(indexPath, &index);
     if (errcode) {
@@ -30,6 +33,7 @@ int main(int argc, char** argv)
         goto cleanup;
     }
 
+    couchstore_index_type indexType = COUCHSTORE_VIEW_PRIMARY_INDEX;
     const char* reduceName = NULL;
     couchstore_json_reducer reducer = COUCHSTORE_REDUCE_NONE;
     
@@ -47,16 +51,27 @@ int main(int argc, char** argv)
                 fprintf(stderr, "Unknown reduce function '%s'\n", reduceName);
                 return usage();
             }
+        } else if (strcmp(inputPath, "--back") == 0) {
+            indexType = COUCHSTORE_VIEW_BACK_INDEX;
+        } else if (strcmp(inputPath, "--primary") == 0) {
+            indexType = COUCHSTORE_VIEW_PRIMARY_INDEX;
         } else {
-            printf("Adding %s to %s", inputPath, indexPath);
-            if (reduceName)
-                printf(", reducing by %s", reduceName);
-            printf(" ...\n");
-            errcode = couchstore_index_add(inputPath, reducer, index);
+            if (indexType == COUCHSTORE_VIEW_PRIMARY_INDEX) {
+                printf("Adding primary index %s to %s", inputPath, indexPath);
+                if (reduceName)
+                    printf(", reducing by %s", reduceName);
+                printf(" ...\n");
+            } else {
+                if (reduceName)
+                    return usage();
+                printf("Adding back-index %s to %s...\n", inputPath, indexPath);
+            }
+            errcode = couchstore_index_add(inputPath, indexType, reducer, index);
             if (errcode < 0) {
                 fprintf(stderr, "Error adding %s: %s\n", inputPath, couchstore_strerror(errcode));
                 goto cleanup;
             }
+            indexType = COUCHSTORE_VIEW_PRIMARY_INDEX;
             reduceName = NULL;
             reducer = COUCHSTORE_REDUCE_NONE;
         }

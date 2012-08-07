@@ -14,7 +14,16 @@ extern "C" {
     typedef struct _CouchStoreIndex CouchStoreIndex;
 
     /*
-     * Available built-in reduce functions to use on the JSON values.
+     * Types of indexes.
+     */
+    typedef uint64_t couchstore_index_type;
+    enum {
+        COUCHSTORE_VIEW_PRIMARY_INDEX = 0,  /**< Primary index, maps emitted keys to values */
+        COUCHSTORE_VIEW_BACK_INDEX = 1,     /**< Back-index, maps doc IDs to emitted keys */
+    };
+
+    /*
+     * Available built-in reduce functions to use on the JSON values in primary indexes.
      * These are documented at <http://wiki.apache.org/couchdb/Built-In_Reduce_Functions>
      */
     typedef uint64_t couchstore_json_reducer;
@@ -59,13 +68,20 @@ extern "C" {
      *      value length (32 bits, big-endian)
      *      key data
      *      value data
+     * The data formats inside the actual keys and values differ with the index types, and are
+     * documented in "The Binary (Termless) Format for Views" (view_format.md).
      *
      * @param inputPath The path to the key-value file
+     * @param index_type The type of index keys/values in the input file, and the type of index
+     *      to generate in the index file. Note: CouchStore can currently add only one back index.
+     * @param reduce_function The type of JSON reduce function to apply to the data. Valid only
+     *      for primary indexes; ignored in back-indexes.
      * @param index The index file to write to
      * @return COUCHSTORE_SUCCESS on success, else an error code
      */
     LIBCOUCHSTORE_API
     couchstore_error_t couchstore_index_add(const char *inputPath,
+                                            couchstore_index_type index_type,
                                             couchstore_json_reducer reduce_function,
                                             CouchStoreIndex* index);
 
