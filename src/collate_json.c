@@ -238,6 +238,26 @@ static int compareStringsUnicode(const char** in1, const char** in2)
 }
 
 
+static double readNumber(const char* start, const char* end, char** endOfNumber) {
+    assert(end > start);
+    // First copy the string into a zero-terminated buffer so we can safely call strtod:
+    size_t len = end - start;
+    char buf[50];
+    char* str = (len < sizeof(buf)) ? buf : malloc(len + 1);
+    if (!str)
+        return 0.0;
+    memcpy(str, start, len);
+    str[len] = '\0';
+
+    char* endInStr;
+    double result = strtod(str, &endInStr);
+    *endOfNumber = (char*)start + (endInStr - str);
+    if (len >= sizeof(buf))
+        free(str);
+    return result;
+}
+
+
 int CollateJSON(sized_buf buf1,
                 sized_buf buf2,
                 CollateJSONMode mode)
@@ -270,7 +290,15 @@ int CollateJSON(sized_buf buf1,
                 break;
             case kNumber: {
                 char* next1, *next2;
-                int diff = dcmp( strtod(str1, &next1), strtod(str2, &next2) );
+                int diff;
+                if (depth == 0) {
+                    // At depth 0, be careful not to fall off the end of the input, because there
+                    // won't be any delimiters (']' or '}') after the number!
+                    diff = dcmp( readNumber(str1, buf1.buf + buf1.size, &next1),
+                                 readNumber(str2, buf2.buf + buf2.size, &next2) );
+                } else {
+                    diff = dcmp( strtod(str1, &next1), strtod(str2, &next2) );
+                }
                 if (diff)
                     return diff;    // Numbers don't match
                 str1 = next1;

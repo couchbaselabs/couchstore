@@ -13,8 +13,17 @@ void TestCollateJSON(void);
 
 static int collateStrs(const char* str1, const char* str2, CollateJSONMode mode)
 {
-    sized_buf buf1 = {(char*)str1, strlen(str1)};
-    sized_buf buf2 = {(char*)str2, strlen(str2)};
+    // Be evil and put numeric garbage past the ends of str1 and str2, to make sure it
+    // doesn't confuse the numeric parsing in the collator:
+    size_t len1 = strlen(str1), len2 = strlen(str2);
+    char padded1[len1 + 3], padded2[len2 + 3];
+    strcpy(padded1, str1);
+    strcat(padded1, "99");
+    strcpy(padded2, str2);
+    strcat(padded2, "88");
+
+    sized_buf buf1 = {padded1, len1};
+    sized_buf buf2 = {padded2, len2};
     return CollateJSON(buf1, buf2, mode);
 }
 
@@ -43,6 +52,7 @@ static void TestCollateScalars()
     assert_eq(collateStrs("true", "false", mode), 1);
     assert_eq(collateStrs("false", "true", mode), -1);
     assert_eq(collateStrs("null", "17", mode), -1);
+    assert_eq(collateStrs("123", "123", mode), 0);
     assert_eq(collateStrs("123", "1", mode), 1);
     assert_eq(collateStrs("123", "0123.0", mode), 0);
     assert_eq(collateStrs("123", "\"123\"", mode), -1);
