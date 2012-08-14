@@ -73,7 +73,7 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
             printf("    seq: %"PRIu64"\n", docinfo->db_seq);
         }
     }
-    if (docinfo->bp == 0) {
+    if (docinfo->bp == 0 && docinfo->deleted == 0) {
         printf("         ** This b-tree node is corrupt; raw node value follows:*\n");
         printf("    raw: ");
         printsbhex(&docinfo->rev_meta, 1);
@@ -93,7 +93,7 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
 
     couchstore_error_t docerr = couchstore_open_doc_with_docinfo(db, docinfo, &doc, 0);
     if(docerr != COUCHSTORE_SUCCESS) {
-        printf("     error reading document body: %s\n", couchstore_strerror(docerr));
+        printf("     could not read document body: %s\n", couchstore_strerror(docerr));
     } else if (doc && (docinfo->content_meta & COUCH_DOC_IS_COMPRESSED)) {
         size_t rlen;
         snappy_uncompressed_length(doc->data.buf, doc->data.size, &rlen);
