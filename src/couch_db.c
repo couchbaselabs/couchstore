@@ -905,16 +905,24 @@ cleanup:
 
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_db_info(Db *db, DbInfo* dbinfo) {
-    const node_pointer *root = db->header.by_id_root;
+    const node_pointer *id_root = db->header.by_id_root;
+    const node_pointer *seq_root = db->header.by_seq_root;
+    const node_pointer *local_root = db->header.local_docs_root;
     dbinfo->filename = db->filename;
     dbinfo->header_position = db->header.position;
     dbinfo->last_sequence = db->header.update_seq;
-    if (root) {
-        dbinfo->doc_count = get_40(root->reduce_value.buf);
-        dbinfo->deleted_count = get_40(root->reduce_value.buf + 5);
-        dbinfo->space_used = get_48(root->reduce_value.buf + 10);
-    } else {
-        dbinfo->deleted_count = dbinfo->doc_count = dbinfo->space_used = 0;
+    dbinfo->deleted_count = dbinfo->doc_count = dbinfo->space_used = 0;
+    if (id_root) {
+        dbinfo->doc_count = get_40(id_root->reduce_value.buf);
+        dbinfo->deleted_count = get_40(id_root->reduce_value.buf + 5);
+        dbinfo->space_used = get_48(id_root->reduce_value.buf + 10);
+        dbinfo->space_used += id_root->subtreesize;
+    }
+    if(seq_root) {
+        dbinfo->space_used += seq_root->subtreesize;
+    }
+    if(local_root) {
+        dbinfo->space_used += local_root->subtreesize;
     }
     return COUCHSTORE_SUCCESS;
 }
