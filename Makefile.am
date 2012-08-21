@@ -16,7 +16,7 @@
 ACLOCAL_AMFLAGS = -I m4 --force
 
 bin_PROGRAMS = couch_dbdump couch_dbinfo couch_compact
-EXTRA_DIST = LICENSE README.md
+EXTRA_DIST = python LICENSE README.md
 
 pkginclude_HEADERS = \
                      include/libcouchstore/couch_db.h \
@@ -44,6 +44,7 @@ libcouchstore_la_SOURCES = \
                             config_static.h \
                             src/arena.c \
                             src/arena.h \
+                            src/bitfield.h \
                             src/btree_modify.c \
                             src/btree_read.c \
                             src/couch_btree.h \
