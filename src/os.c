@@ -14,12 +14,17 @@
 #endif
 
 /* Do special cases for windows */
-#ifndef _O_BINARY
+#ifndef WINDOWS
 #define open_int open
 #define close_int close
 #else
 #include <io.h>
 #include <share.h>
+
+static inline void save_windows_error() {
+    get_os_error_store()->win_err = GetLastError();
+    get_os_error_store()->errno_err = 0;
+}
 
 static int win_open(const char* filename, int oflag, int pmode) {
     int creationflag = OPEN_EXISTING;
@@ -32,11 +37,13 @@ static int win_open(const char* filename, int oflag, int pmode) {
                                    NULL, creationflag, 0, NULL);
 
     if(os_handle == INVALID_HANDLE_VALUE) {
+        save_windows_error();
         return -1;
     }
 
     int fd = _open_osfhandle(os_handle, oflag | _O_BINARY);
     if(fd < 0) {
+        save_windows_error();
         CloseHandle(os_handle);
     }
 
@@ -53,6 +60,13 @@ static int win_close(int fd) {
 #define open_int win_open
 #define close_int win_close
 #endif
+
+static inline void save_errno() {
+    get_os_error_store()->errno_err = errno;
+#ifdef WINDOWS
+    get_os_error_store()->win_err = 0;
+#endif
+}
 
 static inline int handle_to_fd(couch_file_handle handle)
 {
@@ -75,7 +89,10 @@ static ssize_t couch_pread(couch_file_handle handle, void *buf, size_t nbyte, of
         rv = pread(fd, buf, nbyte, offset);
     } while (rv == -1 && errno == EINTR);
 
-    if(rv < 0) return (ssize_t) COUCHSTORE_ERROR_READ;
+    if(rv < 0) {
+        save_errno();
+        return (ssize_t) COUCHSTORE_ERROR_READ;
+    }
     return rv;
 }
 
@@ -90,7 +107,10 @@ static ssize_t couch_pwrite(couch_file_handle handle, const void *buf, size_t nb
         rv = pwrite(fd, buf, nbyte, offset);
     } while (rv == -1 && errno == EINTR);
 
-    if(rv < 0) return (ssize_t) COUCHSTORE_ERROR_WRITE;
+    if(rv < 0) {
+        save_errno();
+        return (ssize_t) COUCHSTORE_ERROR_WRITE;
+    }
     return rv;
 }
 
@@ -101,7 +121,11 @@ static couchstore_error_t couch_open(couch_file_handle* handle, const char *path
         fd = open_int(path, oflag | O_LARGEFILE, 0666);
     } while (fd == -1 && errno == EINTR);
 
-    if (fd == -1) {
+    if (fd < 0) {
+        //If we used win_open, don't clobber the windows error.
+#ifndef WINDOWS
+        save_errno();
+#endif
         if (errno == ENOENT) {
             return COUCHSTORE_ERROR_NO_SUCH_FILE;
         } else {
@@ -124,12 +148,19 @@ static void couch_close(couch_file_handle handle)
             rv = close_int(fd);
         } while (rv == -1 && errno == EINTR);
     }
+    if(rv < 0) {
+        save_errno();
+    }
 }
 
 static off_t couch_goto_eof(couch_file_handle handle)
 {
     int fd = handle_to_fd(handle);
-    return lseek(fd, 0, SEEK_END);
+    int rv = lseek(fd, 0, SEEK_END);
+    if(rv < 0) {
+        save_errno();
+    }
+    return rv;
 }
 
 
@@ -142,6 +173,7 @@ static couchstore_error_t couch_sync(couch_file_handle handle)
     } while (rv == -1 && errno == EINTR);
 
     if (rv == -1) {
+        save_errno();
         return COUCHSTORE_ERROR_WRITE;
     }
 

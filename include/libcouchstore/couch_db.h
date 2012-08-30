@@ -575,6 +575,16 @@ extern "C" {
     LIBCOUCHSTORE_API
     const char *couchstore_strerror(couchstore_error_t errcode);
 
+    /**
+     * Prints a description of the last OS-level errors that Couchstore
+     * encountered on this thread into buf.
+     *
+     * @param buf The buffer to store the message in
+     * @param size The size of the buffer.
+     */
+     LIBCOUCHSTORE_API
+     void couchstore_last_os_error(char* buf, size_t size);
+
 #ifdef __cplusplus
 }
 #endif

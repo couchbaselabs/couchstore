@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include "internal.h"
 #include "couch_btree.h"
@@ -1056,4 +1057,47 @@ void couchstore_free_local_document(LocalDoc *lDoc)
         char *offset = (char *) (&((fatbuf *) NULL)->buf);
         fatbuf_free((fatbuf *) ((char *)lDoc - (char *)offset));
     }
+}
+
+pthread_key_t os_err_key;
+pthread_once_t os_err_init = PTHREAD_ONCE_INIT;
+
+void os_error_destroy(void* err_ptr) {
+    free(err_ptr);
+}
+
+void init_os_error_key() {
+    pthread_key_create(&os_err_key, os_error_destroy);
+}
+
+struct _os_error *get_os_error_store() {
+    int once = pthread_once(&os_err_init, init_os_error_key);
+    assert(once == 0);
+    void *ptr;
+    if((ptr = pthread_getspecific(os_err_key)) == NULL) {
+        ptr = calloc(1, sizeof(struct _os_error));
+        pthread_setspecific(os_err_key, ptr);
+    }
+    return ptr;
+}
+
+LIBCOUCHSTORE_API
+void couchstore_last_os_error(char* buf, size_t size) {
+    struct _os_error *err = get_os_error_store();
+#ifndef WINDOWS
+    snprintf(buf, size, "errno = %d: `%s'", err->errno_err, strerror(err->errno_err));
+#else
+    char* win_msg = NULL;
+    FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER |
+                   FORMAT_MESSAGE_FROM_SYSTEM |
+                   FORMAT_MESSAGE_IGNORE_INSERTS,
+                   NULL, err->win_err,
+                   MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                   (LPTSTR) &win_msg,
+                   0, NULL);
+    snprintf(buf, size, "errno = %d: `%s', WINAPI error = %d: `%s'",
+                        err->errno_err, strerror(err->errno_err),
+                        err->win_err, win_msg);
+    LocalFree(win_msg);
+#endif
 }

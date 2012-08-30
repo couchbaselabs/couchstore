@@ -35,6 +35,12 @@ docset testdocset;
 fatbuf *docsetbuf = NULL;
 char testfilepath[1024] = "testfile.couch";
 
+static void print_os_err() {
+    char emsg[512];
+    couchstore_last_os_error(emsg, 512);
+    fprintf(stderr, "OS Error: %s\n", emsg);
+}
+
 static void test_get_40(uint64_t value, const uint8_t expected[8])
 {
     char buffer[8];
@@ -439,6 +445,11 @@ static void test_open_file_error(void)
     unlink(testfilepath);
     Db *db;
     int errcode = couchstore_open_db(testfilepath, 0, &db);
+
+    if(errcode != 0) {
+        print_os_err();
+    }
+
     assert(errcode == COUCHSTORE_ERROR_NO_SUCH_FILE);
 
     // make sure os.c didn't accidentally call close(0):

@@ -10,13 +10,15 @@
  */
 
 #include <libcouchstore/couch_db.h>
+#include "config.h"
+#include <pthread.h>
 
 #define COUCH_BLOCK_SIZE 4096
 #define COUCH_DISK_VERSION 10
 #define COUCH_SNAPPY_THRESHOLD 64
 
 enum {
-    /** Additional couchstore_docinfos_options flag */ 
+    /** Additional couchstore_docinfos_options flag */
     COUCHSTORE_INCLUDE_CORRUPT_DOCS = 0x40000000
 };
 
@@ -42,6 +44,13 @@ extern "C" {
         uint64_t position;
     } db_header;
 
+    struct _os_error {
+        int errno_err;
+#ifdef WINDOWS
+        DWORD win_err;
+#endif
+    };
+
     struct _db {
         uint64_t file_pos;
         const couch_file_ops *file_ops;
@@ -50,6 +59,7 @@ extern "C" {
         db_header header;
         void *userdata;
     };
+
 
     /** Reads a chunk from the file at a given position.
         @param db The database to read from
@@ -74,6 +84,10 @@ extern "C" {
 
     node_pointer *read_root(char *buf, int size);
     void encode_root(char *buf, node_pointer *node);
+
+    struct _os_error *get_os_error_store();
+
+    extern pthread_key_t os_err_key;
 
 #ifdef __cplusplus
 }
