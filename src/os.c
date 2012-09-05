@@ -61,7 +61,7 @@ static int win_close(int fd) {
 #define close_int win_close
 #endif
 
-static inline void save_errno() {
+static inline void save_errno(void) {
     get_os_error_store()->errno_err = errno;
 #ifdef WINDOWS
     get_os_error_store()->win_err = 0;

@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <stdio.h>
 
 #include "internal.h"
 #include "couch_btree.h"
@@ -1062,15 +1063,15 @@ void couchstore_free_local_document(LocalDoc *lDoc)
 pthread_key_t os_err_key;
 pthread_once_t os_err_init = PTHREAD_ONCE_INIT;
 
-void os_error_destroy(void* err_ptr) {
+static void os_error_destroy(void* err_ptr) {
     free(err_ptr);
 }
 
-void init_os_error_key() {
+static void init_os_error_key(void) {
     pthread_key_create(&os_err_key, os_error_destroy);
 }
 
-struct _os_error *get_os_error_store() {
+struct _os_error *get_os_error_store(void) {
     int once = pthread_once(&os_err_init, init_os_error_key);
     assert(once == 0);
     void *ptr;

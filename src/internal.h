@@ -85,7 +85,7 @@ extern "C" {
     node_pointer *read_root(char *buf, int size);
     void encode_root(char *buf, node_pointer *node);
 
-    struct _os_error *get_os_error_store();
+    struct _os_error *get_os_error_store(void);
 
     extern pthread_key_t os_err_key;
 
