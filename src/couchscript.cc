@@ -11,6 +11,10 @@
 #include <libcouchstore/couch_db.h>
 #include "internal.h"
 
+// For building against lua 5.2 and up. Also requires that lua was
+// built with this define. Homebrew at least will build lua with this
+// set.
+#define LUA_COMPAT_ALL
 // Copied from lua.hpp to allow us to use older versions of lua
 // without that wrapper file.. (BTW this method is broken because
 // it includes system headers within 'extern "C"' and that may not
