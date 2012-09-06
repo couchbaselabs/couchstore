@@ -148,7 +148,6 @@ class CouchStoreTest (unittest.TestCase):
         self.assertEquals(info.last_sequence, 2)
         self.assertEquals(info.doc_count, 0)
         self.assertEquals(info.deleted_count, 1)
-        self.assertEquals(info.space_used, 0)
 
     def testChangesSince(self):
         self.addDocs(50)
