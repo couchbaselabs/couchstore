@@ -275,6 +275,22 @@ extern "C" {
 
 
     /**
+     * Allocates a new DocInfo structure on the heap, plus optionally its id and rev_meta.
+     * If the id or rev_meta are given, their values will be copied into the allocated memory
+     * and the corresponding fields in the returned DocInfo will point there. Otherwise the
+     * DocInfo's id and/or rev_meta fields will be empty/null.
+     * @param id the document ID to copy into the DocInfo, or NULL to leave its ID NULL.
+     * @param rev_meta the revision metadata to copy into the DocInfo, or NULL to leave its
+     *          rev_meta NULL.
+     * @return the allocated DocInfo, or NULL on an allocation failure. Must be freed by
+     *          calling couchstore_free_docinfo.
+     */
+    LIBCOUCHSTORE_API
+    DocInfo* couchstore_alloc_docinfo(const sized_buf *id,
+                                      const sized_buf *rev_meta);
+
+
+    /**
      * Free all allocated resources from a docinfo structure returned by
      * couchstore_docinfo_by_id() or passed to a couchstore_changes_callback_fn.
      *

@@ -275,7 +275,50 @@ const char* couchstore_get_db_filename(Db *db) {
     return db->file.path;
 }
 
-static int by_seq_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
+DocInfo* couchstore_alloc_docinfo(const sized_buf *id, const sized_buf *rev_meta) {
+    size_t size = sizeof(DocInfo);
+    if (id) {
+        size += id->size;
+    }
+    if (rev_meta) {
+        size += rev_meta->size;
+    }
+    DocInfo* docInfo = malloc(size);
+    if (!docInfo) {
+        return NULL;
+    }
+    memset(docInfo, 0, sizeof(DocInfo));
+    char *extra = (char *)docInfo + sizeof(DocInfo);
+    if (id) {
+        memcpy(extra, id->buf, id->size);
+        docInfo->id.buf = extra;
+        docInfo->id.size = id->size;
+        extra += id->size;
+    }
+    if (rev_meta) {
+        memcpy(extra, rev_meta->buf, rev_meta->size);
+        docInfo->rev_meta.buf = extra;
+        docInfo->rev_meta.size = rev_meta->size;
+    }
+    return docInfo;
+}
+
+LIBCOUCHSTORE_API
+void couchstore_free_docinfo(DocInfo *docinfo)
+{
+    free(docinfo);
+}
+
+LIBCOUCHSTORE_API
+void couchstore_free_document(Doc *doc)
+{
+    if (doc) {
+        char *offset = (char *) (&((fatbuf *) NULL)->buf);
+        fatbuf_free((fatbuf *) ((char *)doc - (char *)offset));
+    }
+}
+
+static couchstore_error_t by_seq_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
 {
     const raw_seq_index_value *raw = (const raw_seq_index_value*)v->buf;
     ssize_t extraSize = v->size - sizeof(*raw);
@@ -292,27 +335,24 @@ static int by_seq_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
     uint32_t rev_seq = decode_raw32(raw->rev_seq);
     uint64_t db_seq = decode_sequence_key(k);
 
-    DocInfo* docInfo = malloc(sizeof(DocInfo) + extraSize);
+    sized_buf id = {v->buf + sizeof(*raw), idsize};
+    sized_buf rev_meta = {id.buf + idsize, extraSize - id.size};
+    DocInfo* docInfo = couchstore_alloc_docinfo(&id, &rev_meta);
     if (!docInfo) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
-    char *rbuf = (char *) docInfo;
-    memcpy(rbuf + sizeof(DocInfo), v->buf + sizeof(*raw), extraSize);
-    *pInfo = docInfo;
+    
     docInfo->db_seq = db_seq;
     docInfo->rev_seq = rev_seq;
     docInfo->deleted = deleted;
     docInfo->bp = bp;
     docInfo->size = datasize;
     docInfo->content_meta = content_meta;
-    docInfo->id.buf = rbuf + sizeof(DocInfo);
-    docInfo->id.size = idsize;
-    docInfo->rev_meta.buf = rbuf + sizeof(DocInfo) + idsize;
-    docInfo->rev_meta.size = extraSize - idsize;
-    return 0;
+    *pInfo = docInfo;
+    return COUCHSTORE_SUCCESS;
 }
 
-static int by_id_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
+static couchstore_error_t by_id_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
 {
     const raw_id_index_value *raw = (const raw_id_index_value*)v->buf;
     ssize_t revMetaSize = v->size - sizeof(*raw);
@@ -332,25 +372,20 @@ static int by_id_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
     content_meta = decode_raw08(raw->content_meta);
     revnum = decode_raw32(raw->rev_seq);
 
-    DocInfo* docInfo = malloc(sizeof(DocInfo) + revMetaSize + k->size);
+    sized_buf rev_meta = {v->buf + sizeof(*raw), revMetaSize};
+    DocInfo* docInfo = couchstore_alloc_docinfo(k, &rev_meta);
     if (!docInfo) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
-    char *rbuf = (char *) docInfo;
-    memcpy(rbuf + sizeof(DocInfo), v->buf + sizeof(*raw), revMetaSize);
-    *pInfo = docInfo;
+
     docInfo->db_seq = seq;
     docInfo->rev_seq = revnum;
     docInfo->deleted = deleted;
     docInfo->bp = bp;
     docInfo->size = datasize;
     docInfo->content_meta = content_meta;
-    docInfo->rev_meta.buf = rbuf + sizeof(DocInfo);
-    docInfo->rev_meta.size = revMetaSize;
-    docInfo->id.buf = docInfo->rev_meta.buf + docInfo->rev_meta.size;
-    docInfo->id.size = k->size;
-    memcpy(docInfo->id.buf, k->buf, k->size);
-    return 0;
+    *pInfo = docInfo;
+    return COUCHSTORE_SUCCESS;
 }
 
 //Fill in doc from reading file.
@@ -789,21 +824,6 @@ couchstore_error_t couchstore_db_info(Db *db, DbInfo* dbinfo) {
         dbinfo->deleted_count = dbinfo->doc_count = dbinfo->space_used = 0;
     }
     return COUCHSTORE_SUCCESS;
-}
-
-LIBCOUCHSTORE_API
-void couchstore_free_document(Doc *doc)
-{
-    if (doc) {
-        char *offset = (char *) (&((fatbuf *) NULL)->buf);
-        fatbuf_free((fatbuf *) ((char *)doc - (char *)offset));
-    }
-}
-
-LIBCOUCHSTORE_API
-void couchstore_free_docinfo(DocInfo *docinfo)
-{
-    free(docinfo);
 }
 
 static couchstore_error_t local_doc_fetch(couchfile_lookup_request *rq,
