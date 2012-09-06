@@ -114,9 +114,9 @@ static void ReadIndexFile(const char *indexPath)
     // See write_index_header in couch_index.c
     FILE *file = fopen(indexPath, "rb");
     fseek(file, 0, SEEK_END);
-    off_t eof = ftell(file);
-    off_t headerPos = eof - (eof % 4096);    // go to last 4KB boundary
-    printf("Index header is at 0x%llx\n", headerPos);
+    long eof = ftell(file);
+    long headerPos = eof - (eof % 4096);    // go to last 4KB boundary
+    printf("Index header is at 0x%lx\n", headerPos);
     fseek(file, headerPos, SEEK_SET);
 
     // Header starts with a "1" byte, a length, and a CRC checksum:

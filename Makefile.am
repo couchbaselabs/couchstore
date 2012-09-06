@@ -88,7 +88,7 @@ libcouchstore_la_SOURCES += win32/win32.c
 libcouchstore_la_LDFLAGS += -lws2_32
 endif
 
-libcouchstore_la_CFLAGS = $(AM_CFLAGS) $(ICU_LOCAL_CFLAGS) -DLIBCOUCHSTORE_INTERNAL=1 -Wstrict-aliasing=2
+libcouchstore_la_CFLAGS = $(AM_CFLAGS) $(ICU_LOCAL_CFLAGS) -DLIBCOUCHSTORE_INTERNAL=1 -Wstrict-aliasing=2 -pedantic
 libcouchstore_la_LIBADD = librfc1321.la libbyteswap.la $(ICU_LOCAL_LIBS)
 
 couch_dbdump_SOURCES = src/dbdump.c
