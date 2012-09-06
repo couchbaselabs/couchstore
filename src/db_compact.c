@@ -66,7 +66,7 @@ cleanup:
         fclose(ctx.id_tmp);
     }
     couchstore_close_db(target);
-    if(errcode != COUCHSTORE_SUCCESS) {
+    if(errcode != COUCHSTORE_SUCCESS && target != NULL) {
         unlink(target_filename);
     }
     return errcode;

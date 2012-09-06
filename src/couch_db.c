@@ -278,6 +278,10 @@ cleanup:
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_close_db(Db *db)
 {
+    if(db == NULL) {
+        return COUCHSTORE_SUCCESS;
+    }
+
     if (db->file_ops) {
         db->file_ops->close(db->file_handle);
         db->file_ops->destructor(db->file_handle);
