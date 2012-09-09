@@ -156,7 +156,7 @@ static void couch_close(couch_file_handle handle)
 static off_t couch_goto_eof(couch_file_handle handle)
 {
     int fd = handle_to_fd(handle);
-    int rv = lseek(fd, 0, SEEK_END);
+    off_t rv = lseek(fd, 0, SEEK_END);
     if(rv < 0) {
         save_errno();
     }
