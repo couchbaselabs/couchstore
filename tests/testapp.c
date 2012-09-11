@@ -12,6 +12,8 @@
 #include "macros.h"
 
 #define ZERO(V) memset(&(V), 0, sizeof(V))
+//Only use the macro SETDOC with constants!
+//it uses sizeof()
 #define SETDOC(N, I, D, M)  \
    setdoc(&testdocset.docs[N], &testdocset.infos[N], I, strlen(I), \
          D, sizeof(D) - 1, M, strlen(M)); testdocset.datasize += sizeof(D) - 1;
@@ -192,11 +194,13 @@ static void test_save_docs(int count, const char *doc_tpl)
     for (i = 0; i < count; ++i) {
         idBuf = (char *) malloc(sizeof(char) * 32);
         assert(idBuf != NULL);
-        sprintf(idBuf, "doc%lu", (unsigned long)rand());
+        int idsize = sprintf(idBuf, "doc%lu", (unsigned long)rand());
         valueBuf = (char *) malloc(sizeof(char) * (strlen(doc_tpl) + 20));
         assert(valueBuf != NULL);
-        sprintf(valueBuf, doc_tpl, i + 1);
-        SETDOC(i, idBuf, valueBuf, zerometa);
+        int valsize = sprintf(valueBuf, doc_tpl, i + 1);
+        setdoc(&testdocset.docs[i], &testdocset.infos[i],
+                idBuf, idsize, valueBuf, valsize, zerometa, sizeof(zerometa));
+        testdocset.datasize += valsize;
     }
 
     docptrs = (Doc **) malloc(sizeof(Doc*) * count);
