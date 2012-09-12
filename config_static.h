@@ -82,8 +82,8 @@ extern "C" {
 #endif
 
 #if defined(WIN32) || defined(_WIN32)
+#include <windows.h>
 #define WINDOWS
-#include "win32/win32.h"
 #endif
 
 #endif

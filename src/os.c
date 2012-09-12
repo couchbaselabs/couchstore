@@ -13,59 +13,8 @@
 #include <stdio.h>
 #endif
 
-/* Do special cases for windows */
-#ifndef WINDOWS
-#define open_int open
-#define close_int close
-#else
-#include <io.h>
-#include <share.h>
-
-static inline void save_windows_error() {
-    get_os_error_store()->win_err = GetLastError();
-    get_os_error_store()->errno_err = 0;
-}
-
-static int win_open(const char* filename, int oflag, int pmode) {
-    int creationflag = OPEN_EXISTING;
-    if(oflag & O_CREAT) {
-        creationflag = OPEN_ALWAYS;
-    }
-
-    HANDLE os_handle = CreateFileA(filename, GENERIC_READ | GENERIC_WRITE,
-                                   FILE_SHARE_DELETE | FILE_SHARE_WRITE | FILE_SHARE_READ,
-                                   NULL, creationflag, 0, NULL);
-
-    if(os_handle == INVALID_HANDLE_VALUE) {
-        save_windows_error();
-        return -1;
-    }
-
-    int fd = _open_osfhandle(os_handle, oflag | _O_BINARY);
-    if(fd < 0) {
-        save_windows_error();
-        CloseHandle(os_handle);
-    }
-
-    return fd;
-}
-
-static int win_close(int fd) {
-    int os_handle = _get_osfhandle(fd);
-    int close_result = close(fd);
-    CloseHandle(os_handle);
-    return close_result;
-
-}
-#define open_int win_open
-#define close_int win_close
-#endif
-
 static inline void save_errno(void) {
     get_os_error_store()->errno_err = errno;
-#ifdef WINDOWS
-    get_os_error_store()->win_err = 0;
-#endif
 }
 
 static inline int handle_to_fd(couch_file_handle handle)
@@ -118,14 +67,10 @@ static couchstore_error_t couch_open(couch_file_handle* handle, const char *path
 {
     int fd;
     do {
-        fd = open_int(path, oflag | O_LARGEFILE, 0666);
+        fd = open(path, oflag | O_LARGEFILE, 0666);
     } while (fd == -1 && errno == EINTR);
 
     if (fd < 0) {
-        //If we used win_open, don't clobber the windows error.
-#ifndef WINDOWS
-        save_errno();
-#endif
         if (errno == ENOENT) {
             return COUCHSTORE_ERROR_NO_SUCH_FILE;
         } else {
@@ -145,7 +90,7 @@ static void couch_close(couch_file_handle handle)
     if (fd != -1) {
         do {
             assert(fd >= 3);
-            rv = close_int(fd);
+            rv = close(fd);
         } while (rv == -1 && errno == EINTR);
     }
     if(rv < 0) {

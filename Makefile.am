@@ -65,7 +65,6 @@ libcouchstore_la_SOURCES = \
                             src/reduces.c \
                             src/reduces.h \
                             src/strerror.c \
-                            src/os.c \
                             src/util.c \
                             src/util.h
 
@@ -73,8 +72,10 @@ libcouchstore_la_SOURCES = \
 libcouchstore_la_LDFLAGS = $(AM_LDFLAGS) -version-info $(LIBCOUCHSTORE_API_CURRENT):$(LIBCOUCHSTORE_API_REVISION):$(LIBCOUCHSTORE_API_AGE) -no-undefined -lsnappy -lpthread
 
 if WINDOWS
-libcouchstore_la_SOURCES += win32/win32.c
+libcouchstore_la_SOURCES += src/os_win.c
 libcouchstore_la_LDFLAGS += -lws2_32
+else
+libcouchstore_la_SOURCES += src/os.c
 endif
 
 libcouchstore_la_CFLAGS = $(AM_CFLAGS) -DLIBCOUCHSTORE_INTERNAL=1
@@ -86,7 +87,6 @@ couch_dbdump_CFLAGS = $(AM_CFLAGS) -D__STDC_FORMAT_MACROS
 couch_dbdump_LDADD = libcouchstore.la libbyteswap.la -lsnappy
 
 if WINDOWS
-couch_dbdump_SOURCES += win32/win32.c
 couch_dbdump_LDADD += -lws2_32
 endif
 
