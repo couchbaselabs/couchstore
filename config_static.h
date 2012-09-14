@@ -59,6 +59,12 @@
 #ifdef WORDS_BIGENDIAN
 #define ntohll(a) a
 #define htonll(a) a
+#elif defined(__GLIBC__)
+#define HAVE_HTONLL 1
+/* GNU libc does have bswap which is optimized implementation */
+#include <byteswap.h>
+#define ntohll(a) bswap_64(a)
+#define htonll(a) bswap_64(a)
 #else
 #define ntohll(a) couchstore_byteswap64(a)
 #define htonll(a) couchstore_byteswap64(a)
