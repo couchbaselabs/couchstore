@@ -59,7 +59,7 @@ void *fatbuf_get(fatbuf *fb, size_t bytes)
         return NULL;
     }
 #ifdef DEBUG
-    if (fb->buf[fb->pos] != 0x44) {
+    if (fb->buf[fb->pos] != 0x44 && bytes > 0) {
         fprintf(stderr, "Fatbuf space has been written to before it was taken!\n");
     }
 #endif
