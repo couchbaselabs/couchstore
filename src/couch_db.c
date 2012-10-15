@@ -259,7 +259,7 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
          * user wanted a read-only version of the file
          */
         if (flags & COUCHSTORE_OPEN_FLAG_RDONLY) {
-            error_pass(COUCHSTORE_ERROR_CHECKSUM_FAIL);
+            error_pass(COUCHSTORE_ERROR_NO_HEADER);
         } else {
             error_pass(create_header(db));
         }
