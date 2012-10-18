@@ -1,7 +1,20 @@
 # couchstore.py
 # Python interface to CouchStore library
 
-from ctypes import *        # <http://docs.python.org/library/ctypes.html>
+try:
+    from ctypes import *
+except ImportError:
+    import sys
+    cb_path = '/opt/couchbase/lib/python'
+    while cb_path in sys.path:
+        sys.path.remove(cb_path)
+    try:
+        from ctypes import *
+    except ImportError:
+        sys.exit('error: could not import ctypes module')
+    else:
+        sys.path.insert(0, cb_path)
+
 import errno
 import traceback
 
