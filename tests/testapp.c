@@ -646,6 +646,31 @@ static void mb5086(void)
     assert(remove("mb5085.couch") == 0);
 }
 
+static void test_huge_revseq(void)
+{
+    Db *db;
+    Doc d;
+    DocInfo i;
+    DocInfo *i2;
+    couchstore_error_t err;
+
+    fprintf(stderr, "huge rev_seq.... ");
+    fflush(stderr);
+
+    setdoc(&d, &i, "hi", 2, "foo", 3, NULL, 0);
+    i.rev_seq = 5294967296;
+
+    err = couchstore_open_db("bigrevseq.couch", COUCHSTORE_OPEN_FLAG_CREATE, &db);
+    assert(err == COUCHSTORE_SUCCESS);
+    assert(couchstore_save_document(db, &d, &i, 0) == COUCHSTORE_SUCCESS);
+    assert(couchstore_commit(db) == COUCHSTORE_SUCCESS);
+    assert(couchstore_docinfo_by_id(db, "hi", 2, &i2) == COUCHSTORE_SUCCESS);
+    assert(i2->rev_seq == 5294967296);
+    couchstore_free_docinfo(i2);
+    assert(couchstore_close_db(db) == COUCHSTORE_SUCCESS);
+    assert(remove("bigrevseq.couch") == 0);
+}
+
 
 int main(int argc, const char *argv[])
 {
@@ -691,6 +716,9 @@ int main(int argc, const char *argv[])
     test_changes_no_dups();
     fprintf(stderr, " OK\n");
     mb5086();
+    fprintf(stderr, " OK\n");
+    unlink(testfilepath);
+    test_huge_revseq();
     fprintf(stderr, " OK\n");
     unlink(testfilepath);
 

@@ -312,7 +312,7 @@ static int by_seq_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
     int deleted = (bp & BP_DELETED_FLAG) != 0;
     bp &= ~BP_DELETED_FLAG;
     uint8_t content_meta = decode_raw08(raw->content_meta);
-    uint32_t rev_seq = decode_raw32(raw->rev_seq);
+    uint64_t rev_seq = decode_raw48(raw->rev_seq);
     uint64_t db_seq = decode_sequence_key(k);
 
     DocInfo* docInfo = malloc(sizeof(DocInfo) + extraSize);
@@ -343,9 +343,9 @@ static int by_id_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
         return COUCHSTORE_ERROR_CORRUPT;
     }
 
-    uint32_t datasize, deleted, revnum;
+    uint32_t datasize, deleted;
     uint8_t content_meta;
-    uint64_t bp, seq;
+    uint64_t bp, seq, revnum;
 
     seq = decode_raw48(raw->db_seq);
     datasize = decode_raw32(raw->size);
@@ -353,7 +353,7 @@ static int by_id_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
     deleted = (bp & BP_DELETED_FLAG) != 0;
     bp &= ~BP_DELETED_FLAG;
     content_meta = decode_raw08(raw->content_meta);
-    revnum = decode_raw32(raw->rev_seq);
+    revnum = decode_raw48(raw->rev_seq);
 
     DocInfo* docInfo = malloc(sizeof(DocInfo) + revMetaSize + k->size);
     if (!docInfo) {

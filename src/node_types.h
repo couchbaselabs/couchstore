@@ -49,16 +49,16 @@ typedef struct {
     raw_48 db_seq;
     raw_32 size;
     raw_48 bp;                 // high bit is 'deleted' flag
+    raw_48 rev_seq;
     raw_08 content_meta;
-    raw_32 rev_seq;
     // Variable-size rev_meta data follows
 } raw_id_index_value;
 
 typedef struct {
     raw_kv_length sizes;
     raw_48 bp;                 // high bit is 'deleted' flag
+    raw_48 rev_seq;
     raw_08 content_meta;
-    raw_32 rev_seq;
     // Variable-size id follows
     // Variable-size rev_meta data follows
 } raw_seq_index_value;

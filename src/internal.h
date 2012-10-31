@@ -14,7 +14,7 @@
 #include <pthread.h>
 
 #define COUCH_BLOCK_SIZE 4096
-#define COUCH_DISK_VERSION 10
+#define COUCH_DISK_VERSION 11
 #define COUCH_SNAPPY_THRESHOLD 64
 
 enum {

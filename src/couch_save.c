@@ -16,7 +16,7 @@ static size_t assemble_seq_index_value(DocInfo *docinfo, char *dst)
     raw->sizes = encode_kv_length(docinfo->id.size, docinfo->size);
     raw->bp = encode_raw48(docinfo->bp | (docinfo->deleted ? 1LL<<47 : 0));
     raw->content_meta = encode_raw08(docinfo->content_meta);
-    raw->rev_seq = encode_raw32((uint32_t)docinfo->rev_seq);
+    raw->rev_seq = encode_raw48(docinfo->rev_seq);
     dst += sizeof(*raw);
 
     memcpy(dst, docinfo->id.buf, docinfo->id.size);
@@ -34,7 +34,7 @@ static size_t assemble_id_index_value(DocInfo *docinfo, char *dst)
     raw->size = encode_raw32((uint32_t)docinfo->size);
     raw->bp = encode_raw48(docinfo->bp | (docinfo->deleted ? 1LL<<47 : 0));
     raw->content_meta = encode_raw08(docinfo->content_meta);
-    raw->rev_seq = encode_raw32((uint32_t)docinfo->rev_seq);
+    raw->rev_seq = encode_raw48(docinfo->rev_seq);
     dst += sizeof(*raw);
 
     memcpy(dst, docinfo->rev_meta.buf, docinfo->rev_meta.size);
