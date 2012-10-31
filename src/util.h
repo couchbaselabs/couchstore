@@ -14,6 +14,9 @@ int ebin_cmp(const sized_buf *e1, const sized_buf *e2);
 /** Compares sequence numbers (48-bit big-endian unsigned ints) stored in sized_bufs. */
 int seq_cmp(const sized_buf *k1, const sized_buf *k2);
 
+/** Offsets the pointer PTR by BYTES bytes. Result is of the same type as PTR. */
+#define offsetby(PTR, BYTES)    ((__typeof(PTR))((uint8_t*)(PTR) + (BYTES)))
+
 // Sets errcode to the result of C, and jumps to the cleanup: label if it's nonzero.
 #ifdef DEBUG
     void report_error(couchstore_error_t, const char* file, int line);

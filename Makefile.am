@@ -62,6 +62,8 @@ libcouchstore_la_SOURCES = \
                             src/llmsort.c \
                             src/mergesort.c \
                             src/mergesort.h \
+                            src/node_types.c \
+                            src/node_types.h \
                             src/reduces.c \
                             src/reduces.h \
                             src/strerror.c \
@@ -69,7 +71,7 @@ libcouchstore_la_SOURCES = \
                             src/util.h
 
 
-libcouchstore_la_LDFLAGS = $(AM_LDFLAGS) -version-info $(LIBCOUCHSTORE_API_CURRENT):$(LIBCOUCHSTORE_API_REVISION):$(LIBCOUCHSTORE_API_AGE) -no-undefined -lsnappy -lpthread
+libcouchstore_la_LDFLAGS = $(AM_LDFLAGS) $(ICU_LOCAL_LDFLAGS) -version-info $(LIBCOUCHSTORE_API_CURRENT):$(LIBCOUCHSTORE_API_REVISION):$(LIBCOUCHSTORE_API_AGE) -no-undefined -lsnappy -lpthread
 
 if WINDOWS
 libcouchstore_la_SOURCES += src/os_win.c
@@ -78,8 +80,8 @@ else
 libcouchstore_la_SOURCES += src/os.c
 endif
 
-libcouchstore_la_CFLAGS = $(AM_CFLAGS) -DLIBCOUCHSTORE_INTERNAL=1
-libcouchstore_la_LIBADD = librfc1321.la libbyteswap.la
+libcouchstore_la_CFLAGS = $(AM_CFLAGS) $(ICU_LOCAL_CFLAGS) -DLIBCOUCHSTORE_INTERNAL=1 -Wstrict-aliasing=2
+libcouchstore_la_LIBADD = librfc1321.la libbyteswap.la $(ICU_LOCAL_LIBS)
 
 couch_dbdump_SOURCES = src/dbdump.c
 couch_dbdump_DEPENDENCIES = libcouchstore.la

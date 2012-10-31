@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include "couch_btree.h"
 #include "util.h"
-#include "bitfield.h"
+#include "node_types.h"
 
 static couchstore_error_t btree_lookup_inner(couchfile_lookup_request *rq,
                                              uint64_t diskpos,
@@ -24,11 +24,8 @@ static couchstore_error_t btree_lookup_inner(couchfile_lookup_request *rq,
 
     if (nodebuf[0] == 0) { //KP Node
         while (bufpos < nodebuflen && current < end) {
-            uint32_t klen, vlen;
-            get_kvlen(nodebuf + bufpos, &klen, &vlen);
-            sized_buf cmp_key = {nodebuf + bufpos + 5, klen};
-            sized_buf val_buf = {nodebuf + bufpos + 5 + klen, vlen};
-            bufpos += 5 + klen + vlen;
+            sized_buf cmp_key, val_buf;
+            bufpos += read_kv(nodebuf + bufpos, &cmp_key, &val_buf);
 
             if (rq->cmp.compare(&cmp_key, rq->keys[current]) >= 0) {
                 if (rq->fold) {
@@ -43,31 +40,18 @@ static couchstore_error_t btree_lookup_inner(couchfile_lookup_request *rq,
                     last_item++;
                 } while (last_item < end && rq->cmp.compare(&cmp_key, rq->keys[last_item]) >= 0);
 
-                if (rq->node_callback) {
-                    // Invoke the node_callback on entry to the child node (and later on exit)
-                    uint64_t subtreeSize = get_48(val_buf.buf + 6);
-                    sized_buf reduce_value = {val_buf.buf + 14, get_16(val_buf.buf + 12)};
-                    error_pass(rq->node_callback(rq, subtreeSize, &reduce_value));
-                }
-                
-                pointer = get_48(val_buf.buf);
+                const raw_node_pointer *raw = (const raw_node_pointer*)val_buf.buf;
+                pointer = decode_raw48(raw->pointer);
                 error_pass(btree_lookup_inner(rq, pointer, current, last_item));
                 if (!rq->in_fold) {
                     current = last_item;
-                }
-
-                if (rq->node_callback) {
-                    error_pass(rq->node_callback(rq, 0, NULL));
                 }
             }
         }
     } else if (nodebuf[0] == 1) { //KV Node
         while (bufpos < nodebuflen && current < end) {
-            uint32_t klen, vlen;
-            get_kvlen(nodebuf + bufpos, &klen, &vlen);
-            sized_buf cmp_key = {nodebuf + bufpos + 5, klen};
-            sized_buf val_buf = {nodebuf + bufpos + 5 + klen, vlen};
-            bufpos += 5 + klen + vlen;
+            sized_buf cmp_key, val_buf;
+            bufpos += read_kv(nodebuf + bufpos, &cmp_key, &val_buf);
             int cmp_val = rq->cmp.compare(&cmp_key, rq->keys[current]);
             if (cmp_val >= 0 && rq->fold && !rq->in_fold) {
                 rq->in_fold = 1;

@@ -2,64 +2,123 @@
 #define COUCH_BITFIELD_H
 
 #include "config.h"
+#include "internal.h"
+#include <assert.h>
 #include <string.h>
 
-/** Read a 48-bit (6-byte) big-endian integer from the address pointed to by buf. */
-static inline uint64_t get_48(const char *buf)
+
+// Variable-width types. Since these are made out of chars they will be byte-aligned,
+// so structs consisting only of these will be packed.
+
+typedef struct {
+    uint8_t raw_bytes[1];
+} raw_08;
+
+typedef struct {
+    uint8_t raw_bytes[2];
+} raw_16;
+
+typedef struct {
+    uint8_t raw_bytes[3];
+} raw_24;
+
+typedef struct {
+    uint8_t raw_bytes[4];
+} raw_32;
+
+typedef struct {
+    uint8_t raw_bytes[5];
+} raw_40;
+
+typedef struct {
+    uint8_t raw_bytes[6];
+} raw_48;
+
+typedef struct {
+    uint8_t raw_bytes[8];
+} raw_64;
+
+
+// Functions for decoding raw_xx types to native integers:
+
+#define DECODE_RAW(DST_TYPE, FLIP_FN) \
+    DST_TYPE value = 0; \
+    memcpy((char*)&value + sizeof(value) - sizeof(raw), &(raw), sizeof(raw)); \
+    return FLIP_FN(value)
+
+static inline uint8_t decode_raw08(raw_08 raw)
 {
-    const uint32_t* longs = (const uint32_t*)buf;
-    const uint16_t* shorts = (const uint16_t*)buf;
-    return ((uint64_t)ntohl(longs[0]) << 16) | ntohs(shorts[2]);
+    return raw.raw_bytes[0];
 }
 
-/** Read a 40-bit (5-byte) big-endian integer from the address pointed to by buf. */
-static inline uint64_t get_40(const char *buf)
+static inline uint16_t decode_raw16(raw_16 raw)
 {
-    const uint32_t* longs = (const uint32_t*)buf;
-    return ((uint64_t)ntohl(longs[0]) << 8) | (uint8_t)buf[4];
+    DECODE_RAW(uint16_t, ntohs);
 }
 
-/** Read a 32-bit big-endian integer from the address pointed to by buf. */
-static inline uint32_t get_32(const char *buf)
+static inline uint32_t decode_raw24(raw_24 raw)
 {
-    return ntohl(*(const uint32_t*)buf);
+    DECODE_RAW(uint32_t, ntohl);
 }
 
-/** Read a 16-bit big-endian integer from the address pointed to by buf. */
-static inline uint32_t get_16(const char *buf)
+static inline uint32_t decode_raw32(raw_32 raw)
 {
-    return ntohs(*(const uint16_t*)buf);
+    DECODE_RAW(uint32_t, ntohl);
 }
 
-/** Read a 12-bit key length and 28-bit value length, packed into 5 bytes big-endian. */
-static inline void get_kvlen(const char *buf, uint32_t *klen, uint32_t *vlen)
+static inline uint64_t decode_raw40(raw_40 raw)
 {
-    //12, 28 bit
-    *klen = get_16(buf) >> 4;
-    *vlen = get_32(buf + 1) & 0x0FFFFFFF;
+    DECODE_RAW(uint64_t, ntohll);
 }
 
-/** Flip on the the bits of num as a numbits-bit number, offset bitpos bits into
-    buf. MUST ZERO MEMORY _BEFORE_ WRITING TO IT! */
-static inline void set_bits(char *buf, const int bitpos, const int numbits, uint64_t num)
+static inline uint64_t decode_raw48(raw_48 raw)
 {
-    // This may look inefficient, but since set_bits is generally called with constant values for
-    // bitpos and numbits, the 'if' tests will be resolved by the optimizer and only the
-    // appropriate block will be compiled.
-    if (bitpos + numbits <= 16) {
-        uint16_t num16 = (uint16_t) num;
-        num16 <<= (16 - (numbits + bitpos));
-        num16 = htons(num16);
-        *(uint16_t*)buf |= num16;
-    } else if (bitpos + numbits <= 32) {
-        uint32_t num32 = (uint32_t) num;
-        num32 <<= (32 - (numbits + bitpos));
-        num32 = htonl(num32);
-        *(uint32_t*)buf |= num32;
-    } else {
-        num = num << (64 - (numbits + bitpos));
-        num = htonll(num);
-        *(uint64_t*)buf |= num;
-    }
+    DECODE_RAW(uint64_t, ntohll);
 }
+
+static inline uint64_t decode_raw64(raw_64 raw)
+{
+    DECODE_RAW(uint64_t, ntohll);
+}
+
+
+// Functions for encoding native integers to raw_xx types:
+
+#define ENCODE_RAW(FLIP_FN, RAW_TYPE) \
+    value = FLIP_FN(value); \
+    RAW_TYPE raw; \
+    memcpy(&raw, (char*)&value + sizeof(value) - sizeof(raw), sizeof(raw)); \
+    return raw
+
+
+static inline raw_08 encode_raw08(uint8_t value)
+{
+    ENCODE_RAW(, raw_08);
+}
+
+static inline raw_16 encode_raw16(uint16_t value)
+{
+    ENCODE_RAW(htons, raw_16);
+}
+
+static inline raw_32 encode_raw32(uint32_t value)
+{
+    ENCODE_RAW(htonl, raw_32);
+}
+
+static inline raw_40 encode_raw40(uint64_t value)
+{
+    ENCODE_RAW(htonll, raw_40);
+}
+
+static inline raw_48 encode_raw48(uint64_t value)
+{
+    ENCODE_RAW(htonll, raw_48);
+}
+
+static inline raw_64 encode_raw64(uint64_t value)
+{
+    ENCODE_RAW(htonll, raw_64);
+}
+
 #endif

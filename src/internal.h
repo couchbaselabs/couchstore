@@ -81,10 +81,6 @@ extern "C" {
     couchstore_error_t db_write_header(Db *db, sized_buf *buf, off_t *pos);
     int db_write_buf(Db *db, const sized_buf *buf, off_t *pos, size_t *disk_size);
     int db_write_buf_compressed(Db *db, const sized_buf *buf, off_t *pos, size_t *disk_size);
-
-    node_pointer *read_root(char *buf, int size);
-    void encode_root(char *buf, node_pointer *node);
-
     struct _os_error *get_os_error_store(void);
 
     extern pthread_key_t os_err_key;
