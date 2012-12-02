@@ -65,7 +65,7 @@ def _toString (key):
 ### INTERNAL STRUCTS:
 
 class SizedBuf (Structure):
-    _fields_ = [("buf", POINTER(c_char)), ("size", c_ulonglong)]
+    _fields_ = [("buf", POINTER(c_char)), ("size", c_size_t)]
 
     def __init__(self, string):
         if string != None:
@@ -90,7 +90,7 @@ class DocInfoStruct (Structure):
                 ("deleted", c_int),
                 ("content_meta", c_ubyte),
                 ("bp", c_ulonglong),
-                ("size", c_ulonglong) ]
+                ("size", c_size_t) ]
 
 class LocalDocStruct (Structure):
     _fields_ = [("id", SizedBuf),
@@ -103,7 +103,7 @@ class DbInfoStruct (Structure):
                 ("doc_count", c_ulonglong),
                 ("deleted_count", c_ulonglong),
                 ("space_used", c_ulonglong),
-                ("header_position", c_ulonglong) ]
+                ("header_position", c_size_t) ]
 
 
 ### DOCUMENT INFO CLASS:
@@ -223,7 +223,7 @@ class CouchStore (object):
             flags = 0
 
         db = c_void_p()
-        _check(_lib.couchstore_open_db(path, flags, byref(db)))
+        _check(_lib.couchstore_open_db(path, c_uint64(flags), byref(db)))
         self._as_parameter_ = db
         self.path = path
 
