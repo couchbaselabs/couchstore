@@ -603,10 +603,12 @@ static couchstore_error_t lookup_callback(couchfile_lookup_request *rq,
     }
 
     if ((context->options & COUCHSTORE_DELETES_ONLY) && docinfo->deleted == 0) {
+        couchstore_free_docinfo(docinfo);
         return COUCHSTORE_SUCCESS;
     }
 
     if ((context->options & COUCHSTORE_NO_DELETES) && docinfo->deleted == 1) {
+        couchstore_free_docinfo(docinfo);
         return COUCHSTORE_SUCCESS;
     }
 
