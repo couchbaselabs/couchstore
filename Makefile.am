@@ -124,6 +124,7 @@ lua_tests: couchscript couch_compact tests/localdoc.lua
 	@./couchscript tests/bulk.lua
 	@./couchscript tests/changessincefilter.lua
 	@./couchscript tests/compact.lua
+	@./couchscript tests/dropdel.lua
 
 slow_lua_tests: couchscript tests/largefile.lua tests/large.lua
 	@echo "Running slow lua tests."

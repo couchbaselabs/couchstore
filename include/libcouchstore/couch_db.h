@@ -548,6 +548,18 @@ extern "C" {
     LIBCOUCHSTORE_API
     couchstore_error_t couchstore_compact_db(Db* source, const char* target_filename);
 
+
+    /*
+     * Flags to pass as the flags parameter to couchstore_compact_db_ex
+     */
+    typedef uint64_t couchstore_compact_flags;
+    enum {
+        /**
+         * Do not copy the tombstones of deleted items into compacted file.
+         */
+        COUCHSTORE_COMPACT_FLAG_DROP_DELETES = 1
+    };
+
     /*
      * Compact a database. This creates a new DB file with the same data as the
      * source db, omitting data that is no longer needed.
@@ -555,13 +567,14 @@ extern "C" {
      *
      * @param source the source database
      * @param target_filename the filename of the new database to create.
+     * @param flags flags that change compaction behavior
      * @param ops Pointer to a structure containing the file I/O operations
      *            you want the library to use.
      * @return COUCHSTORE_SUCCESS on success
      */
     LIBCOUCHSTORE_API
     couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filename,
-                                                const couch_file_ops *ops);
+                                                uint64_t flags, const couch_file_ops *ops);
     /*////////////////////  MISC: */
 
     /**

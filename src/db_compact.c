@@ -30,24 +30,33 @@ typedef struct compact_ctx {
     /* This is for stuff that lasts the duration of the b-tree writing (node pointers) */
     arena *persistent_arena;
     couchfile_modify_result *target_mr;
+    couchstore_compact_flags flags;
 } compact_ctx;
 
 static couchstore_error_t compact_seq_tree(Db* source, Db* target, compact_ctx *ctx);
 static couchstore_error_t compact_localdocs_tree(Db* source, Db* target, compact_ctx *ctx);
 static couchstore_error_t write_id_tree(Db* target, compact_ctx *ctx);
 
-couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filename, const couch_file_ops *ops)
+couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filename,
+                                            couchstore_compact_flags flags,
+                                            const couch_file_ops *ops)
 {
     Db* target = NULL;
     couchstore_error_t errcode;
     compact_ctx ctx;
     ctx.id_tmp = NULL;
+    ctx.flags = flags;
 
     error_pass(couchstore_open_db_ex(target_filename, COUCHSTORE_OPEN_FLAG_CREATE, ops, &target));
 
     target->file_pos = 1;
     target->header.update_seq = source->header.update_seq;
-    target->header.purge_seq = source->header.purge_seq;
+    if(flags & COUCHSTORE_COMPACT_FLAG_DROP_DELETES) {
+        //Count the number of times purge has happened
+        target->header.purge_seq = source->header.purge_seq + 1;
+    } else {
+        target->header.purge_seq = source->header.purge_seq;
+    }
     target->header.purge_ptr = source->header.purge_ptr;
 
     if(source->header.by_seq_root) {
@@ -75,7 +84,7 @@ cleanup:
 
 couchstore_error_t couchstore_compact_db(Db* source, const char* target_filename)
 {
-    return couchstore_compact_db_ex(source, target_filename, couchstore_get_default_file_ops());
+    return couchstore_compact_db_ex(source, target_filename, NULL, couchstore_get_default_file_ops());
 }
 
 static int read_id_record(FILE *in, void *buf, void *ctx)
@@ -269,6 +278,11 @@ static couchstore_error_t compact_seq_fetchcb(couchfile_lookup_request *rq, void
     raw_seq_index_value* rawSeq = (raw_seq_index_value*)v->buf;
     uint64_t bpWithDeleted = decode_raw48(rawSeq->bp);
     uint64_t bp = bpWithDeleted & ~BP_DELETED_FLAG;
+    if((bpWithDeleted & BP_DELETED_FLAG) &&
+       (ctx->flags & COUCHSTORE_COMPACT_FLAG_DROP_DELETES)) {
+        return COUCHSTORE_SUCCESS;
+    }
+
     if(bp != 0) {
         off_t new_bp = 0;
         // Copy the document from the old db file to the new one:
