@@ -61,6 +61,9 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
 
     if(source->header.by_seq_root) {
         ctx.id_tmp = tmpfile();
+        if(!ctx.id_tmp) {
+            error_pass(COUCHSTORE_ERROR_OPEN_FILE);
+        }
         error_pass(compact_seq_tree(source, target, &ctx));
         error_pass(write_id_tree(target, &ctx));
         fclose(ctx.id_tmp);
