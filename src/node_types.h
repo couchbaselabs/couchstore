@@ -78,7 +78,7 @@ size_t encode_root(void *buf, node_pointer *node);
 static inline void decode_kv_length(const raw_kv_length *kv, uint32_t *klen, uint32_t *vlen)
 {
     //12, 28 bit
-    *klen = ntohs(*(uint16_t*)&kv->raw_kv[0]) >> 4;
+    *klen = (uint16_t) ((kv->raw_kv[0] << 4) | ((kv->raw_kv[1] & 0xf0) >> 4));
     *vlen = ntohl(*(uint32_t*)&kv->raw_kv[1]) & 0x0FFFFFFF;
 }
 
