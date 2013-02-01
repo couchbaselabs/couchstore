@@ -80,7 +80,9 @@ libcouchstore_la_SOURCES = \
                             src/util.h \
                             src/couch_index.c \
                             src/views/bitmap.h \
-                            src/views/bitmap.c
+                            src/views/bitmap.c \
+                            src/views/sorted_list.h \
+                            src/views/sorted_list.c
 
 
 libcouchstore_la_LDFLAGS = $(AM_LDFLAGS) $(ICU_LOCAL_LDFLAGS) -version-info $(LIBCOUCHSTORE_API_CURRENT):$(LIBCOUCHSTORE_API_REVISION):$(LIBCOUCHSTORE_API_AGE) -no-undefined -lsnappy -lpthread
@@ -169,7 +171,8 @@ testapp_SOURCES = tests/testapp.c src/util.c tests/macros.h tests/collate_json_t
 testapp_SOURCES += \
 	tests/views/view_tests.h \
 	tests/views/tests.c \
-	tests/views/bitmaps.c
+	tests/views/bitmaps.c \
+	tests/views/sorted_lists.c
 testapp_CFLAGS = $(AM_CFLAGS)
 testapp_DEPENDENCIES = libcouchstore.la libbyteswap.la
 testapp_LDADD = libcouchstore.la libbyteswap.la

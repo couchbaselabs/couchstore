@@ -27,10 +27,12 @@
 #include <stdlib.h>
 #include "../macros.h"
 #include "../src/views/bitmap.h"
+#include "../src/views/sorted_list.h"
 
 #define TPRINT(...) fprintf(stderr, __VA_ARGS__)
 
 void view_tests();
 void test_bitmaps();
+void test_sorted_lists();
 
 #endif

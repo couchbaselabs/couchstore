@@ -26,4 +26,5 @@ void view_tests()
     TPRINT("\n\nRunning view tests\n\n");
 
     test_bitmaps();
+    test_sorted_lists();
 }
