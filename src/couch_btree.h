@@ -8,13 +8,15 @@
 extern "C" {
 #endif
 
+    typedef int (*compare_callback)(const sized_buf *k1, const sized_buf *k2);
+
     typedef struct compare_info {
         /* used by find_first_gteq */
         int last_cmp_val;
         sized_buf *last_cmp_key;
         int list_pos;
         /* Compare function */
-        int (*compare)(const sized_buf *k1, const sized_buf *k2);
+        compare_callback compare;
         void *arg;
     } compare_info;
 
@@ -23,7 +25,7 @@ extern "C" {
 
     typedef struct couchfile_lookup_request {
         compare_info cmp;
-        Db *db;
+        tree_file *file;
         int num_keys;
         /* If nonzero, calls fetch_callback for all keys between and including key 0 and key 1
            in the keys array, or all keys after key 0 if it contains only one key.
@@ -68,7 +70,7 @@ extern "C" {
 
     typedef struct couchfile_modify_request {
         compare_info cmp;
-        Db *db;
+        tree_file *file;
         int num_actions;
         couchfile_modify_action *actions;
         void (*fetch_callback) (struct couchfile_modify_request *rq, sized_buf *k, sized_buf *v, void *arg);
@@ -108,8 +110,9 @@ extern "C" {
 
     couchstore_error_t mr_push_item(sized_buf *k, sized_buf *v, couchfile_modify_result *dst);
 
-    couchfile_modify_result* new_btree_modres(arena* a, arena* transient_arena, Db* db, compare_info* cmp, reduce_fn reduce,
-            reduce_fn rereduce);
+    couchfile_modify_result* new_btree_modres(arena* a, arena* transient_arena, tree_file *file,
+                                              compare_info* cmp, reduce_fn reduce,
+                                              reduce_fn rereduce);
 
     node_pointer* complete_new_btree(couchfile_modify_result* mr, couchstore_error_t *errcode);
 

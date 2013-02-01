@@ -15,11 +15,14 @@
 #   limitations under the License.
 ACLOCAL_AMFLAGS = -I m4 --force
 
-bin_PROGRAMS = couch_dbdump couch_dbinfo couch_compact
+bin_PROGRAMS = couch_dbdump couch_dbinfo couch_compact couch_viewgen
 EXTRA_DIST = python LICENSE README.md
+
+ICU_LOCAL_LIBS=-licuuc -licudata -licui18n
 
 pkginclude_HEADERS = \
                      include/libcouchstore/couch_db.h \
+                     include/libcouchstore/couch_index.h \
                      include/libcouchstore/couch_common.h \
                      include/libcouchstore/error.h \
                      include/libcouchstore/file_ops.h \
@@ -47,6 +50,8 @@ libcouchstore_la_SOURCES = \
                             src/bitfield.h \
                             src/btree_modify.c \
                             src/btree_read.c \
+                            src/collate_json.c \
+                            src/collate_json.h \
                             src/couch_btree.h \
                             src/couch_db.c \
                             src/couch_save.c \
@@ -59,7 +64,11 @@ libcouchstore_la_SOURCES = \
                             src/internal.h \
                             src/iobuffer.c \
                             src/iobuffer.h \
+                            src/json_reduce.c \
+                            src/json_reduce.h \
                             src/llmsort.c \
+                            src/tree_writer.c \
+                            src/tree_writer.h \
                             src/mergesort.c \
                             src/mergesort.h \
                             src/node_types.c \
@@ -68,7 +77,8 @@ libcouchstore_la_SOURCES = \
                             src/reduces.h \
                             src/strerror.c \
                             src/util.c \
-                            src/util.h
+                            src/util.h \
+                            src/couch_index.c
 
 
 libcouchstore_la_LDFLAGS = $(AM_LDFLAGS) $(ICU_LOCAL_LDFLAGS) -version-info $(LIBCOUCHSTORE_API_CURRENT):$(LIBCOUCHSTORE_API_REVISION):$(LIBCOUCHSTORE_API_AGE) -no-undefined -lsnappy -lpthread
@@ -80,7 +90,7 @@ else
 libcouchstore_la_SOURCES += src/os.c
 endif
 
-libcouchstore_la_CFLAGS = $(AM_CFLAGS) $(ICU_LOCAL_CFLAGS) -DLIBCOUCHSTORE_INTERNAL=1 -Wstrict-aliasing=2
+libcouchstore_la_CFLAGS = $(AM_CFLAGS) $(ICU_LOCAL_CFLAGS) -DLIBCOUCHSTORE_INTERNAL=1 -Wstrict-aliasing=2 -pedantic
 libcouchstore_la_LIBADD = librfc1321.la libbyteswap.la $(ICU_LOCAL_LIBS)
 
 couch_dbdump_SOURCES = src/dbdump.c
@@ -89,6 +99,7 @@ couch_dbdump_CFLAGS = $(AM_CFLAGS) -D__STDC_FORMAT_MACROS
 couch_dbdump_LDADD = libcouchstore.la libbyteswap.la -lsnappy
 
 if WINDOWS
+couch_dbdump_SOURCES += win32/win32.c
 couch_dbdump_LDADD += -lws2_32
 endif
 
@@ -101,6 +112,11 @@ couch_compact_SOURCES = src/compactor.c
 couch_compact_DEPENDENCIES = libcouchstore.la
 couch_compact_CFLAGS = $(AM_CFLAGS) -D__STDC_FORMAT_MACROS
 couch_compact_LDADD = libcouchstore.la libbyteswap.la -lsnappy
+
+couch_viewgen_SOURCES = src/viewgen.c
+couch_viewgen_DEPENDENCIES = libcouchstore.la
+couch_viewgen_CFLAGS = $(AM_CFLAGS) -D__STDC_FORMAT_MACROS
+couch_viewgen_LDADD = libcouchstore.la libbyteswap.la -lsnappy
 
 extra_tests=
 slow_tests=
@@ -147,7 +163,7 @@ CLEANFILES = test.couch
 check_PROGRAMS = testapp
 TESTS = ${check_PROGRAMS}
 
-testapp_SOURCES = tests/testapp.c src/util.c tests/macros.h
+testapp_SOURCES = tests/testapp.c src/util.c tests/macros.h tests/collate_json_test.c tests/indexer_test.c
 testapp_CFLAGS = $(AM_CFLAGS)
 testapp_DEPENDENCIES = libcouchstore.la libbyteswap.la
 testapp_LDADD = libcouchstore.la libbyteswap.la

@@ -14,6 +14,16 @@
         }                                                   \
     }  while (0)
 
+#define assert_eq(A, B)                                     \
+    do {                                                    \
+        if ((A) != (B)) {                                      \
+            fprintf(stderr, "%s:%d: assertion failed: %s != %s\n",    \
+                    __FILE__, __LINE__, #A, #B);                    \
+            fflush(stderr);                                 \
+            abort();                                        \
+        }                                                   \
+    }  while (0)
+
 #define try(C)                                                      \
     do {                                                            \
         if((errcode = (C)) < 0) {                                   \

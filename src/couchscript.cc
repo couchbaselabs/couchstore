@@ -232,7 +232,7 @@ extern "C" {
         int64_t arg = static_cast<int64_t>(luaL_checknumber(ls, 2));
         off_t location(0);
         if (arg < 1) {
-            location = db->file_pos + arg;
+            location = db->file.pos + arg;
         } else {
             location = static_cast<off_t>(arg);
         }
@@ -249,7 +249,7 @@ extern "C" {
             return 1;
         }
 
-        db->file_pos = location;
+        db->file.pos = location;
 
         return 0;
     }

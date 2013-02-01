@@ -16,7 +16,7 @@ int ebin_cmp(const sized_buf *e1, const sized_buf *e2)
     } else {
         size = e1->size;
     }
-    
+
     int cmp = memcmp(e1->buf, e2->buf, size);
     if (cmp == 0) {
         if (size < e2->size) {
@@ -59,7 +59,7 @@ void *fatbuf_get(fatbuf *fb, size_t bytes)
         return NULL;
     }
 #ifdef DEBUG
-    if (fb->buf[fb->pos] != 0x44) {
+    if (fb->buf[fb->pos] != 0x44 && bytes > 0) {
         fprintf(stderr, "Fatbuf space has been written to before it was taken!\n");
     }
 #endif
