@@ -81,6 +81,8 @@ libcouchstore_la_SOURCES = \
                             src/views/collate_json.h \
                             src/views/bitmap.h \
                             src/views/bitmap.c \
+                            src/views/index_header.h \
+                            src/views/index_header.c \
                             src/views/sorted_list.h \
                             src/views/sorted_list.c
 
@@ -172,6 +174,7 @@ testapp_SOURCES += \
 	tests/views/view_tests.h \
 	tests/views/tests.c \
 	tests/views/collate_json_test.c \
+	tests/views/index_headers.c \
 	tests/views/bitmaps.c \
 	tests/views/sorted_lists.c
 testapp_CFLAGS = $(AM_CFLAGS)

@@ -28,6 +28,7 @@
 #include "../macros.h"
 #include "../src/views/bitmap.h"
 #include "../src/views/sorted_list.h"
+#include "../src/views/index_header.h"
 
 #define TPRINT(...) fprintf(stderr, __VA_ARGS__)
 
@@ -35,5 +36,6 @@ void view_tests();
 void test_bitmaps();
 void test_sorted_lists();
 void test_collate_json();
+void test_index_headers();
 
 #endif
