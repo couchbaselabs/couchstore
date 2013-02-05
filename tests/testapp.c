@@ -12,7 +12,6 @@
 #include <string.h>
 #include "macros.h"
 
-extern void TestCollateJSON(void);  // collate_json_test.c
 extern void TestCouchIndexer(void); // indexer_test.c
 extern void view_tests();
 
@@ -726,7 +725,6 @@ int main(int argc, const char *argv[])
     fprintf(stderr, " OK\n");
     unlink(testfilepath);
     
-    TestCollateJSON();
     TestCouchIndexer();
 
     // make sure os.c didn't accidentally call close(0):

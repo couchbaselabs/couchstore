@@ -34,5 +34,6 @@
 void view_tests();
 void test_bitmaps();
 void test_sorted_lists();
+void test_collate_json();
 
 #endif

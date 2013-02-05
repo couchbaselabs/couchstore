@@ -7,7 +7,7 @@
 #include <string.h>
 #include <libcouchstore/couch_index.h>
 #include "bitfield.h"
-#include "collate_json.h"
+#include "views/collate_json.h"
 #include "couch_btree.h"
 #include "internal.h"
 #include "json_reduce.h"

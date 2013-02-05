@@ -2,13 +2,11 @@
 
 //  Reference: http://wiki.apache.org/couchdb/View_collation
 
-#include "../src/collate_json.h"
-#include "macros.h"
+#include "../src/views/collate_json.h"
+#include "../macros.h"
+#include "view_tests.h"
 #include <string.h>
 #include <stdio.h>
-
-
-void TestCollateJSON(void);
 
 
 static int collateStrs(const char* str1, const char* str2, CollateJSONMode mode)
@@ -133,7 +131,7 @@ static void TestCollateUnicodeStrings()
     assert_eq(collateStrs("\"\001\"", "\" \"", mode), -1);
 }
 
-void TestCollateJSON(void)
+void test_collate_json()
 {
     fprintf(stderr, "JSON collation: ");
     TestCollateConvertEscape();

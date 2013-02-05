@@ -50,8 +50,6 @@ libcouchstore_la_SOURCES = \
                             src/bitfield.h \
                             src/btree_modify.c \
                             src/btree_read.c \
-                            src/collate_json.c \
-                            src/collate_json.h \
                             src/couch_btree.h \
                             src/couch_db.c \
                             src/couch_save.c \
@@ -79,6 +77,8 @@ libcouchstore_la_SOURCES = \
                             src/util.c \
                             src/util.h \
                             src/couch_index.c \
+                            src/views/collate_json.c \
+                            src/views/collate_json.h \
                             src/views/bitmap.h \
                             src/views/bitmap.c \
                             src/views/sorted_list.h \
@@ -167,10 +167,11 @@ CLEANFILES = test.couch
 check_PROGRAMS = testapp
 TESTS = ${check_PROGRAMS}
 
-testapp_SOURCES = tests/testapp.c src/util.c tests/macros.h tests/collate_json_test.c tests/indexer_test.c
+testapp_SOURCES = tests/testapp.c src/util.c tests/macros.h tests/indexer_test.c
 testapp_SOURCES += \
 	tests/views/view_tests.h \
 	tests/views/tests.c \
+	tests/views/collate_json_test.c \
 	tests/views/bitmaps.c \
 	tests/views/sorted_lists.c
 testapp_CFLAGS = $(AM_CFLAGS)

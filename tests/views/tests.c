@@ -27,4 +27,5 @@ void view_tests()
 
     test_bitmaps();
     test_sorted_lists();
+    test_collate_json();
 }
