@@ -14,6 +14,7 @@
 
 extern void TestCollateJSON(void);  // collate_json_test.c
 extern void TestCouchIndexer(void); // indexer_test.c
+extern void view_tests();
 
 #define ZERO(V) memset(&(V), 0, sizeof(V))
 //Only use the macro SETDOC with constants!
@@ -730,6 +731,8 @@ int main(int argc, const char *argv[])
 
     // make sure os.c didn't accidentally call close(0):
     assert(lseek(0, 0, SEEK_CUR) >= 0 || errno != EBADF);
+
+    view_tests();
 
     return 0;
 }
