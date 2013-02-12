@@ -32,7 +32,7 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
 {
     Db* target = NULL;
     couchstore_error_t errcode;
-    compact_ctx ctx = {NULL, new_arena(0), new_arena(0)};
+    compact_ctx ctx = {NULL, new_arena(0), new_arena(0), NULL, 0};
     ctx.flags = flags;
     error_unless(ctx.transient_arena && ctx.persistent_arena, COUCHSTORE_ERROR_ALLOC_FAIL);
 
