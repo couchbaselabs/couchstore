@@ -105,7 +105,6 @@ couch_dbdump_CFLAGS = $(AM_CFLAGS) -D__STDC_FORMAT_MACROS
 couch_dbdump_LDADD = libcouchstore.la libbyteswap.la -lsnappy
 
 if WINDOWS
-couch_dbdump_SOURCES += win32/win32.c
 couch_dbdump_LDADD += -lws2_32
 endif
 
