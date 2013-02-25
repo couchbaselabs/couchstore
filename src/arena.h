@@ -70,4 +70,10 @@ const arena_position* arena_mark(arena *a);
  */
 void arena_free_from_mark(arena *a, const arena_position *mark);
 
+/**
+ * Frees all blocks from the arena.
+ */
+void arena_free_all(arena *a);
+
+
 #endif // COUCH_ARENA_H

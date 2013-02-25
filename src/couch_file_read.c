@@ -1,5 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include "config.h"
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -7,15 +8,55 @@
 #include <snappy-c.h>
 
 #include "internal.h"
+#include "iobuffer.h"
 #include "bitfield.h"
 #include "crc32.h"
 #include "util.h"
 
 #define MAX_HEADER_SIZE 1024    // Conservative estimate; just for sanity check
 
+couchstore_error_t tree_file_open(tree_file* file,
+                                  const char *filename,
+                                  int openflags,
+                                  const couch_file_ops *ops)
+{
+    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
+
+    /* Sanity check input parameters */
+    if (filename == NULL || file == NULL || ops == NULL ||
+            ops->version != 3 || ops->constructor == NULL || ops->open == NULL ||
+            ops->close == NULL || ops->pread == NULL ||
+            ops->pwrite == NULL || ops->goto_eof == NULL ||
+            ops->sync == NULL || ops->destructor == NULL) {
+        return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
+    }
+
+    memset(file, 0, sizeof(*file));
+
+    file->path = strdup(filename);
+    error_unless(file->path, COUCHSTORE_ERROR_ALLOC_FAIL);
+
+    file->ops = couch_get_buffered_file_ops(ops, &file->handle);
+    error_unless(file->ops, COUCHSTORE_ERROR_ALLOC_FAIL);
+
+    error_pass(file->ops->open(&file->handle, filename, openflags));
+
+cleanup:
+    return errcode;
+}
+
+void tree_file_close(tree_file* file)
+{
+    if (file->ops) {
+        file->ops->close(file->handle);
+        file->ops->destructor(file->handle);
+    }
+    free((char*)file->path);
+}
+
 /** Read bytes from the database file, skipping over the header-detection bytes at every block
     boundary. */
-static couchstore_error_t read_skipping_prefixes(Db* db, off_t *pos, ssize_t len, void *dst) {
+static couchstore_error_t read_skipping_prefixes(tree_file *file, off_t *pos, ssize_t len, void *dst) {
     if (*pos % COUCH_BLOCK_SIZE == 0) {
         ++*pos;
     }
@@ -24,7 +65,7 @@ static couchstore_error_t read_skipping_prefixes(Db* db, off_t *pos, ssize_t len
         if (read_size > len) {
             read_size = len;
         }
-        ssize_t got_bytes = db->file_ops->pread(db->file_handle, dst, read_size, *pos);
+        ssize_t got_bytes = file->ops->pread(file->handle, dst, read_size, *pos);
         if (got_bytes < 0) {
             return (couchstore_error_t) got_bytes;
         } else if (got_bytes == 0) {
@@ -43,14 +84,14 @@ static couchstore_error_t read_skipping_prefixes(Db* db, off_t *pos, ssize_t len
 /** Common subroutine of pread_bin, pread_compressed and pread_header.
     Parameters and return value are the same as for pread_bin,
     except the 'header' parameter which is 1 if reading a header, 0 otherwise. */
-static int pread_bin_internal(Db *db, off_t pos, char **ret_ptr, int header)
+static int pread_bin_internal(tree_file *file, off_t pos, char **ret_ptr, int header)
 {
     struct {
         uint32_t chunk_len;
         uint32_t crc32;
     } info;
     
-    couchstore_error_t err = read_skipping_prefixes(db, &pos, sizeof(info), &info);
+    couchstore_error_t err = read_skipping_prefixes(file, &pos, sizeof(info), &info);
     if (err < 0) {
         return err;
     }
@@ -67,7 +108,7 @@ static int pread_bin_internal(Db *db, off_t pos, char **ret_ptr, int header)
     if (!buf) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
-    err = read_skipping_prefixes(db, &pos, info.chunk_len, buf);
+    err = read_skipping_prefixes(file, &pos, info.chunk_len, buf);
     if (!err && info.crc32 && info.crc32 != hash_crc32(buf, info.chunk_len)) {
         err = COUCHSTORE_ERROR_CHECKSUM_FAIL;
     }
@@ -80,16 +121,16 @@ static int pread_bin_internal(Db *db, off_t pos, char **ret_ptr, int header)
     return info.chunk_len;
 }
 
-int pread_header(Db *db, off_t pos, char **ret_ptr)
+int pread_header(tree_file *file, off_t pos, char **ret_ptr)
 {
-    return pread_bin_internal(db, pos + 1, ret_ptr, 1);
+    return pread_bin_internal(file, pos + 1, ret_ptr, 1);
 }
 
-int pread_compressed(Db *db, off_t pos, char **ret_ptr)
+int pread_compressed(tree_file *file, off_t pos, char **ret_ptr)
 {
     char *compressed_buf;
     char *new_buf;
-    int len = pread_bin_internal(db, pos, &compressed_buf, 0);
+    int len = pread_bin_internal(file, pos, &compressed_buf, 0);
     if (len < 0) {
         return len;
     }
@@ -115,7 +156,7 @@ int pread_compressed(Db *db, off_t pos, char **ret_ptr)
     return (int) uncompressed_len;
 }
 
-int pread_bin(Db *db, off_t pos, char **ret_ptr)
+int pread_bin(tree_file *file, off_t pos, char **ret_ptr)
 {
-    return pread_bin_internal(db, pos, ret_ptr, 0);
+    return pread_bin_internal(file, pos, ret_ptr, 0);
 }

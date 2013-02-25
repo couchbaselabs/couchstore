@@ -1,5 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include "config.h"
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
@@ -72,12 +73,12 @@ static couchfile_modify_result *make_modres(arena* a, couchfile_modify_request *
     return res;
 }
 
-couchfile_modify_result *new_btree_modres(arena *a, arena *transient_arena, Db* db, compare_info* cmp, reduce_fn reduce,
-        reduce_fn rereduce)
+couchfile_modify_result *new_btree_modres(arena *a, arena *transient_arena, tree_file *file,
+                                          compare_info* cmp, reduce_fn reduce, reduce_fn rereduce)
 {
     couchfile_modify_request* rq = arena_alloc(a, sizeof(couchfile_modify_request));
     rq->cmp = *cmp;
-    rq->db = db;
+    rq->file = file;
     rq->num_actions = 0;
     rq->fetch_callback = NULL;
     rq->reduce = reduce;
@@ -179,7 +180,7 @@ static couchstore_error_t flush_mr_partial(couchfile_modify_result *res, size_t 
     int itmcount = 0;
     char *nodebuf = NULL;
     sized_buf writebuf;
-    char reducebuf[30];
+    char reducebuf[500];    // view_indexer.c's reduce fns need this much room
     size_t reducesize = 0;
     uint64_t subtreesize = 0;
     off_t diskpos;
@@ -219,7 +220,7 @@ static couchstore_error_t flush_mr_partial(couchfile_modify_result *res, size_t 
 
     writebuf.size = dst - nodebuf;
 
-    errcode = db_write_buf_compressed(res->rq->db, &writebuf, &diskpos, &disk_size);
+    errcode = db_write_buf_compressed(res->rq->file, &writebuf, &diskpos, &disk_size);
     free(nodebuf);  // here endeth the nodebuf.
     if (errcode != COUCHSTORE_SUCCESS) {
         return errcode;
@@ -227,10 +228,12 @@ static couchstore_error_t flush_mr_partial(couchfile_modify_result *res, size_t 
 
     if (res->node_type == KV_NODE && res->rq->reduce) {
         res->rq->reduce(reducebuf, &reducesize, res->values->next, itmcount);
+        assert(reducesize <= sizeof(reducebuf));
     }
 
     if (res->node_type == KP_NODE && res->rq->rereduce) {
         res->rq->rereduce(reducebuf, &reducesize, res->values->next, itmcount);
+        assert(reducesize <= sizeof(reducebuf));
     }
 
     node_pointer *ptr = (node_pointer *) arena_alloc(res->arena, sizeof(node_pointer) + final_key.size + reducesize);
@@ -314,7 +317,7 @@ static couchstore_error_t modify_node(couchfile_modify_request *rq,
     }
 
     if (nptr) {
-        if ((nodebuflen = pread_compressed(rq->db, nptr->pointer, (char **) &nodebuf)) < 0) {
+        if ((nodebuflen = pread_compressed(rq->file, nptr->pointer, (char **) &nodebuf)) < 0) {
             error_pass(COUCHSTORE_ERROR_READ);
         }
     }

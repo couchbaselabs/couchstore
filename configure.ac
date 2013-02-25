@@ -27,7 +27,7 @@ AC_PROG_CXX
 AC_DISABLE_STATIC
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 AC_PROG_LIBTOOL
-AM_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
 AC_CANONICAL_HOST
@@ -107,6 +107,28 @@ AS_IF([test "x$ac_cv_header_snappy_c_h" != "xyes"],
       [AC_MSG_ERROR(Failed to locate snappy-c.h)])
 AS_IF([test "x${ac_cv_have_libsnappy}" != "xyes"],
       [AC_MSG_ERROR(Failed to locate libsnappy)])
+
+AC_ARG_WITH([win32-icu-binaries], [AC_HELP_STRING([--with-win32-icu-binaries=PATH],
+    [set PATH to the Win32 native ICU binaries directory])], [
+    ICU_CONFIG="" # supposed to be a command to query options...
+    ICU_INCLUDE="$withval/include"
+    ICU_LOCAL_CFLAGS="-I$ICU_INCLUDE"
+    ICU_LIB_DIR="$withval/lib"
+    ICU_LOCAL_LDFLAGS="-L$ICU_LIB_DIR"
+    ICU_LOCAL_BIN=$withval/bin
+    AC_SUBST(ICU_INCLUDE)
+    AC_SUBST(ICU_LIB_DIR)
+], [
+    AC_CHECK_ICU([3.4.1])
+    ICU_LOCAL_CFLAGS=`$ICU_CONFIG --cppflags-searchpath`
+    ICU_LOCAL_LDFLAGS=`$ICU_CONFIG --ldflags-searchpath`
+    ICU_LOCAL_BIN=
+])
+
+AC_SUBST(ICU_CONFIG)
+AC_SUBST(ICU_LOCAL_CFLAGS)
+AC_SUBST(ICU_LOCAL_LDFLAGS)
+AC_SUBST(ICU_LOCAL_BIN)
 
 AH_TOP([
 #ifndef CONFIG_H

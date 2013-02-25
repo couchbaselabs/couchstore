@@ -13,7 +13,7 @@
 #include "crc32.h"
 #include "util.h"
 
-static ssize_t raw_write(Db *db, const sized_buf *buf, off_t pos)
+static ssize_t raw_write(tree_file *file, const sized_buf *buf, off_t pos)
 {
     off_t write_pos = pos;
     size_t buf_pos = 0;
@@ -27,7 +27,7 @@ static ssize_t raw_write(Db *db, const sized_buf *buf, off_t pos)
         }
 
         if (write_pos % COUCH_BLOCK_SIZE == 0) {
-            written = db->file_ops->pwrite(db->file_handle, &blockprefix, 1, write_pos);
+            written = file->ops->pwrite(file->handle, &blockprefix, 1, write_pos);
             if (written < 0) {
                 return written;
             }
@@ -35,7 +35,7 @@ static ssize_t raw_write(Db *db, const sized_buf *buf, off_t pos)
             continue;
         }
 
-        written = db->file_ops->pwrite(db->file_handle, buf->buf + buf_pos, block_remain, write_pos);
+        written = file->ops->pwrite(file->handle, buf->buf + buf_pos, block_remain, write_pos);
         if (written < 0) {
             return written;
         }
@@ -46,9 +46,9 @@ static ssize_t raw_write(Db *db, const sized_buf *buf, off_t pos)
     return (ssize_t)(write_pos - pos);
 }
 
-couchstore_error_t db_write_header(Db *db, sized_buf *buf, off_t *pos)
+couchstore_error_t db_write_header(tree_file *file, sized_buf *buf, off_t *pos)
 {
-    off_t write_pos = db->file_pos;
+    off_t write_pos = file->pos;
     ssize_t written;
     uint32_t size = htonl(buf->size + 4); //Len before header includes hash len.
     uint32_t crc32 = htonl(hash_crc32(buf->buf, buf->size));
@@ -64,26 +64,26 @@ couchstore_error_t db_write_header(Db *db, sized_buf *buf, off_t *pos)
     memcpy(&headerbuf[1], &size, 4);
     memcpy(&headerbuf[5], &crc32, 4);
 
-    written = db->file_ops->pwrite(db->file_handle, &headerbuf, sizeof(headerbuf), write_pos);
+    written = file->ops->pwrite(file->handle, &headerbuf, sizeof(headerbuf), write_pos);
     if (written < 0) {
         return (couchstore_error_t)written;
     }
     write_pos += written;
 
     //Write actual header
-    written = raw_write(db, buf, write_pos);
+    written = raw_write(file, buf, write_pos);
     if (written < 0) {
         return (couchstore_error_t)written;
     }
     write_pos += written;
-    db->file_pos = write_pos;
+    file->pos = write_pos;
 
     return COUCHSTORE_SUCCESS;
 }
 
-int db_write_buf(Db *db, const sized_buf *buf, off_t *pos, size_t *disk_size)
+int db_write_buf(tree_file *file, const sized_buf *buf, off_t *pos, size_t *disk_size)
 {
-    off_t write_pos = db->file_pos;
+    off_t write_pos = file->pos;
     off_t end_pos = write_pos;
     ssize_t written;
     uint32_t size = htonl(buf->size | 0x80000000);
@@ -95,14 +95,14 @@ int db_write_buf(Db *db, const sized_buf *buf, off_t *pos, size_t *disk_size)
     memcpy(&headerbuf[4], &crc32, 4);
 
     sized_buf sized_headerbuf = { headerbuf, 8 };
-    written = raw_write(db, &sized_headerbuf, end_pos);
+    written = raw_write(file, &sized_headerbuf, end_pos);
     if (written < 0) {
         return (int)written;
     }
     end_pos += written;
 
     // Write actual buffer:
-    written = raw_write(db, buf, end_pos);
+    written = raw_write(file, buf, end_pos);
     if (written < 0) {
         return (int)written;
     }
@@ -112,7 +112,7 @@ int db_write_buf(Db *db, const sized_buf *buf, off_t *pos, size_t *disk_size)
         *pos = write_pos;
     }
 
-    db->file_pos = end_pos;
+    file->pos = end_pos;
     if (disk_size) {
         *disk_size = (size_t) (end_pos - write_pos);
     }
@@ -120,7 +120,7 @@ int db_write_buf(Db *db, const sized_buf *buf, off_t *pos, size_t *disk_size)
     return 0;
 }
 
-int db_write_buf_compressed(Db *db, const sized_buf *buf, off_t *pos, size_t *disk_size)
+int db_write_buf_compressed(tree_file *file, const sized_buf *buf, off_t *pos, size_t *disk_size)
 {
     int errcode = 0;
     sized_buf to_write;
@@ -133,7 +133,7 @@ int db_write_buf_compressed(Db *db, const sized_buf *buf, off_t *pos, size_t *di
                                  &to_write.size) == SNAPPY_OK,
                  COUCHSTORE_ERROR_WRITE);
 
-    error_pass(db_write_buf(db, &to_write, pos, disk_size));
+    error_pass(db_write_buf(file, &to_write, pos, disk_size));
 cleanup:
     free(to_write.buf);
     return errcode;

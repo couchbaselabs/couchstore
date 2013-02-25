@@ -35,6 +35,7 @@
 /couch_compact
 /couch_dbdump
 /couch_dbinfo
+/couch_viewgen
 /couchscript
 /docs/doxy
 /libcouchstore*.changes

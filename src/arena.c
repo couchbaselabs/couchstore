@@ -173,3 +173,8 @@ void arena_free_from_mark(arena *a, const arena_position *mark)
     // TODO: Somehow roll back blocks_allocated and bytes_allocated (how?)
 #endif
 }
+
+void arena_free_all(arena *a)
+{
+    arena_free_from_mark(a, NULL);
+}

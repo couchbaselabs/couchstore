@@ -12,6 +12,9 @@
 #include <string.h>
 #include "macros.h"
 
+extern void TestCollateJSON(void);  // collate_json_test.c
+extern void TestCouchIndexer(void); // indexer_test.c
+
 #define ZERO(V) memset(&(V), 0, sizeof(V))
 //Only use the macro SETDOC with constants!
 //it uses sizeof()
@@ -342,7 +345,7 @@ static void test_save_docs(int count, const char *doc_tpl)
     seqtreesize = db->header.by_seq_root->subtreesize;
     const raw_by_id_reduce *reduce = (const raw_by_id_reduce*)db->header.by_id_root->reduce_value.buf;
     docssize = decode_raw48(reduce->size);
-    dbfilesize = db->file_pos;
+    dbfilesize = db->file.pos;
 
     assert(dbfilesize > 0);
     assert(idtreesize > 0);
@@ -694,7 +697,7 @@ int main(int argc, const char *argv[])
     if (argc > 1)
         strcpy(testfilepath, argv[1]);
     printf("Using test database at %s\n", testfilepath);
-
+    
     test_bitfield_fns();
 
     test_open_file_error();
@@ -721,6 +724,9 @@ int main(int argc, const char *argv[])
     test_huge_revseq();
     fprintf(stderr, " OK\n");
     unlink(testfilepath);
+    
+    TestCollateJSON();
+    TestCouchIndexer();
 
     // make sure os.c didn't accidentally call close(0):
     assert(lseek(0, 0, SEEK_CUR) >= 0 || errno != EBADF);

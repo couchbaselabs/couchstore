@@ -61,7 +61,7 @@ static int process_file(const char *file)
         btreesize += db->header.by_seq_root->subtreesize;
     }
     printf("   B-tree size: %s\n", size_str(btreesize));
-    printf("   total disk size: %s\n", size_str(db->file_pos));
+    printf("   total disk size: %s\n", size_str(db->file.pos));
 
     couchstore_close_db(db);
 
