@@ -85,7 +85,7 @@ static couchstore_error_t couch_open(couch_file_handle* handle, const char *path
 static void couch_close(couch_file_handle handle)
 {
     int fd = handle_to_fd(handle);
-    int rv;
+    int rv = 0;
 
     if (fd != -1) {
         do {
@@ -138,8 +138,28 @@ static void couch_destructor(couch_file_handle handle)
     (void)handle;
 }
 
+static couchstore_error_t couch_advise(couch_file_handle handle, off_t offset, off_t len, couchstore_file_advice_t advice)
+{
+#ifdef POSIX_FADV_NORMAL
+    int fd = handle_to_fd(handle);
+    int error = posix_fadvise(fd, offset, len, (int) advice);
+    switch(error) {
+        case EINVAL:
+        case ESPIPE:
+            return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
+            break;
+        case EBADF:
+            return COUCHSTORE_ERROR_OPEN_FILE;
+            break;
+    }
+#else
+    (void) handle; (void) offset; (void) len; (void) advice;
+#endif
+    return COUCHSTORE_SUCCESS;
+}
+
 static const couch_file_ops default_file_ops = {
-    (uint64_t)3,
+    (uint64_t)4,
     couch_constructor,
     couch_open,
     couch_close,
@@ -147,6 +167,7 @@ static const couch_file_ops default_file_ops = {
     couch_pwrite,
     couch_goto_eof,
     couch_sync,
+    couch_advise,
     couch_destructor,
     NULL
 };

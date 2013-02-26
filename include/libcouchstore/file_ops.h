@@ -4,6 +4,7 @@
 
 #include <stdint.h>
 #include <sys/types.h>
+#include "couch_common.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,7 +23,7 @@ extern "C" {
     typedef struct {
         /**
          * Version number that describes the layout of the structure. Should be set
-         * to 3.
+         * to 4.
          */
         uint64_t version;
 
@@ -91,6 +92,15 @@ extern "C" {
          * @return COUCHSTORE_SUCCESS upon success
          */
         couchstore_error_t (*sync)(couch_file_handle handle);
+
+        /**
+         * Give filesystem caching advice.
+         * @param handle file handle to give advice on
+         * @param offset offset to start at
+         * @param len length of range to advise on
+         * @param advice the advice type, see couchstore_file_advice_t in couch_common.h
+         */
+        couchstore_error_t (*advise)(couch_file_handle handle, off_t offset, off_t len, couchstore_file_advice_t advice);
 
         /**
          * Called as part of shutting down the db instance this instance was

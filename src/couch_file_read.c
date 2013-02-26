@@ -24,7 +24,7 @@ couchstore_error_t tree_file_open(tree_file* file,
 
     /* Sanity check input parameters */
     if (filename == NULL || file == NULL || ops == NULL ||
-            ops->version != 3 || ops->constructor == NULL || ops->open == NULL ||
+            ops->version != 4 || ops->constructor == NULL || ops->open == NULL ||
             ops->close == NULL || ops->pread == NULL ||
             ops->pwrite == NULL || ops->goto_eof == NULL ||
             ops->sync == NULL || ops->destructor == NULL) {
