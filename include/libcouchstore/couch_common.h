@@ -2,6 +2,7 @@
 #ifndef COUCH_COMMON_H
 #define COUCH_COMMON_H
 #include <sys/types.h>
+#include <fcntl.h>
 #include <stdint.h>
 
 #include <libcouchstore/visibility.h>

@@ -61,6 +61,8 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
 
         //Sort the ID tree by ID
         error_pass(TreeWriterSort(ctx.id_tree_writer));
+        //Mark end of bodies segment
+        int64_t bodies_end = target->file.pos;
         //Build the b-trees
         error_pass(TreeWriterWrite(ctx.seq_tree_writer, &target->file, &target->header.by_seq_root));
         error_pass(TreeWriterWrite(ctx.id_tree_writer, &target->file, &target->header.by_id_root));
@@ -68,6 +70,9 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
         TreeWriterFree(ctx.seq_tree_writer);
         ctx.id_tree_writer = NULL;
         ctx.seq_tree_writer = NULL;
+        //Attempt to evict doc bodies in new file from FS cache, make sure we're sync'd up first.
+        target->file.ops->sync(target->file.handle);
+        target->file.ops->advise(target->file.handle, 0, bodies_end, COUCHSTORE_FILE_ADVICE_EVICT);
     }
 
     if(source->header.local_docs_root) {
