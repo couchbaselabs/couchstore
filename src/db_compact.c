@@ -52,6 +52,9 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
 
     ctx.target_file = &target->file;
 
+    //CACHE THE WHOLE SOURCE FILE
+    source->file.ops->advise(source->file.handle, 0, source->file.pos, COUCHSTORE_FILE_ADVICE_READ);
+
     if(source->header.by_seq_root) {
         error_pass(TreeWriterOpen(NULL, ebin_cmp, by_id_reduce, by_id_rereduce, &ctx.id_tree_writer));
         //Will be loading this one up in Seq order, so we won't need to TreeWriterSort it

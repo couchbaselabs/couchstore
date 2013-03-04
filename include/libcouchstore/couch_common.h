@@ -26,10 +26,13 @@ extern "C" {
     typedef enum {
 #ifdef POSIX_FADV_NORMAL
         /* Evict this range from FS caches if possible */
-        COUCHSTORE_FILE_ADVICE_EVICT = POSIX_FADV_DONTNEED
+        COUCHSTORE_FILE_ADVICE_EVICT = POSIX_FADV_DONTNEED,
+        /* Read this range into cache. */
+        COUCHSTORE_FILE_ADVICE_READ = POSIX_FADV_WILLNEED
 #else
         /* Assign these whatever values, we'll be ignoring them.. */
-        COUCHSTORE_FILE_ADVICE_EVICT
+        COUCHSTORE_FILE_ADVICE_EVICT,
+        COUCHSTORE_FILE_ADVICE_READ
 #endif
     } couchstore_file_advice_t;
 
