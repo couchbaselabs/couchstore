@@ -111,7 +111,9 @@ couchstore_error_t TreeWriterWrite(TreeWriter* writer,
     couchfile_modify_result* target_mr = new_btree_modres(persistent_arena,
                                                           transient_arena,
                                                           treefile, &idcmp,
-                                                          writer->reduce, writer->rereduce);
+                                                          writer->reduce, 
+                                                          writer->rereduce,
+                                                          DB_CHUNK_THRESHOLD);
     if(target_mr == NULL) {
         error_pass(COUCHSTORE_ERROR_ALLOC_FAIL);
     }

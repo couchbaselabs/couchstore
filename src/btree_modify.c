@@ -10,9 +10,6 @@
 #include "arena.h"
 #include "node_types.h"
 
-#define CHUNK_THRESHOLD 1279
-#define CHUNK_SIZE (CHUNK_THRESHOLD * 2 / 3)
-
 
 static couchstore_error_t flush_mr_partial(couchfile_modify_result *res, size_t mr_quota);
 static couchstore_error_t flush_mr(couchfile_modify_result *res);
@@ -23,12 +20,12 @@ static couchstore_error_t maybe_flush(couchfile_modify_result *mr)
         /* The compactor can (and should), just write out nodes
          * of size CHUNK_SIZE as soon as it can, so that it can
          * free memory it no longer needs. */
-        if (mr->modified && mr->node_len > CHUNK_SIZE) {
+        if (mr->modified && mr->node_len > (mr->rq->chunk_threshold * 2 / 3)) {
             return flush_mr(mr);
         }
-    } else if (mr->modified && mr->node_len > CHUNK_THRESHOLD && mr->count > 3) {
+    } else if (mr->modified && mr->node_len > mr->rq->chunk_threshold && mr->count > 3) {
         /* Don't write out a partial node unless we've collected at least three items */
-        return flush_mr_partial(mr, CHUNK_SIZE);
+        return flush_mr_partial(mr, (mr->rq->chunk_threshold * 2 / 3));
     }
 
     return COUCHSTORE_SUCCESS;
@@ -74,7 +71,8 @@ static couchfile_modify_result *make_modres(arena* a, couchfile_modify_request *
 }
 
 couchfile_modify_result *new_btree_modres(arena *a, arena *transient_arena, tree_file *file,
-                                          compare_info* cmp, reduce_fn reduce, reduce_fn rereduce)
+                                          compare_info* cmp, reduce_fn reduce, reduce_fn rereduce,
+                                          int chunk_threshold)
 {
     couchfile_modify_request* rq = arena_alloc(a, sizeof(couchfile_modify_request));
     rq->cmp = *cmp;
@@ -84,6 +82,7 @@ couchfile_modify_result *new_btree_modres(arena *a, arena *transient_arena, tree
     rq->reduce = reduce;
     rq->rereduce = rereduce;
     rq->compacting = 1;
+    rq->chunk_threshold = chunk_threshold;
 
     couchfile_modify_result* mr = make_modres(a, rq);
     if (!mr)

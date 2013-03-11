@@ -1046,6 +1046,7 @@ couchstore_error_t couchstore_save_local_document(Db *db, LocalDoc *lDoc)
     rq.rereduce = NULL;
     rq.file = &db->file;
     rq.compacting = 0;
+    rq.chunk_threshold = DB_CHUNK_THRESHOLD;
 
     nroot = modify_btree(&rq, db->header.local_docs_root, &errcode);
     if (errcode == COUCHSTORE_SUCCESS && nroot != db->header.local_docs_root) {

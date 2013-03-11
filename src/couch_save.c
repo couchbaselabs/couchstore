@@ -8,6 +8,7 @@
 #include "node_types.h"
 #include "util.h"
 #include "reduces.h"
+#include "couch_btree.h"
 
 static size_t assemble_seq_index_value(DocInfo *docinfo, char *dst)
 {
@@ -200,6 +201,7 @@ static couchstore_error_t update_indexes(Db *db,
     idrq.fetch_callback = idfetch_update_cb;
     idrq.file = &db->file;
     idrq.compacting = 0;
+    idrq.chunk_threshold = DB_CHUNK_THRESHOLD;
 
     new_id_root = modify_btree(&idrq, db->header.by_id_root, &errcode);
     error_pass(errcode);
@@ -224,6 +226,7 @@ static couchstore_error_t update_indexes(Db *db,
     seqrq.rereduce = by_seq_rereduce;
     seqrq.file = &db->file;
     seqrq.compacting = 0;
+    seqrq.chunk_threshold = DB_CHUNK_THRESHOLD;
 
     new_seq_root = modify_btree(&seqrq, db->header.by_seq_root, &errcode);
     if (errcode != COUCHSTORE_SUCCESS) {
