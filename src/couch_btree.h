@@ -80,7 +80,8 @@ extern "C" {
         reduce_fn rereduce;
         /*  We're in the compactor */
         int compacting;
-        int chunk_threshold;
+        int kv_chunk_threshold;
+        int kp_chunk_threshold;
     } couchfile_modify_request;
 
 #define KP_NODE 0
@@ -102,7 +103,7 @@ extern "C" {
         nodelist *pointers_end;
         /* If we run over a node and never set this, it can be left as-is on disk. */
         int modified;
-        /* 0 - leaf, 1 - ptr */
+        /* 1 - leaf, 0 - ptr */
         int node_type;
         int error_state;
     } couchfile_modify_result;
@@ -115,7 +116,8 @@ extern "C" {
 
     couchfile_modify_result* new_btree_modres(arena* a, arena* transient_arena, tree_file *file,
                                               compare_info* cmp, reduce_fn reduce,
-                                              reduce_fn rereduce, int chunk_threshold);
+                                              reduce_fn rereduce, int kv_chunk_threshold,
+                                              int kp_chunk_threshold);
 
     node_pointer* complete_new_btree(couchfile_modify_result* mr, couchstore_error_t *errcode);
 
