@@ -18,7 +18,11 @@ ACLOCAL_AMFLAGS = -I m4 --force
 bin_PROGRAMS = couch_dbdump couch_dbinfo couch_compact couch_viewgen
 EXTRA_DIST = python LICENSE README.md
 
+if WINDOWS
+ICU_LOCAL_LIBS=-licuuc -licudt -licuin
+else
 ICU_LOCAL_LIBS=-licuuc -licudata -licui18n
+endif
 
 pkginclude_HEADERS = \
                      include/libcouchstore/couch_db.h \
