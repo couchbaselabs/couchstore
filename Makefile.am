@@ -33,7 +33,7 @@ lib_LTLIBRARIES = libcouchstore.la
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libcouchstore.pc
 
-noinst_LTLIBRARIES = librfc1321.la libbyteswap.la
+noinst_LTLIBRARIES = librfc1321.la libbyteswap.la libmapreduce.la
 
 libbyteswap_la_SOURCES = src/byteswap.c
 
@@ -42,6 +42,16 @@ librfc1321_la_SOURCES = \
                             src/rfc1321/md5.h \
                             src/rfc1321/global.h
 librfc1321_la_CFLAGS =  $(AM_CFLAGS) ${NO_WERROR}
+
+libmapreduce_la_CXXFLAGS = $(AM_CXXFLAGS) -DLIBMAPREDUCE_INTERNAL=1
+libmapreduce_la_SOURCES = \
+	src/views/mapreduce/mapreduce.h \
+	src/views/mapreduce/mapreduce_internal.h \
+	src/views/mapreduce/visibility.h \
+	src/views/mapreduce/mapreduce_c.cc \
+	src/views/mapreduce/mapreduce.cc
+libmapreduce_la_LDFLAGS = $(AM_LDFLAGS) $(AM_CXX_LDFLAGS) $(V8_LIB_FLAGS) -pthread
+libmapreduce_la_LIBADD = $(V8_FLAGS)
 
 libcouchstore_la_SOURCES = \
                             config_static.h \
@@ -87,7 +97,7 @@ libcouchstore_la_SOURCES = \
                             src/views/sorted_list.c
 
 
-libcouchstore_la_LDFLAGS = $(AM_LDFLAGS) $(ICU_LOCAL_LDFLAGS) -version-info $(LIBCOUCHSTORE_API_CURRENT):$(LIBCOUCHSTORE_API_REVISION):$(LIBCOUCHSTORE_API_AGE) -no-undefined -lsnappy -lpthread
+libcouchstore_la_LDFLAGS = $(AM_LDFLAGS) $(ICU_LOCAL_LDFLAGS) -version-info $(LIBCOUCHSTORE_API_CURRENT):$(LIBCOUCHSTORE_API_REVISION):$(LIBCOUCHSTORE_API_AGE) -no-undefined -lstdc++ -lsnappy -lpthread
 
 if WINDOWS
 libcouchstore_la_SOURCES += src/os_win.c
@@ -97,7 +107,7 @@ libcouchstore_la_SOURCES += src/os.c
 endif
 
 libcouchstore_la_CFLAGS = $(AM_CFLAGS) $(ICU_LOCAL_CFLAGS) -DLIBCOUCHSTORE_INTERNAL=1 -Wstrict-aliasing=2 -pedantic
-libcouchstore_la_LIBADD = librfc1321.la libbyteswap.la $(ICU_LOCAL_LIBS)
+libcouchstore_la_LIBADD = librfc1321.la libbyteswap.la libmapreduce.la $(ICU_LOCAL_LIBS)
 
 couch_dbdump_SOURCES = src/dbdump.c
 couch_dbdump_DEPENDENCIES = libcouchstore.la
@@ -170,6 +180,11 @@ TESTS = ${check_PROGRAMS}
 
 testapp_SOURCES = tests/testapp.c src/util.c tests/macros.h tests/indexer_test.c
 testapp_SOURCES += \
+	tests/mapreduce/mapreduce_tests.h \
+	tests/mapreduce/tests.c \
+	tests/mapreduce/map.c \
+	tests/mapreduce/reduce.c \
+	tests/mapreduce/builtin.c \
 	tests/views/view_tests.h \
 	tests/views/tests.c \
 	tests/views/collate_json_test.c \
@@ -178,7 +193,7 @@ testapp_SOURCES += \
 	tests/views/sorted_lists.c
 testapp_CFLAGS = $(AM_CFLAGS)
 testapp_DEPENDENCIES = libcouchstore.la libbyteswap.la
-testapp_LDADD = libcouchstore.la libbyteswap.la
+testapp_LDADD = libcouchstore.la libbyteswap.la libmapreduce.la
 
 test: check-TESTS $(extra_tests)
 

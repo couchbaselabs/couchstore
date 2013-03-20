@@ -13,6 +13,7 @@
 #include "macros.h"
 
 extern void TestCouchIndexer(void); // indexer_test.c
+extern void mapreduce_tests();
 extern void view_tests();
 
 #define ZERO(V) memset(&(V), 0, sizeof(V))
@@ -730,6 +731,7 @@ int main(int argc, const char *argv[])
     // make sure os.c didn't accidentally call close(0):
     assert(lseek(0, 0, SEEK_CUR) >= 0 || errno != EBADF);
 
+    mapreduce_tests();
     view_tests();
 
     return 0;

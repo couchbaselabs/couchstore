@@ -130,6 +130,38 @@ AC_SUBST(ICU_LOCAL_CFLAGS)
 AC_SUBST(ICU_LOCAL_LDFLAGS)
 AC_SUBST(ICU_LOCAL_BIN)
 
+AC_LANG_PUSH([C++])
+
+AC_ARG_WITH([v8-lib], [AC_HELP_STRING([--with-v8-lib=PATH],
+    [set PATH to the V8 library directory])],
+    [
+        V8_LIB_FLAGS="-L$withval -lv8"
+    ], [
+        V8_LIB_FLAGS="-lv8"
+    ])
+AC_SUBST(V8_LIB_FLAGS)
+
+AC_ARG_WITH([v8-include], [AC_HELP_STRING([--with-v8-include=PATH],
+    [set PATH to the V8 include directory])], [
+        V8_FLAGS="-I$withval"
+    ], [
+        V8_FLAGS="-I/usr/include/v8"
+        V8_FLAGS="$V8_FLAGS -I/opt/local/include"
+        V8_FLAGS="$V8_FLAGS -I/usr/local/include/v8"
+        V8_FLAGS="$V8_FLAGS -I/opt/local/include/v8"
+])
+AC_SUBST(V8_FLAGS)
+
+AC_CHECK_HEADER([v8.h], [], [AC_MSG_ERROR([Could not find the V8 JavaScript engine library.])])
+
+AC_LANG_POP([C++])
+
+dnl Check whether the user's system supports pthread
+AC_SEARCH_LIBS(pthread_create, pthread)
+if test "x$ac_cv_search_pthread_create" = "xno"; then
+  AC_MSG_ERROR([Can't enable threads without the POSIX thread library.])
+fi
+
 AH_TOP([
 #ifndef CONFIG_H
 #define CONFIG_H
