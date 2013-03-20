@@ -182,7 +182,7 @@ static couchstore_error_t flush_mr_partial(couchfile_modify_result *res, size_t 
     char reducebuf[30];
     size_t reducesize = 0;
     uint64_t subtreesize = 0;
-    off_t diskpos;
+    cs_off_t diskpos;
     size_t disk_size;
     sized_buf final_key = {NULL, 0};
 

@@ -27,7 +27,7 @@ static inline couch_file_handle fd_to_handle(int fd)
     return (couch_file_handle)(intptr_t)fd;
 }
 
-static ssize_t couch_pread(couch_file_handle handle, void *buf, size_t nbyte, off_t offset)
+static ssize_t couch_pread(couch_file_handle handle, void *buf, size_t nbyte, cs_off_t offset)
 {
 #ifdef LOG_IO
     fprintf(stderr, "PREAD  %8llx -- %8llx  (%6.1f kbytes)\n", offset, offset+nbyte, nbyte/1024.0);
@@ -45,7 +45,7 @@ static ssize_t couch_pread(couch_file_handle handle, void *buf, size_t nbyte, of
     return rv;
 }
 
-static ssize_t couch_pwrite(couch_file_handle handle, const void *buf, size_t nbyte, off_t offset)
+static ssize_t couch_pwrite(couch_file_handle handle, const void *buf, size_t nbyte, cs_off_t offset)
 {
 #ifdef LOG_IO
     fprintf(stderr, "PWRITE %8llx -- %8llx  (%6.1f kbytes)\n", offset, offset+nbyte, nbyte/1024.0);
@@ -98,10 +98,10 @@ static void couch_close(couch_file_handle handle)
     }
 }
 
-static off_t couch_goto_eof(couch_file_handle handle)
+static cs_off_t couch_goto_eof(couch_file_handle handle)
 {
     int fd = handle_to_fd(handle);
-    off_t rv = lseek(fd, 0, SEEK_END);
+    cs_off_t rv = lseek(fd, 0, SEEK_END);
     if(rv < 0) {
         save_errno();
     }

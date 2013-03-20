@@ -91,14 +91,14 @@ static void test_raw_48(uint64_t value, const uint8_t expected[8])
 
 static void test_bitfield_fns(void)
 {
-    assert(sizeof(off_t) == 8);
+    assert(sizeof(cs_off_t) == 8);
 
     assert(sizeof(raw_08) == 1);
     assert(sizeof(raw_16) == 2);
     assert(sizeof(raw_32) == 4);
     assert(sizeof(raw_40) == 5);
     assert(sizeof(raw_48) == 6);
-    
+
     struct {
         raw_08 a;
         raw_48 b;

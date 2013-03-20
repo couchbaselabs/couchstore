@@ -13,9 +13,9 @@
 #include "crc32.h"
 #include "util.h"
 
-static ssize_t raw_write(Db *db, const sized_buf *buf, off_t pos)
+static ssize_t raw_write(Db *db, const sized_buf *buf, cs_off_t pos)
 {
-    off_t write_pos = pos;
+    cs_off_t write_pos = pos;
     size_t buf_pos = 0;
     char blockprefix = 0;
     ssize_t written;
@@ -46,9 +46,9 @@ static ssize_t raw_write(Db *db, const sized_buf *buf, off_t pos)
     return (ssize_t)(write_pos - pos);
 }
 
-couchstore_error_t db_write_header(Db *db, sized_buf *buf, off_t *pos)
+couchstore_error_t db_write_header(Db *db, sized_buf *buf, cs_off_t *pos)
 {
-    off_t write_pos = db->file_pos;
+    cs_off_t write_pos = db->file_pos;
     ssize_t written;
     uint32_t size = htonl(buf->size + 4); //Len before header includes hash len.
     uint32_t crc32 = htonl(hash_crc32(buf->buf, buf->size));
@@ -81,10 +81,10 @@ couchstore_error_t db_write_header(Db *db, sized_buf *buf, off_t *pos)
     return COUCHSTORE_SUCCESS;
 }
 
-int db_write_buf(Db *db, const sized_buf *buf, off_t *pos, size_t *disk_size)
+int db_write_buf(Db *db, const sized_buf *buf, cs_off_t *pos, size_t *disk_size)
 {
-    off_t write_pos = db->file_pos;
-    off_t end_pos = write_pos;
+    cs_off_t write_pos = db->file_pos;
+    cs_off_t end_pos = write_pos;
     ssize_t written;
     uint32_t size = htonl(buf->size | 0x80000000);
     uint32_t crc32 = htonl(hash_crc32(buf->buf, buf->size));
@@ -120,7 +120,7 @@ int db_write_buf(Db *db, const sized_buf *buf, off_t *pos, size_t *disk_size)
     return 0;
 }
 
-int db_write_buf_compressed(Db *db, const sized_buf *buf, off_t *pos, size_t *disk_size)
+int db_write_buf_compressed(Db *db, const sized_buf *buf, cs_off_t *pos, size_t *disk_size)
 {
     int errcode = 0;
     sized_buf to_write;
@@ -138,4 +138,3 @@ cleanup:
     free(to_write.buf);
     return errcode;
 }
-

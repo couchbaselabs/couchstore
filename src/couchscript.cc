@@ -230,11 +230,11 @@ extern "C" {
         Db *db = getDb(ls);
 
         int64_t arg = static_cast<int64_t>(luaL_checknumber(ls, 2));
-        off_t location(0);
+        cs_off_t location(0);
         if (arg < 1) {
             location = db->file_pos + arg;
         } else {
-            location = static_cast<off_t>(arg);
+            location = static_cast<cs_off_t>(arg);
         }
 
         const char* path = couchstore_get_db_filename(db);

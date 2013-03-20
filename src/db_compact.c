@@ -287,7 +287,7 @@ static couchstore_error_t compact_seq_fetchcb(couchfile_lookup_request *rq, void
     }
 
     if(bp != 0) {
-        off_t new_bp = 0;
+        cs_off_t new_bp = 0;
         // Copy the document from the old db file to the new one:
         size_t new_size = 0;
         sized_buf item;

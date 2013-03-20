@@ -35,7 +35,7 @@ cleanup:
 }
 
 // Attempts to initialize the database from a header at the given file position
-static couchstore_error_t find_header_at_pos(Db *db, off_t pos)
+static couchstore_error_t find_header_at_pos(Db *db, cs_off_t pos)
 {
     int errcode = COUCHSTORE_SUCCESS;
     raw_file_header *header_buf = NULL;
@@ -135,7 +135,7 @@ static couchstore_error_t write_header(Db *db)
     encode_root(root, db->header.by_id_root);
     root += idrootsize;
     encode_root(root, db->header.local_docs_root);
-    off_t pos;
+    cs_off_t pos;
     couchstore_error_t errcode = db_write_header(db, &writebuf, &pos);
     if (errcode == COUCHSTORE_SUCCESS) {
         db->header.position = pos;
@@ -166,7 +166,7 @@ uint64_t couchstore_get_header_position(Db *db)
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_commit(Db *db)
 {
-    off_t curpos = db->file_pos;
+    cs_off_t curpos = db->file_pos;
     sized_buf zerobyte = {"\0", 1};
     size_t seqrootsize = 0, idrootsize = 0, localrootsize = 0;
     if (db->header.by_seq_root) {
@@ -377,7 +377,7 @@ static int by_id_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
 }
 
 //Fill in doc from reading file.
-static couchstore_error_t bp_to_doc(Doc **pDoc, Db *db, off_t bp, couchstore_open_options options)
+static couchstore_error_t bp_to_doc(Doc **pDoc, Db *db, cs_off_t bp, couchstore_open_options options)
 {
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     int bodylen = 0;

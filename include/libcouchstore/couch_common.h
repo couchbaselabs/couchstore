@@ -10,6 +10,8 @@
 extern "C" {
 #endif
 
+    typedef uint64_t cs_off_t;
+
     /** Document content metadata flags */
     typedef uint8_t couchstore_content_meta_flags;
     enum {
@@ -63,7 +65,7 @@ extern "C" {
         uint64_t doc_count;         /**< Total number of (non-deleted) documents */
         uint64_t deleted_count;     /**< Total number of deleted documents */
         uint64_t space_used;        /**< Disk space actively used by docs */
-        off_t header_position;      /**< File offset of current header */
+        cs_off_t header_position;   /**< File offset of current header */
     } DbInfo;
 
 

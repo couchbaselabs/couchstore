@@ -15,7 +15,7 @@
 
 /** Read bytes from the database file, skipping over the header-detection bytes at every block
     boundary. */
-static couchstore_error_t read_skipping_prefixes(Db* db, off_t *pos, ssize_t len, void *dst) {
+static couchstore_error_t read_skipping_prefixes(Db* db, cs_off_t *pos, ssize_t len, void *dst) {
     if (*pos % COUCH_BLOCK_SIZE == 0) {
         ++*pos;
     }
@@ -43,18 +43,18 @@ static couchstore_error_t read_skipping_prefixes(Db* db, off_t *pos, ssize_t len
 /** Common subroutine of pread_bin, pread_compressed and pread_header.
     Parameters and return value are the same as for pread_bin,
     except the 'header' parameter which is 1 if reading a header, 0 otherwise. */
-static int pread_bin_internal(Db *db, off_t pos, char **ret_ptr, int header)
+static int pread_bin_internal(Db *db, cs_off_t pos, char **ret_ptr, int header)
 {
     struct {
         uint32_t chunk_len;
         uint32_t crc32;
     } info;
-    
+
     couchstore_error_t err = read_skipping_prefixes(db, &pos, sizeof(info), &info);
     if (err < 0) {
         return err;
     }
-    
+
     info.chunk_len = ntohl(info.chunk_len) & ~0x80000000;
     if (header) {
         if (info.chunk_len < 4 || info.chunk_len > MAX_HEADER_SIZE)
@@ -75,17 +75,17 @@ static int pread_bin_internal(Db *db, off_t pos, char **ret_ptr, int header)
         free(buf);
         return err;
     }
-    
+
     *ret_ptr = buf;
     return info.chunk_len;
 }
 
-int pread_header(Db *db, off_t pos, char **ret_ptr)
+int pread_header(Db *db, cs_off_t pos, char **ret_ptr)
 {
     return pread_bin_internal(db, pos + 1, ret_ptr, 1);
 }
 
-int pread_compressed(Db *db, off_t pos, char **ret_ptr)
+int pread_compressed(Db *db, cs_off_t pos, char **ret_ptr)
 {
     char *compressed_buf;
     char *new_buf;
@@ -115,7 +115,7 @@ int pread_compressed(Db *db, off_t pos, char **ret_ptr)
     return (int) uncompressed_len;
 }
 
-int pread_bin(Db *db, off_t pos, char **ret_ptr)
+int pread_bin(Db *db, cs_off_t pos, char **ret_ptr)
 {
     return pread_bin_internal(db, pos, ret_ptr, 0);
 }

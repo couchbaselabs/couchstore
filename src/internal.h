@@ -68,19 +68,19 @@ extern "C" {
                 or to NULL if the length is zero. Caller is responsible for freeing this buffer!
                 On failure, value pointed to is unaltered.
         @return The length of the chunk (zero is a valid length!), or a negative error code */
-    int pread_bin(Db *db, off_t pos, char **ret_ptr);
+    int pread_bin(Db *db, cs_off_t pos, char **ret_ptr);
 
     /** Reads a compressed chunk from the file at a given position.
         Parameters and return value are the same as for pread_bin. */
-    int pread_compressed(Db *db, off_t pos, char **ret_ptr);
+    int pread_compressed(Db *db, cs_off_t pos, char **ret_ptr);
 
     /** Reads a file header from the file at a given position.
         Parameters and return value are the same as for pread_bin. */
-    int pread_header(Db *db, off_t pos, char **ret_ptr);
+    int pread_header(Db *db, cs_off_t pos, char **ret_ptr);
 
-    couchstore_error_t db_write_header(Db *db, sized_buf *buf, off_t *pos);
-    int db_write_buf(Db *db, const sized_buf *buf, off_t *pos, size_t *disk_size);
-    int db_write_buf_compressed(Db *db, const sized_buf *buf, off_t *pos, size_t *disk_size);
+    couchstore_error_t db_write_header(Db *db, sized_buf *buf, cs_off_t *pos);
+    int db_write_buf(Db *db, const sized_buf *buf, cs_off_t *pos, size_t *disk_size);
+    int db_write_buf_compressed(Db *db, const sized_buf *buf, cs_off_t *pos, size_t *disk_size);
     struct _os_error *get_os_error_store(void);
 
     extern pthread_key_t os_err_key;
