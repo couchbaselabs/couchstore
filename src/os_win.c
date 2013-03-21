@@ -45,9 +45,10 @@ static ssize_t couch_pread(couch_file_handle handle, void *buf, size_t nbyte, cs
     OVERLAPPED winoffs;
     memset(&winoffs, 0, sizeof(winoffs));
     winoffs.Offset = offset & 0xFFFFFFFF;
-    winoffs.OffsetHigh = offset >> 32;
+    winoffs.OffsetHigh = (offset >> 32) & 0x7FFFFFFF;
     rv = ReadFile(file, buf, nbyte, &bytesread, &winoffs);
     if(!rv) {
+        save_windows_error();
         return (ssize_t) COUCHSTORE_ERROR_READ;
     }
     return bytesread;
@@ -64,7 +65,7 @@ static ssize_t couch_pwrite(couch_file_handle handle, const void *buf, size_t nb
     OVERLAPPED winoffs;
     memset(&winoffs, 0, sizeof(winoffs));
     winoffs.Offset = offset & 0xFFFFFFFF;
-    winoffs.OffsetHigh = offset >> 32;
+    winoffs.OffsetHigh = (offset >> 32) & 0x7FFFFFFF;
     rv = WriteFile(file, buf, nbyte, &byteswritten, &winoffs);
     if(!rv) {
         save_windows_error();

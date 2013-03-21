@@ -10,7 +10,25 @@
 extern "C" {
 #endif
 
-    typedef uint64_t cs_off_t;
+    /**
+     * Using off_t turned out to be a real challenge. On "unix-like" systems
+     * its size is set by a combination of #defines like: _LARGE_FILE,
+     * _FILE_OFFSET_BITS and/or _LARGEFILE_SOURCE etc. The interesting
+     * part is however Windows.
+     *
+     * Windows follows the LLP64 data model:
+     * http://en.wikipedia.org/wiki/LLP64#64-bit_data_models
+     *
+     * This means both the int and long int types have a size of 32 bits
+     * regardless if it's a 32 or 64 bits Windows system.
+     *
+     * And Windows defines the type off_t as being a signed long integer:
+     * http://msdn.microsoft.com/en-us/library/323b6b3k.aspx
+     *
+     * This means we can't use off_t on Windows if we deal with files
+     * that can have a size of 2Gb or more.
+     */
+    typedef int64_t cs_off_t;
 
     /** Document content metadata flags */
     typedef uint8_t couchstore_content_meta_flags;
