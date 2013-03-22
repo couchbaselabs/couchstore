@@ -47,9 +47,9 @@ static couchstore_error_t write_doc(Db *db, const Doc *doc, uint64_t *bp,
 {
     couchstore_error_t errcode;
     if (writeopts & COMPRESS_DOC_BODIES) {
-        errcode = db_write_buf_compressed(&db->file, &doc->data, (off_t *) bp, disk_size);
+        errcode = db_write_buf_compressed(&db->file, &doc->data, (cs_off_t *) bp, disk_size);
     } else {
-        errcode = db_write_buf(&db->file, &doc->data, (off_t *) bp, disk_size);
+        errcode = db_write_buf(&db->file, &doc->data, (cs_off_t *) bp, disk_size);
     }
 
     return errcode;
@@ -316,7 +316,7 @@ couchstore_error_t couchstore_save_documents(Db *db,
     uint64_t seq = db->header.update_seq;
 
     fatbuf *fb;
-    
+
     for (ii = 0; ii < numdocs; ii++) {
         // Get additional size for terms to be inserted into indexes
         // IMPORTANT: This must match the sizes of the fatbuf_get calls in add_doc_to_update_list!

@@ -35,7 +35,7 @@ typedef struct file_buffer {
     struct buffered_file_handle *owner;
     size_t capacity;
     size_t length;
-    off_t offset;
+    cs_off_t offset;
     uint8_t dirty;
     uint8_t bytes[1];
 } file_buffer;
@@ -79,12 +79,12 @@ static void free_buffer(file_buffer* buf) {
 
 
 // Write as many bytes as possible into the buffer, returning the count
-static size_t write_to_buffer(file_buffer* buf, const void *bytes, size_t nbyte, off_t offset)
+static size_t write_to_buffer(file_buffer* buf, const void *bytes, size_t nbyte, cs_off_t offset)
 {
     if (buf->length == 0) {
         // If buffer is empty, align it to start at the current offset:
         buf->offset = offset;
-    } else if (offset < buf->offset || offset > buf->offset + (off_t)buf->length) {
+    } else if (offset < buf->offset || offset > buf->offset + (cs_off_t)buf->length) {
         // If it's out of range, don't write anything
         return 0;
     }
@@ -122,8 +122,8 @@ static couchstore_error_t flush_buffer(file_buffer* buf) {
 //////// BUFFER READS:
 
 
-static size_t read_from_buffer(file_buffer* buf, void *bytes, size_t nbyte, off_t offset) {
-    if (offset < buf->offset || offset >= buf->offset + (off_t)buf->length) {
+static size_t read_from_buffer(file_buffer* buf, void *bytes, size_t nbyte, cs_off_t offset) {
+    if (offset < buf->offset || offset >= buf->offset + (cs_off_t)buf->length) {
         return 0;
     }
     size_t offset_in_buffer = (size_t)(offset - buf->offset);
@@ -134,7 +134,7 @@ static size_t read_from_buffer(file_buffer* buf, void *bytes, size_t nbyte, off_
 }
 
 
-static couchstore_error_t load_buffer_from(file_buffer* buf, off_t offset, size_t nbyte) {
+static couchstore_error_t load_buffer_from(file_buffer* buf, cs_off_t offset, size_t nbyte) {
     if (buf->dirty) {
         // If buffer contains data to be written, flush it first:
         couchstore_error_t err = flush_buffer(buf);
@@ -168,7 +168,7 @@ static couchstore_error_t load_buffer_from(file_buffer* buf, off_t offset, size_
 //////// BUFFER MANAGEMENT:
 
 
-static file_buffer* find_buffer(buffered_file_handle* h, off_t offset) {
+static file_buffer* find_buffer(buffered_file_handle* h, cs_off_t offset) {
     offset = offset - offset % READ_BUFFER_CAPACITY;
     // Find a buffer for this offset, or use the last one:
     file_buffer* buffer = h->first_buffer;
@@ -261,7 +261,7 @@ static void buffered_close(couch_file_handle handle)
     h->raw_ops->close(h->raw_ops_handle);
 }
 
-static ssize_t buffered_pread(couch_file_handle handle, void *buf, size_t nbyte, off_t offset)
+static ssize_t buffered_pread(couch_file_handle handle, void *buf, size_t nbyte, cs_off_t offset)
 {
 #if LOG_BUFFER
     //fprintf(stderr, "r");
@@ -288,7 +288,7 @@ static ssize_t buffered_pread(couch_file_handle handle, void *buf, size_t nbyte,
                 }
             } else*/ {
                 // Move the buffer to cover the remainder of the data to be read.
-                off_t block_start = offset - (offset % READ_BUFFER_CAPACITY);
+                cs_off_t block_start = offset - (offset % READ_BUFFER_CAPACITY);
                 err = load_buffer_from(buffer, block_start, (size_t)(offset + nbyte - block_start));
                 if (err < 0) {
                     return err;
@@ -306,7 +306,7 @@ static ssize_t buffered_pread(couch_file_handle handle, void *buf, size_t nbyte,
     return total_read;
 }
 
-static ssize_t buffered_pwrite(couch_file_handle handle, const void *buf, size_t nbyte, off_t offset)
+static ssize_t buffered_pwrite(couch_file_handle handle, const void *buf, size_t nbyte, cs_off_t offset)
 {
 #if LOG_BUFFER
     //fprintf(stderr, "w");
@@ -354,7 +354,7 @@ static ssize_t buffered_pwrite(couch_file_handle handle, const void *buf, size_t
     return nbyte_written;
 }
 
-static off_t buffered_goto_eof(couch_file_handle handle)
+static cs_off_t buffered_goto_eof(couch_file_handle handle)
 {
     buffered_file_handle *h = (buffered_file_handle*)handle;
     return h->raw_ops->goto_eof(h->raw_ops_handle);

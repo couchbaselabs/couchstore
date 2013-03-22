@@ -158,8 +158,8 @@ static void ReadIndexFile(const char *indexPath)
 
         printf("\tRoot: type=%d, pointer=%llu, subtreesize=%llu, reduce=%llu bytes\n",
                indexType, pointer, subtreesize, (uint64_t)reduce.size);
-        assert((off_t)pointer < headerPos);
-        assert((off_t)subtreesize < headerPos);
+        assert((cs_off_t)pointer < headerPos);
+        assert((cs_off_t)subtreesize < headerPos);
 
         // Examine the reduce values in the root node:
         assert(reduce.size >= 5 + 1024/8);

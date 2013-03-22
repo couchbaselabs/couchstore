@@ -34,7 +34,7 @@ cleanup:
 }
 
 // Attempts to initialize the database from a header at the given file position
-static couchstore_error_t find_header_at_pos(Db *db, off_t pos)
+static couchstore_error_t find_header_at_pos(Db *db, cs_off_t pos)
 {
     int errcode = COUCHSTORE_SUCCESS;
     raw_file_header *header_buf = NULL;
@@ -134,7 +134,7 @@ static couchstore_error_t write_header(Db *db)
     encode_root(root, db->header.by_id_root);
     root += idrootsize;
     encode_root(root, db->header.local_docs_root);
-    off_t pos;
+    cs_off_t pos;
     couchstore_error_t errcode = db_write_header(&db->file, &writebuf, &pos);
     if (errcode == COUCHSTORE_SUCCESS) {
         db->header.position = pos;
@@ -165,7 +165,7 @@ uint64_t couchstore_get_header_position(Db *db)
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_commit(Db *db)
 {
-    off_t curpos = db->file.pos;
+    cs_off_t curpos = db->file.pos;
     sized_buf zerobyte = {"\0", 1};
     size_t seqrootsize = 0, idrootsize = 0, localrootsize = 0;
     if (db->header.by_seq_root) {
@@ -234,7 +234,7 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
     if (flags & COUCHSTORE_OPEN_FLAG_CREATE) {
         openflags |= O_CREAT;
     }
-    
+
     error_pass(tree_file_open(&db->file, filename, openflags, ops));
 
     if ((db->file.pos = db->file.ops->goto_eof(db->file.handle)) == 0) {
@@ -392,7 +392,7 @@ static couchstore_error_t by_id_read_docinfo(DocInfo **pInfo, sized_buf *k, size
 }
 
 //Fill in doc from reading file.
-static couchstore_error_t bp_to_doc(Doc **pDoc, Db *db, off_t bp, couchstore_open_options options)
+static couchstore_error_t bp_to_doc(Doc **pDoc, Db *db, cs_off_t bp, couchstore_open_options options)
 {
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     int bodylen = 0;
@@ -842,7 +842,7 @@ static couchstore_error_t iterate_docinfos(Db *db,
     if (tree == NULL) {
         return COUCHSTORE_SUCCESS;
     }
-    
+
     // Create an array of *pointers to* sized_bufs, which is what btree_lookup wants:
     const sized_buf **keyptrs = malloc(numDocs * sizeof(sized_buf*));
     if (!keyptrs) {
@@ -870,10 +870,10 @@ static couchstore_error_t iterate_docinfos(Db *db,
     rq.fetch_callback = lookup_callback;
     rq.node_callback = NULL;
     rq.fold = fold;
-    
+
     // Go!
     couchstore_error_t errcode = btree_lookup(&rq, tree->pointer);
-    
+
     free(keyptrs);
     return errcode;
 }
@@ -912,7 +912,7 @@ couchstore_error_t couchstore_docinfos_by_sequence(Db *db,
         keylist[i].buf = (void*) &keyvalues[i];
         keylist[i].size = sizeof(keyvalues[i]);
     }
-    
+
     error_pass(iterate_docinfos(db, keylist, numDocs,
                                 db->header.by_seq_root, seq_ptr_cmp, seq_cmp,
                                 callback,

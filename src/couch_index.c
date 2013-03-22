@@ -97,9 +97,9 @@ static couchstore_error_t write_index_header(CouchStoreIndex* index)
     assert((char*)root - writebuf.buf == (ssize_t)writebuf.size);
 
     // Write the header to the file, on a 4k block boundary:
-    off_t pos;
+    cs_off_t pos;
     error_pass(db_write_header(&index->file, &writebuf, &pos));
-    
+
 cleanup:
     free(writebuf.buf);
     return errcode;

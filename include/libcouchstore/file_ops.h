@@ -62,7 +62,7 @@ extern "C" {
          * @return number of bytes read (which may be less than nbytes),
          *         or a value <= 0 if an error occurred
          */
-        ssize_t (*pread)(couch_file_handle handle, void *buf, size_t nbytes, off_t offset);
+        ssize_t (*pread)(couch_file_handle handle, void *buf, size_t nbytes, cs_off_t offset);
 
         /**
          * Write a chunk of data to a given offset in the file.
@@ -74,7 +74,7 @@ extern "C" {
          * @return number of bytes written (which may be less than nbytes),
          *         or a value <= 0 if an error occurred
          */
-        ssize_t (*pwrite)(couch_file_handle handle, const void *buf, size_t nbytes, off_t offset);
+        ssize_t (*pwrite)(couch_file_handle handle, const void *buf, size_t nbytes, cs_off_t offset);
 
         /**
          * Move to the end of the file.
@@ -82,7 +82,7 @@ extern "C" {
          * @param handle file handle to move the filepointer in
          * @return the offset (from beginning of the file), or -1 if the operation failed
          */
-        off_t (*goto_eof)(couch_file_handle handle);
+        cs_off_t (*goto_eof)(couch_file_handle handle);
 
         /**
          * Flush the buffers to disk
