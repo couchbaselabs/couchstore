@@ -46,6 +46,11 @@ static std::map<uintptr_t, mapreduce_ctx_t *> ctx_registry;
 static pthread_mutex_t ctx_registry_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
+static mapreduce_error_t start_context(const char *functions[],
+                                       int num_functions,
+                                       void **context,
+                                       char **error_msg);
+
 static void make_function_list(const char *sources[],
                                int num_sources,
                                std::list<std::string> &list);
@@ -63,23 +68,7 @@ mapreduce_error_t mapreduce_start_map_context(const char *map_functions[],
                                               void **context,
                                               char **error_msg)
 {
-    try {
-        mapreduce_ctx_t *ctx = new mapreduce_ctx_t();
-        std::list<std::string> functions_list;
-
-        make_function_list(map_functions, num_functions, functions_list);
-        initContext(ctx, functions_list);
-        register_ctx(ctx);
-        *context = (void *) ctx;
-    } catch (MapReduceError &e) {
-        copy_error_msg(e.getMsg(), error_msg);
-        return e.getError();
-    } catch (std::bad_alloc &) {
-        copy_error_msg(MEM_ALLOC_ERROR_MSG, error_msg);
-        return MAPREDUCE_ALLOC_ERROR;
-    }
-    *error_msg = NULL;
-    return MAPREDUCE_SUCCESS;
+    return start_context(map_functions, num_functions, context, error_msg);
 }
 
 
@@ -130,24 +119,7 @@ mapreduce_error_t mapreduce_start_reduce_context(const char *reduce_functions[],
                                                  void **context,
                                                  char **error_msg)
 {
-    try {
-        mapreduce_ctx_t *ctx = new mapreduce_ctx_t();
-        std::list<std::string> functions_list;
-
-        make_function_list(reduce_functions, num_functions, functions_list);
-        initContext(ctx, functions_list);
-        register_ctx(ctx);
-        *context = (void *) ctx;
-    } catch (MapReduceError &e) {
-        copy_error_msg(e.getMsg(), error_msg);
-        return e.getError();
-    } catch (std::bad_alloc &) {
-        copy_error_msg(MEM_ALLOC_ERROR_MSG, error_msg);
-        return MAPREDUCE_ALLOC_ERROR;
-    }
-
-    *error_msg = NULL;
-    return MAPREDUCE_SUCCESS;
+    return start_context(reduce_functions, num_functions, context, error_msg);
 }
 
 
@@ -277,6 +249,7 @@ void mapreduce_free_context(void *context)
 
         unregister_ctx(ctx);
         destroyContext(ctx);
+        delete ctx;
     }
 }
 
@@ -349,6 +322,39 @@ LIBMAPREDUCE_API
 void mapreduce_set_timeout(unsigned int seconds)
 {
     terminator_timeout = seconds;
+}
+
+
+static mapreduce_error_t start_context(const char *functions[],
+                                       int num_functions,
+                                       void **context,
+                                       char **error_msg)
+{
+    mapreduce_ctx_t *ctx = NULL;
+    mapreduce_error_t ret = MAPREDUCE_SUCCESS;
+
+    try {
+        ctx = new mapreduce_ctx_t();
+        std::list<std::string> functions_list;
+
+        make_function_list(functions, num_functions, functions_list);
+        initContext(ctx, functions_list);
+    } catch (MapReduceError &e) {
+        copy_error_msg(e.getMsg(), error_msg);
+        ret = e.getError();
+    } catch (std::bad_alloc &) {
+        copy_error_msg(MEM_ALLOC_ERROR_MSG, error_msg);
+        ret = MAPREDUCE_ALLOC_ERROR;
+    }
+
+    if (ret == MAPREDUCE_SUCCESS) {
+        register_ctx(ctx);
+        *context = (void *) ctx;
+        *error_msg = NULL;
+    } else {
+        delete ctx;
+    }
+    return ret;
 }
 
 
