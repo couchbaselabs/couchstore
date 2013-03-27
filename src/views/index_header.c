@@ -25,7 +25,6 @@
 #include <string.h>
 #include <snappy-c.h>
 
-
 #define BITMASK_BYTE_SIZE      (1024 / CHAR_BIT)
 
 #define dec_uint16(b) (decode_raw16(*((raw_16 *) b)))
@@ -33,6 +32,7 @@
 
 static void enc_uint16(uint16_t u, char **buf);
 static void enc_uint48(uint64_t u, char **buf);
+
 static void enc_seq_list(const void *list, char **buf);
 static void enc_part_seq_list(const void *list, char **buf);
 static int part_seq_cmp(const void *a, const void *b);

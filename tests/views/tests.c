@@ -29,4 +29,5 @@ void view_tests()
     test_sorted_lists();
     test_collate_json();
     test_index_headers();
+    test_reductions();
 }

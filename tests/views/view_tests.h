@@ -29,6 +29,7 @@
 #include "../src/views/bitmap.h"
 #include "../src/views/sorted_list.h"
 #include "../src/views/index_header.h"
+#include "../src/views/reductions.h"
 
 #define TPRINT(...) fprintf(stderr, __VA_ARGS__)
 
@@ -37,5 +38,6 @@ void test_bitmaps();
 void test_sorted_lists();
 void test_collate_json();
 void test_index_headers();
+void test_reductions();
 
 #endif

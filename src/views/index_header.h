@@ -36,7 +36,6 @@ extern "C" {
 
 #define LATEST_INDEX_HEADER_VERSION 1
 
-
 typedef struct {
     uint16_t part_id;
     uint64_t seq;
@@ -74,7 +73,6 @@ typedef struct {
     /* sorted_list instance, values of type part_seq_t */
     void                       *unindexable_seqs;
 } index_header_t;
-
 
 LIBCOUCHSTORE_API
 couchstore_error_t decode_index_header(const char *bytes, size_t len, index_header_t **header);
