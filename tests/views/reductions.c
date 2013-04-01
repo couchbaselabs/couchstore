@@ -7,7 +7,11 @@ static view_btree_reduction_t *test_view_btree_reduction_decoding(const char *re
                                                                     size_t len)
 {
     view_btree_reduction_t *r = NULL;
-    uint16_t partition_bitset[] = {0,1023};
+    uint16_t partition_bitset[] = {
+        0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,
+        25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,
+        47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63
+    };
     bitmap_t expected_part_bitmap;
 
 
@@ -16,7 +20,7 @@ static view_btree_reduction_t *test_view_btree_reduction_decoding(const char *re
 
     assert(r != NULL);
 
-    assert(r->kv_count == 1221);
+    assert(r->kv_count == 1582);
 
     memset(&expected_part_bitmap, 0, sizeof(expected_part_bitmap));
     for (int i = 0; i < (sizeof(partition_bitset) / sizeof(partition_bitset[0])); ++i) {
@@ -25,10 +29,15 @@ static view_btree_reduction_t *test_view_btree_reduction_decoding(const char *re
 
     assert(memcmp(&r->partitions_bitmap, &expected_part_bitmap, sizeof(expected_part_bitmap)) == 0);
 
-    assert(r->num_values == 2);
+    assert(r->num_values == 3);
 
-    assert(r->reduce_values[0].size == 2);
-    assert(r->reduce_values[1].size == 4);
+    assert(r->reduce_values[0].size == 4);
+    assert(r->reduce_values[1].size == 5);
+    assert(r->reduce_values[2].size == 9);
+
+    assert(memcmp(r->reduce_values[0].buf, "1582", 4) == 0);
+    assert(memcmp(r->reduce_values[1].buf, "-1582", 5) == 0);
+    assert(memcmp(r->reduce_values[2].buf, "110120647", 9) == 0);
 
     return r;
 }
@@ -36,13 +45,13 @@ static view_btree_reduction_t *test_view_btree_reduction_decoding(const char *re
 static view_id_btree_reduction_t *test_view_id_btree_reduction_decoding(const char *id_btree_reduction_bin)
 {
     view_id_btree_reduction_t *r = NULL;
-    uint16_t partition_bitset[] = {0,1023};
+    uint16_t partition_bitset[] = { 49, 50, 51, 52 };
     bitmap_t expected_part_bitmap;
 
     assert(decode_view_id_btree_reductions(id_btree_reduction_bin, &r) == COUCHSTORE_SUCCESS);
     assert(r != NULL);
 
-    assert(r->kv_count == 1221);
+    assert(r->kv_count == 3026);
 
     memset(&expected_part_bitmap, 0, sizeof(expected_part_bitmap));
     for (int i = 0; i < (sizeof(partition_bitset) / sizeof(partition_bitset[0])); ++i) {
@@ -77,19 +86,18 @@ static void test_view_id_btree_reduction_encoding(const view_id_btree_reduction_
 void test_reductions()
 {
     char reduction_bin[] = {
-        0,0,0,4,197,128,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-        0,1,0,2,11,22,0,4,11,22,33,44
+        0,0,0,6,46,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,255,255,255,255,255,255,255,0,4,
+        49,53,56,50,0,5,45,49,53,56,50,0,9,49,49,48,49,50,48,54,52,55
     };
 
     char id_btree_reduction_bin[] = {
-        0,0,0,4,197,128,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-        0,1
+        0,0,0,11,210,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,30,0,0,0,0,0,0
     };
 
     TPRINT("Decoding a view btree reduction ...\n");
