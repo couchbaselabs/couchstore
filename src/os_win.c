@@ -34,7 +34,7 @@ static inline couch_file_handle win_to_handle(HANDLE hdl)
     return (couch_file_handle)(intptr_t)hdl;
 }
 
-static ssize_t couch_pread(couch_file_handle handle, void *buf, size_t nbyte, off_t offset)
+static ssize_t couch_pread(couch_file_handle handle, void *buf, size_t nbyte, cs_off_t offset)
 {
 #ifdef LOG_IO
     fprintf(stderr, "PREAD  %8llx -- %8llx  (%6.1f kbytes)\n", offset, offset+nbyte, nbyte/1024.0);
@@ -45,15 +45,16 @@ static ssize_t couch_pread(couch_file_handle handle, void *buf, size_t nbyte, of
     OVERLAPPED winoffs;
     memset(&winoffs, 0, sizeof(winoffs));
     winoffs.Offset = offset & 0xFFFFFFFF;
-    winoffs.OffsetHigh = offset >> 32;
+    winoffs.OffsetHigh = (offset >> 32) & 0x7FFFFFFF;
     rv = ReadFile(file, buf, nbyte, &bytesread, &winoffs);
     if(!rv) {
+        save_windows_error();
         return (ssize_t) COUCHSTORE_ERROR_READ;
     }
     return bytesread;
 }
 
-static ssize_t couch_pwrite(couch_file_handle handle, const void *buf, size_t nbyte, off_t offset)
+static ssize_t couch_pwrite(couch_file_handle handle, const void *buf, size_t nbyte, cs_off_t offset)
 {
 #ifdef LOG_IO
     fprintf(stderr, "PWRITE %8llx -- %8llx  (%6.1f kbytes)\n", offset, offset+nbyte, nbyte/1024.0);
@@ -64,7 +65,7 @@ static ssize_t couch_pwrite(couch_file_handle handle, const void *buf, size_t nb
     OVERLAPPED winoffs;
     memset(&winoffs, 0, sizeof(winoffs));
     winoffs.Offset = offset & 0xFFFFFFFF;
-    winoffs.OffsetHigh = offset >> 32;
+    winoffs.OffsetHigh = (offset >> 32) & 0x7FFFFFFF;
     rv = WriteFile(file, buf, nbyte, &byteswritten, &winoffs);
     if(!rv) {
         save_windows_error();
@@ -101,13 +102,13 @@ static void couch_close(couch_file_handle handle)
     CloseHandle(handle);
 }
 
-static off_t couch_goto_eof(couch_file_handle handle)
+static cs_off_t couch_goto_eof(couch_file_handle handle)
 {
     HANDLE file = handle_to_win(handle);
     LARGE_INTEGER size;
     if(!GetFileSizeEx(file, &size)) {
         save_windows_error();
-        return (off_t) COUCHSTORE_ERROR_READ;
+        return (cs_off_t) COUCHSTORE_ERROR_READ;
     }
     return size.QuadPart;
 }

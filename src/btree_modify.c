@@ -194,7 +194,7 @@ static couchstore_error_t flush_mr_partial(couchfile_modify_result *res, size_t 
     char reducebuf[500];    // view_indexer.c's reduce fns need this much room
     size_t reducesize = 0;
     uint64_t subtreesize = 0;
-    off_t diskpos;
+    cs_off_t diskpos;
     size_t disk_size;
     sized_buf final_key = {NULL, 0};
 
