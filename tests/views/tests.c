@@ -30,4 +30,5 @@ void view_tests()
     test_collate_json();
     test_index_headers();
     test_reductions();
+    test_keys();
 }
