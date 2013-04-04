@@ -190,8 +190,6 @@ couchstore_error_t decode_view_id_btree_reductions(const char *bytes,
     bytes += 5;
 
     memcpy(&r->partitions_bitmap, bytes, BITMASK_BYTE_SIZE);
-    bytes += BITMASK_BYTE_SIZE;
-
 
     *reduction = r;
 
@@ -222,7 +220,6 @@ couchstore_error_t encode_view_id_btree_reductions(const view_id_btree_reduction
     enc_raw40(reduction->kv_count, &b);
 
     memcpy(b, &reduction->partitions_bitmap, BITMASK_BYTE_SIZE);
-    b += BITMASK_BYTE_SIZE;
 
     *buffer = buf;
     *buffer_size = sz;

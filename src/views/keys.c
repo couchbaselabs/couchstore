@@ -25,11 +25,7 @@ couchstore_error_t decode_view_btree_key(const char *bytes, size_t len,
         goto alloc_error;
     }
 
-    k->json_key.size = 0;
     k->json_key.buf = NULL;
-
-    k->doc_id.size = 0;
-    k->doc_id.buf = NULL;
 
     sz = dec_uint16(bytes);
 
@@ -58,8 +54,6 @@ couchstore_error_t decode_view_btree_key(const char *bytes, size_t len,
     }
 
     memcpy(k->doc_id.buf, bytes, len);
-    bytes += len;
-    len -= len;
 
     *key = k;
 
@@ -81,8 +75,6 @@ couchstore_error_t encode_view_btree_key(const view_btree_key_t *key,
 
     sz += 2;             /* size_t */
     sz += key->json_key.size;
-
-
     sz += key->doc_id.size;
 
     b = buf = (char *) malloc(sz);
@@ -96,7 +88,6 @@ couchstore_error_t encode_view_btree_key(const view_btree_key_t *key,
     b += key->json_key.size;
 
     memcpy(b, key->doc_id.buf, key->doc_id.size);
-    b += key->doc_id.size;
 
     *buffer = buf;
     *buffer_size = sz;
@@ -118,14 +109,8 @@ void free_view_btree_key(view_btree_key_t *key)
         return;
     }
 
-    if (key->json_key.buf != NULL){
-        free(key->json_key.buf);
-    }
-
-    if (key->doc_id.buf != NULL){
-        free(key->doc_id.buf);
-    }
-
+    free(key->json_key.buf);
+    free(key->doc_id.buf);
     free(key);
 }
 
@@ -141,7 +126,6 @@ couchstore_error_t decode_view_id_btree_key(const char *bytes, size_t len,
         goto alloc_error;
     }
 
-    k->doc_id.size = 0;
     k->doc_id.buf = NULL;
 
     k->partition = dec_uint16(bytes);
@@ -157,8 +141,6 @@ couchstore_error_t decode_view_id_btree_key(const char *bytes, size_t len,
     }
 
     memcpy(k->doc_id.buf, bytes, len);
-    bytes += len;
-    len -= len;
 
     *key = k;
 
@@ -215,10 +197,7 @@ void free_view_id_btree_key(view_id_btree_key_t *key)
         return;
     }
 
-    if (key->doc_id.buf != NULL){
-        free(key->doc_id.buf);
-    }
-
+    free(key->doc_id.buf);
     free(key);
 }
 
