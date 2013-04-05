@@ -155,7 +155,10 @@ static inline sized_buf getJSONKey(sized_buf buf) {
 }
 
 static int keyCompare(const sized_buf *k1, const sized_buf *k2) {
-    return CollateJSON(getJSONKey(*k1), getJSONKey(*k2), kCollateJSON_Unicode);
+    sized_buf key1 = getJSONKey(*k1);
+    sized_buf key2 = getJSONKey(*k2);
+
+    return CollateJSON(&key1, &key2, kCollateJSON_Unicode);
 }
 
 

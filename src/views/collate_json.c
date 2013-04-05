@@ -259,12 +259,12 @@ static double readNumber(const char* start, const char* end, char** endOfNumber)
 }
 
 
-int CollateJSON(sized_buf buf1,
-                sized_buf buf2,
+int CollateJSON(const sized_buf *buf1,
+                const sized_buf *buf2,
                 CollateJSONMode mode)
 {
-    const char* str1 = buf1.buf;
-    const char* str2 = buf2.buf;
+    const char* str1 = buf1->buf;
+    const char* str2 = buf2->buf;
     int depth = 0;
     
     do {
@@ -295,8 +295,8 @@ int CollateJSON(sized_buf buf1,
                 if (depth == 0) {
                     // At depth 0, be careful not to fall off the end of the input, because there
                     // won't be any delimiters (']' or '}') after the number!
-                    diff = dcmp( readNumber(str1, buf1.buf + buf1.size, &next1),
-                                 readNumber(str2, buf2.buf + buf2.size, &next2) );
+                    diff = dcmp( readNumber(str1, buf1->buf + buf1->size, &next1),
+                                 readNumber(str2, buf2->buf + buf2->size, &next2) );
                 } else {
                     diff = dcmp( strtod(str1, &next1), strtod(str2, &next2) );
                 }

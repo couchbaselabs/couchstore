@@ -22,7 +22,7 @@ static int collateStrs(const char* str1, const char* str2, CollateJSONMode mode)
 
     sized_buf buf1 = {padded1, len1};
     sized_buf buf2 = {padded2, len2};
-    return CollateJSON(buf1, buf2, mode);
+    return CollateJSON(&buf1, &buf2, mode);
 }
 
 

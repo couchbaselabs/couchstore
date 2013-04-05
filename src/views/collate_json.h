@@ -27,8 +27,8 @@ typedef enum CollateJSONMode {
  * otherwise this function will return wrong results or even crash.
  */
 LIBCOUCHSTORE_API
-int CollateJSON(sized_buf buf1,
-                sized_buf buf2,
+int CollateJSON(const sized_buf *buf1,
+                const sized_buf *buf2,
                 CollateJSONMode mode);
 
 // not part of the API -- exposed for testing only (see collate_json_test.c)
