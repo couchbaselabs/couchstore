@@ -31,6 +31,7 @@
 #include "../src/views/index_header.h"
 #include "../src/views/reductions.h"
 #include "../src/views/keys.h"
+#include "../src/views/values.h"
 
 #define TPRINT(...) fprintf(stderr, __VA_ARGS__)
 
@@ -41,5 +42,6 @@ void test_collate_json();
 void test_index_headers();
 void test_reductions();
 void test_keys();
+void test_values();
 
 #endif

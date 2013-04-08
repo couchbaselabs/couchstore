@@ -101,6 +101,11 @@ static inline raw_16 encode_raw16(uint16_t value)
     ENCODE_RAW(htons, raw_16);
 }
 
+static inline raw_24 encode_raw24(uint32_t value)
+{
+    ENCODE_RAW(htonl, raw_24);
+}
+
 static inline raw_32 encode_raw32(uint32_t value)
 {
     ENCODE_RAW(htonl, raw_32);

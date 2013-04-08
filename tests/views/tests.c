@@ -31,4 +31,5 @@ void view_tests()
     test_index_headers();
     test_reductions();
     test_keys();
+    test_values();
 }
