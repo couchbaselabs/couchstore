@@ -26,7 +26,7 @@ couchstore_error_t decode_view_btree_reductions(const char *bytes, size_t len,
     view_btree_reduction_t *r = NULL;
     uint8_t  i, j;
     uint16_t sz;
-    char    *bs;
+    const char *bs;
     size_t length;
 
     r = (view_btree_reduction_t *) malloc(sizeof(view_btree_reduction_t));
