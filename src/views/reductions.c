@@ -14,7 +14,6 @@
 #define dec_uint40(b) (decode_raw40(*((raw_40 *) b)))
 
 static void enc_uint16(uint16_t u, char **buf);
-static void enc_uint48(uint64_t u, char **buf);
 
 static void enc_raw40(uint64_t u, char **buf);
 
@@ -251,13 +250,6 @@ static void enc_uint16(uint16_t u, char **buf)
     *buf += 2;
 }
 
-
-static void enc_uint48(uint64_t u, char **buf)
-{
-    raw_48 r = encode_raw48(u);
-    memcpy(*buf, &r, 6);
-    *buf += 6;
-}
 
 static void enc_raw40(uint64_t u, char **buf)
 {
