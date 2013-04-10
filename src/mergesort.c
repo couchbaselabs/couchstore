@@ -15,7 +15,7 @@ struct record_in_memory {
 };
 
 struct compare_info {
-    int (*compare)(void *, void *, void *);
+    mergesort_compare_records_t compare;
     void *pointer;
 };
 
@@ -40,12 +40,16 @@ static int compare_records(void *p, void *q, void *pointer)
 #define INSUFFICIENT_MEMORY  COUCHSTORE_ERROR_ALLOC_FAIL
 #define FILE_CREATION_ERROR  COUCHSTORE_ERROR_OPEN_FILE
 #define FILE_WRITE_ERROR     COUCHSTORE_ERROR_WRITE
+#define FILE_READ_ERROR      COUCHSTORE_ERROR_READ
 
 int merge_sort(FILE *unsorted_file, FILE *sorted_file,
-               int (*read)(FILE *, void *, void *),
-               int (*write)(FILE *, void *, void *),
-               int (*compare)(void *, void *, void *), void *pointer,
-               unsigned max_record_size, unsigned long block_size, unsigned long *pcount)
+               mergesort_read_record_t read,
+               mergesort_write_record_t write,
+               mergesort_compare_records_t compare,
+               void *pointer,
+               unsigned max_record_size,
+               unsigned long block_size,
+               unsigned long *pcount)
 {
     struct tape {
         FILE *fp;
@@ -103,6 +107,13 @@ int merge_sort(FILE *unsorted_file, FILE *sorted_file,
                 memcpy(p->record, record[0], record_size);
                 first = p;
                 block_count++;
+            } else if (record_size < 0) {
+                fclose(source_tape[0].fp);
+                fclose(source_tape[1].fp);
+                free(record[0]);
+                free(record[1]);
+                free_memory_blocks(first);
+                return FILE_READ_ERROR;
             }
             if (block_count == block_size || (record_size == 0 && block_count != 0)) {
                 first = sort_linked_list(first, 0, compare_records, &comp, NULL);
@@ -141,7 +152,12 @@ int merge_sort(FILE *unsorted_file, FILE *sorted_file,
         source_tape[1] = source_tape[0];
         source_tape[0].fp = sorted_file;
         while (source_tape[1].count-- != 0L) {
-            (*read)(source_tape[1].fp, record[0], pointer);
+            if ((*read)(source_tape[1].fp, record[0], pointer) <= 0) {
+                fclose(source_tape[1].fp);
+                free(record[0]);
+                free(record[1]);
+                return FILE_READ_ERROR;
+            }
             if ((*write)(source_tape[0].fp, record[0], pointer) == 0) {
                 fclose(source_tape[1].fp);
                 free(record[0]);
@@ -154,6 +170,7 @@ int merge_sort(FILE *unsorted_file, FILE *sorted_file,
         while (source_tape[1].count != 0L) {
             unsigned destination = 0;
             struct tape destination_tape[2];
+            int record1_size, record2_size;
             destination_tape[0].fp = source_tape[0].count <= block_size ?
                                      sorted_file : tmpfile();
             destination_tape[0].count = 0L;
@@ -176,8 +193,18 @@ int merge_sort(FILE *unsorted_file, FILE *sorted_file,
                 free(record[1]);
                 return FILE_CREATION_ERROR;
             }
-            (*read)(source_tape[0].fp, record[0], pointer);
-            (*read)(source_tape[1].fp, record[1], pointer);
+            record1_size = (*read)(source_tape[0].fp, record[0], pointer);
+            record2_size = (*read)(source_tape[1].fp, record[1], pointer);
+            if (record1_size <= 0 || record2_size <= 0) {
+                if (destination_tape[0].fp != sorted_file) {
+                    fclose(destination_tape[0].fp);
+                }
+                fclose(source_tape[0].fp);
+                fclose(source_tape[1].fp);
+                free(record[0]);
+                free(record[1]);
+                return FILE_READ_ERROR;
+            }
             while (source_tape[0].count != 0L) {
                 unsigned long count[2];
                 count[0] = source_tape[0].count;
@@ -204,7 +231,17 @@ int merge_sort(FILE *unsorted_file, FILE *sorted_file,
                         return FILE_WRITE_ERROR;
                     }
                     if (source_tape[select].count > 1L) {
-                        (*read)(source_tape[select].fp, record[select], pointer);
+                        if ((*read)(source_tape[select].fp, record[select], pointer) <= 0) {
+                            if (destination_tape[0].fp != sorted_file) {
+                                fclose(destination_tape[0].fp);
+                            }
+                            fclose(destination_tape[1].fp);
+                            fclose(source_tape[0].fp);
+                            fclose(source_tape[1].fp);
+                            free(record[0]);
+                            free(record[1]);
+                            return FILE_READ_ERROR;
+                        }
                     }
                     source_tape[select].count--;
                     count[select]--;

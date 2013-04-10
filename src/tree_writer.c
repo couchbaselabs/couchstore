@@ -19,7 +19,7 @@
 
 static int read_id_record(FILE *in, void *buf, void *ctx);
 static int write_id_record(FILE *out, void *ptr, void *ctx);
-static int compare_id_record(void* r1, void* r2, void *ctx);
+static int compare_id_record(const void *r1, const void *r2, void *ctx);
 
 
 struct TreeWriter {
@@ -180,10 +180,14 @@ static int read_id_record(FILE *in, void *buf, void *ctx)
     uint32_t vlen;
     extsort_record *rec = (extsort_record *) buf;
     if(fread(&klen, 2, 1, in) != 1) {
-        return 0;
+        if (feof(in)) {
+            return 0;
+        } else {
+            return -1;
+        }
     }
     if(fread(&vlen, 4, 1, in) != 1) {
-        return 0;
+        return -1;
     }
     klen = ntohs(klen);
     vlen = ntohl(vlen);
@@ -192,10 +196,10 @@ static int read_id_record(FILE *in, void *buf, void *ctx)
     rec->v.size = vlen;
     rec->v.buf = rec->buf + klen;
     if(fread(rec->k.buf, klen, 1, in) != 1) {
-        return 0;
+        return -1;
     }
     if(fread(rec->v.buf, vlen, 1, in) != 1) {
-        return 0;
+        return -1;
     }
     return sizeof(extsort_record) + klen + vlen;
 }
@@ -218,7 +222,7 @@ static int write_id_record(FILE *out, void *ptr, void *ctx)
     return 1;
 }
 
-static int compare_id_record(void* r1, void* r2, void *ctx)
+static int compare_id_record(const void *r1, const void *r2, void *ctx)
 {
     TreeWriter* writer = ctx;
     extsort_record *e1 = (extsort_record *) r1, *e2 = (extsort_record *) r2;
