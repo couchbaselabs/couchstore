@@ -52,7 +52,7 @@ LIBCOUCHSTORE_API void *sorted_list_iterator(const void *list);
 
 LIBCOUCHSTORE_API void *sorted_list_next(void *iterator);
 
-LIBCOUCHSTORE_API void *sorted_list_free_iterator(void *iterator);
+LIBCOUCHSTORE_API void sorted_list_free_iterator(void *iterator);
 
 
 #ifdef __cplusplus

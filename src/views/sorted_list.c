@@ -212,7 +212,7 @@ LIBCOUCHSTORE_API void *sorted_list_next(void *iterator)
 }
 
 
-LIBCOUCHSTORE_API void *sorted_list_free_iterator(void *iterator)
+LIBCOUCHSTORE_API void sorted_list_free_iterator(void *iterator)
 {
     free(iterator);
 }
