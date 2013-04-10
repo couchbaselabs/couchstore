@@ -119,7 +119,6 @@ couchstore_error_t decode_view_id_btree_key(const char *bytes, size_t len,
                                              view_id_btree_key_t **key)
 {
     view_id_btree_key_t *k = NULL;
-    uint16_t sz;
 
     k = (view_id_btree_key_t *) malloc(sizeof(view_id_btree_key_t));
     if (k == NULL) {
