@@ -15,7 +15,12 @@
 #   limitations under the License.
 ACLOCAL_AMFLAGS = -I m4 --force
 
-bin_PROGRAMS = couch_dbdump couch_dbinfo couch_compact couch_viewgen
+bin_PROGRAMS = \
+	couch_dbdump \
+	couch_dbinfo \
+	couch_compact \
+	couch_viewgen \
+	couch_view_file_sorter
 EXTRA_DIST = python LICENSE README.md
 
 if WINDOWS
@@ -93,6 +98,8 @@ libcouchstore_la_SOURCES = \
                             src/couch_index.c \
                             src/views/collate_json.c \
                             src/views/collate_json.h \
+                            src/views/file_sorter.h \
+                            src/views/file_sorter.c \
                             src/views/bitmap.h \
                             src/views/bitmap.c \
                             src/views/index_header.h \
@@ -142,6 +149,15 @@ couch_viewgen_SOURCES = src/viewgen.c
 couch_viewgen_DEPENDENCIES = libcouchstore.la
 couch_viewgen_CFLAGS = $(AM_CFLAGS) -D__STDC_FORMAT_MACROS
 couch_viewgen_LDADD = libcouchstore.la libbyteswap.la -lsnappy
+
+couch_view_file_sorter_SOURCES = src/views/bin/couch_view_file_sorter.c
+couch_view_file_sorter_DEPENDENCIES = libcouchstore.la
+couch_view_file_sorter_CFLAGS = $(AM_CFLAGS) -D__STDC_FORMAT_MACROS
+couch_view_file_sorter_LDADD = libcouchstore.la libbyteswap.la -lsnappy
+
+if WINDOWS
+couch_view_file_sorter_LDADD += -lws2_32
+endif
 
 extra_tests=
 slow_tests=

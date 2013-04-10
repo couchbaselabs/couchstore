@@ -17,6 +17,9 @@
 #define ID_SORT_MAX_RECORD_SIZE 4196
 
 
+static char *alloc_record(void);
+static char *duplicate_record(char *rec);
+static void free_record(char *rec);
 static int read_id_record(FILE *in, void *buf, void *ctx);
 static int write_id_record(FILE *out, void *ptr, void *ctx);
 static int compare_id_record(const void *r1, const void *r2, void *ctx);
@@ -86,8 +89,9 @@ couchstore_error_t TreeWriterSort(TreeWriter* writer)
     rewind(writer->file);
     return merge_sort(writer->file, writer->file,
                       read_id_record, write_id_record, compare_id_record,
+                      alloc_record, duplicate_record, free_record,
                       writer,  // 'context' parameter to the above callbacks
-                      ID_SORT_MAX_RECORD_SIZE, ID_SORT_CHUNK_SIZE, NULL);
+                      ID_SORT_CHUNK_SIZE, NULL);
 }
 
 
@@ -229,4 +233,27 @@ static int compare_id_record(const void *r1, const void *r2, void *ctx)
     e1->k.buf = e1->buf;
     e2->k.buf = e2->buf;
     return writer->key_compare(&e1->k, &e2->k);
+}
+
+static char *alloc_record(void)
+{
+    return malloc(ID_SORT_MAX_RECORD_SIZE);
+}
+
+static char *duplicate_record(char *rec)
+{
+    extsort_record *record = (extsort_record *) rec;
+    size_t record_size = sizeof(extsort_record) + record->k.size + record->v.size;
+    extsort_record *new_record = (extsort_record *) malloc(record_size);
+
+    if (new_record != NULL) {
+        memcpy(new_record, record, record_size);
+    }
+
+    return (char *) new_record;
+}
+
+static void free_record(char *rec)
+{
+    free(rec);
 }

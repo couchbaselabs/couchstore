@@ -29,14 +29,20 @@ typedef int (*mergesort_compare_records_t)(const void *record_buffer1,
                                            const void *record_buffer2,
                                            void *pointer);
 
+typedef char *(*mergesort_record_alloc_t)(void);
+typedef char *(*mergesort_record_duplicate_t)(char *record);
+typedef void  (*mergesort_record_free_t)(char *record);
+
 void *sort_linked_list(void *, unsigned, int (*)(void *, void *, void *), void *, unsigned long *);
 
 int merge_sort(FILE *unsorted_file, FILE *sorted_file,
                mergesort_read_record_t read,
                mergesort_write_record_t write,
                mergesort_compare_records_t compare,
+               mergesort_record_alloc_t record_alloc,
+               mergesort_record_duplicate_t record_duplicate,
+               mergesort_record_free_t record_free,
                void *pointer,
-               unsigned max_record_size,
                unsigned long block_size,
                unsigned long *pcount);
 #endif

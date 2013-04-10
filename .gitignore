@@ -36,6 +36,7 @@
 /couch_dbdump
 /couch_dbinfo
 /couch_viewgen
+/couch_view_file_sorter
 /couchscript
 /docs/doxy
 /libcouchstore*.changes
