@@ -60,7 +60,7 @@ LIBCOUCHSTORE_API int sorted_list_add(void *list, const void *elem, size_t elem_
     sorted_list_node_t *n = l->head;
     sorted_list_node_t *prev = NULL;
     sorted_list_node_t *new_node;
-    int cmp;
+    int cmp = 0;
 
     new_node = (sorted_list_node_t *) malloc(sizeof(sorted_list_node_t));
     if (new_node == NULL) {
