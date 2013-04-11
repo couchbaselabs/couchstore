@@ -46,7 +46,7 @@ couchstore_error_t decode_view_btree_reductions(const char *bytes,
     bs = bytes;
     length = len;
 
-    i = 0;
+    r->num_values = 0;
     while (len > 0) {
 
         sz = dec_uint16(bs);
@@ -55,24 +55,22 @@ couchstore_error_t decode_view_btree_reductions(const char *bytes,
 
         bs += sz;
         len -= sz;
-        i++;
+        r->num_values++;
     }
 
-    r->num_values = i;
 
     if (len > 0) {
         free_view_btree_reductions(r);
         return COUCHSTORE_ERROR_CORRUPT;
     }
 
-    r->reduce_values = (sized_buf *) malloc(i * sizeof(sized_buf));
+    r->reduce_values = (sized_buf *) malloc(r->num_values * sizeof(sized_buf));
 
     if (r->reduce_values == NULL) {
         goto alloc_error;
     }
 
-    for (j = 0; j< i; ++j) {
-        r->reduce_values[j].size = 0;
+    for (j = 0; j< r->num_values; ++j) {
         r->reduce_values[j].buf = NULL;
     }
 
@@ -162,9 +160,7 @@ void free_view_btree_reductions(view_btree_reduction_t *reduction)
 
     if (reduction->reduce_values != NULL){
         for (int i = 0; i < reduction->num_values; ++i) {
-            if (reduction->reduce_values[i].buf != NULL) {
-                free(reduction->reduce_values[i].buf);
-            }
+            free(reduction->reduce_values[i].buf);
         }
         free(reduction->reduce_values);
     }
