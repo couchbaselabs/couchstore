@@ -3,9 +3,6 @@
 #include "keys.h"
 #include "../bitfield.h"
 #include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <snappy-c.h>
 
 
 #define dec_uint16(b) (decode_raw16(*((raw_16 *) b)))
@@ -14,8 +11,9 @@ static void enc_uint16(uint16_t u, char **buf);
 
 
 LIBCOUCHSTORE_API
-couchstore_error_t decode_view_btree_key(const char *bytes, size_t len,
-                                        view_btree_key_t **key)
+couchstore_error_t decode_view_btree_key(const char *bytes,
+                                         size_t len,
+                                         view_btree_key_t **key)
 {
     view_btree_key_t *k = NULL;
     uint16_t sz;
@@ -67,8 +65,8 @@ couchstore_error_t decode_view_btree_key(const char *bytes, size_t len,
 
 LIBCOUCHSTORE_API
 couchstore_error_t encode_view_btree_key(const view_btree_key_t *key,
-                                       char **buffer,
-                                       size_t *buffer_size)
+                                         char **buffer,
+                                         size_t *buffer_size)
 {
     char *buf = NULL, *b = NULL;
     size_t sz = 0;
@@ -115,8 +113,9 @@ void free_view_btree_key(view_btree_key_t *key)
 }
 
 LIBCOUCHSTORE_API
-couchstore_error_t decode_view_id_btree_key(const char *bytes, size_t len,
-                                             view_id_btree_key_t **key)
+couchstore_error_t decode_view_id_btree_key(const char *bytes,
+                                            size_t len,
+                                            view_id_btree_key_t **key)
 {
     view_id_btree_key_t *k = NULL;
 
@@ -153,16 +152,14 @@ couchstore_error_t decode_view_id_btree_key(const char *bytes, size_t len,
 
 LIBCOUCHSTORE_API
 couchstore_error_t encode_view_id_btree_key(const view_id_btree_key_t *key,
-                                            char **buffer, size_t *buffer_size)
+                                            char **buffer,
+                                            size_t *buffer_size)
 {
     char *buf = NULL, *b = NULL;
     size_t sz = 0;
 
-
     sz += 2;             /* uint16_t */
-
     sz += key->doc_id.size;
-
 
     b = buf = (char *) malloc(sz);
     if (buf == NULL) {
@@ -171,10 +168,8 @@ couchstore_error_t encode_view_id_btree_key(const view_id_btree_key_t *key,
 
     enc_uint16(key->partition, &b);
 
-
     memcpy(b, key->doc_id.buf, key->doc_id.size);
     b += key->doc_id.size;
-
 
     *buffer = buf;
     *buffer_size = sz;

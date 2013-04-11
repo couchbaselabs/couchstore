@@ -4,7 +4,7 @@
 
 
 static view_btree_reduction_t *test_view_btree_reduction_decoding(const char *reduction_bin,
-                                                                    size_t len)
+                                                                  size_t len)
 {
     view_btree_reduction_t *r = NULL;
     uint16_t partition_bitset[] = {
@@ -63,8 +63,8 @@ static view_id_btree_reduction_t *test_view_id_btree_reduction_decoding(const ch
 }
 
 static void test_view_btree_reduction_encoding(const view_btree_reduction_t *r,
-                                       char **buffer,
-                                       size_t *size)
+                                               char **buffer,
+                                               size_t *size)
 {
     couchstore_error_t res;
 
@@ -74,8 +74,8 @@ static void test_view_btree_reduction_encoding(const view_btree_reduction_t *r,
 
 
 static void test_view_id_btree_reduction_encoding(const view_id_btree_reduction_t *r,
-                                       char **buffer,
-                                       size_t *size)
+                                                  char **buffer,
+                                                  size_t *size)
 {
     couchstore_error_t res;
 
@@ -102,7 +102,7 @@ void test_reductions()
 
     TPRINT("Decoding a view btree reduction ...\n");
     view_btree_reduction_t *r = test_view_btree_reduction_decoding(reduction_bin,
-                                                                    sizeof(reduction_bin));
+                                                                   sizeof(reduction_bin));
 
     TPRINT("Decoding a view id btree reduction ...\n");
     view_id_btree_reduction_t *id_btree_r = test_view_id_btree_reduction_decoding(id_btree_reduction_bin);

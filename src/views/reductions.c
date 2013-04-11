@@ -3,9 +3,7 @@
 #include "reductions.h"
 #include "../bitfield.h"
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
-#include <snappy-c.h>
 
 #define BITMASK_BYTE_SIZE      (1024 / CHAR_BIT)
 
@@ -19,7 +17,8 @@ static void enc_raw40(uint64_t u, char **buf);
 
 
 LIBCOUCHSTORE_API
-couchstore_error_t decode_view_btree_reductions(const char *bytes, size_t len,
+couchstore_error_t decode_view_btree_reductions(const char *bytes,
+                                                size_t len,
                                                 view_btree_reduction_t **reduction)
 {
     view_btree_reduction_t *r = NULL;
@@ -110,8 +109,8 @@ couchstore_error_t decode_view_btree_reductions(const char *bytes, size_t len,
 
 LIBCOUCHSTORE_API
 couchstore_error_t encode_view_btree_reductions(const view_btree_reduction_t *reduction,
-                                       char **buffer,
-                                       size_t *buffer_size)
+                                                char **buffer,
+                                                size_t *buffer_size)
 {
     char *buf = NULL, *b = NULL;
     size_t sz = 0;
@@ -175,10 +174,9 @@ void free_view_btree_reductions(view_btree_reduction_t *reduction)
 
 LIBCOUCHSTORE_API
 couchstore_error_t decode_view_id_btree_reductions(const char *bytes,
-                                             view_id_btree_reduction_t **reduction)
+                                                   view_id_btree_reduction_t **reduction)
 {
     view_id_btree_reduction_t *r = NULL;
-
 
     r = (view_id_btree_reduction_t *) malloc(sizeof(view_id_btree_reduction_t));
     if (r == NULL) {
@@ -202,8 +200,8 @@ couchstore_error_t decode_view_id_btree_reductions(const char *bytes,
 
 LIBCOUCHSTORE_API
 couchstore_error_t encode_view_id_btree_reductions(const view_id_btree_reduction_t *reduction,
-                                       char **buffer,
-                                       size_t *buffer_size)
+                                                   char **buffer,
+                                                   size_t *buffer_size)
 {
     char *buf = NULL, *b = NULL;
     size_t sz = 0;

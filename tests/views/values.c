@@ -4,7 +4,7 @@
 
 
 static view_btree_value_t *test_view_btree_value_decoding(const char *value_bin,
-                                                                    size_t len)
+                                                          size_t len)
 {
     view_btree_value_t *v = NULL;
 
@@ -55,8 +55,8 @@ static view_id_btree_value_t *test_view_id_btree_value_decoding(const char *id_b
 }
 
 static void test_view_btree_value_encoding(const view_btree_value_t *v,
-                                            char **buffer,
-                                            size_t *size)
+                                           char **buffer,
+                                           size_t *size)
 {
     couchstore_error_t res;
 
@@ -66,8 +66,8 @@ static void test_view_btree_value_encoding(const view_btree_value_t *v,
 
 
 static void test_view_id_btree_value_encoding(const view_id_btree_value_t *v,
-                                       char **buffer,
-                                       size_t *size)
+                                              char **buffer,
+                                              size_t *size)
 {
     couchstore_error_t res;
 
@@ -90,8 +90,9 @@ void test_values()
     view_btree_value_t *v = test_view_btree_value_decoding(value_bin, sizeof(value_bin));
 
     TPRINT("Decoding a view id btree value ...\n");
-    view_id_btree_value_t *id_btree_v = test_view_id_btree_value_decoding(id_btree_value_bin,
-                                                                        sizeof(id_btree_value_bin));
+    view_id_btree_value_t *id_btree_v;
+    id_btree_v = test_view_id_btree_value_decoding(id_btree_value_bin,
+                                                   sizeof(id_btree_value_bin));
 
     TPRINT("Encoding the previously decoded view btree value ...\n");
     char *v_bin2 = NULL;
@@ -116,8 +117,9 @@ void test_values()
     view_btree_value_t *v2 = test_view_btree_value_decoding(v_bin2, v_bin2_size);
 
     TPRINT("Decoding the previously encoded view id btree value ...\n");
-    view_id_btree_value_t *id_btree_v2 = test_view_id_btree_value_decoding(id_btree_v_bin2,
-                                                                        id_btree_v_bin2_size);
+    view_id_btree_value_t *id_btree_v2;
+    id_btree_v2 = test_view_id_btree_value_decoding(id_btree_v_bin2,
+                                                    id_btree_v_bin2_size);
 
     TPRINT("Encoding the previously decoded view btree value ...\n");
     char *v_bin3 = NULL;

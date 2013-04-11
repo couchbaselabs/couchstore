@@ -14,8 +14,9 @@ static void enc_raw24(uint32_t u, char **buf);
 
 
 LIBCOUCHSTORE_API
-couchstore_error_t decode_view_btree_value(const char *bytes, size_t len,
-                                            view_btree_value_t **value)
+couchstore_error_t decode_view_btree_value(const char *bytes,
+                                           size_t len,
+                                           view_btree_value_t **value)
 {
     view_btree_value_t *v = NULL;
     uint16_t  i, j;
@@ -97,7 +98,8 @@ couchstore_error_t decode_view_btree_value(const char *bytes, size_t len,
 
 LIBCOUCHSTORE_API
 couchstore_error_t encode_view_btree_value(const view_btree_value_t *value,
-                                            char **buffer, size_t *buffer_size)
+                                           char **buffer,
+                                           size_t *buffer_size)
 {
     char *buf = NULL, *b = NULL;
     uint16_t i;
@@ -155,8 +157,9 @@ void free_view_btree_value(view_btree_value_t *value)
 }
 
 LIBCOUCHSTORE_API
-couchstore_error_t decode_view_id_btree_value(const char *bytes, size_t len,
-                                            view_id_btree_value_t **value)
+couchstore_error_t decode_view_id_btree_value(const char *bytes,
+                                              size_t len,
+                                              view_id_btree_value_t **value)
 {
     view_id_btree_value_t *v = NULL;
     uint16_t i, j, num_keys;
@@ -271,12 +274,12 @@ couchstore_error_t decode_view_id_btree_value(const char *bytes, size_t len,
 
 LIBCOUCHSTORE_API
 couchstore_error_t encode_view_id_btree_value(const view_id_btree_value_t *value,
-                                            char **buffer, size_t *buffer_size)
+                                              char **buffer,
+                                              size_t *buffer_size)
 {
     char *buf = NULL, *b = NULL;
     size_t sz = 0;
     uint16_t i, j;
-
 
     sz += 2;                 /* partition */
 
