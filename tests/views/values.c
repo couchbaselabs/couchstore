@@ -8,25 +8,16 @@ static view_btree_value_t *test_view_btree_value_decoding(const char *value_bin,
 {
     view_btree_value_t *v = NULL;
 
-
     assert(decode_view_btree_value(value_bin, len, &v) == COUCHSTORE_SUCCESS);
-
-
     assert(v != NULL);
 
-    assert(v->partition == 46);
+    assert(v->partition == 10);
+    assert(v->num_values == 2);
 
-
-    assert(v->values[0].size == 2);
+    assert(v->values[0].size == 4);
+    assert(memcmp(v->values[0].buf, "6155", v->values[0].size) == 0);
     assert(v->values[1].size == 4);
-    assert(v->values[2].size == 5);
-
-
-    assert(memcmp(v->values[0].buf, "ab", v->values[0].size) == 0);
-
-    assert(memcmp(v->values[1].buf, "abcd", v->values[1].size) == 0);
-
-    assert(memcmp(v->values[2].buf, "abcde", v->values[2].size) == 0);
+    assert(memcmp(v->values[1].buf, "6154", v->values[0].size) == 0);
 
     return v;
 }
@@ -36,30 +27,29 @@ static view_id_btree_value_t *test_view_id_btree_value_decoding(const char *id_b
 {
     view_id_btree_value_t *v = NULL;
 
-
     assert(decode_view_id_btree_value(id_btree_value_bin, len, &v) == COUCHSTORE_SUCCESS);
-
     assert(v != NULL);
 
-    assert(v->partition == 45);
+    assert(v->partition == 67);
+    assert(v->num_view_keys_map == 2);
 
-    assert(v->view_keys_map[0].view_id == 1);
-    assert(v->view_keys_map[0].num_keys == 3);
-    assert(v->view_keys_map[0].json_keys[0].size == 2);
-    assert(v->view_keys_map[0].json_keys[1].size == 3);
-    assert(v->view_keys_map[0].json_keys[2].size == 4);
+    assert(v->view_keys_map[0].view_id == 0);
+    assert(v->view_keys_map[0].num_keys == 2);
+    assert(v->view_keys_map[0].json_keys[0].size == 14);
+    assert(memcmp(v->view_keys_map[0].json_keys[0].buf,
+                  "[123,\"foobar\"]",
+                  v->view_keys_map[0].json_keys[0].size) == 0);
+    assert(v->view_keys_map[0].json_keys[1].size == 4);
+    assert(memcmp(v->view_keys_map[0].json_keys[1].buf,
+                  "-321",
+                  v->view_keys_map[0].json_keys[1].size) == 0);
 
-    assert(v->view_keys_map[1].view_id == 2);
+    assert(v->view_keys_map[1].view_id == 1);
     assert(v->view_keys_map[1].num_keys == 1);
-    assert(v->view_keys_map[1].json_keys[0].size == 2);
-
-    assert(memcmp(v->view_keys_map[0].json_keys[0].buf, "ab", v->view_keys_map[0].json_keys[0].size) == 0);
-
-    assert(memcmp(v->view_keys_map[0].json_keys[1].buf, "abc", v->view_keys_map[0].json_keys[1].size) == 0);
-
-    assert(memcmp(v->view_keys_map[0].json_keys[2].buf, "abcd", v->view_keys_map[0].json_keys[2].size) == 0);
-
-    assert(memcmp(v->view_keys_map[1].json_keys[0].buf, "ab", v->view_keys_map[0].json_keys[0].size) == 0);
+    assert(v->view_keys_map[1].json_keys[0].size == 7);
+    assert(memcmp(v->view_keys_map[1].json_keys[0].buf,
+                  "[5,6,7]",
+                  v->view_keys_map[1].json_keys[0].size) == 0);
 
     return v;
 }
@@ -88,11 +78,12 @@ static void test_view_id_btree_value_encoding(const view_id_btree_value_t *v,
 void test_values()
 {
     char value_bin[] = {
-        0,46,0,0,2,97,98,0,0,4,97,98,99,100,0,0,5,97,98,99,100,101
+        0,10,0,0,4,54,49,53,53,0,0,4,54,49,53,52
     };
 
     char id_btree_value_bin[] = {
-        0,45,1,0,3,0,2,97,98,0,3,97,98,99,0,4,97,98,99,100,2,0,1,0,2,97,98
+        0,67,0,0,2,0,14,91,49,50,51,44,34,102,111,111,98,97,114,
+        34,93,0,4,45,51,50,49,1,0,1,0,7,91,53,44,54,44,55,93
     };
 
     TPRINT("Decoding a view btree value ...\n");
