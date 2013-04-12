@@ -16,7 +16,6 @@ static void enc_uint16(uint16_t u, char **buf);
 static void enc_raw40(uint64_t u, char **buf);
 
 
-LIBCOUCHSTORE_API
 couchstore_error_t decode_view_btree_reductions(const char *bytes,
                                                 size_t len,
                                                 view_btree_reduction_t **reduction)
@@ -105,7 +104,6 @@ couchstore_error_t decode_view_btree_reductions(const char *bytes,
 }
 
 
-LIBCOUCHSTORE_API
 couchstore_error_t encode_view_btree_reductions(const view_btree_reduction_t *reduction,
                                                 char **buffer,
                                                 size_t *buffer_size)
@@ -151,7 +149,6 @@ couchstore_error_t encode_view_btree_reductions(const view_btree_reduction_t *re
 }
 
 
-LIBCOUCHSTORE_API
 void free_view_btree_reductions(view_btree_reduction_t *reduction)
 {
     if (reduction == NULL) {
@@ -168,7 +165,7 @@ void free_view_btree_reductions(view_btree_reduction_t *reduction)
     free(reduction);
 }
 
-LIBCOUCHSTORE_API
+
 couchstore_error_t decode_view_id_btree_reductions(const char *bytes,
                                                    view_id_btree_reduction_t **reduction)
 {
@@ -194,7 +191,6 @@ couchstore_error_t decode_view_id_btree_reductions(const char *bytes,
 }
 
 
-LIBCOUCHSTORE_API
 couchstore_error_t encode_view_id_btree_reductions(const view_id_btree_reduction_t *reduction,
                                                    char **buffer,
                                                    size_t *buffer_size)
@@ -227,7 +223,6 @@ couchstore_error_t encode_view_id_btree_reductions(const view_id_btree_reduction
 }
 
 
-LIBCOUCHSTORE_API
 void free_view_id_btree_reductions(view_id_btree_reduction_t *reduction)
 {
     if (reduction == NULL) {

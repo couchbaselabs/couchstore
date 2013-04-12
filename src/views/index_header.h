@@ -74,15 +74,15 @@ typedef struct {
     void                       *unindexable_seqs;
 } index_header_t;
 
-LIBCOUCHSTORE_API
-couchstore_error_t decode_index_header(const char *bytes, size_t len, index_header_t **header);
 
-LIBCOUCHSTORE_API
+couchstore_error_t decode_index_header(const char *bytes,
+                                       size_t len,
+                                       index_header_t **header);
+
 couchstore_error_t encode_index_header(const index_header_t *header,
                                        char **buffer,
                                        size_t *buffer_size);
 
-LIBCOUCHSTORE_API
 void free_index_header(index_header_t *header);
 
 #ifdef __cplusplus

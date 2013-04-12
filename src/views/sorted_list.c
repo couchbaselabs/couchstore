@@ -40,7 +40,7 @@ typedef struct {
 } sorted_list_iterator_t;
 
 
-LIBCOUCHSTORE_API void *sorted_list_create(sorted_list_cmp_t cmp_fun)
+void *sorted_list_create(sorted_list_cmp_t cmp_fun)
 {
     sorted_list_t *list = (sorted_list_t *) malloc(sizeof(sorted_list_t));
 
@@ -54,7 +54,7 @@ LIBCOUCHSTORE_API void *sorted_list_create(sorted_list_cmp_t cmp_fun)
 }
 
 
-LIBCOUCHSTORE_API int sorted_list_add(void *list, const void *elem, size_t elem_size)
+int sorted_list_add(void *list, const void *elem, size_t elem_size)
 {
     sorted_list_t *l = (sorted_list_t *) list;
     sorted_list_node_t *n = l->head;
@@ -108,7 +108,7 @@ LIBCOUCHSTORE_API int sorted_list_add(void *list, const void *elem, size_t elem_
 }
 
 
-LIBCOUCHSTORE_API void *sorted_list_get(const void *list, const void *elem)
+void *sorted_list_get(const void *list, const void *elem)
 {
     const sorted_list_t *l = (const sorted_list_t *) list;
     sorted_list_node_t *n = l->head;
@@ -129,7 +129,7 @@ LIBCOUCHSTORE_API void *sorted_list_get(const void *list, const void *elem)
 }
 
 
-LIBCOUCHSTORE_API void sorted_list_remove(void *list, const void *elem)
+void sorted_list_remove(void *list, const void *elem)
 {
     sorted_list_t *l = (sorted_list_t *) list;
     sorted_list_node_t *n = l->head;
@@ -159,7 +159,7 @@ LIBCOUCHSTORE_API void sorted_list_remove(void *list, const void *elem)
 }
 
 
-LIBCOUCHSTORE_API void sorted_list_free(void *list)
+void sorted_list_free(void *list)
 {
     sorted_list_t *l = (sorted_list_t *) list;
     sorted_list_node_t *n = NULL;
@@ -176,7 +176,7 @@ LIBCOUCHSTORE_API void sorted_list_free(void *list)
 }
 
 
-LIBCOUCHSTORE_API int sorted_list_size(const void *list)
+int sorted_list_size(const void *list)
 {
     const sorted_list_t *l = (const sorted_list_t *) list;
 
@@ -184,7 +184,7 @@ LIBCOUCHSTORE_API int sorted_list_size(const void *list)
 }
 
 
-LIBCOUCHSTORE_API void *sorted_list_iterator(const void *list)
+void *sorted_list_iterator(const void *list)
 {
    const sorted_list_t *l = (const sorted_list_t *) list;
    sorted_list_iterator_t *it = NULL;
@@ -198,7 +198,7 @@ LIBCOUCHSTORE_API void *sorted_list_iterator(const void *list)
 }
 
 
-LIBCOUCHSTORE_API void *sorted_list_next(void *iterator)
+void *sorted_list_next(void *iterator)
 {
     sorted_list_iterator_t *it = (sorted_list_iterator_t *) iterator;
     void *elem = NULL;
@@ -212,7 +212,7 @@ LIBCOUCHSTORE_API void *sorted_list_next(void *iterator)
 }
 
 
-LIBCOUCHSTORE_API void sorted_list_free_iterator(void *iterator)
+void sorted_list_free_iterator(void *iterator)
 {
     free(iterator);
 }

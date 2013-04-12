@@ -23,29 +23,25 @@ typedef struct {
     sized_buf               doc_id;
 } view_id_btree_key_t;
 
-LIBCOUCHSTORE_API
+
 couchstore_error_t decode_view_btree_key(const char *bytes,
                                          size_t len,
                                          view_btree_key_t **key);
 
-LIBCOUCHSTORE_API
 couchstore_error_t encode_view_btree_key(const view_btree_key_t *key,
                                          char **buffer,
                                          size_t *buffer_size);
-LIBCOUCHSTORE_API
+
 void free_view_btree_key(view_btree_key_t *key);
 
-LIBCOUCHSTORE_API
 couchstore_error_t decode_view_id_btree_key(const char *bytes,
                                             size_t len,
                                             view_id_btree_key_t **key);
 
-LIBCOUCHSTORE_API
 couchstore_error_t encode_view_id_btree_key(const view_id_btree_key_t *key,
                                             char **buffer,
                                             size_t *buffer_size);
 
-LIBCOUCHSTORE_API
 void free_view_id_btree_key(view_id_btree_key_t *key);
 
 #ifdef __cplusplus

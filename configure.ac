@@ -81,6 +81,7 @@ AS_CASE([$host_os],
   ])
 
 AM_CONDITIONAL([WINDOWS], [test x$IS_WINDOWS = xTRUE])
+AM_CONDITIONAL([GCC], [test x$GCC = xyes])
 
 AC_CHECK_HEADERS_ONCE([snappy-c.h netinet/in.h inttypes.h])
 

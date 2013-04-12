@@ -41,7 +41,7 @@ lib_LTLIBRARIES = libcouchstore.la
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libcouchstore.pc
 
-noinst_LTLIBRARIES = librfc1321.la libbyteswap.la libmapreduce.la
+noinst_LTLIBRARIES = librfc1321.la libbyteswap.la libcouchstore_tests.la libmapreduce.la
 
 libbyteswap_la_SOURCES = src/byteswap.c
 
@@ -60,6 +60,11 @@ libmapreduce_la_SOURCES = \
 	src/views/mapreduce/mapreduce.cc
 libmapreduce_la_LDFLAGS = $(AM_LDFLAGS) $(AM_CXX_LDFLAGS) $(V8_LIB_FLAGS) -pthread
 libmapreduce_la_LIBADD = $(V8_FLAGS)
+
+BASE_libcouchstore_la_CFLAGS = $(AM_CFLAGS) $(ICU_LOCAL_CFLAGS)
+if GCC
+BASE_libcouchstore_la_CFLAGS += -Wstrict-aliasing=2 -pedantic
+endif
 
 libcouchstore_la_SOURCES = \
                             config_static.h \
@@ -119,8 +124,13 @@ else
 libcouchstore_la_SOURCES += src/os.c
 endif
 
-libcouchstore_la_CFLAGS = $(AM_CFLAGS) $(ICU_LOCAL_CFLAGS) -DLIBCOUCHSTORE_INTERNAL=1 -Wstrict-aliasing=2 -pedantic
+libcouchstore_la_CFLAGS = $(BASE_libcouchstore_la_CFLAGS) -DLIBCOUCHSTORE_INTERNAL=1
 libcouchstore_la_LIBADD = librfc1321.la libbyteswap.la libmapreduce.la $(ICU_LOCAL_LIBS)
+
+libcouchstore_tests_la_SOURCES = $(libcouchstore_la_SOURCES)
+libcouchstore_tests_la_LDFLAGS = $(libcouchstore_la_LDFLAGS)
+libcouchstore_tests_la_CFLAGS = $(BASE_libcouchstore_la_CFLAGS)
+libcouchstore_tests_la_LIBADD = $(libcouchstore_la_LIBADD)
 
 couch_dbdump_SOURCES = src/dbdump.c
 couch_dbdump_DEPENDENCIES = libcouchstore.la
@@ -213,8 +223,8 @@ testapp_SOURCES += \
 	tests/views/values.c
 
 testapp_CFLAGS = $(AM_CFLAGS)
-testapp_DEPENDENCIES = libcouchstore.la libbyteswap.la
-testapp_LDADD = libcouchstore.la libbyteswap.la libmapreduce.la
+testapp_DEPENDENCIES = libcouchstore_tests.la libbyteswap.la
+testapp_LDADD = libcouchstore_tests.la libbyteswap.la libmapreduce.la
 
 test: check-TESTS $(extra_tests)
 

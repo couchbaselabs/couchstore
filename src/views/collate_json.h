@@ -26,13 +26,11 @@ typedef enum CollateJSONMode {
  * CAREFUL: The two strings must be valid JSON, with no extraneous whitespace,
  * otherwise this function will return wrong results or even crash.
  */
-LIBCOUCHSTORE_API
 int CollateJSON(const sized_buf *buf1,
                 const sized_buf *buf2,
                 CollateJSONMode mode);
 
 // not part of the API -- exposed for testing only (see collate_json_test.c)
-LIBCOUCHSTORE_API
 char ConvertJSONEscape(const char **in);
 
 #endif

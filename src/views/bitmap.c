@@ -28,21 +28,18 @@
 #define CHUNK_OFFSET(bit)     ((bit) % CHUNK_BITS)
 
 
-LIBCOUCHSTORE_API
 int is_bit_set(const bitmap_t *bm, uint16_t bit)
 {
     return (MAP_CHUNK(*bm, bit) & (1 << CHUNK_OFFSET(bit))) != 0;
 }
 
 
-LIBCOUCHSTORE_API
 void set_bit(bitmap_t *bm, uint16_t bit)
 {
     (MAP_CHUNK(*bm, bit)) |= (1 << CHUNK_OFFSET(bit));
 }
 
 
-LIBCOUCHSTORE_API
 void unset_bit(bitmap_t *bm, uint16_t bit)
 {
     ((MAP_CHUNK(*bm, bit)) &= ~(1 << CHUNK_OFFSET(bit)));

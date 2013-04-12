@@ -37,9 +37,9 @@ typedef struct {
 } bitmap_t;
 
 
-LIBCOUCHSTORE_API int  is_bit_set(const bitmap_t *bm, uint16_t bit);
-LIBCOUCHSTORE_API void set_bit(bitmap_t *bm, uint16_t bit);
-LIBCOUCHSTORE_API void unset_bit(bitmap_t *bm, uint16_t bit);
+int  is_bit_set(const bitmap_t *bm, uint16_t bit);
+void set_bit(bitmap_t *bm, uint16_t bit);
+void unset_bit(bitmap_t *bm, uint16_t bit);
 
 
 #ifdef __cplusplus

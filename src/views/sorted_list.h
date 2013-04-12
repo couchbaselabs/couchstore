@@ -36,23 +36,23 @@ extern "C" {
 typedef int (*sorted_list_cmp_t)(const void *a, const void *b);
 
 
-LIBCOUCHSTORE_API void *sorted_list_create(sorted_list_cmp_t less_fun);
+void *sorted_list_create(sorted_list_cmp_t less_fun);
 
-LIBCOUCHSTORE_API int  sorted_list_add(void *list, const void *elem, size_t elem_size);
+int   sorted_list_add(void *list, const void *elem, size_t elem_size);
 
-LIBCOUCHSTORE_API void *sorted_list_get(const void *list, const void *elem);
+void *sorted_list_get(const void *list, const void *elem);
 
-LIBCOUCHSTORE_API void sorted_list_remove(void *list, const void *elem);
+void sorted_list_remove(void *list, const void *elem);
 
-LIBCOUCHSTORE_API int  sorted_list_size(const void *list);
+int  sorted_list_size(const void *list);
 
-LIBCOUCHSTORE_API void sorted_list_free(void *list);
+void sorted_list_free(void *list);
 
-LIBCOUCHSTORE_API void *sorted_list_iterator(const void *list);
+void *sorted_list_iterator(const void *list);
 
-LIBCOUCHSTORE_API void *sorted_list_next(void *iterator);
+void *sorted_list_next(void *iterator);
 
-LIBCOUCHSTORE_API void sorted_list_free_iterator(void *iterator);
+void sorted_list_free_iterator(void *iterator);
 
 
 #ifdef __cplusplus

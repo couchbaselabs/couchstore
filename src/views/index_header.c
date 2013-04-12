@@ -39,8 +39,9 @@ static int part_seq_cmp(const void *a, const void *b);
 static int part_id_cmp(const void *a, const void *b);
 
 
-LIBCOUCHSTORE_API
-couchstore_error_t decode_index_header(const char *bytes, size_t len, index_header_t **header)
+couchstore_error_t decode_index_header(const char *bytes,
+                                       size_t len,
+                                       index_header_t **header)
 {
     index_header_t *h = NULL;
     char *b = NULL, *uncomp = NULL;
@@ -239,7 +240,6 @@ couchstore_error_t decode_index_header(const char *bytes, size_t len, index_head
 }
 
 
-LIBCOUCHSTORE_API
 couchstore_error_t encode_index_header(const index_header_t *header,
                                        char **buffer,
                                        size_t *buffer_size)
@@ -358,7 +358,6 @@ couchstore_error_t encode_index_header(const index_header_t *header,
 }
 
 
-LIBCOUCHSTORE_API
 void free_index_header(index_header_t *header)
 {
     if (header == NULL) {
