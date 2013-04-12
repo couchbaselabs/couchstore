@@ -19,7 +19,6 @@ bin_PROGRAMS = \
 	couch_dbdump \
 	couch_dbinfo \
 	couch_compact \
-	couch_viewgen \
 	couch_view_file_sorter
 EXTRA_DIST = python LICENSE README.md
 
@@ -81,8 +80,6 @@ libcouchstore_la_SOURCES = \
                             src/internal.h \
                             src/iobuffer.c \
                             src/iobuffer.h \
-                            src/json_reduce.c \
-                            src/json_reduce.h \
                             src/llmsort.c \
                             src/tree_writer.c \
                             src/tree_writer.h \
@@ -95,7 +92,6 @@ libcouchstore_la_SOURCES = \
                             src/strerror.c \
                             src/util.c \
                             src/util.h \
-                            src/couch_index.c \
                             src/views/collate_json.c \
                             src/views/collate_json.h \
                             src/views/file_sorter.h \
@@ -144,11 +140,6 @@ couch_compact_SOURCES = src/compactor.c
 couch_compact_DEPENDENCIES = libcouchstore.la
 couch_compact_CFLAGS = $(AM_CFLAGS) -D__STDC_FORMAT_MACROS
 couch_compact_LDADD = libcouchstore.la libbyteswap.la -lsnappy
-
-couch_viewgen_SOURCES = src/viewgen.c
-couch_viewgen_DEPENDENCIES = libcouchstore.la
-couch_viewgen_CFLAGS = $(AM_CFLAGS) -D__STDC_FORMAT_MACROS
-couch_viewgen_LDADD = libcouchstore.la libbyteswap.la -lsnappy
 
 couch_view_file_sorter_SOURCES = src/views/bin/couch_view_file_sorter.c
 couch_view_file_sorter_DEPENDENCIES = libcouchstore.la
@@ -204,7 +195,7 @@ CLEANFILES = test.couch
 check_PROGRAMS = testapp
 TESTS = ${check_PROGRAMS}
 
-testapp_SOURCES = tests/testapp.c src/util.c tests/macros.h tests/indexer_test.c
+testapp_SOURCES = tests/testapp.c src/util.c tests/macros.h
 testapp_SOURCES += \
 	tests/mapreduce/mapreduce_tests.h \
 	tests/mapreduce/tests.c \

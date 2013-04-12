@@ -12,7 +12,6 @@
 #include <string.h>
 #include "macros.h"
 
-extern void TestCouchIndexer(void); // indexer_test.c
 extern void mapreduce_tests();
 extern void view_tests();
 
@@ -725,8 +724,6 @@ int main(int argc, const char *argv[])
     test_huge_revseq();
     fprintf(stderr, " OK\n");
     unlink(testfilepath);
-    
-    TestCouchIndexer();
 
     // make sure os.c didn't accidentally call close(0):
     assert(lseek(0, 0, SEEK_CUR) >= 0 || errno != EBADF);
