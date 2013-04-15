@@ -30,6 +30,7 @@ couchstore_error_t decode_view_btree_value(const char *bytes,
 
     v->values = NULL;
 
+    assert(len >= 2);
     v->partition = dec_uint16(bytes);
     bytes += 2;
     len -= 2;
@@ -40,10 +41,12 @@ couchstore_error_t decode_view_btree_value(const char *bytes,
     v->num_values = 0;
     while (len > 0) {
 
+        assert(len >= 3);
         sz = dec_raw24(bs);
         bs += 3;
         len -= 3;
 
+        assert(len >= sz);
         bs += sz;
         len -= sz;
         v->num_values++;

@@ -33,14 +33,15 @@ couchstore_error_t decode_view_btree_reductions(const char *bytes,
 
     r->reduce_values = NULL;
 
+    assert(len >= 5);
     r->kv_count = dec_uint40(bytes);
     bytes += 5;
     len -= 5;
 
+    assert(len >= BITMASK_BYTE_SIZE);
     memcpy(&r->partitions_bitmap, bytes, BITMASK_BYTE_SIZE);
     bytes += BITMASK_BYTE_SIZE;
     len -= BITMASK_BYTE_SIZE;
-
 
     bs = bytes;
     length = len;
@@ -48,10 +49,12 @@ couchstore_error_t decode_view_btree_reductions(const char *bytes,
     r->num_values = 0;
     while (len > 0) {
 
+        assert(len >= 2);
         sz = dec_uint16(bs);
         bs += 2;
         len -= 2;
 
+        assert(len >= sz);
         bs += sz;
         len -= sz;
         r->num_values++;

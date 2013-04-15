@@ -24,6 +24,7 @@ couchstore_error_t decode_view_btree_key(const char *bytes,
 
     k->json_key.buf = NULL;
 
+    assert(len >= 2);
     sz = dec_uint16(bytes);
 
     bytes += 2;
@@ -36,6 +37,7 @@ couchstore_error_t decode_view_btree_key(const char *bytes,
         goto alloc_error;
     }
 
+    assert(len >= sz);
     memcpy(k->json_key.buf, bytes, sz);
     bytes += sz;
 
