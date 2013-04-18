@@ -25,7 +25,7 @@ void test_bitmaps()
 {
     TPRINT("Running view bitmap tests\n");
 
-    bitmap_t bm;
+    bitmap_t bm, bm1, bm2;
     uint16_t one_bits[] = {1023, 1013, 500, 401, 1, 7, 666, 69};
     int j, set;
     uint16_t i;
@@ -73,4 +73,13 @@ void test_bitmaps()
             assert(bm.chunks[i] == 0);
         }
     }
+
+    memset(&bm1, 0, sizeof(bitmap_t));
+    memset(&bm2, 0, sizeof(bitmap_t));
+    set_bit(&bm1, 1023);
+    set_bit(&bm2, 0);
+
+    union_bitmaps(&bm1, &bm2);
+    assert(bm1.chunks[0] == 0x80);
+    assert(bm1.chunks[127] == 0x01);
 }

@@ -44,3 +44,10 @@ void unset_bit(bitmap_t *bm, uint16_t bit)
 {
     ((MAP_CHUNK(*bm, bit)) &= ~(1 << CHUNK_OFFSET(bit)));
 }
+
+void union_bitmaps(bitmap_t *dst_bm, const bitmap_t *src_bm)
+{
+    for (unsigned int i = 0; i < 1024 / CHUNK_BITS; ++i) {
+        dst_bm->chunks[i] |= src_bm->chunks[i];
+    }
+}
