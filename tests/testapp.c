@@ -12,6 +12,7 @@
 #include <string.h>
 #include "macros.h"
 
+extern void file_merger_tests();
 extern void mapreduce_tests();
 extern void view_tests();
 
@@ -693,6 +694,8 @@ int main(int argc, const char *argv[])
         "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
         "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\""
         "}";
+
+    file_merger_tests();
 
     if (argc > 1)
         strcpy(testfilepath, argv[1]);
