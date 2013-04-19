@@ -103,6 +103,8 @@ libcouchstore_la_SOURCES = \
                             src/views/collate_json.h \
                             src/views/file_sorter.h \
                             src/views/file_sorter.c \
+                            src/views/file_merger.h \
+                            src/views/file_merger.c \
                             src/views/bitmap.h \
                             src/views/bitmap.c \
                             src/views/index_header.h \
@@ -114,7 +116,9 @@ libcouchstore_la_SOURCES = \
                             src/views/keys.h \
                             src/views/keys.c \
                             src/views/values.h \
-                            src/views/values.c
+                            src/views/values.c \
+                            src/views/util.h \
+                            src/views/util.c
 
 
 libcouchstore_la_LDFLAGS = $(AM_LDFLAGS) $(ICU_LOCAL_LDFLAGS) -version-info $(LIBCOUCHSTORE_API_CURRENT):$(LIBCOUCHSTORE_API_REVISION):$(LIBCOUCHSTORE_API_AGE) -no-undefined -lstdc++ -lsnappy -lpthread
