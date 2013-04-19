@@ -19,7 +19,8 @@ bin_PROGRAMS = \
 	couch_dbdump \
 	couch_dbinfo \
 	couch_compact \
-	couch_view_file_sorter
+	couch_view_file_sorter \
+	couch_view_file_merger
 EXTRA_DIST = python LICENSE README.md
 
 if WINDOWS
@@ -164,6 +165,15 @@ couch_view_file_sorter_LDADD = libcouchstore.la libbyteswap.la -lsnappy
 
 if WINDOWS
 couch_view_file_sorter_LDADD += -lws2_32
+endif
+
+couch_view_file_merger_SOURCES = src/views/bin/couch_view_file_merger.c
+couch_view_file_merger_DEPENDENCIES = libcouchstore.la
+couch_view_file_merger_CFLAGS = $(AM_CFLAGS) -D__STDC_FORMAT_MACROS
+couch_view_file_merger_LDADD = libcouchstore.la libbyteswap.la -lsnappy
+
+if WINDOWS
+couch_view_file_merger_LDADD += -lws2_32
 endif
 
 extra_tests=
