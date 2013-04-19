@@ -126,6 +126,7 @@ couchstore_error_t decode_view_id_btree_key(const char *bytes,
 
     k->doc_id.buf = NULL;
 
+    assert(len >= 2);
     k->partition = dec_uint16(bytes);
     bytes += 2;
     len -= 2;

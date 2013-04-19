@@ -173,6 +173,7 @@ couchstore_error_t decode_view_id_btree_value(const char *bytes,
 
     v->view_keys_map = NULL;
 
+    assert(len >= 2);
     v->partition = dec_uint16(bytes);
     bytes += 2;
     len -= 2;
@@ -183,19 +184,23 @@ couchstore_error_t decode_view_id_btree_value(const char *bytes,
     v->num_view_keys_map = 0;
     while (len > 0) {
 
+        assert(len >= 1);
         bs += 1; /* view_id */
         len -= 1;
 
+        assert(len >= 2);
         num_keys = dec_uint16(bs);
         bs +=2;
         len -= 2;
 
         for (j = 0; j < num_keys; ++j) {
 
+            assert(len >= 2);
             sz = dec_uint16(bs);
             bs += 2;
             len -= 2;
 
+            assert(len >= sz);
             bs += sz;
             len -= sz;
         }
