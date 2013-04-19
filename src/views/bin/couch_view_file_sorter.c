@@ -40,6 +40,9 @@ int main(int argc, char *argv[])
     couchstore_error_t error;
     int status = 0;
 
+    (void) argc;
+    (void) argv;
+
     if (fscanf(stdin, "%d\n", &num_views) != 1) {
         fprintf(stderr, "Error reading number of views.\n");
         exit(1);

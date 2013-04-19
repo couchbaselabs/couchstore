@@ -13,17 +13,15 @@ static view_btree_reduction_t *test_view_btree_reduction_decoding(const char *re
         47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63
     };
     bitmap_t expected_part_bitmap;
-
+    unsigned i;
 
     assert(decode_view_btree_reductions(reduction_bin, len, &r) == COUCHSTORE_SUCCESS);
 
-
     assert(r != NULL);
-
     assert(r->kv_count == 1582);
 
     memset(&expected_part_bitmap, 0, sizeof(expected_part_bitmap));
-    for (int i = 0; i < (sizeof(partition_bitset) / sizeof(partition_bitset[0])); ++i) {
+    for (i = 0; i < (sizeof(partition_bitset) / sizeof(partition_bitset[0])); ++i) {
         set_bit(&expected_part_bitmap, partition_bitset[i]);
     }
 
@@ -47,6 +45,7 @@ static view_id_btree_reduction_t *test_view_id_btree_reduction_decoding(const ch
     view_id_btree_reduction_t *r = NULL;
     uint16_t partition_bitset[] = { 49, 50, 51, 52 };
     bitmap_t expected_part_bitmap;
+    unsigned i;
 
     assert(decode_view_id_btree_reductions(id_btree_reduction_bin, &r) == COUCHSTORE_SUCCESS);
     assert(r != NULL);
@@ -54,7 +53,7 @@ static view_id_btree_reduction_t *test_view_id_btree_reduction_decoding(const ch
     assert(r->kv_count == 3026);
 
     memset(&expected_part_bitmap, 0, sizeof(expected_part_bitmap));
-    for (int i = 0; i < (sizeof(partition_bitset) / sizeof(partition_bitset[0])); ++i) {
+    for (i = 0; i < (sizeof(partition_bitset) / sizeof(partition_bitset[0])); ++i) {
         set_bit(&expected_part_bitmap, partition_bitset[i]);
     }
     assert(memcmp(&r->partitions_bitmap, &expected_part_bitmap, sizeof(expected_part_bitmap)) == 0);

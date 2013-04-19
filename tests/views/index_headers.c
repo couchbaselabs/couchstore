@@ -37,6 +37,7 @@ static index_header_t *test_index_header_decoding(const char *header_bin, size_t
     uint16_t pending_unindexable[] = { 15,58 };
     index_header_t *header = NULL;
     bitmap_t expected_active, expected_passive, expected_cleanup;
+    unsigned i;
 
     assert(decode_index_header(header_bin, header_bin_size, &header) == COUCHSTORE_SUCCESS);
     assert(header != NULL);
@@ -47,19 +48,19 @@ static index_header_t *test_index_header_decoding(const char *header_bin, size_t
     assert(header->num_views == 2);
 
     memset(&expected_active, 0, sizeof(expected_active));
-    for (int i = 0; i < (sizeof(active) / sizeof(active[0])); ++i) {
+    for (i = 0; i < (sizeof(active) / sizeof(active[0])); ++i) {
         set_bit(&expected_active, active[i]);
     }
     assert(memcmp(&header->active_bitmask, &expected_active, sizeof(expected_active)) == 0);
 
     memset(&expected_passive, 0, sizeof(expected_passive));
-    for (int i = 0; i < (sizeof(passive) / sizeof(passive[0])); ++i) {
+    for (i = 0; i < (sizeof(passive) / sizeof(passive[0])); ++i) {
         set_bit(&expected_passive, passive[i]);
     }
     assert(memcmp(&header->passive_bitmask, &expected_passive, sizeof(expected_passive)) == 0);
 
     memset(&expected_cleanup, 0, sizeof(expected_cleanup));
-    for (int i = 0; i < (sizeof(cleanup) / sizeof(cleanup[0])); ++i) {
+    for (i = 0; i < (sizeof(cleanup) / sizeof(cleanup[0])); ++i) {
         set_bit(&expected_cleanup, cleanup[i]);
     }
     assert(memcmp(&header->cleanup_bitmask, &expected_cleanup, sizeof(expected_cleanup)) == 0);

@@ -27,8 +27,8 @@ void test_bitmaps()
 
     bitmap_t bm, bm1, bm2;
     uint16_t one_bits[] = {1023, 1013, 500, 401, 1, 7, 666, 69};
-    int j, set;
-    uint16_t i;
+    int set;
+    uint16_t i, j;
 
     memset(&bm, 0, sizeof(bitmap_t));
     for (j = 0; j < (sizeof(one_bits) / sizeof(uint16_t)); ++j) {
@@ -58,7 +58,7 @@ void test_bitmaps()
     set_bit(&bm, 1023);
     set_bit(&bm, 514);
     set_bit(&bm, 0);
-    for (int i = 0; i < (sizeof((bm.chunks)) / sizeof(bm.chunks[0])); ++i) {
+    for (i = 0; i < (sizeof((bm.chunks)) / sizeof(bm.chunks[0])); ++i) {
         switch (i) {
         case 0:
             assert(bm.chunks[i] == 0x80);
