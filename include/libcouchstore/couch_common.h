@@ -2,6 +2,7 @@
 #ifndef COUCH_COMMON_H
 #define COUCH_COMMON_H
 #include <sys/types.h>
+#include <fcntl.h>
 #include <stdint.h>
 
 #include <libcouchstore/visibility.h>
@@ -41,6 +42,16 @@ extern "C" {
                                              was not inserted as JSON. */
         COUCH_DOC_NON_JSON_MODE = 3 /**< Document was not checked (DB running in non-JSON mode) */
     };
+
+    typedef enum {
+#ifdef POSIX_FADV_NORMAL
+        /* Evict this range from FS caches if possible */
+        COUCHSTORE_FILE_ADVICE_EVICT = POSIX_FADV_DONTNEED
+#else
+        /* Assign these whatever values, we'll be ignoring them.. */
+        COUCHSTORE_FILE_ADVICE_EVICT
+#endif
+    } couchstore_file_advice_t;
 
     /** A generic data blob. Nothing is implied about ownership of the block pointed to. */
     typedef struct _sized_buf {
