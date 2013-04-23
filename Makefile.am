@@ -122,7 +122,7 @@ libcouchstore_la_SOURCES = \
                             src/views/util.c
 
 
-libcouchstore_la_LDFLAGS = $(AM_LDFLAGS) $(ICU_LOCAL_LDFLAGS) -version-info $(LIBCOUCHSTORE_API_CURRENT):$(LIBCOUCHSTORE_API_REVISION):$(LIBCOUCHSTORE_API_AGE) -no-undefined -lstdc++ -lsnappy -lpthread
+libcouchstore_la_LDFLAGS = $(AM_LDFLAGS) $(ICU_LOCAL_LDFLAGS) -version-info $(LIBCOUCHSTORE_API_CURRENT):$(LIBCOUCHSTORE_API_REVISION):$(LIBCOUCHSTORE_API_AGE) -no-undefined
 
 if WINDOWS
 libcouchstore_la_SOURCES += src/os_win.c
@@ -132,7 +132,7 @@ libcouchstore_la_SOURCES += src/os.c
 endif
 
 libcouchstore_la_CFLAGS = $(BASE_libcouchstore_la_CFLAGS) -DLIBCOUCHSTORE_INTERNAL=1
-libcouchstore_la_LIBADD = librfc1321.la libbyteswap.la libmapreduce.la $(ICU_LOCAL_LIBS)
+libcouchstore_la_LIBADD = librfc1321.la libbyteswap.la libmapreduce.la $(ICU_LOCAL_LIBS) -lstdc++ -lsnappy -lpthread
 
 libcouchstore_tests_la_SOURCES = $(libcouchstore_la_SOURCES)
 libcouchstore_tests_la_LDFLAGS = $(libcouchstore_la_LDFLAGS)
