@@ -212,4 +212,7 @@ reformat:
 if WINDOWS
 install-data-hook:
 	$(INSTALL) $(python_pythonlib_DATA) $(bindir)
+	$(INSTALL) $(ICU_LIB_DIR)/icuuc.dll $(bindir)
+	$(INSTALL) $(ICU_LIB_DIR)/icudt.dll $(bindir)
+	$(INSTALL) $(ICU_LIB_DIR)/icuin.dll $(bindir)
 endif
