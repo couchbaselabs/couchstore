@@ -357,7 +357,7 @@ class CouchStore (object):
         def callback (dbPtr, docInfoPtr, context):
             fn(DocumentInfo._fromStruct(docInfoPtr.contents, self))
             return 0
-        _check(_lib.couchstore_changes_since(self, since, 0, \
+        _check(_lib.couchstore_changes_since(self, c_uint64(since), c_uint64(0), \
                CouchStore.ITERATORFUNC(callback), c_void_p(0)))
 
     def changesSince (self, since):
@@ -379,7 +379,7 @@ class CouchStore (object):
         if endKey:
             ids[1] = SizedBuf(endKey)
             numIDs = 2
-        _check(_lib.couchstore_docinfos_by_id(self, ids, numIDs, 1, \
+        _check(_lib.couchstore_docinfos_by_id(self, ids, numIDs, c_uint64(1), \
                CouchStore.ITERATORFUNC(callback), c_void_p(0)))
 
     @property
