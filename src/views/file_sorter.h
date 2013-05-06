@@ -23,7 +23,7 @@
 
 #include "config.h"
 #include <libcouchstore/visibility.h>
-#include <libcouchstore/couch_db.h>
+#include "../file_sorter.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,20 +32,18 @@ extern "C" {
 
     /*
      * Sort a file containing records of btree operations for a view btree.
-     * Source and destination paths can be the same.
      */
     LIBCOUCHSTORE_API
-    couchstore_error_t sort_view_kvs_ops_file(const char *source_path,
-                                              const char *dest_path);
+    file_sorter_error_t sort_view_kvs_ops_file(const char *file_path,
+                                               const char *tmp_dir);
 
     /*
      * Sort a file containing records of btree operations for a view id
      * btree (back index).
-     * Source and destination paths can be the same.
      */
     LIBCOUCHSTORE_API
-    couchstore_error_t sort_view_ids_ops_file(const char *source_path,
-                                              const char *dest_path);
+    file_sorter_error_t sort_view_ids_ops_file(const char *file_path,
+                                               const char *tmp_dir);
 
 
 #ifdef __cplusplus
