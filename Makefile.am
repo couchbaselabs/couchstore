@@ -85,6 +85,10 @@ libcouchstore_la_SOURCES = \
                             src/fatbuf.h \
                             src/file_merger.h \
                             src/file_merger.c \
+                            src/file_name_utils.h \
+                            src/file_name_utils.c \
+                            src/file_sorter.h \
+                            src/file_sorter.c \
                             src/internal.h \
                             src/iobuffer.c \
                             src/iobuffer.h \
@@ -224,6 +228,7 @@ TESTS = ${check_PROGRAMS}
 testapp_SOURCES = tests/testapp.c src/util.c tests/macros.h
 testapp_SOURCES += \
 	tests/file_merger_tests.c \
+	tests/file_sorter_tests.c \
 	tests/mapreduce/mapreduce_tests.h \
 	tests/mapreduce/tests.c \
 	tests/mapreduce/map.c \
