@@ -18,6 +18,7 @@
  * the License.
  **/
 
+#include <stdlib.h>
 #include "util.h"
 #include "../util.h"
 #include "../bitfield.h"
@@ -60,4 +61,116 @@ int view_key_cmp(const sized_buf *key1, const sized_buf *key2)
 int view_id_cmp(const sized_buf *key1, const sized_buf *key2)
 {
     return ebin_cmp(key1, key2);
+}
+
+
+int read_view_record(FILE *in, void **buf, void *ctx)
+{
+    uint32_t len, vlen;
+    uint16_t klen;
+    uint8_t op;
+    view_file_merge_record_t *rec;
+    view_file_merge_ctx_t *merge_ctx = (view_file_merge_ctx_t *) ctx;
+
+    /* On disk format is a bit weird, but it's compatible with what
+       Erlang's file_sorter module requires. */
+
+    if (fread(&len, sizeof(len), 1, in) != 1) {
+        if (feof(in)) {
+            return 0;
+        } else {
+            return FILE_MERGER_ERROR_FILE_READ;
+        }
+    }
+    if (merge_ctx->type == INCREMENTAL_UPDATE_VIEW_RECORD) {
+        if (fread(&op, sizeof(rec->op), 1, in) != 1) {
+            return FILE_MERGER_ERROR_FILE_READ;
+        }
+    }
+    if (fread(&klen, sizeof(klen), 1, in) != 1) {
+        return FILE_MERGER_ERROR_FILE_READ;
+    }
+
+    len = ntohl(len);
+    klen = ntohs(klen);
+    vlen = len - sizeof(klen) - klen;
+    if (merge_ctx->type == INCREMENTAL_UPDATE_VIEW_RECORD) {
+        vlen -= sizeof(op);
+    }
+
+    rec = (view_file_merge_record_t *) malloc(sizeof(*rec) + klen + vlen);
+    if (rec == NULL) {
+        return FILE_MERGER_ERROR_ALLOC;
+    }
+
+    rec->op = op;
+    rec->k.size = klen;
+    rec->k.buf = ((char *) rec) + sizeof(view_file_merge_record_t);
+    rec->v.size = vlen;
+    rec->v.buf = ((char *) rec) + sizeof(view_file_merge_record_t) + klen;
+
+    if (fread(rec->k.buf, klen + vlen, 1, in) != 1) {
+        free(rec);
+        return FILE_MERGER_ERROR_FILE_READ;
+    }
+
+    *buf = (void *) rec;
+
+    return klen + vlen;
+}
+
+
+file_merger_error_t write_view_record(FILE *out, void *buf, void *ctx)
+{
+    view_file_merge_record_t *rec = (view_file_merge_record_t *) buf;
+    uint16_t klen = htons((uint16_t) rec->k.size);
+    uint32_t len;
+    view_file_merge_ctx_t *merge_ctx = (view_file_merge_ctx_t *) ctx;
+
+    len = (uint32_t)  sizeof(klen) + rec->k.size + rec->v.size;
+    if (merge_ctx->type == INCREMENTAL_UPDATE_VIEW_RECORD) {
+        len += (uint32_t) sizeof(rec->op);
+    }
+    len = htonl(len);
+
+    if (fwrite(&len, sizeof(len), 1, out) != 1) {
+        return FILE_MERGER_ERROR_FILE_WRITE;
+    }
+    if (merge_ctx->type == INCREMENTAL_UPDATE_VIEW_RECORD) {
+        if (fwrite(&rec->op, sizeof(rec->op), 1, out) != 1) {
+            return FILE_MERGER_ERROR_FILE_WRITE;
+        }
+    }
+    if (fwrite(&klen, sizeof(klen), 1, out) != 1) {
+        return FILE_MERGER_ERROR_FILE_WRITE;
+    }
+    if (fwrite(rec->k.buf, rec->k.size + rec->v.size, 1, out) != 1) {
+        return FILE_MERGER_ERROR_FILE_WRITE;
+    }
+
+    return FILE_MERGER_SUCCESS;
+}
+
+
+int compare_view_records(const void *r1, const void *r2, void *ctx)
+{
+    view_file_merge_ctx_t *merge_ctx = (view_file_merge_ctx_t *) ctx;
+    view_file_merge_record_t *rec1 = (view_file_merge_record_t *) r1;
+    view_file_merge_record_t *rec2 = (view_file_merge_record_t *) r2;
+    int res;
+
+    res = merge_ctx->key_cmp_fun(&rec1->k, &rec2->k);
+
+    if (res == 0 && merge_ctx->type == INCREMENTAL_UPDATE_VIEW_RECORD) {
+        return ((int) rec1->op) - ((int) rec2->op);
+    }
+
+    return res;
+}
+
+
+void free_view_record(void *record, void *ctx)
+{
+    (void) ctx;
+    free(record);
 }

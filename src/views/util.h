@@ -23,16 +23,52 @@
 
 #include "config.h"
 #include <libcouchstore/couch_db.h>
+#include "../file_merger.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+    typedef struct {
+        uint8_t   op;
+        sized_buf k;
+        sized_buf v;
+    } view_file_merge_record_t;
+
+    enum view_record_type {
+        INITIAL_BUILD_VIEW_RECORD,
+        INCREMENTAL_UPDATE_VIEW_RECORD
+    };
+
+    typedef struct {
+        FILE *src_f;
+        FILE *dst_f;
+        enum view_record_type type;
+        int (*key_cmp_fun)(const sized_buf *key1, const sized_buf *key2);
+    } view_file_merge_ctx_t;
+
 
     /* compare keys of a view btree */
     int view_key_cmp(const sized_buf *key1, const sized_buf *key2);
 
     /* compare keys of the id btree of an index */
     int view_id_cmp(const sized_buf *key1, const sized_buf *key2);
+
+    /* read view index record from a file, obbeys the read record function
+       prototype defined in src/file_merger.h */
+    int read_view_record(FILE *in, void **buf, void *ctx);
+
+    /* write view index record from a file, obbeys the write record function
+       prototype defined in src/file_merger.h */
+    file_merger_error_t write_view_record(FILE *out, void *buf, void *ctx);
+
+    /* compare 2 view index records, obbeys the record compare function
+       prototype defined in src/file_merger.h */
+    int compare_view_records(const void *r1, const void *r2, void *ctx);
+
+    /* frees a view record, obbeys the record free function prototype
+       defined in src/file_merger.h */
+    void free_view_record(void *record, void *ctx);
 
 #ifdef __cplusplus
 }
