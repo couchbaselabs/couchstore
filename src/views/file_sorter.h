@@ -38,12 +38,26 @@ extern "C" {
                                                const char *tmp_dir);
 
     /*
+     * Sort a file containing view records for a view btree.
+     */
+    LIBCOUCHSTORE_API
+    file_sorter_error_t sort_view_kvs_file(const char *file_path,
+                                           const char *tmp_dir);
+
+    /*
      * Sort a file containing records of btree operations for a view id
      * btree (back index).
      */
     LIBCOUCHSTORE_API
     file_sorter_error_t sort_view_ids_ops_file(const char *file_path,
                                                const char *tmp_dir);
+
+    /*
+     * Sort a file containing records for a view id btree (back index).
+     */
+    LIBCOUCHSTORE_API
+    file_sorter_error_t sort_view_ids_file(const char *file_path,
+                                           const char *tmp_dir);
 
 
 #ifdef __cplusplus

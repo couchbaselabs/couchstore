@@ -28,6 +28,9 @@
 #define SORT_ERROR_CODE(Err) (100 + (Err))
 #define NIL_FILE "<nil>"
 
+#define INITIAL_VIEW_FILE     'b'
+#define INCREMENTAL_VIEW_FILE 'u'
+
 static char *read_line(char *buf, int size);
 
 
@@ -39,12 +42,26 @@ int main(int argc, char *argv[])
     char **view_files;
     file_sorter_error_t error;
     int status = 0, i, j;
+    char type;
 
     (void) argc;
     (void) argv;
 
     if (read_line(tmp_dir, LINE_BUF_SIZE) != tmp_dir) {
         fprintf(stderr, "Error reading temporary directory path.\n");
+        exit(1);
+    }
+
+    if (fscanf(stdin, "%c\n", &type) != 1) {
+        fprintf(stderr, "Error reading view file type.\n");
+        exit(1);
+    }
+    switch (type) {
+    case INITIAL_VIEW_FILE:
+    case INCREMENTAL_VIEW_FILE:
+        break;
+    default:
+        fprintf(stderr, "Invalid view file type: %c.\n", type);
         exit(1);
     }
 
@@ -90,7 +107,14 @@ int main(int argc, char *argv[])
     }
 
     if (strcmp(id_file, NIL_FILE) != 0) {
-        error = sort_view_ids_ops_file(id_file, tmp_dir);
+        switch (type) {
+        case INITIAL_VIEW_FILE:
+            error = sort_view_ids_file(id_file, tmp_dir);
+            break;
+        case INCREMENTAL_VIEW_FILE:
+            error = sort_view_ids_ops_file(id_file, tmp_dir);
+            break;
+        }
         if (error != FILE_SORTER_SUCCESS) {
             fprintf(stderr, "Error sorting id file: %d\n", error);
             status = SORT_ERROR_CODE(error);
@@ -100,7 +124,14 @@ int main(int argc, char *argv[])
 
     for (i = 0; i < num_views; ++i) {
         if (strcmp(view_files[i], NIL_FILE) != 0) {
-            error = sort_view_kvs_ops_file(view_files[i], tmp_dir);
+            switch (type) {
+            case INITIAL_VIEW_FILE:
+                error = sort_view_kvs_file(view_files[i], tmp_dir);
+                break;
+            case INCREMENTAL_VIEW_FILE:
+                error = sort_view_kvs_ops_file(view_files[i], tmp_dir);
+                break;
+            }
             if (error != FILE_SORTER_SUCCESS) {
                 fprintf(stderr, "Error sorting view %d file: %d\n", (i + 1), error);
                 status = SORT_ERROR_CODE(error);

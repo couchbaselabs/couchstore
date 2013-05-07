@@ -43,6 +43,19 @@ file_sorter_error_t sort_view_kvs_ops_file(const char *file_path,
 
 
 LIBCOUCHSTORE_API
+file_sorter_error_t sort_view_kvs_file(const char *file_path,
+                                       const char *tmp_dir)
+{
+    view_file_merge_ctx_t ctx;
+
+    ctx.key_cmp_fun = view_key_cmp;
+    ctx.type = INITIAL_BUILD_VIEW_RECORD;
+
+    return do_sort_file(file_path, tmp_dir, &ctx);
+}
+
+
+LIBCOUCHSTORE_API
 file_sorter_error_t sort_view_ids_ops_file(const char *file_path,
                                            const char *tmp_dir)
 {
@@ -50,6 +63,19 @@ file_sorter_error_t sort_view_ids_ops_file(const char *file_path,
 
     ctx.key_cmp_fun = view_id_cmp;
     ctx.type = INCREMENTAL_UPDATE_VIEW_RECORD;
+
+    return do_sort_file(file_path, tmp_dir, &ctx);
+}
+
+
+LIBCOUCHSTORE_API
+file_sorter_error_t sort_view_ids_file(const char *file_path,
+                                       const char *tmp_dir)
+{
+    view_file_merge_ctx_t ctx;
+
+    ctx.key_cmp_fun = view_id_cmp;
+    ctx.type = INITIAL_BUILD_VIEW_RECORD;
 
     return do_sort_file(file_path, tmp_dir, &ctx);
 }
