@@ -139,8 +139,12 @@ static void couch_destructor(couch_file_handle handle)
     (void)handle;
 }
 
+static couchstore_error_t couch_advise(couch_file_handle handle, cs_off_t offset, cs_off_t len, couchstore_file_advice_t advice) {
+    return COUCHSTORE_SUCCESS;
+}
+
 static const couch_file_ops default_file_ops = {
-    (uint64_t)3,
+    (uint64_t)4,
     couch_constructor,
     couch_open,
     couch_close,
@@ -148,6 +152,7 @@ static const couch_file_ops default_file_ops = {
     couch_pwrite,
     couch_goto_eof,
     couch_sync,
+    couch_advise,
     couch_destructor,
     NULL
 };
