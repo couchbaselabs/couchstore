@@ -168,7 +168,7 @@ class DocumentInfo (object):
             raise Exception("Contents unknown")
         info = self._asStruct()
         docptr = pointer(DocStruct())
-        _lib.couchstore_open_doc_with_docinfo(self.store, byref(info), byref(docptr), options)
+        _lib.couchstore_open_doc_with_docinfo(self.store, byref(info), byref(docptr), c_uint64(options))
         contents = str(docptr.contents.data)
         _lib.couchstore_free_document(docptr)
         return contents
@@ -185,7 +185,7 @@ class LocalDocs (object):
         """Returns the contents of a local document (as a string) given its ID."""
         id = _toString(key)
         docptr = pointer(LocalDocStruct())
-        err = _lib.couchstore_open_local_document(self.couchstore, id, len(id), byref(docptr))
+        err = _lib.couchstore_open_local_document(self.couchstore, id, c_size_t(len(id)), byref(docptr))
         if err == -5 or (err == 0 and docptr.contents.deleted):
             raise KeyError(id)
         _check(err)
@@ -263,7 +263,7 @@ class CouchStore (object):
                 infoStruct.content_meta |= 0x80
         else:
             docref = None
-        _check(_lib.couchstore_save_document(self, docref, byref(infoStruct), options))
+        _check(_lib.couchstore_save_document(self, docref, byref(infoStruct), c_uint64(options)))
         if isinstance(id, DocumentInfo):
             id.sequence = infoStruct.db_seq
         return infoStruct.db_seq
@@ -288,8 +288,8 @@ class CouchStore (object):
                 info.deleted = True
             infoStructs[i] = pointer(info)
             docStructs[i] = pointer(doc)
-        _check(_lib.couchstore_save_documents(self, byref(docStructs), byref(infoStructs), n, \
-                                              options))
+        _check(_lib.couchstore_save_documents(self, byref(docStructs), byref(infoStructs), c_uint(n), \
+                                              c_uint64(options)))
         return [info.contents.db_seq for info in infoStructs]
     pass
 
@@ -303,7 +303,7 @@ class CouchStore (object):
         """Returns the contents of a document (as a string) given its ID."""
         id = _toString(id)
         docptr = pointer(DocStruct())
-        err = _lib.couchstore_open_document(self, id, len(id), byref(docptr), options)
+        err = _lib.couchstore_open_document(self, id, c_size_t(len(id)), byref(docptr), options)
         if err == -5:
             raise KeyError(id)
         _check(err)
@@ -337,7 +337,7 @@ class CouchStore (object):
         """Returns the DocumentInfo object with the given ID."""
         id = _toString(id)
         infoptr = pointer(DocInfoStruct())
-        err = _lib.couchstore_docinfo_by_id(self, id, len(id), byref(infoptr))
+        err = _lib.couchstore_docinfo_by_id(self, id, c_size_t(len(id)), byref(infoptr))
         return self._infoPtrToDoc(id, infoptr, err)
 
     def getInfoBySequence (self, sequence):
@@ -379,7 +379,7 @@ class CouchStore (object):
         if endKey:
             ids[1] = SizedBuf(endKey)
             numIDs = 2
-        _check(_lib.couchstore_docinfos_by_id(self, ids, numIDs, c_uint64(1), \
+        _check(_lib.couchstore_docinfos_by_id(self, ids, c_uint(numIDs), c_uint64(1), \
                CouchStore.ITERATORFUNC(callback), c_void_p(0)))
 
     @property
