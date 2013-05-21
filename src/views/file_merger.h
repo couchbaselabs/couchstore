@@ -32,21 +32,22 @@ extern "C" {
 
 
     /*
-     * Merge a group files containing sorted sets of records for a view btree.
+     * Merge a group files containing sorted sets of btree operations for a
+     * view btree.
      */
     LIBCOUCHSTORE_API
-    file_merger_error_t merge_view_kvs_files(const char *source_files[],
-                                             unsigned num_source_files,
-                                             const char *dest_path);
+    file_merger_error_t merge_view_kvs_ops_files(const char *source_files[],
+                                                 unsigned num_source_files,
+                                                 const char *dest_path);
 
     /*
-     * Merge a group files containing sorted sets of records for the id btree
-     * of an index.
+     * Merge a group files containing sorted sets of btree operations for a
+     * view id btree (back index).
      */
     LIBCOUCHSTORE_API
-    file_merger_error_t merge_view_ids_files(const char *source_files[],
-                                             unsigned num_source_files,
-                                             const char *dest_path);
+    file_merger_error_t merge_view_ids_ops_files(const char *source_files[],
+                                                 unsigned num_source_files,
+                                                 const char *dest_path);
 
 
 #ifdef __cplusplus

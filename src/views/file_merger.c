@@ -29,28 +29,28 @@ static file_merger_error_t merge_view_files(const char *source_files[],
 
 
 LIBCOUCHSTORE_API
-file_merger_error_t merge_view_kvs_files(const char *source_files[],
-                                         unsigned num_source_files,
-                                         const char *dest_path)
+file_merger_error_t merge_view_kvs_ops_files(const char *source_files[],
+                                             unsigned num_source_files,
+                                             const char *dest_path)
 {
     view_file_merge_ctx_t ctx;
 
     ctx.key_cmp_fun = view_key_cmp;
-    ctx.type = INITIAL_BUILD_VIEW_RECORD;
+    ctx.type = INCREMENTAL_UPDATE_VIEW_RECORD;
 
     return merge_view_files(source_files, num_source_files, dest_path, &ctx);
 }
 
 
 LIBCOUCHSTORE_API
-file_merger_error_t merge_view_ids_files(const char *source_files[],
-                                         unsigned num_source_files,
-                                         const char *dest_path)
+file_merger_error_t merge_view_ids_ops_files(const char *source_files[],
+                                             unsigned num_source_files,
+                                             const char *dest_path)
 {
     view_file_merge_ctx_t ctx;
 
     ctx.key_cmp_fun = view_id_cmp;
-    ctx.type = INITIAL_BUILD_VIEW_RECORD;
+    ctx.type = INCREMENTAL_UPDATE_VIEW_RECORD;
 
     return merge_view_files(source_files, num_source_files, dest_path, &ctx);
 }

@@ -91,6 +91,7 @@ int main(int argc, char *argv[])
     }
 
     if (read_line(dest_file, LINE_BUF_SIZE) != dest_file) {
+        fprintf(stderr, "Error reading destination file name.\n");
         status = 1;
         goto finished;
     }
@@ -99,10 +100,10 @@ int main(int argc, char *argv[])
         const char **src_files = (const char **) view_files;
         switch (view_file_type) {
         case 'i':
-            error = merge_view_ids_files(src_files, num_files, dest_file);
+            error = merge_view_ids_ops_files(src_files, num_files, dest_file);
             break;
         case 'v':
-            error = merge_view_kvs_files(src_files, num_files, dest_file);
+            error = merge_view_kvs_ops_files(src_files, num_files, dest_file);
             break;
         default:
             fprintf(stderr, "Unknown view file type: %c\n", view_file_type);
