@@ -191,7 +191,7 @@ static couchstore_error_t flush_mr_partial(couchfile_modify_result *res, size_t 
     int itmcount = 0;
     char *nodebuf = NULL;
     sized_buf writebuf;
-    char reducebuf[500];    // view_indexer.c's reduce fns need this much room
+    char reducebuf[MAX_REDUCTION_SIZE];
     size_t reducesize = 0;
     uint64_t subtreesize = 0;
     cs_off_t diskpos;
@@ -238,12 +238,18 @@ static couchstore_error_t flush_mr_partial(couchfile_modify_result *res, size_t 
     }
 
     if (res->node_type == KV_NODE && res->rq->reduce) {
-        res->rq->reduce(reducebuf, &reducesize, res->values->next, itmcount);
+        errcode = res->rq->reduce(reducebuf, &reducesize, res->values->next, itmcount);
+        if (errcode != COUCHSTORE_SUCCESS) {
+            return errcode;
+        }
         assert(reducesize <= sizeof(reducebuf));
     }
 
     if (res->node_type == KP_NODE && res->rq->rereduce) {
-        res->rq->rereduce(reducebuf, &reducesize, res->values->next, itmcount);
+        errcode = res->rq->rereduce(reducebuf, &reducesize, res->values->next, itmcount);
+        if (errcode != COUCHSTORE_SUCCESS) {
+            return errcode;
+        }
         assert(reducesize <= sizeof(reducebuf));
     }
 

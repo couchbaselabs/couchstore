@@ -24,7 +24,8 @@ extern "C" {
         COUCHSTORE_ERROR_CHECKSUM_FAIL = -9,
         COUCHSTORE_ERROR_INVALID_ARGUMENTS = -10,
         COUCHSTORE_ERROR_NO_SUCH_FILE = -11,
-        COUCHSTORE_ERROR_CANCEL = -12
+        COUCHSTORE_ERROR_CANCEL = -12,
+        COUCHSTORE_REDUCTION_TOO_LARGE = -13
     } couchstore_error_t;
 
 #ifdef __cplusplus

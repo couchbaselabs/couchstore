@@ -9,6 +9,7 @@ extern "C" {
 #endif
 
 #define DB_CHUNK_THRESHOLD 1279
+#define MAX_REDUCTION_SIZE ((1 << 16) - 1)
 
     typedef int (*compare_callback)(const sized_buf *k1, const sized_buf *k2);
 
@@ -55,7 +56,7 @@ extern "C" {
     } nodelist;
 
     /* Reduce function gets items and places reduce value in dst buffer */
-    typedef void (*reduce_fn) (char* dst, size_t* size_r, nodelist* itmlist, int count);
+    typedef couchstore_error_t (*reduce_fn) (char* dst, size_t* size_r, nodelist* itmlist, int count);
 
 #define ACTION_FETCH  0
 #define ACTION_REMOVE 1

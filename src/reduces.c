@@ -6,15 +6,17 @@
 #include "node_types.h"
 
 
-void by_seq_reduce (char *dst, size_t *size_r, nodelist *leaflist, int count)
+couchstore_error_t by_seq_reduce (char *dst, size_t *size_r, nodelist *leaflist, int count)
 {
     (void)leaflist;
     raw_by_seq_reduce *raw = (raw_by_seq_reduce*)dst;
     raw->count = encode_raw40(count);
     *size_r = sizeof(*raw);
+
+    return COUCHSTORE_SUCCESS;
 }
 
-void by_seq_rereduce (char *dst, size_t *size_r, nodelist *ptrlist, int count)
+couchstore_error_t by_seq_rereduce (char *dst, size_t *size_r, nodelist *ptrlist, int count)
 {
     uint64_t total = 0;
     nodelist *i = ptrlist;
@@ -28,6 +30,8 @@ void by_seq_rereduce (char *dst, size_t *size_r, nodelist *ptrlist, int count)
     raw_by_seq_reduce *raw = (raw_by_seq_reduce*)dst;
     raw->count = encode_raw40(total);
     *size_r = sizeof(*raw);
+
+    return COUCHSTORE_SUCCESS;
 }
 
 
@@ -40,7 +44,7 @@ static size_t encode_by_id_reduce(char *dst, uint64_t notdeleted, uint64_t delet
     return sizeof(*raw);
 }
 
-void by_id_reduce(char *dst, size_t *size_r, nodelist *leaflist, int count)
+couchstore_error_t by_id_reduce(char *dst, size_t *size_r, nodelist *leaflist, int count)
 {
     uint64_t notdeleted = 0, deleted = 0, size = 0;
 
@@ -59,9 +63,12 @@ void by_id_reduce(char *dst, size_t *size_r, nodelist *leaflist, int count)
     }
 
     *size_r = encode_by_id_reduce(dst, notdeleted, deleted, size);
+
+    return COUCHSTORE_SUCCESS;
+
 }
 
-void by_id_rereduce(char *dst, size_t *size_r, nodelist *ptrlist, int count)
+couchstore_error_t by_id_rereduce(char *dst, size_t *size_r, nodelist *ptrlist, int count)
 {
     uint64_t notdeleted = 0, deleted = 0, size = 0;
 
@@ -77,4 +84,6 @@ void by_id_rereduce(char *dst, size_t *size_r, nodelist *ptrlist, int count)
     }
 
     *size_r = encode_by_id_reduce(dst, notdeleted, deleted, size);
+
+    return COUCHSTORE_SUCCESS;
 }
