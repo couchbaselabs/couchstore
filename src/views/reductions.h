@@ -33,7 +33,7 @@ couchstore_error_t decode_view_btree_reductions(const char *bytes,
                                                 view_btree_reduction_t **reduction);
 
 couchstore_error_t encode_view_btree_reductions(const view_btree_reduction_t *reduction,
-                                                char **buffer,
+                                                char *buffer,
                                                 size_t *buffer_size);
 
 void free_view_btree_reductions(view_btree_reduction_t *reduction);
@@ -42,7 +42,7 @@ couchstore_error_t decode_view_id_btree_reductions(const char *bytes,
                                                    view_id_btree_reduction_t **reduction);
 
 couchstore_error_t encode_view_id_btree_reductions(const view_id_btree_reduction_t *reduction,
-                                                   char **buffer,
+                                                   char *buffer,
                                                    size_t *buffer_size);
 
 void free_view_id_btree_reductions(view_id_btree_reduction_t *reduction);

@@ -2,6 +2,7 @@
 
 #include "reductions.h"
 #include "../bitfield.h"
+#include "../couch_btree.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -108,10 +109,10 @@ couchstore_error_t decode_view_btree_reductions(const char *bytes,
 
 
 couchstore_error_t encode_view_btree_reductions(const view_btree_reduction_t *reduction,
-                                                char **buffer,
+                                                char *buffer,
                                                 size_t *buffer_size)
 {
-    char *buf = NULL, *b = NULL;
+    char *b = NULL;
     size_t sz = 0;
 
     sz += 5;                     /* kv_count */
@@ -122,10 +123,11 @@ couchstore_error_t encode_view_btree_reductions(const view_btree_reduction_t *re
         sz += reduction->reduce_values[i].size;
     }
 
-    b = buf = (char *) malloc(sz);
-    if (buf == NULL) {
-        goto alloc_error;
+    if (sz > MAX_REDUCTION_SIZE) {
+        return COUCHSTORE_REDUCTION_TOO_LARGE;
     }
+
+    b = buffer;
 
     enc_raw40(reduction->kv_count, &b);
 
@@ -139,16 +141,9 @@ couchstore_error_t encode_view_btree_reductions(const view_btree_reduction_t *re
         b += reduction->reduce_values[i].size;
     }
 
-    *buffer = buf;
     *buffer_size = sz;
 
     return COUCHSTORE_SUCCESS;
-
- alloc_error:
-    free(buf);
-    *buffer = NULL;
-    *buffer_size = 0;
-    return COUCHSTORE_ERROR_ALLOC_FAIL;
 }
 
 
@@ -195,34 +190,28 @@ couchstore_error_t decode_view_id_btree_reductions(const char *bytes,
 
 
 couchstore_error_t encode_view_id_btree_reductions(const view_id_btree_reduction_t *reduction,
-                                                   char **buffer,
+                                                   char *buffer,
                                                    size_t *buffer_size)
 {
-    char *buf = NULL, *b = NULL;
+    char *b = NULL;
     size_t sz = 0;
 
     sz += 5;                     /* kv_count */
     sz += BITMASK_BYTE_SIZE; /* partitions bitmap */
 
-    b = buf = (char *) malloc(sz);
-    if (buf == NULL) {
-        goto alloc_error;
+    if (sz > MAX_REDUCTION_SIZE) {
+        return COUCHSTORE_REDUCTION_TOO_LARGE;
     }
+
+    b = buffer;
 
     enc_raw40(reduction->kv_count, &b);
 
     memcpy(b, &reduction->partitions_bitmap, BITMASK_BYTE_SIZE);
 
-    *buffer = buf;
     *buffer_size = sz;
 
     return COUCHSTORE_SUCCESS;
-
- alloc_error:
-    free(buf);
-    *buffer = NULL;
-    *buffer_size = 0;
-    return COUCHSTORE_ERROR_ALLOC_FAIL;
 }
 
 

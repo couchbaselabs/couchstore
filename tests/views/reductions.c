@@ -1,7 +1,7 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
 #include "view_tests.h"
-
+#include "../src/couch_btree.h"
 
 static view_btree_reduction_t *test_view_btree_reduction_decoding(const char *reduction_bin,
                                                                   size_t len)
@@ -62,7 +62,7 @@ static view_id_btree_reduction_t *test_view_id_btree_reduction_decoding(const ch
 }
 
 static void test_view_btree_reduction_encoding(const view_btree_reduction_t *r,
-                                               char **buffer,
+                                               char *buffer,
                                                size_t *size)
 {
     couchstore_error_t res;
@@ -73,7 +73,7 @@ static void test_view_btree_reduction_encoding(const view_btree_reduction_t *r,
 
 
 static void test_view_id_btree_reduction_encoding(const view_id_btree_reduction_t *r,
-                                                  char **buffer,
+                                                  char *buffer,
                                                   size_t *size)
 {
     couchstore_error_t res;
@@ -107,20 +107,20 @@ void test_reductions()
     view_id_btree_reduction_t *id_btree_r = test_view_id_btree_reduction_decoding(id_btree_reduction_bin);
 
     TPRINT("Encoding the previously decoded view btree reduction ...\n");
-    char *r_bin2 = NULL;
+    char r_bin2[MAX_REDUCTION_SIZE];
     size_t r_bin2_size = 0;
 
-    test_view_btree_reduction_encoding(r, &r_bin2, &r_bin2_size);
+    test_view_btree_reduction_encoding(r, r_bin2, &r_bin2_size);
 
     assert(r_bin2_size == sizeof(reduction_bin));
     assert(memcmp(r_bin2, reduction_bin, r_bin2_size) == 0);
 
 
     TPRINT("Encoding the previously decoded view id btree reduction ...\n");
-    char *id_btree_r_bin2 = NULL;
+    char id_btree_r_bin2[MAX_REDUCTION_SIZE];
     size_t id_btree_r_bin2_size = 0;
 
-    test_view_id_btree_reduction_encoding(id_btree_r, &id_btree_r_bin2, &id_btree_r_bin2_size);
+    test_view_id_btree_reduction_encoding(id_btree_r, id_btree_r_bin2, &id_btree_r_bin2_size);
 
     assert(id_btree_r_bin2_size == sizeof(id_btree_reduction_bin));
     assert(memcmp(id_btree_r_bin2, id_btree_reduction_bin, id_btree_r_bin2_size) == 0);
@@ -132,30 +132,26 @@ void test_reductions()
     view_id_btree_reduction_t *id_btree_r2 = test_view_id_btree_reduction_decoding(id_btree_r_bin2);
 
     TPRINT("Encoding the previously decoded view btree reduciton ...\n");
-    char *r_bin3 = NULL;
+    char r_bin3[MAX_REDUCTION_SIZE];
     size_t r_bin3_size = 0;
 
-    test_view_btree_reduction_encoding(r2, &r_bin3, &r_bin3_size);
+    test_view_btree_reduction_encoding(r2, r_bin3, &r_bin3_size);
 
     assert(r_bin3_size == sizeof(reduction_bin));
     assert(memcmp(r_bin3, reduction_bin, r_bin3_size) == 0);
 
     TPRINT("Encoding the previously decoded view id btree reduciton ...\n");
-    char *id_btree_r_bin3 = NULL;
+    char id_btree_r_bin3[MAX_REDUCTION_SIZE];
     size_t id_btree_r_bin3_size = 0;
 
-    test_view_id_btree_reduction_encoding(id_btree_r2, &id_btree_r_bin3, &id_btree_r_bin3_size);
+    test_view_id_btree_reduction_encoding(id_btree_r2, id_btree_r_bin3, &id_btree_r_bin3_size);
 
     assert(id_btree_r_bin3_size == sizeof(id_btree_reduction_bin));
     assert(memcmp(id_btree_r_bin3, id_btree_reduction_bin, id_btree_r_bin3_size) == 0);
 
     free_view_btree_reductions(r);
     free_view_btree_reductions(r2);
-    free(r_bin2);
-    free(r_bin3);
 
     free_view_id_btree_reductions(id_btree_r);
     free_view_id_btree_reductions(id_btree_r2);
-    free(id_btree_r_bin2);
-    free(id_btree_r_bin3);
 }
