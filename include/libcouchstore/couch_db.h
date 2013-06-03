@@ -576,11 +576,7 @@ extern "C" {
         /**
          * Do not copy the tombstones of deleted items into compacted file.
          */
-        COUCHSTORE_COMPACT_FLAG_DROP_DELETES = 1,
-        /**
-         * Evict document body portion of target file after compaction (fadvise)
-         */
-        COUCHSTORE_COMPACT_FLAG_EVICT_BODIES = 2
+        COUCHSTORE_COMPACT_FLAG_DROP_DELETES = 1
     };
 
     /**
