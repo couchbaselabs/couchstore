@@ -71,8 +71,10 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
         ctx.id_tree_writer = NULL;
         ctx.seq_tree_writer = NULL;
         //Attempt to evict doc bodies in new file from FS cache, make sure we're sync'd up first.
-        target->file.ops->sync(target->file.handle);
-        target->file.ops->advise(target->file.handle, 0, bodies_end, COUCHSTORE_FILE_ADVICE_EVICT);
+        if(flags & COUCHSTORE_COMPACT_FLAG_EVICT_BODIES) {
+            target->file.ops->sync(target->file.handle);
+            target->file.ops->advise(target->file.handle, 0, bodies_end, COUCHSTORE_FILE_ADVICE_EVICT);
+        }
     }
 
     if(source->header.local_docs_root) {

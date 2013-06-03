@@ -11,7 +11,7 @@ static void exit_error(couchstore_error_t errcode)
 }
 
 static void usage(const char* prog) {
-    fprintf(stderr, "Usage: %s [--dropdeletes] <input file> <output file>\n", prog);
+    fprintf(stderr, "Usage: %s [--dropdeletes] [--evict] <input file> <output file>\n", prog);
     exit(-1);
 }
 
@@ -27,12 +27,21 @@ int main(int argc, char** argv)
     couchstore_compact_flags flags = 0;
     const couch_file_ops* target_io_ops = couchstore_get_default_file_ops();
 
-    if(!strcmp(argv[argp],"--dropdeletes")) {
-        argp++;
-        if(argc < 4) {
-            usage(argv[0]);
+    while((argp < argc) && (argv[argp][0] == '-')) {
+        if(!strcmp(argv[argp],"--dropdeletes")) {
+            argp++;
+            if(argc < (argp + 2)) {
+                usage(argv[0]);
+            }
+            flags |= COUCHSTORE_COMPACT_FLAG_DROP_DELETES;
         }
-        flags = COUCHSTORE_COMPACT_FLAG_DROP_DELETES;
+        if(!strcmp(argv[argp],"--evict")) {
+            argp++;
+            if(argc < (argp + 2)) {
+                usage(argv[0]);
+            }
+            flags |= COUCHSTORE_COMPACT_FLAG_EVICT_BODIES;
+        }
     }
 
     errcode = couchstore_open_db(argv[argp++], COUCHSTORE_OPEN_FLAG_RDONLY, &source);
