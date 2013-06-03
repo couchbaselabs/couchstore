@@ -116,6 +116,7 @@ libcouchstore_la_SOURCES = \
                             src/views/index_header.c \
                             src/views/sorted_list.h \
                             src/views/sorted_list.c \
+                            src/views/reducers.h \
                             src/views/reductions.h \
                             src/views/reductions.c \
                             src/views/keys.h \
