@@ -124,7 +124,7 @@ couchstore_error_t encode_view_btree_reductions(const view_btree_reduction_t *re
     }
 
     if (sz > MAX_REDUCTION_SIZE) {
-        return COUCHSTORE_REDUCTION_TOO_LARGE;
+        return COUCHSTORE_ERROR_REDUCTION_TOO_LARGE;
     }
 
     b = buffer;
@@ -200,7 +200,7 @@ couchstore_error_t encode_view_id_btree_reductions(const view_id_btree_reduction
     sz += BITMASK_BYTE_SIZE; /* partitions bitmap */
 
     if (sz > MAX_REDUCTION_SIZE) {
-        return COUCHSTORE_REDUCTION_TOO_LARGE;
+        return COUCHSTORE_ERROR_REDUCTION_TOO_LARGE;
     }
 
     b = buffer;
