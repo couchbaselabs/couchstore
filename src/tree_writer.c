@@ -30,6 +30,7 @@ struct TreeWriter {
     compare_callback key_compare;
     reduce_fn reduce;
     reduce_fn rereduce;
+    void *user_reduce_ctx;
 };
 
 
@@ -37,6 +38,7 @@ couchstore_error_t TreeWriterOpen(const char* unsortedFilePath,
                                   compare_callback key_compare,
                                   reduce_fn reduce,
                                   reduce_fn rereduce,
+                                  void *user_reduce_ctx,
                                   TreeWriter** out_writer)
 {
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
@@ -53,6 +55,7 @@ couchstore_error_t TreeWriterOpen(const char* unsortedFilePath,
     writer->key_compare = (key_compare ? key_compare : ebin_cmp);
     writer->reduce = reduce;
     writer->rereduce = rereduce;
+    writer->user_reduce_ctx = user_reduce_ctx;
     *out_writer = writer;
 cleanup:
     return errcode;
@@ -117,6 +120,7 @@ couchstore_error_t TreeWriterWrite(TreeWriter* writer,
                                                           treefile, &idcmp,
                                                           writer->reduce, 
                                                           writer->rereduce,
+                                                          writer->user_reduce_ctx,
                                                           DB_CHUNK_THRESHOLD,
                                                           DB_CHUNK_THRESHOLD);
     if(target_mr == NULL) {

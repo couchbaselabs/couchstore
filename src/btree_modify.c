@@ -83,6 +83,7 @@ static couchfile_modify_result *make_modres(arena* a, couchfile_modify_request *
 
 couchfile_modify_result *new_btree_modres(arena *a, arena *transient_arena, tree_file *file,
                                           compare_info* cmp, reduce_fn reduce, reduce_fn rereduce,
+                                          void *user_reduce_ctx,
                                           int kv_chunk_threshold, int kp_chunk_threshold)
 {
     couchfile_modify_request* rq = arena_alloc(a, sizeof(couchfile_modify_request));
@@ -92,6 +93,7 @@ couchfile_modify_result *new_btree_modres(arena *a, arena *transient_arena, tree
     rq->fetch_callback = NULL;
     rq->reduce = reduce;
     rq->rereduce = rereduce;
+    rq->user_reduce_ctx = user_reduce_ctx;
     rq->compacting = 1;
     rq->kv_chunk_threshold = kv_chunk_threshold;
     rq->kp_chunk_threshold = kp_chunk_threshold;
@@ -238,7 +240,7 @@ static couchstore_error_t flush_mr_partial(couchfile_modify_result *res, size_t 
     }
 
     if (res->node_type == KV_NODE && res->rq->reduce) {
-        errcode = res->rq->reduce(reducebuf, &reducesize, res->values->next, itmcount);
+        errcode = res->rq->reduce(reducebuf, &reducesize, res->values->next, itmcount, res->rq->user_reduce_ctx);
         if (errcode != COUCHSTORE_SUCCESS) {
             return errcode;
         }
@@ -246,7 +248,7 @@ static couchstore_error_t flush_mr_partial(couchfile_modify_result *res, size_t 
     }
 
     if (res->node_type == KP_NODE && res->rq->rereduce) {
-        errcode = res->rq->rereduce(reducebuf, &reducesize, res->values->next, itmcount);
+        errcode = res->rq->rereduce(reducebuf, &reducesize, res->values->next, itmcount, res->rq->user_reduce_ctx);
         if (errcode != COUCHSTORE_SUCCESS) {
             return errcode;
         }

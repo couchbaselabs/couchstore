@@ -20,11 +20,11 @@ typedef struct {
 extern "C" {
 #endif
 
-    couchstore_error_t by_seq_reduce(char *dst, size_t *size_r, const nodelist *leaflist, int count);
-    couchstore_error_t by_seq_rereduce(char *dst, size_t *size_r, const nodelist *leaflist, int count);
+    couchstore_error_t by_seq_reduce(char *dst, size_t *size_r, const nodelist *leaflist, int count, void *ctx);
+    couchstore_error_t by_seq_rereduce(char *dst, size_t *size_r, const nodelist *leaflist, int count, void *ctx);
 
-    couchstore_error_t by_id_rereduce(char *dst, size_t *size_r, const nodelist *leaflist, int count);
-    couchstore_error_t by_id_reduce(char *dst, size_t *size_r, const nodelist *leaflist, int count);
+    couchstore_error_t by_id_rereduce(char *dst, size_t *size_r, const nodelist *leaflist, int count, void *ctx);
+    couchstore_error_t by_id_reduce(char *dst, size_t *size_r, const nodelist *leaflist, int count, void *ctx);
 
 #ifdef __cplusplus
 }

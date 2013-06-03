@@ -53,9 +53,9 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
     ctx.target_file = &target->file;
 
     if(source->header.by_seq_root) {
-        error_pass(TreeWriterOpen(NULL, ebin_cmp, by_id_reduce, by_id_rereduce, &ctx.id_tree_writer));
+        error_pass(TreeWriterOpen(NULL, ebin_cmp, by_id_reduce, by_id_rereduce, NULL, &ctx.id_tree_writer));
         //Will be loading this one up in Seq order, so we won't need to TreeWriterSort it
-        error_pass(TreeWriterOpen(NULL, seq_cmp, by_seq_reduce, by_seq_rereduce, &ctx.seq_tree_writer));
+        error_pass(TreeWriterOpen(NULL, seq_cmp, by_seq_reduce, by_seq_rereduce, NULL, &ctx.seq_tree_writer));
         //Dump seq tree into both TreeWriters
         error_pass(compact_seq_tree(source, &ctx));
 
@@ -244,7 +244,7 @@ static couchstore_error_t compact_localdocs_tree(Db* source, Db* target, compact
     sized_buf *low_key_list = &low_key;
 
     ctx->target_mr = new_btree_modres(ctx->persistent_arena, NULL, &target->file,
-                                      &idcmp, NULL, NULL, DB_CHUNK_THRESHOLD,
+                                      &idcmp, NULL, NULL, NULL, DB_CHUNK_THRESHOLD,
                                       DB_CHUNK_THRESHOLD);
     if(ctx->target_mr == NULL) {
         error_pass(COUCHSTORE_ERROR_ALLOC_FAIL);

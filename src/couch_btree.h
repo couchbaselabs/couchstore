@@ -59,7 +59,8 @@ extern "C" {
     typedef couchstore_error_t (*reduce_fn)(char *dst,
                                             size_t *size_r,
                                             const nodelist *itmlist,
-                                            int count);
+                                            int count,
+                                            void *ctx);
 
 #define ACTION_FETCH  0
 #define ACTION_REMOVE 1
@@ -82,6 +83,7 @@ extern "C" {
         void (*fetch_callback) (struct couchfile_modify_request *rq, sized_buf *k, sized_buf *v, void *arg);
         reduce_fn reduce;
         reduce_fn rereduce;
+        void *user_reduce_ctx;
         /*  We're in the compactor */
         int compacting;
         int kv_chunk_threshold;
@@ -120,7 +122,8 @@ extern "C" {
 
     couchfile_modify_result* new_btree_modres(arena* a, arena* transient_arena, tree_file *file,
                                               compare_info* cmp, reduce_fn reduce,
-                                              reduce_fn rereduce, int kv_chunk_threshold,
+                                              reduce_fn rereduce, void *user_reduce_ctx,
+                                              int kv_chunk_threshold,
                                               int kp_chunk_threshold);
 
     node_pointer* complete_new_btree(couchfile_modify_result* mr, couchstore_error_t *errcode);

@@ -21,6 +21,7 @@ couchstore_error_t TreeWriterOpen(const char* unsortedFilePath,
                                   compare_callback key_compare,
                                   reduce_fn reduce,
                                   reduce_fn rereduce,
+                                  void *user_reduce_ctx,
                                   TreeWriter** out_writer);
 
 /**
