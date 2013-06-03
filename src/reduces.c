@@ -6,7 +6,7 @@
 #include "node_types.h"
 
 
-couchstore_error_t by_seq_reduce (char *dst, size_t *size_r, nodelist *leaflist, int count)
+couchstore_error_t by_seq_reduce(char *dst, size_t *size_r, const nodelist *leaflist, int count)
 {
     (void)leaflist;
     raw_by_seq_reduce *raw = (raw_by_seq_reduce*)dst;
@@ -16,10 +16,10 @@ couchstore_error_t by_seq_reduce (char *dst, size_t *size_r, nodelist *leaflist,
     return COUCHSTORE_SUCCESS;
 }
 
-couchstore_error_t by_seq_rereduce (char *dst, size_t *size_r, nodelist *ptrlist, int count)
+couchstore_error_t by_seq_rereduce(char *dst, size_t *size_r, const nodelist *ptrlist, int count)
 {
     uint64_t total = 0;
-    nodelist *i = ptrlist;
+    const nodelist *i = ptrlist;
     while (i != NULL && count > 0) {
         const raw_by_seq_reduce *reduce = (const raw_by_seq_reduce*) i->pointer->reduce_value.buf;
         total += decode_raw40(reduce->count);
@@ -44,11 +44,11 @@ static size_t encode_by_id_reduce(char *dst, uint64_t notdeleted, uint64_t delet
     return sizeof(*raw);
 }
 
-couchstore_error_t by_id_reduce(char *dst, size_t *size_r, nodelist *leaflist, int count)
+couchstore_error_t by_id_reduce(char *dst, size_t *size_r, const nodelist *leaflist, int count)
 {
     uint64_t notdeleted = 0, deleted = 0, size = 0;
 
-    nodelist *i = leaflist;
+    const nodelist *i = leaflist;
     while (i != NULL && count > 0) {
         const raw_id_index_value *raw = (const raw_id_index_value*)i->data.buf;
         if (decode_raw48(raw->bp) & BP_DELETED_FLAG) {
@@ -68,11 +68,11 @@ couchstore_error_t by_id_reduce(char *dst, size_t *size_r, nodelist *leaflist, i
 
 }
 
-couchstore_error_t by_id_rereduce(char *dst, size_t *size_r, nodelist *ptrlist, int count)
+couchstore_error_t by_id_rereduce(char *dst, size_t *size_r, const nodelist *ptrlist, int count)
 {
     uint64_t notdeleted = 0, deleted = 0, size = 0;
 
-    nodelist *i = ptrlist;
+    const nodelist *i = ptrlist;
     while (i != NULL && count > 0) {
         const raw_by_id_reduce *reduce = (const raw_by_id_reduce*) i->pointer->reduce_value.buf;
         notdeleted += decode_raw40(reduce->notdeleted);

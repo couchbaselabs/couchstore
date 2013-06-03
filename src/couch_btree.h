@@ -56,7 +56,10 @@ extern "C" {
     } nodelist;
 
     /* Reduce function gets items and places reduce value in dst buffer */
-    typedef couchstore_error_t (*reduce_fn) (char* dst, size_t* size_r, nodelist* itmlist, int count);
+    typedef couchstore_error_t (*reduce_fn)(char *dst,
+                                            size_t *size_r,
+                                            const nodelist *itmlist,
+                                            int count);
 
 #define ACTION_FETCH  0
 #define ACTION_REMOVE 1
