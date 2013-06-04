@@ -149,6 +149,7 @@ int pread_compressed(tree_file *file, cs_off_t pos, char **ret_ptr)
     snappy_status ss = (snappy_uncompress(compressed_buf, len, new_buf, &uncompressed_len));
     free(compressed_buf);
     if (ss != SNAPPY_OK) {
+        free(new_buf);
         return COUCHSTORE_ERROR_CORRUPT;
     }
 

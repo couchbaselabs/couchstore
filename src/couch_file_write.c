@@ -126,7 +126,8 @@ int db_write_buf_compressed(tree_file *file, const sized_buf *buf, cs_off_t *pos
     sized_buf to_write;
     size_t max_size = snappy_max_compressed_length(buf->size);
 
-    to_write.buf = (char *) malloc(max_size);
+    char* compressbuf = (char *) malloc(max_size);
+    to_write.buf = compressbuf;
     to_write.size = max_size;
     error_unless(to_write.buf, COUCHSTORE_ERROR_ALLOC_FAIL);
     error_unless(snappy_compress(buf->buf, buf->size, to_write.buf,
@@ -135,6 +136,6 @@ int db_write_buf_compressed(tree_file *file, const sized_buf *buf, cs_off_t *pos
 
     error_pass(db_write_buf(file, &to_write, pos, disk_size));
 cleanup:
-    free(to_write.buf);
+    free(compressbuf);
     return errcode;
 }
