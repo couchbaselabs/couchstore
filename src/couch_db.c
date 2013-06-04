@@ -843,6 +843,10 @@ static couchstore_error_t iterate_docinfos(Db *db,
         return COUCHSTORE_SUCCESS;
     }
 
+    if(numDocs <= 0) {
+        return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
+    }
+
     // Create an array of *pointers to* sized_bufs, which is what btree_lookup wants:
     const sized_buf **keyptrs = malloc(numDocs * sizeof(sized_buf*));
     if (!keyptrs) {
