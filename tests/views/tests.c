@@ -32,4 +32,5 @@ void view_tests()
     test_reductions();
     test_keys();
     test_values();
+    reducer_tests();
 }

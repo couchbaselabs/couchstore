@@ -21,6 +21,13 @@
 #ifndef _VIEW_REDUCERS_H
 #define _VIEW_REDUCERS_H
 
+#include "../couch_btree.h"
+#include "../internal.h"
+#include <stdint.h>
+#include <libcouchstore/visibility.h>
+#include <libcouchstore/couch_db.h>
+#include <libcouchstore/couch_common.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -40,6 +47,18 @@ extern "C" {
         const char           *error_doc_id;
         view_reducer_error_t  error;
     } view_reducer_ctx_t;
+
+    couchstore_error_t view_id_btree_reduce(char *dst,
+                                            size_t *size_r,
+                                            const nodelist *leaflist,
+                                            int count,
+                                            void *ctx);
+
+    couchstore_error_t view_id_btree_rereduce(char *dst,
+                                              size_t *size_r,
+                                              const nodelist *itmlist,
+                                              int count,
+                                              void *ctx);
 
 #ifdef __cplusplus
 }

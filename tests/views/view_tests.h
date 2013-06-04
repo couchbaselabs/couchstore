@@ -32,6 +32,7 @@
 #include "../src/views/reductions.h"
 #include "../src/views/keys.h"
 #include "../src/views/values.h"
+#include "../src/views/reducers.h"
 
 #define TPRINT(...) fprintf(stderr, __VA_ARGS__)
 
@@ -43,5 +44,6 @@ void test_index_headers();
 void test_reductions();
 void test_keys();
 void test_values();
+void reducer_tests();
 
 #endif

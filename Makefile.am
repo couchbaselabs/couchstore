@@ -124,7 +124,9 @@ libcouchstore_la_SOURCES = \
                             src/views/values.h \
                             src/views/values.c \
                             src/views/util.h \
-                            src/views/util.c
+                            src/views/util.c \
+                            src/views/reducers.h \
+                            src/views/reducers.c
 
 
 libcouchstore_la_LDFLAGS = $(AM_LDFLAGS) $(ICU_LOCAL_LDFLAGS) -version-info $(LIBCOUCHSTORE_API_CURRENT):$(LIBCOUCHSTORE_API_REVISION):$(LIBCOUCHSTORE_API_AGE) -no-undefined
@@ -243,7 +245,8 @@ testapp_SOURCES += \
 	tests/views/sorted_lists.c \
 	tests/views/reductions.c \
 	tests/views/keys.c \
-	tests/views/values.c
+	tests/views/values.c \
+    tests/views/reducers.c
 
 testapp_CFLAGS = $(AM_CFLAGS)
 testapp_DEPENDENCIES = libcouchstore_tests.la libbyteswap.la
