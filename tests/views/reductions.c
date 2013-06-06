@@ -15,7 +15,7 @@ static view_btree_reduction_t *test_view_btree_reduction_decoding(const char *re
     bitmap_t expected_part_bitmap;
     unsigned i;
 
-    assert(decode_view_btree_reductions(reduction_bin, len, &r) == COUCHSTORE_SUCCESS);
+    assert(decode_view_btree_reduction(reduction_bin, len, &r) == COUCHSTORE_SUCCESS);
 
     assert(r != NULL);
     assert(r->kv_count == 1582);
@@ -47,7 +47,7 @@ static view_id_btree_reduction_t *test_view_id_btree_reduction_decoding(const ch
     bitmap_t expected_part_bitmap;
     unsigned i;
 
-    assert(decode_view_id_btree_reductions(id_btree_reduction_bin, &r) == COUCHSTORE_SUCCESS);
+    assert(decode_view_id_btree_reduction(id_btree_reduction_bin, &r) == COUCHSTORE_SUCCESS);
     assert(r != NULL);
 
     assert(r->kv_count == 3026);
@@ -67,7 +67,7 @@ static void test_view_btree_reduction_encoding(const view_btree_reduction_t *r,
 {
     couchstore_error_t res;
 
-    res = encode_view_btree_reductions(r, buffer, size);
+    res = encode_view_btree_reduction(r, buffer, size);
     assert(res == COUCHSTORE_SUCCESS);
 }
 
@@ -78,7 +78,7 @@ static void test_view_id_btree_reduction_encoding(const view_id_btree_reduction_
 {
     couchstore_error_t res;
 
-    res = encode_view_id_btree_reductions(r, buffer, size);
+    res = encode_view_id_btree_reduction(r, buffer, size);
     assert(res == COUCHSTORE_SUCCESS);
 }
 
@@ -149,9 +149,9 @@ void test_reductions()
     assert(id_btree_r_bin3_size == sizeof(id_btree_reduction_bin));
     assert(memcmp(id_btree_r_bin3, id_btree_reduction_bin, id_btree_r_bin3_size) == 0);
 
-    free_view_btree_reductions(r);
-    free_view_btree_reductions(r2);
+    free_view_btree_reduction(r);
+    free_view_btree_reduction(r2);
 
-    free_view_id_btree_reductions(id_btree_r);
-    free_view_id_btree_reductions(id_btree_r2);
+    free_view_id_btree_reduction(id_btree_r);
+    free_view_id_btree_reduction(id_btree_r2);
 }

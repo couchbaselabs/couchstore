@@ -69,10 +69,10 @@ couchstore_error_t view_id_btree_reduce(char *dst,
         free_view_id_btree_value(v);
     }
     r->kv_count = subtree_count;
-    errcode = encode_view_id_btree_reductions(r, dst, size_r);
+    errcode = encode_view_id_btree_reduction(r, dst, size_r);
 
 alloc_error:
-    free_view_id_btree_reductions(r);
+    free_view_id_btree_reduction(r);
 
     return errcode;
 }
@@ -97,19 +97,19 @@ couchstore_error_t view_id_btree_rereduce(char *dst,
     memset(&r->partitions_bitmap, 0, sizeof(bitmap_t));
     for (i = itmlist; i != NULL && count > 0; i = i->next, count--) {
         view_id_btree_reduction_t *r2 = NULL;
-        errcode = decode_view_id_btree_reductions(i->pointer->reduce_value.buf, &r2);
+        errcode = decode_view_id_btree_reduction(i->pointer->reduce_value.buf, &r2);
         if (errcode != COUCHSTORE_SUCCESS) {
             goto alloc_error;
         }
         union_bitmaps(&r->partitions_bitmap, &r2->partitions_bitmap);
         subtree_count += r2->kv_count;
-        free_view_id_btree_reductions(r2);
+        free_view_id_btree_reduction(r2);
     }
     r->kv_count = subtree_count;
-    errcode = encode_view_id_btree_reductions(r, dst, size_r);
+    errcode = encode_view_id_btree_reduction(r, dst, size_r);
 
 alloc_error:
-    free_view_id_btree_reductions(r);
+    free_view_id_btree_reduction(r);
 
     return errcode;
 }
@@ -195,10 +195,10 @@ couchstore_error_t view_btree_sum_reduce(char *dst,
         goto alloc_error;
     }
     memcpy(r->reduce_values[0].buf, buf, size);
-    errcode = encode_view_btree_reductions(r, dst, size_r);
+    errcode = encode_view_btree_reduction(r, dst, size_r);
 
 alloc_error:
-    free_view_btree_reductions(r);
+    free_view_btree_reduction(r);
 
     return errcode;
 }
@@ -231,7 +231,7 @@ couchstore_error_t view_btree_sum_rereduce(char *dst,
     sum = 0;
     for (i = itmlist; i != NULL && count > 0; i = i->next, count--) {
         view_btree_reduction_t *r2 = NULL;
-        errcode = decode_view_btree_reductions(i->pointer->reduce_value.buf,
+        errcode = decode_view_btree_reduction(i->pointer->reduce_value.buf,
         i->pointer->reduce_value.size, &r2);
         if (errcode != COUCHSTORE_SUCCESS) {
             goto alloc_error;
@@ -252,19 +252,19 @@ couchstore_error_t view_btree_sum_rereduce(char *dst,
                 if (doc_id == NULL) {
                     errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
                     free_view_btree_key(k);
-                    free_view_btree_reductions(r2);
+                    free_view_btree_reduction(r2);
                     goto alloc_error;
                 }
                 memcpy(doc_id, k->doc_id.buf, k->doc_id.size);
                 errctx->error_doc_id = (const char *) doc_id;
                 errctx->error = VIEW_REDUCER_ERROR_NOT_A_NUMBER;
                 free_view_btree_key(k);
-                free_view_btree_reductions(r2);
+                free_view_btree_reduction(r2);
                 errcode = COUCHSTORE_ERROR_REDUCER_FAILURE;
                 goto alloc_error;
             }
         }
-        free_view_btree_reductions(r2);
+        free_view_btree_reduction(r2);
     }
     size = sprintf(buf, DOUBLE_FMT, sum);
     assert(size > 0);
@@ -283,10 +283,10 @@ couchstore_error_t view_btree_sum_rereduce(char *dst,
         goto alloc_error;
     }
     memcpy(r->reduce_values[0].buf, buf, size);
-    errcode = encode_view_btree_reductions(r, dst, size_r);
+    errcode = encode_view_btree_reduction(r, dst, size_r);
 
 alloc_error:
-    free_view_btree_reductions(r);
+    free_view_btree_reduction(r);
 
     return errcode;
 }

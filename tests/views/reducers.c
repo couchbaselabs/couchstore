@@ -99,7 +99,7 @@ static void test_view_id_btree_reducer()
     nl->next = nl2;
 
     assert(view_id_btree_reduce(dst, &size_r, nl, count, NULL) == COUCHSTORE_SUCCESS);
-    assert(decode_view_id_btree_reductions(dst, &r) == COUCHSTORE_SUCCESS);
+    assert(decode_view_id_btree_reduction(dst, &r) == COUCHSTORE_SUCCESS);
     assert(r->kv_count == 6);
     assert(is_bit_set(&r->partitions_bitmap,57));
     assert(is_bit_set(&r->partitions_bitmap,67));
@@ -111,7 +111,7 @@ static void test_view_id_btree_reducer()
     }
 
     /* free it before variables reuse */
-    free_view_id_btree_reductions(r);
+    free_view_id_btree_reduction(r);
 
     np2 = (node_pointer *) malloc(sizeof(node_pointer));
     assert(np2 != NULL);
@@ -124,7 +124,7 @@ static void test_view_id_btree_reducer()
     nl2->pointer = np2;
 
     assert(view_id_btree_rereduce(dst, &size_r, nl, count, NULL) == COUCHSTORE_SUCCESS);
-    assert(decode_view_id_btree_reductions(dst, &r) == COUCHSTORE_SUCCESS);
+    assert(decode_view_id_btree_reduction(dst, &r) == COUCHSTORE_SUCCESS);
     assert(r->kv_count == 6);
     assert(is_bit_set(&r->partitions_bitmap,57));
     assert(is_bit_set(&r->partitions_bitmap,67));
@@ -135,7 +135,7 @@ static void test_view_id_btree_reducer()
         }
     }
 
-    free_view_id_btree_reductions(r);
+    free_view_id_btree_reduction(r);
     free_node_list(nl);
 }
 
@@ -214,7 +214,7 @@ static void test_view_btree_sum_reducer()
     nl->next = nl2;
 
     assert(view_btree_sum_reduce(dst, &size_r, nl, count, NULL) == COUCHSTORE_SUCCESS);
-    assert(decode_view_btree_reductions(dst, size_r, &r) == COUCHSTORE_SUCCESS);
+    assert(decode_view_btree_reduction(dst, size_r, &r) == COUCHSTORE_SUCCESS);
     assert(r->kv_count == 4);
     assert(r->num_values == 1);
 
@@ -230,7 +230,7 @@ static void test_view_btree_sum_reducer()
         }
     }
     /* free it before variables reuse */
-    free_view_btree_reductions(r);
+    free_view_btree_reduction(r);
     np2 = (node_pointer *) malloc(sizeof(node_pointer));
     assert(np2 != NULL);
 
@@ -243,7 +243,7 @@ static void test_view_btree_sum_reducer()
     nl2->pointer = np2;
 
     assert(view_btree_sum_rereduce(dst, &size_r, nl, count, NULL) == COUCHSTORE_SUCCESS);
-    assert(decode_view_btree_reductions(dst, size_r, &r) == COUCHSTORE_SUCCESS);
+    assert(decode_view_btree_reduction(dst, size_r, &r) == COUCHSTORE_SUCCESS);
     assert(r->kv_count == 4);
     assert(r->num_values == 1);
 
@@ -259,7 +259,7 @@ static void test_view_btree_sum_reducer()
         }
     }
 
-    free_view_btree_reductions(r);
+    free_view_btree_reduction(r);
     free_node_list(nl);
 }
 

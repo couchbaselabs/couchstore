@@ -28,24 +28,24 @@ typedef struct {
 } view_id_btree_reduction_t;
 
 
-couchstore_error_t decode_view_btree_reductions(const char *bytes,
-                                                size_t len,
-                                                view_btree_reduction_t **reduction);
+couchstore_error_t decode_view_btree_reduction(const char *bytes,
+                                               size_t len,
+                                               view_btree_reduction_t **reduction);
 
-couchstore_error_t encode_view_btree_reductions(const view_btree_reduction_t *reduction,
-                                                char *buffer,
-                                                size_t *buffer_size);
+couchstore_error_t encode_view_btree_reduction(const view_btree_reduction_t *reduction,
+                                               char *buffer,
+                                               size_t *buffer_size);
 
-void free_view_btree_reductions(view_btree_reduction_t *reduction);
+void free_view_btree_reduction(view_btree_reduction_t *reduction);
 
-couchstore_error_t decode_view_id_btree_reductions(const char *bytes,
-                                                   view_id_btree_reduction_t **reduction);
+couchstore_error_t decode_view_id_btree_reduction(const char *bytes,
+                                                  view_id_btree_reduction_t **reduction);
 
-couchstore_error_t encode_view_id_btree_reductions(const view_id_btree_reduction_t *reduction,
-                                                   char *buffer,
-                                                   size_t *buffer_size);
+couchstore_error_t encode_view_id_btree_reduction(const view_id_btree_reduction_t *reduction,
+                                                  char *buffer,
+                                                  size_t *buffer_size);
 
-void free_view_id_btree_reductions(view_id_btree_reduction_t *reduction);
+void free_view_id_btree_reduction(view_id_btree_reduction_t *reduction);
 
 #ifdef __cplusplus
 }
