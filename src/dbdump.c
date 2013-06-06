@@ -108,6 +108,7 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
         size_t uncompr_len;
         snappy_uncompress(doc->data.buf, doc->data.size, decbuf, &uncompr_len);
         printf("     data: (snappy) %.*s\n", (int) uncompr_len, decbuf);
+        free(decbuf);
     } else if(doc) {
         printf("     data: ");
         printsb(&doc->data);
