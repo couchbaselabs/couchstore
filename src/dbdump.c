@@ -207,8 +207,6 @@ int main(int argc, char **argv)
         usage();
     }
 
-    DumpMode mode = DumpBySequence;
-
     int ii = 1;
     while (strncmp(argv[ii], "-", 1) == 0) {
         if (strcmp(argv[ii], "--byid") == 0) {
