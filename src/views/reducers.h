@@ -72,6 +72,18 @@ extern "C" {
                                                int count,
                                                void *ctx);
 
+    couchstore_error_t view_btree_count_reduce(char *dst,
+                                               size_t *size_r,
+                                               const nodelist *leaflist,
+                                               int count,
+                                               void *ctx);
+
+    couchstore_error_t view_btree_count_rereduce(char *dst,
+                                                 size_t *size_r,
+                                                 const nodelist *itmlist,
+                                                 int count,
+                                                 void *ctx);
+
 #ifdef __cplusplus
 }
 #endif
