@@ -246,7 +246,7 @@ static void test_save_docs(int count, const char *doc_tpl)
     char *idBuf, *valueBuf;
     Doc **docptrs;
     DocInfo **nfoptrs;
-    sized_buf *ids;
+    sized_buf *ids = NULL;
     uint64_t idtreesize = 0;
     uint64_t seqtreesize = 0;
     uint64_t docssize = 0;

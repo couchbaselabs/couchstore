@@ -131,13 +131,14 @@ static int visit_node(Db *db,
         printf("  ");
     if (reduceValue) {
         // This is a tree node:
-        printf("+ (%llu) ", subtreeSize);
+        printf("+ (%llu) ", (unsigned long long) subtreeSize);
         printsbhex(reduceValue, 0);
     } else if (docinfo->bp > 0) {
         // This is a document:
-        printf("%c (%llu) ", (docinfo->deleted ? 'x' : '*'), (uint64_t)docinfo->size);
+        printf("%c (%llu) ", (docinfo->deleted ? 'x' : '*'),
+               (unsigned long long) docinfo->size);
         if (mode == DumpBySequence) {
-            printf("#%lld ", docinfo->db_seq);
+            printf("#%llu ", (unsigned long long) docinfo->db_seq);
         }
         printsb(&docinfo->id);
 

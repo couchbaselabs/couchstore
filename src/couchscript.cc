@@ -202,8 +202,9 @@ extern "C" {
         if (rc < 0) {
             char buf[1024];
             snprintf(buf, sizeof(buf),
-                     "error get doc by docinfo (key=\"%s\", bp=%llu, size=%lld): %s",
-                     key, docinfo->bp, (uint64_t)docinfo->size, couchstore_strerror(rc));
+                     "error get doc by docinfo (key=\"%s\", bp=%llu, size=%llu): %s",
+                     key, (unsigned long long) docinfo->bp,
+                     (unsigned long long) docinfo->size, couchstore_strerror(rc));
             couchstore_free_docinfo(docinfo);
             lua_pushstring(ls, buf);
             lua_error(ls);
@@ -242,8 +243,8 @@ extern "C" {
         int rv = truncate(path, location);
         if (rv != 0) {
             char buf[1256];
-            snprintf(buf, sizeof(buf), "error truncating DB %s to %llu: %s (%d)",
-                     path, location, strerror(errno), errno);
+            snprintf(buf, sizeof(buf), "error truncating DB %s to %lld: %s (%d)",
+                     path, (long long) location, strerror(errno), errno);
             lua_pushstring(ls, buf);
             lua_error(ls);
             return 1;
