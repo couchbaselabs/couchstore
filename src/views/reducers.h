@@ -48,6 +48,11 @@ extern "C" {
         view_reducer_error_t  error;
     } view_reducer_ctx_t;
 
+    typedef struct {
+        uint64_t count;
+        double sum, min, max, sumsqr;
+    } stats_t;
+
     couchstore_error_t view_id_btree_reduce(char *dst,
                                             size_t *size_r,
                                             const nodelist *leaflist,
@@ -84,6 +89,17 @@ extern "C" {
                                                  int count,
                                                  void *ctx);
 
+    couchstore_error_t view_btree_stats_reduce(char *dst,
+                                               size_t *size_r,
+                                               const nodelist *leaflist,
+                                               int count,
+                                               void *ctx);
+
+    couchstore_error_t view_btree_stats_rereduce(char *dst,
+                                                 size_t *size_r,
+                                                 const nodelist *itmlist,
+                                                 int count,
+                                                 void *ctx);
 #ifdef __cplusplus
 }
 #endif
