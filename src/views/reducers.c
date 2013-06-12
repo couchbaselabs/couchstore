@@ -209,7 +209,7 @@ couchstore_error_t view_btree_sum_reduce(char *dst,
     }
 
     r->reduce_values[0].size = size;
-    r->reduce_values[0].buf = (char *) malloc(size * sizeof(char));
+    r->reduce_values[0].buf = (char *) malloc(size);
     if (r->reduce_values[0].buf == NULL) {
         errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
         goto alloc_error;
@@ -297,7 +297,7 @@ couchstore_error_t view_btree_sum_rereduce(char *dst,
     }
 
     r->reduce_values[0].size = size;
-    r->reduce_values[0].buf = (char *) malloc(size * sizeof(char));
+    r->reduce_values[0].buf = (char *) malloc(size);
     if (r->reduce_values[0].buf == NULL) {
         errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
         goto alloc_error;
@@ -553,7 +553,7 @@ couchstore_error_t view_btree_stats_reduce(char *dst,
     }
 
     r->reduce_values[0].size = size;
-    r->reduce_values[0].buf = (char *) malloc(size * sizeof(char));
+    r->reduce_values[0].buf = (char *) malloc(size);
     if (r->reduce_values[0].buf == NULL) {
         errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
         goto alloc_error;
@@ -663,7 +663,7 @@ couchstore_error_t view_btree_stats_rereduce(char *dst,
     }
 
     r->reduce_values[0].size = size;
-    r->reduce_values[0].buf = (char *) malloc(size * sizeof(char));
+    r->reduce_values[0].buf = (char *) malloc(size);
     if (r->reduce_values[0].buf == NULL) {
         errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
         goto alloc_error;

@@ -86,7 +86,7 @@ couchstore_error_t decode_view_btree_reduction(const char *bytes,
         len -= 2;
 
         r->reduce_values[i].size = sz;
-        r->reduce_values[i].buf = (char *) malloc(sz * sizeof(char));
+        r->reduce_values[i].buf = (char *) malloc(sz);
 
         if (r->reduce_values[i].buf == NULL) {
             goto alloc_error;
