@@ -97,7 +97,7 @@ extern "C" {
         Parameters and return value are the same as for pread_bin. */
     int pread_header(tree_file *file, cs_off_t pos, char **ret_ptr);
 
-    couchstore_error_t db_write_header(tree_file *file, sized_buf *buf, cs_off_t *pos);
+    couchstore_error_t write_header(tree_file *file, sized_buf *buf, cs_off_t *pos);
     int db_write_buf(tree_file *file, const sized_buf *buf, cs_off_t *pos, size_t *disk_size);
     int db_write_buf_compressed(tree_file *file, const sized_buf *buf, cs_off_t *pos, size_t *disk_size);
     struct _os_error *get_os_error_store(void);

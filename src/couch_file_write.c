@@ -46,7 +46,7 @@ static ssize_t raw_write(tree_file *file, const sized_buf *buf, cs_off_t pos)
     return (ssize_t)(write_pos - pos);
 }
 
-couchstore_error_t db_write_header(tree_file *file, sized_buf *buf, cs_off_t *pos)
+couchstore_error_t write_header(tree_file *file, sized_buf *buf, cs_off_t *pos)
 {
     cs_off_t write_pos = file->pos;
     ssize_t written;

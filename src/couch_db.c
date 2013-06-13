@@ -105,7 +105,7 @@ static couchstore_error_t find_header(Db *db)
     return last_header_errcode;
 }
 
-static couchstore_error_t write_header(Db *db)
+static couchstore_error_t db_write_header(Db *db)
 {
     sized_buf writebuf;
     size_t seqrootsize = 0, idrootsize = 0, localrootsize = 0;
@@ -135,7 +135,7 @@ static couchstore_error_t write_header(Db *db)
     root += idrootsize;
     encode_root(root, db->header.local_docs_root);
     cs_off_t pos;
-    couchstore_error_t errcode = db_write_header(&db->file, &writebuf, &pos);
+    couchstore_error_t errcode = write_header(&db->file, &writebuf, &pos);
     if (errcode == COUCHSTORE_SUCCESS) {
         db->header.position = pos;
     }
@@ -153,7 +153,7 @@ static couchstore_error_t create_header(Db *db)
     db->header.purge_seq = 0;
     db->header.purge_ptr = 0;
     db->header.position = 0;
-    return write_header(db);
+    return db_write_header(db);
 }
 
 LIBCOUCHSTORE_API
@@ -186,7 +186,7 @@ couchstore_error_t couchstore_commit(Db *db)
     //Set the pos back to where it was when we started to write the real header.
     db->file.pos = curpos;
     if (errcode == COUCHSTORE_SUCCESS) {
-        errcode = write_header(db);
+        errcode = db_write_header(db);
     }
 
     if (errcode == COUCHSTORE_SUCCESS) {
