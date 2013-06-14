@@ -472,7 +472,6 @@ couchstore_error_t view_btree_stats_reduce(char *dst,
     uint16_t j;
     double n;
     stats_t *s;
-    sized_buf reduce_value;
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     char buf[MAX_REDUCTION_SIZE];
     size_t size = 0;
@@ -480,7 +479,6 @@ couchstore_error_t view_btree_stats_reduce(char *dst,
     view_reducer_ctx_t *errctx;
     char *doc_id;
 
-    reduce_value.buf = NULL;
     r = (view_btree_reduction_t *) malloc(sizeof(view_btree_reduction_t));
     if (r == NULL) {
         errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -488,14 +486,12 @@ couchstore_error_t view_btree_stats_reduce(char *dst,
     }
     r->reduce_values = NULL;
     memset(&r->partitions_bitmap, 0, sizeof(bitmap_t));
-    reduce_value.size = sizeof(stats_t);
-    reduce_value.buf = malloc(sizeof(stats_t));
-    if (reduce_value.buf == NULL) {
+    s = malloc(sizeof(stats_t));
+    if (s == NULL) {
         errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
         goto alloc_error;
     }
-    memset(reduce_value.buf, 0, sizeof(stats_t));
-    s = (stats_t *)reduce_value.buf;
+    memset(s, 0, sizeof(stats_t));
 
     for (i = leaflist; i != NULL && count > 0; i = i->next, count--) {
         view_btree_value_t *v = NULL;
@@ -562,7 +558,7 @@ couchstore_error_t view_btree_stats_reduce(char *dst,
     errcode = encode_view_btree_reduction(r, dst, size_r);
 
 alloc_error:
-    free(reduce_value.buf);
+    free(s);
     free_view_btree_reduction(r);
 
     return errcode;
@@ -577,7 +573,6 @@ couchstore_error_t view_btree_stats_rereduce(char *dst,
     view_btree_reduction_t *r = NULL;
     uint64_t subtree_count = 0;
     uint16_t j;
-    sized_buf reduce_value;
     double n;
     stats_t *s, reduced;
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
@@ -587,7 +582,6 @@ couchstore_error_t view_btree_stats_rereduce(char *dst,
     view_reducer_ctx_t *errctx;
     char *doc_id;
 
-    reduce_value.buf = NULL;
     r = (view_btree_reduction_t *) malloc(sizeof(view_btree_reduction_t));
     if (r == NULL) {
         errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -595,14 +589,12 @@ couchstore_error_t view_btree_stats_rereduce(char *dst,
     }
     r->reduce_values = NULL;
     memset(&r->partitions_bitmap, 0, sizeof(bitmap_t));
-    reduce_value.size = sizeof(stats_t);
-    reduce_value.buf = malloc(sizeof(stats_t));
-    if (reduce_value.buf == NULL) {
+    s = malloc(sizeof(stats_t));
+    if (s == NULL) {
         errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
         goto alloc_error;
     }
-    memset(reduce_value.buf, 0, sizeof(stats_t));
-    s = (stats_t *)reduce_value.buf;
+    memset(s, 0, sizeof(stats_t));
 
     for (i = itmlist; i != NULL && count > 0; i = i->next, count--) {
         view_btree_reduction_t *r2 = NULL;
@@ -672,7 +664,7 @@ couchstore_error_t view_btree_stats_rereduce(char *dst,
     errcode = encode_view_btree_reduction(r, dst, size_r);
 
 alloc_error:
-    free(reduce_value.buf);
+    free(s);
     free_view_btree_reduction(r);
 
     return errcode;
