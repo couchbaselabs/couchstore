@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
 #include "bitmap.h"
 #include "keys.h"
 #include "reductions.h"
@@ -12,7 +13,7 @@
 
 #define DOUBLE_FMT "%.15lg"
 #define scan_stats(buf, sum, count, min, max, sumsqr) \
-        sscanf(buf, "{\"sum\":%lg,\"count\":%llu,\"min\":%lg,\"max\":%lg,\"sumsqr\":%lg}",\
+        sscanf(buf, "{\"sum\":%lg,\"count\":%"SCNu64",\"min\":%lg,\"max\":%lg,\"sumsqr\":%lg}",\
                &sum, &count, &min, &max, &sumsqr)
 
 #define sprint_stats(buf, sum, count, min, max, sumsqr) \
@@ -471,7 +472,7 @@ couchstore_error_t view_btree_stats_reduce(char *dst,
     uint64_t subtree_count = 0;
     uint16_t j;
     double n;
-    stats_t *s;
+    stats_t s;
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     char buf[MAX_REDUCTION_SIZE];
     size_t size = 0;
@@ -486,12 +487,7 @@ couchstore_error_t view_btree_stats_reduce(char *dst,
     }
     r->reduce_values = NULL;
     memset(&r->partitions_bitmap, 0, sizeof(bitmap_t));
-    s = malloc(sizeof(stats_t));
-    if (s == NULL) {
-        errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
-        goto alloc_error;
-    }
-    memset(s, 0, sizeof(stats_t));
+    memset(&s, 0, sizeof(stats_t));
 
     for (i = leaflist; i != NULL && count > 0; i = i->next, count--) {
         view_btree_value_t *v = NULL;
@@ -504,14 +500,14 @@ couchstore_error_t view_btree_stats_reduce(char *dst,
 
         for (j = 0; j< v->num_values; ++j) {
             if (buf_to_double(&(v->values[j]), &n)) {
-                s->sum += n;
-                s->sumsqr += n * n;
-                if (s->count++ == 0) {
-                    s->min = s->max = n;
-                } else if (n > s->max) {
-                    s->max = n;
-                } else if (n < s->min) {
-                    s->min = n;
+                s.sum += n;
+                s.sumsqr += n * n;
+                if (s.count++ == 0) {
+                    s.min = s.max = n;
+                } else if (n > s.max) {
+                    s.max = n;
+                } else if (n < s.min) {
+                    s.min = n;
                 }
             } else {
                 view_btree_key_t *k = NULL;
@@ -538,7 +534,7 @@ couchstore_error_t view_btree_stats_reduce(char *dst,
         }
         free_view_btree_value(v);
     }
-    size = sprint_stats(buf, s->sum, s->count, s->min, s->max, s->sumsqr);
+    size = sprint_stats(buf, s.sum, (unsigned long long) s.count, s.min, s.max, s.sumsqr);
     assert(size > 0);
     r->kv_count = subtree_count;
     r->num_values = 1;
@@ -558,7 +554,6 @@ couchstore_error_t view_btree_stats_reduce(char *dst,
     errcode = encode_view_btree_reduction(r, dst, size_r);
 
 alloc_error:
-    free(s);
     free_view_btree_reduction(r);
 
     return errcode;
@@ -573,14 +568,13 @@ couchstore_error_t view_btree_stats_rereduce(char *dst,
     view_btree_reduction_t *r = NULL;
     uint64_t subtree_count = 0;
     uint16_t j;
-    double n;
-    stats_t *s, reduced;
+    stats_t s, reduced;
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     char buf[MAX_REDUCTION_SIZE];
     size_t size = 0;
     const nodelist *i;
     view_reducer_ctx_t *errctx;
-    char *doc_id;
+    int scanned;
 
     r = (view_btree_reduction_t *) malloc(sizeof(view_btree_reduction_t));
     if (r == NULL) {
@@ -589,12 +583,7 @@ couchstore_error_t view_btree_stats_rereduce(char *dst,
     }
     r->reduce_values = NULL;
     memset(&r->partitions_bitmap, 0, sizeof(bitmap_t));
-    s = malloc(sizeof(stats_t));
-    if (s == NULL) {
-        errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
-        goto alloc_error;
-    }
-    memset(s, 0, sizeof(stats_t));
+    memset(&s, 0, sizeof(stats_t));
 
     for (i = itmlist; i != NULL && count > 0; i = i->next, count--) {
         view_btree_reduction_t *r2 = NULL;
@@ -606,19 +595,19 @@ couchstore_error_t view_btree_stats_rereduce(char *dst,
         union_bitmaps(&r->partitions_bitmap, &r2->partitions_bitmap);
         subtree_count += r2->kv_count;
         for (j = 0; j< r2->num_values; ++j) {
-            int scanned = scan_stats(r2->reduce_values[j].buf,
+            scanned = scan_stats(r2->reduce_values[j].buf,
                                     reduced.sum, reduced.count, reduced.min,
                                     reduced.max, reduced.sumsqr);
             if (scanned == 5) {
-                if (reduced.min < s->min || s->count == 0) {
-                    s->min = reduced.min;
+                if (reduced.min < s.min || s.count == 0) {
+                    s.min = reduced.min;
                 }
-                if (reduced.max > s->max || s->count == 0) {
-                    s->max = reduced.max;
+                if (reduced.max > s.max || s.count == 0) {
+                    s.max = reduced.max;
                 }
-                s->count += reduced.count;
-                s->sum += reduced.sum;
-                s->sumsqr += reduced.sumsqr;
+                s.count += reduced.count;
+                s.sum += reduced.sum;
+                s.sumsqr += reduced.sumsqr;
             } else {
                 view_btree_key_t *k = NULL;
                 errcode = decode_view_btree_key(i->key.buf, i->key.size, &k);
@@ -626,16 +615,8 @@ couchstore_error_t view_btree_stats_rereduce(char *dst,
                     goto alloc_error;
                 }
                 errctx = (view_reducer_ctx_t *) ctx;
-                doc_id = (char *) malloc(k->doc_id.size);
-                if (doc_id == NULL) {
-                    errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
-                    free_view_btree_key(k);
-                    free_view_btree_reduction(r2);
-                    goto alloc_error;
-                }
-                memcpy(doc_id, k->doc_id.buf, k->doc_id.size);
-                errctx->error_doc_id = (const char *) doc_id;
-                errctx->error = VIEW_REDUCER_ERROR_NOT_A_NUMBER;
+                errctx->error_doc_id = NULL;
+                errctx->error = VIEW_REDUCER_ERROR_BAD_STATS_OBJECT;
                 free_view_btree_key(k);
                 free_view_btree_reduction(r2);
                 errcode = COUCHSTORE_ERROR_REDUCER_FAILURE;
@@ -644,7 +625,7 @@ couchstore_error_t view_btree_stats_rereduce(char *dst,
         }
         free_view_btree_reduction(r2);
     }
-    size = sprint_stats(buf, s->sum, s->count, s->min, s->max, s->sumsqr);
+    size = sprint_stats(buf, s.sum, (unsigned long long) s.count, s.min, s.max, s.sumsqr);
     assert(size > 0);
     r->kv_count = subtree_count;
     r->num_values = 1;
@@ -664,7 +645,6 @@ couchstore_error_t view_btree_stats_rereduce(char *dst,
     errcode = encode_view_btree_reduction(r, dst, size_r);
 
 alloc_error:
-    free(s);
     free_view_btree_reduction(r);
 
     return errcode;

@@ -2,13 +2,13 @@
 
 #include "view_tests.h"
 #include "../src/couch_btree.h"
-
 #include <string.h>
+#include <inttypes.h>
 
 #define BITMAP_SIZE 1024
 #define DOUBLE_FMT "%.15lg"
 #define scan_stats(buf, sum, count, min, max, sumsqr) \
-        sscanf(buf, "{\"sum\":%lg,\"count\":%llu,\"min\":%lg,\"max\":%lg,\"sumsqr\":%lg}",\
+        sscanf(buf, "{\"sum\":%lg,\"count\":%"SCNu64",\"min\":%lg,\"max\":%lg,\"sumsqr\":%lg}",\
                &sum, &count, &min, &max, &sumsqr)
 
 static void free_node_list(nodelist *nl);
@@ -484,7 +484,7 @@ static void test_view_btree_stats_reducer()
     view_btree_reduction_t *r;
     char dst[MAX_REDUCTION_SIZE];
     size_t size_r;
-    int count = 0;
+    int count = 0, scanned, i;
     /* partition ID is 1, two values, 5 and 6 */
     char data_bin1[] = {0,1,0,0,1,53,0,0,1,54};
     /* json_key size is 2, doc_id size is 4 */
@@ -510,6 +510,7 @@ static void test_view_btree_stats_reducer()
         109,34,58,49,49,44,34,99,111,117,110,116,34,58,50,44,34,109,105,110,34,
         58,53,44,34,109,97,120,34,58,54,44,34,115,117,109,115,113,114,34,58,54,49,125
     };
+    stats_t st;
 
     nl = (nodelist *) malloc(sizeof(nodelist));
     assert(nl != NULL);
@@ -548,21 +549,18 @@ static void test_view_btree_stats_reducer()
     assert(r->kv_count == 4);
     assert(r->num_values == 1);
 
-    stats_t *st = malloc(sizeof(stats_t));
-    assert(st != NULL);
-
-    int scanned = scan_stats(r->reduce_values[0].buf,
-                            st->sum, st->count, st->min, st->max, st->sumsqr);
+    scanned = scan_stats(r->reduce_values[0].buf,
+                            st.sum, st.count, st.min, st.max, st.sumsqr);
     assert(scanned == 5);
-    assert(st->count == 4);
-    assert(st->sum == 22);
-    assert(st->sumsqr == 122);
-    assert(st->min == 5);
-    assert(st->max == 6);
+    assert(st.count == 4);
+    assert(st.sum == 22);
+    assert(st.sumsqr == 122);
+    assert(st.min == 5);
+    assert(st.max == 6);
     assert(is_bit_set(&r->partitions_bitmap,1));
     assert(is_bit_set(&r->partitions_bitmap,2));
 
-    for (int i = 0; i < BITMAP_SIZE; ++i) {
+    for (i = 0; i < BITMAP_SIZE; ++i) {
         if ((i != 1) && (i != 2)) {
             assert (!(is_bit_set(&r->partitions_bitmap, i)));
         }
@@ -570,7 +568,6 @@ static void test_view_btree_stats_reducer()
 
     /* free it before variables reuse */
     free_view_btree_reduction(r);
-    free(st);
     np2 = (node_pointer *) malloc(sizeof(node_pointer));
     assert(np2 != NULL);
     np2->key.buf = key_bin2;
@@ -586,20 +583,18 @@ static void test_view_btree_stats_reducer()
     assert(r->kv_count == 4);
     assert(r->num_values == 1);
 
-    st = malloc(sizeof(stats_t));
-    assert(st != NULL);
     scanned = scan_stats(r->reduce_values[0].buf,
-                        st->sum, st->count, st->min, st->max, st->sumsqr);
+                        st.sum, st.count, st.min, st.max, st.sumsqr);
     assert(scanned == 5);
-    assert(st->count == 4);
-    assert(st->sum == 22);
-    assert(st->sumsqr == 122);
-    assert(st->min == 5);
-    assert(st->max == 6);
+    assert(st.count == 4);
+    assert(st.sum == 22);
+    assert(st.sumsqr == 122);
+    assert(st.min == 5);
+    assert(st.max == 6);
     assert(is_bit_set(&r->partitions_bitmap,1));
     assert(is_bit_set(&r->partitions_bitmap,2));
 
-    for (int i = 0; i < BITMAP_SIZE; ++i) {
+    for (i = 0; i < BITMAP_SIZE; ++i) {
         if ((i != 1) && (i != 2)) {
             assert (!(is_bit_set(&r->partitions_bitmap, i)));
         }
@@ -607,7 +602,6 @@ static void test_view_btree_stats_reducer()
 
     free_view_btree_reduction(r);
     free_node_list(nl);
-    free(st);
 }
 
 static void test_view_btree_stats_reducer_errors()
@@ -697,8 +691,6 @@ static void test_view_btree_stats_reducer_errors()
     nl2->pointer = np2;
 
     assert(view_btree_stats_rereduce(dst, &size_r, nl, count, &errctx) == COUCHSTORE_ERROR_REDUCER_FAILURE);
-    assert(errctx.error == VIEW_REDUCER_ERROR_NOT_A_NUMBER);
-    assert(memcmp(errctx.error_doc_id,"fooo", 4) == 0);
-    free((char *)errctx.error_doc_id);
+    assert(errctx.error == VIEW_REDUCER_ERROR_BAD_STATS_OBJECT);
     free_node_list(nl);
 }
