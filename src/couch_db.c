@@ -37,7 +37,10 @@ cleanup:
 static couchstore_error_t find_header_at_pos(Db *db, cs_off_t pos)
 {
     int errcode = COUCHSTORE_SUCCESS;
-    raw_file_header *header_buf = NULL;
+    union {
+        raw_file_header *raw;
+        char *buf;
+    } header_buf = { NULL };
     uint8_t buf[2];
     ssize_t readsize = db->file.ops->pread(db->file.handle, buf, 2, pos);
     error_unless(readsize == 2, COUCHSTORE_ERROR_READ);
@@ -47,26 +50,26 @@ static couchstore_error_t find_header_at_pos(Db *db, cs_off_t pos)
         return COUCHSTORE_ERROR_CORRUPT;
     }
 
-    int header_len = pread_header(&db->file, pos, (char**)&header_buf);
+    int header_len = pread_header(&db->file, pos, &header_buf.buf);
     if (header_len < 0) {
         error_pass(header_len);
     }
 
     db->header.position = pos;
-    db->header.disk_version = decode_raw08(header_buf->version);
+    db->header.disk_version = decode_raw08(header_buf.raw->version);
     error_unless(db->header.disk_version == COUCH_DISK_VERSION,
                  COUCHSTORE_ERROR_HEADER_VERSION);
-    db->header.update_seq = decode_raw48(header_buf->update_seq);
-    db->header.purge_seq = decode_raw48(header_buf->purge_seq);
-    db->header.purge_ptr = decode_raw48(header_buf->purge_ptr);
+    db->header.update_seq = decode_raw48(header_buf.raw->update_seq);
+    db->header.purge_seq = decode_raw48(header_buf.raw->purge_seq);
+    db->header.purge_ptr = decode_raw48(header_buf.raw->purge_ptr);
     error_unless(db->header.purge_ptr <= db->header.position, COUCHSTORE_ERROR_CORRUPT);
-    int seqrootsize = decode_raw16(header_buf->seqrootsize);
-    int idrootsize = decode_raw16(header_buf->idrootsize);
-    int localrootsize = decode_raw16(header_buf->localrootsize);
+    int seqrootsize = decode_raw16(header_buf.raw->seqrootsize);
+    int idrootsize = decode_raw16(header_buf.raw->idrootsize);
+    int localrootsize = decode_raw16(header_buf.raw->localrootsize);
     error_unless(header_len == HEADER_BASE_SIZE + seqrootsize + idrootsize + localrootsize,
                  COUCHSTORE_ERROR_CORRUPT);
 
-    char *root_data = (char*) (header_buf + 1);  // i.e. just past *header_buf
+    char *root_data = (char*) (header_buf.raw + 1);  // i.e. just past *header_buf
     error_pass(read_db_root(db, &db->header.by_seq_root, root_data, seqrootsize));
     root_data += seqrootsize;
     error_pass(read_db_root(db, &db->header.by_id_root, root_data, idrootsize));
@@ -74,7 +77,7 @@ static couchstore_error_t find_header_at_pos(Db *db, cs_off_t pos)
     error_pass(read_db_root(db, &db->header.local_docs_root, root_data, localrootsize));
 
 cleanup:
-    free(header_buf);
+    free(header_buf.raw);
     return errcode;
 }
 
