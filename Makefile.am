@@ -64,7 +64,7 @@ libmapreduce_la_LIBADD = $(V8_FLAGS)
 
 BASE_libcouchstore_la_CFLAGS = $(AM_CFLAGS) $(ICU_LOCAL_CFLAGS)
 if GCC
-BASE_libcouchstore_la_CFLAGS += -Wstrict-aliasing=2 -pedantic
+BASE_libcouchstore_la_CFLAGS += -Wstrict-aliasing=2 -Werror=strict-aliasing -pedantic
 endif
 
 libcouchstore_la_SOURCES = \
