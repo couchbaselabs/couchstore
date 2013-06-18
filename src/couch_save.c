@@ -344,7 +344,12 @@ couchstore_error_t couchstore_save_documents(Db *db,
     idvlist = fatbuf_get(fb, numdocs * sizeof(sized_buf));
 
     for (ii = 0; ii < numdocs; ii++) {
-        seq++;
+        if(options & COUCHSTORE_SEQUENCE_AS_IS) {
+            seq = infos[ii]->db_seq;
+        } else {
+            seq++;
+        }
+
         if (docs) {
             curdoc = docs[ii];
         } else {
@@ -367,12 +372,23 @@ couchstore_error_t couchstore_save_documents(Db *db,
 
     fatbuf_free(fb);
     if (errcode == COUCHSTORE_SUCCESS) {
-        // Fill in the assigned sequence numbers for caller's later use:
-        seq = db->header.update_seq;
-        for (ii = 0; ii < numdocs; ii++) {
-            infos[ii]->db_seq = ++seq;
+        if(options & COUCHSTORE_SEQUENCE_AS_IS) {
+            // Sequences are passed as-is, make sure update_seq is >= the highest.
+            seq = db->header.update_seq;
+            for(ii = 0; ii < numdocs; ii++) {
+                if(infos[ii]->db_seq >= seq) {
+                    seq = infos[ii]->db_seq;
+                }
+            }
+            db->header.update_seq = seq;
+        } else {
+            // Fill in the assigned sequence numbers for caller's later use:
+            seq = db->header.update_seq;
+            for (ii = 0; ii < numdocs; ii++) {
+                infos[ii]->db_seq = ++seq;
+            }
+            db->header.update_seq = seq;
         }
-        db->header.update_seq = seq;
     }
 
     return errcode;

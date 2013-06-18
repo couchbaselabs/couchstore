@@ -651,6 +651,49 @@ static void mb5086(void)
     assert(remove("mb5085.couch") == 0);
 }
 
+static void test_asis_seqs(void)
+{
+   Db *db;
+   Doc d;
+   DocInfo i;
+   DocInfo *ir;
+   couchstore_error_t errcode;
+
+   fprintf(stderr, "as-is seqs.... ");
+   fflush(stderr);
+
+   try(couchstore_open_db(testfilepath, COUCHSTORE_OPEN_FLAG_CREATE, &db));
+   setdoc(&d, &i, "test", 4, "foo", 3, NULL, 0);
+   i.db_seq = 1;
+   try(couchstore_save_document(db, &d, &i, COUCHSTORE_SEQUENCE_AS_IS));
+   assert(db->header.update_seq == 1);
+
+   setdoc(&d, &i, "test_two", 8, "foo", 3, NULL, 0);
+   i.db_seq = 12;
+   try(couchstore_save_document(db, &d, &i, COUCHSTORE_SEQUENCE_AS_IS));
+   assert(db->header.update_seq == 12);
+
+   setdoc(&d, &i, "test_foo", 8, "foo", 3, NULL, 0);
+   i.db_seq = 6;
+   try(couchstore_save_document(db, &d, &i, COUCHSTORE_SEQUENCE_AS_IS));
+   assert(db->header.update_seq == 12);
+
+   try(couchstore_docinfo_by_id(db, "test", 4, &ir));
+   assert(ir->db_seq == 1);
+   couchstore_free_docinfo(ir);
+   
+   try(couchstore_docinfo_by_id(db, "test_two", 8, &ir));
+   assert(ir->db_seq == 12);
+   couchstore_free_docinfo(ir);
+
+   try(couchstore_docinfo_by_id(db, "test_foo", 8, &ir));
+   assert(ir->db_seq == 6);
+   couchstore_free_docinfo(ir);
+
+cleanup:
+   assert(errcode == COUCHSTORE_SUCCESS);
+}
+
 static void test_huge_revseq(void)
 {
     Db *db;
@@ -727,6 +770,9 @@ int main(int argc, const char *argv[])
     fprintf(stderr, " OK\n");
     unlink(testfilepath);
     test_huge_revseq();
+    fprintf(stderr, " OK\n");
+    unlink(testfilepath);
+    test_asis_seqs();
     fprintf(stderr, " OK\n");
     unlink(testfilepath);
 

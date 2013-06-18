@@ -127,7 +127,15 @@ extern "C" {
          * default, and if this is not set the data field of the Doc will
          * be written to disk as-is, regardless of the content_meta flags.
          */
-        COMPRESS_DOC_BODIES = 1
+        COMPRESS_DOC_BODIES = 1,
+        /**
+         * Store the DocInfo's passed in db_seq as is.
+         *
+         * Couchstore will *not* assign it a new sequence number, but store the
+         * sequence number as given. The update_seq for the DB will be set to
+         * at least this sequence.
+         * */
+        COUCHSTORE_SEQUENCE_AS_IS = 2
     };
 
     /**
