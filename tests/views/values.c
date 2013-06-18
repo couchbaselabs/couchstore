@@ -80,11 +80,18 @@ void test_values()
     char value_bin[] = {
         0,10,0,0,4,54,49,53,53,0,0,4,54,49,53,52
     };
-
     char id_btree_value_bin[] = {
         0,67,0,0,2,0,14,91,49,50,51,44,34,102,111,111,98,97,114,
         34,93,0,4,45,51,50,49,1,0,1,0,7,91,53,44,54,44,55,93
     };
+    char *v_bin2 = NULL;
+    size_t v_bin2_size = 0;
+    char *id_btree_v_bin2 = NULL;
+    size_t id_btree_v_bin2_size = 0;
+    char *v_bin3 = NULL;
+    size_t v_bin3_size = 0;
+    char *id_btree_v_bin3 = NULL;
+    size_t id_btree_v_bin3_size = 0;
 
     TPRINT("Decoding a view btree value ...\n");
     view_btree_value_t *v = test_view_btree_value_decoding(value_bin, sizeof(value_bin));
@@ -95,19 +102,12 @@ void test_values()
                                                    sizeof(id_btree_value_bin));
 
     TPRINT("Encoding the previously decoded view btree value ...\n");
-    char *v_bin2 = NULL;
-    size_t v_bin2_size = 0;
-
     test_view_btree_value_encoding(v, &v_bin2, &v_bin2_size);
 
     assert(v_bin2_size == sizeof(value_bin));
     assert(memcmp(v_bin2, value_bin, v_bin2_size) == 0);
 
-
     TPRINT("Encoding the previously decoded view id btree value ...\n");
-    char *id_btree_v_bin2 = NULL;
-    size_t id_btree_v_bin2_size = 0;
-
     test_view_id_btree_value_encoding(id_btree_v, &id_btree_v_bin2, &id_btree_v_bin2_size);
 
     assert(id_btree_v_bin2_size == sizeof(id_btree_value_bin));
@@ -122,18 +122,12 @@ void test_values()
                                                     id_btree_v_bin2_size);
 
     TPRINT("Encoding the previously decoded view btree value ...\n");
-    char *v_bin3 = NULL;
-    size_t v_bin3_size = 0;
-
     test_view_btree_value_encoding(v2, &v_bin3, &v_bin3_size);
 
     assert(v_bin3_size == sizeof(value_bin));
     assert(memcmp(v_bin3, value_bin, v_bin3_size) == 0);
 
     TPRINT("Encoding the previously decoded view id btree value ...\n");
-    char *id_btree_v_bin3 = NULL;
-    size_t id_btree_v_bin3_size = 0;
-
     test_view_id_btree_value_encoding(id_btree_v2, &id_btree_v_bin3, &id_btree_v_bin3_size);
 
     assert(id_btree_v_bin3_size == sizeof(id_btree_value_bin));
