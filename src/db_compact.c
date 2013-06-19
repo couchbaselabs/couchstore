@@ -36,6 +36,7 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
     couchstore_error_t errcode;
     compact_ctx ctx = {NULL, NULL, new_arena(0), new_arena(0), NULL, NULL, 0};
     ctx.flags = flags;
+    error_unless(!source->dropped, COUCHSTORE_ERROR_FILE_CLOSED);
     error_unless(ctx.transient_arena && ctx.persistent_arena, COUCHSTORE_ERROR_ALLOC_FAIL);
 
     error_pass(couchstore_open_db_ex(target_filename, COUCHSTORE_OPEN_FLAG_CREATE, ops, &target));

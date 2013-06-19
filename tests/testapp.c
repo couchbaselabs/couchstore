@@ -719,6 +719,32 @@ static void test_huge_revseq(void)
     assert(remove("bigrevseq.couch") == 0);
 }
 
+static void test_dropped_handle(void)
+{
+   couchstore_error_t errcode;
+   Db* db;
+   Doc d;
+   DocInfo i;
+
+   fprintf(stderr, "drop file handle.... ");
+   fflush(stderr);
+
+   try(couchstore_open_db(testfilepath, COUCHSTORE_OPEN_FLAG_CREATE, &db));
+   setdoc(&d, &i, "test", 4, "foo", 3, NULL, 0);
+   try(couchstore_save_document(db, &d, &i, 0));
+   try(couchstore_commit(db));
+
+   try(couchstore_drop_file(db));
+   assert(couchstore_save_document(db, &d, &i, 0) == COUCHSTORE_ERROR_FILE_CLOSED);
+
+   try(couchstore_reopen_file(db, testfilepath, 0));
+
+   Doc* rd;
+   try(couchstore_open_document(db, "test", 4, &rd, 0));
+   couchstore_free_document(rd);
+cleanup:
+   assert(errcode == COUCHSTORE_SUCCESS);
+}
 
 int main(int argc, const char *argv[])
 {
@@ -773,6 +799,9 @@ int main(int argc, const char *argv[])
     fprintf(stderr, " OK\n");
     unlink(testfilepath);
     test_asis_seqs();
+    fprintf(stderr, " OK\n");
+    unlink(testfilepath);
+    test_dropped_handle();
     fprintf(stderr, " OK\n");
     unlink(testfilepath);
 

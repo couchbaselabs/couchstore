@@ -322,6 +322,8 @@ couchstore_error_t couchstore_save_documents(Db *db,
 
     fatbuf *fb;
 
+    error_unless(!db->dropped, COUCHSTORE_ERROR_FILE_CLOSED);
+
     for (ii = 0; ii < numdocs; ii++) {
         // Get additional size for terms to be inserted into indexes
         // IMPORTANT: This must match the sizes of the fatbuf_get calls in add_doc_to_update_list!
@@ -390,7 +392,7 @@ couchstore_error_t couchstore_save_documents(Db *db,
             db->header.update_seq = seq;
         }
     }
-
+ cleanup:
     return errcode;
 }
 

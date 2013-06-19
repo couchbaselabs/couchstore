@@ -31,6 +31,10 @@ const char *couchstore_strerror(couchstore_error_t errcode)
         return "invalid arguments";
     case COUCHSTORE_ERROR_NO_SUCH_FILE:
         return "no such file";
+    case COUCHSTORE_ERROR_FILE_CLOSED:
+        return "cannot do this operation when file is closed";
+    case COUCHSTORE_ERROR_DB_NO_LONGER_VALID:
+        return "this db handle could have its file reopened and must be closed";
     default:
         return NULL;
     }
