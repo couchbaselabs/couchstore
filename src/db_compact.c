@@ -13,8 +13,7 @@
 #include <stdio.h>
 
 typedef struct compact_ctx {
-    TreeWriter* id_tree_writer;
-    TreeWriter* seq_tree_writer;
+    TreeWriter* tree_writer;
     /* Using this for stuff that doesn't need to live longer than it takes to write
      * out a b-tree node (the k/v pairs) */
     arena *transient_arena;
@@ -25,7 +24,7 @@ typedef struct compact_ctx {
     couchstore_compact_flags flags;
 } compact_ctx;
 
-static couchstore_error_t compact_seq_tree(Db* source, compact_ctx *ctx);
+static couchstore_error_t compact_seq_tree(Db* source, Db* target, compact_ctx *ctx);
 static couchstore_error_t compact_localdocs_tree(Db* source, Db* target, compact_ctx *ctx);
 
 couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filename,
@@ -34,7 +33,7 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
 {
     Db* target = NULL;
     couchstore_error_t errcode;
-    compact_ctx ctx = {NULL, NULL, new_arena(0), new_arena(0), NULL, NULL, 0};
+    compact_ctx ctx = {NULL, new_arena(0), new_arena(0), NULL, 0, flags};
     ctx.flags = flags;
     error_unless(!source->dropped, COUCHSTORE_ERROR_FILE_CLOSED);
     error_unless(ctx.transient_arena && ctx.persistent_arena, COUCHSTORE_ERROR_ALLOC_FAIL);
@@ -51,31 +50,13 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
     }
     target->header.purge_ptr = source->header.purge_ptr;
 
-    ctx.target_file = &target->file;
-
     if(source->header.by_seq_root) {
-        error_pass(TreeWriterOpen(NULL, ebin_cmp, by_id_reduce, by_id_rereduce, NULL, &ctx.id_tree_writer));
-        //Will be loading this one up in Seq order, so we won't need to TreeWriterSort it
-        error_pass(TreeWriterOpen(NULL, seq_cmp, by_seq_reduce, by_seq_rereduce, NULL, &ctx.seq_tree_writer));
-        //Dump seq tree into both TreeWriters
-        error_pass(compact_seq_tree(source, &ctx));
-
-        //Sort the ID tree by ID
-        error_pass(TreeWriterSort(ctx.id_tree_writer));
-        //Mark end of bodies segment
-        int64_t bodies_end = target->file.pos;
-        //Build the b-trees
-        error_pass(TreeWriterWrite(ctx.seq_tree_writer, &target->file, &target->header.by_seq_root));
-        error_pass(TreeWriterWrite(ctx.id_tree_writer, &target->file, &target->header.by_id_root));
-        TreeWriterFree(ctx.id_tree_writer);
-        TreeWriterFree(ctx.seq_tree_writer);
-        ctx.id_tree_writer = NULL;
-        ctx.seq_tree_writer = NULL;
-        //Attempt to evict doc bodies in new file from FS cache, make sure we're sync'd up first.
-        if(flags & COUCHSTORE_COMPACT_FLAG_EVICT_BODIES) {
-            target->file.ops->sync(target->file.handle);
-            target->file.ops->advise(target->file.handle, 0, bodies_end, COUCHSTORE_FILE_ADVICE_EVICT);
-        }
+        error_pass(TreeWriterOpen(NULL, ebin_cmp, by_id_reduce, by_id_rereduce, NULL, &ctx.tree_writer));
+        error_pass(compact_seq_tree(source, target, &ctx));
+        error_pass(TreeWriterSort(ctx.tree_writer));
+        error_pass(TreeWriterWrite(ctx.tree_writer, &target->file, &target->header.by_id_root));
+        TreeWriterFree(ctx.tree_writer);
+        ctx.tree_writer = NULL;
     }
 
     if(source->header.local_docs_root) {
@@ -83,7 +64,7 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
     }
     error_pass(couchstore_commit(target));
 cleanup:
-    TreeWriterFree(ctx.id_tree_writer);
+    TreeWriterFree(ctx.tree_writer);
     delete_arena(ctx.transient_arena);
     delete_arena(ctx.persistent_arena);
     couchstore_close_db(target);
@@ -126,15 +107,15 @@ static couchstore_error_t output_seqtree_item(sized_buf* k, sized_buf *v, compac
         error_pass(COUCHSTORE_ERROR_READ);
     }
 
-    error_pass(TreeWriterAddItem(ctx->seq_tree_writer, *k, *v));
-
+    error_pass(mr_push_item(k_c, v_c, ctx->target_mr));
+    
     // Decode the by-sequence index value. See the file format doc or
     // assemble_id_index_value in couch_db.c:
     const raw_seq_index_value* rawSeq = (const raw_seq_index_value*)v->buf;
     uint32_t idsize, datasize;
     decode_kv_length(&rawSeq->sizes, &idsize, &datasize);
     uint32_t revMetaSize = (uint32_t)v->size - (sizeof(raw_seq_index_value) + idsize);
-
+    
     // Set up sized_bufs for the ID tree key and value:
     sized_buf id_k, id_v;
     id_k.buf = (char*)(rawSeq + 1);
@@ -150,9 +131,12 @@ static couchstore_error_t output_seqtree_item(sized_buf* k, sized_buf *v, compac
     raw->rev_seq = rawSeq->rev_seq;
     memcpy(raw + 1, (uint8_t*)(rawSeq + 1) + idsize, revMetaSize); //Copy rev_meta
 
-    error_pass(TreeWriterAddItem(ctx->id_tree_writer, id_k, id_v));
+    error_pass(TreeWriterAddItem(ctx->tree_writer, id_k, id_v));
 
-    arena_free_all(ctx->transient_arena);
+    if(ctx->target_mr->count == 0) {
+        /* No items queued, we must have just flushed. We can safely rewind the transient arena. */
+        arena_free_all(ctx->transient_arena);
+    }
 
 cleanup:
     return errcode;
@@ -183,7 +167,7 @@ static couchstore_error_t compact_seq_fetchcb(couchfile_lookup_request *rq, void
         }
         item.size = itemsize;
 
-        db_write_buf(ctx->target_file, &item, &new_bp, &new_size);
+        db_write_buf(ctx->target_mr->rq->file, &item, &new_bp, &new_size);
 
         bpWithDeleted = (bpWithDeleted & BP_DELETED_FLAG) | new_bp;  //Preserve high bit
         rawSeq->bp = encode_raw48(bpWithDeleted);
@@ -193,7 +177,7 @@ static couchstore_error_t compact_seq_fetchcb(couchfile_lookup_request *rq, void
     return output_seqtree_item(k, v, ctx);
 }
 
-static couchstore_error_t compact_seq_tree(Db* source, compact_ctx *ctx)
+static couchstore_error_t compact_seq_tree(Db* source, Db* target, compact_ctx *ctx)
 {
     couchstore_error_t errcode;
     compare_info seqcmp;
@@ -207,6 +191,13 @@ static couchstore_error_t compact_seq_tree(Db* source, compact_ctx *ctx)
     low_key.size = 6;
     sized_buf *low_key_list = &low_key;
 
+    ctx->target_mr = new_btree_modres(ctx->persistent_arena, ctx->transient_arena, &target->file,
+                                      &seqcmp, by_seq_reduce, by_seq_rereduce, NULL,
+                                      DB_CHUNK_THRESHOLD, DB_CHUNK_THRESHOLD);
+    if(ctx->target_mr == NULL) {
+        error_pass(COUCHSTORE_ERROR_ALLOC_FAIL);
+    }
+
     srcfold.cmp = seqcmp;
     srcfold.file = &source->file;
     srcfold.num_keys = 1;
@@ -217,7 +208,10 @@ static couchstore_error_t compact_seq_tree(Db* source, compact_ctx *ctx)
     srcfold.fetch_callback = compact_seq_fetchcb;
     srcfold.node_callback = NULL;
 
-    error_pass(btree_lookup(&srcfold, source->header.by_seq_root->pointer));
+    errcode = btree_lookup(&srcfold, source->header.by_seq_root->pointer);
+    if(errcode == COUCHSTORE_SUCCESS) {
+        target->header.by_seq_root = complete_new_btree(ctx->target_mr, &errcode);
+    }
 cleanup:
     arena_free_all(ctx->persistent_arena);
     arena_free_all(ctx->transient_arena);

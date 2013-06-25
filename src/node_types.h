@@ -3,6 +3,9 @@
 //  couchstore
 //
 //  Created by Jens Alfke on 4/25/12.
+//  Modified by Filipe Manana on 6/19/13 to fix some GCC warnings regarding
+//  violation of strict aliasing rules.
+//
 //  Copyright (c) 2012 Couchbase, Inc. All rights reserved.
 //
 
@@ -79,7 +82,8 @@ static inline void decode_kv_length(const raw_kv_length *kv, uint32_t *klen, uin
 {
     //12, 28 bit
     *klen = (uint16_t) ((kv->raw_kv[0] << 4) | ((kv->raw_kv[1] & 0xf0) >> 4));
-    *vlen = ntohl(*(uint32_t*)&kv->raw_kv[1]) & 0x0FFFFFFF;
+    memcpy(vlen, &kv->raw_kv[1], 4);
+    *vlen = ntohl(*vlen) & 0x0FFFFFFF;
 }
 
 /**
@@ -88,7 +92,9 @@ static inline void decode_kv_length(const raw_kv_length *kv, uint32_t *klen, uin
 static inline raw_kv_length encode_kv_length(size_t klen, size_t vlen)
 {
     raw_kv_length kv;
-    *(uint32_t*)&kv.raw_kv[1] = htonl(vlen);
+
+    vlen = htonl(vlen);
+    memcpy(&kv.raw_kv[1], &vlen, 4);
     kv.raw_kv[0] = (uint8_t)(klen >> 4);    // upper 8 bits of klen
     kv.raw_kv[1] |= (klen & 0xF) << 4;     // lower 4 bits of klen in upper half of byte
     return kv;
