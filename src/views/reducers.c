@@ -10,6 +10,7 @@
 #include "values.h"
 #include "reducers.h"
 #include "../couch_btree.h"
+#include "mapreduce/mapreduce.h"
 
 #define DOUBLE_FMT "%.15lg"
 #define scan_stats(buf, sum, count, min, max, sumsqr) \
@@ -19,6 +20,14 @@
 #define sprint_stats(buf, sum, count, min, max, sumsqr) \
         sprintf(buf, "{\"sum\":%lg,\"count\":%llu,\"min\":%lg,\"max\":%lg,\"sumsqr\":%lg}",\
                 sum, count, min, max, sumsqr)
+
+static void free_view_btree_key_excluding_elements(view_btree_key_t *key);
+
+static void mapreduce_free_json_list_repeating_k(mapreduce_json_list_t *list);
+
+static void free_view_btree_reduction_excluding_elements(view_btree_reduction_t *reduction);
+
+static void free_view_btree_value_excluding_elements(view_btree_value_t *value);
 
 static int buf_to_str(const sized_buf *buf, char str[32])
 {
@@ -649,3 +658,165 @@ alloc_error:
 
     return errcode;
 }
+
+couchstore_error_t view_btree_js_reduce(char *dst,
+                                        size_t *size_r,
+                                        const nodelist *leaflist,
+                                        int count,
+                                        void *ctx)
+{
+    view_btree_reduction_t *r = NULL;
+    uint64_t subtree_count = 0;
+    uint16_t j;
+    int cnt;
+    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
+    const nodelist *i;
+    user_view_reducer_ctx_t *uctx;
+    mapreduce_json_list_t *kl = NULL;
+    mapreduce_json_list_t *vl = NULL;
+    mapreduce_json_list_t *rl = NULL;
+    mapreduce_error_t ret;
+    char *error_msg = NULL;
+    void *context = NULL;
+
+    uctx = (user_view_reducer_ctx_t *) ctx;
+    context = uctx->mapreduce_context;
+    assert(context);
+    r = (view_btree_reduction_t *) calloc(1, sizeof(view_btree_reduction_t));
+    if (r == NULL) {
+        errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
+        goto alloc_error;
+    }
+
+    kl = (mapreduce_json_list_t *) calloc(1, sizeof(mapreduce_json_list_t));
+    if (kl == NULL) {
+        errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
+        goto alloc_error;
+    }
+
+    vl = (mapreduce_json_list_t *) calloc(1, sizeof(mapreduce_json_list_t));
+    if (vl == NULL) {
+        errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
+        goto alloc_error;
+    }
+
+    cnt = count;
+    for (i = leaflist; i != NULL && count > 0; i = i->next, count--) {
+        view_btree_value_t *v = NULL;
+        errcode = decode_view_btree_value(i->data.buf, i->data.size, &v);
+        if (errcode != COUCHSTORE_SUCCESS) {
+            goto alloc_error;
+        }
+        set_bit(&r->partitions_bitmap, v->partition);
+        subtree_count += v->num_values;
+        free_view_btree_value(v);
+    }
+    r->kv_count = subtree_count;
+    vl->values = (mapreduce_json_t *) malloc(subtree_count * sizeof(mapreduce_json_t));
+    if (vl->values == NULL) {
+        errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
+        goto alloc_error;
+    }
+    kl->values = (mapreduce_json_t *) malloc(subtree_count * sizeof(mapreduce_json_t));
+    if (kl->values == NULL) {
+        errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
+        goto alloc_error;
+    }
+    for (i = leaflist; i != NULL && cnt > 0; i = i->next, cnt--) {
+        view_btree_value_t *v2 = NULL;
+        view_btree_key_t *k = NULL;
+        errcode = decode_view_btree_value(i->data.buf, i->data.size, &v2);
+        if (errcode != COUCHSTORE_SUCCESS) {
+            goto alloc_error;
+        }
+        errcode = decode_view_btree_key(i->key.buf, i->key.size, &k);
+        if (errcode != COUCHSTORE_SUCCESS) {
+            free_view_btree_value(v2);
+            free_view_btree_key(k);
+            goto alloc_error;
+        }
+        for (j = 0; j < v2->num_values; ++j) {
+            vl->values[vl->length].length = v2->values[j].size;
+            vl->values[vl->length].json = v2->values[j].buf;
+            vl->length++;
+            kl->values[kl->length].length = k->json_key.size;
+            kl->values[kl->length].json = k->json_key.buf;
+            kl->length++;
+        }
+        free_view_btree_value_excluding_elements(v2);
+        free_view_btree_key_excluding_elements(k);
+    }
+    ret = mapreduce_reduce_all(context, kl, vl, &rl, &error_msg);
+    if (ret != MAPREDUCE_SUCCESS) {
+        uctx->error_msg = error_msg;
+        uctx->mapreduce_error = ret;
+        errcode = COUCHSTORE_ERROR_REDUCER_FAILURE;
+        goto alloc_error;
+    }
+    r->num_values = uctx->num_functions;
+    r->reduce_values = (sized_buf *) malloc(r->num_values * sizeof(sized_buf));
+    if (r->reduce_values == NULL) {
+        errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
+        goto alloc_error;
+    }
+    for (j = 0; j < r->num_values; ++j) {
+        r->reduce_values[j].size = (size_t) rl->values[j].length;
+        r->reduce_values[j].buf = rl->values[j].json;
+    }
+    errcode = encode_view_btree_reduction(r, dst, size_r);
+
+alloc_error:
+    mapreduce_free_json_list_repeating_k(kl);
+    mapreduce_free_json_list(vl);
+    mapreduce_free_json_list(rl);
+    free_view_btree_reduction_excluding_elements(r);
+    return errcode;
+}
+
+static void free_view_btree_key_excluding_elements(view_btree_key_t *key)
+{
+    if (key != NULL) {
+        free(key->doc_id.buf);
+        free(key);
+    }
+}
+
+static void mapreduce_free_json_list_repeating_k(mapreduce_json_list_t *list)
+{
+    int i, j;
+
+    if (list == NULL) {
+        return;
+    }
+
+    for (j = list->length - 1; j > 0; --j) {
+        if (list->values[j].json == list->values[j - 1].json) {
+            list->values[j].length = 0;
+        }
+    }
+
+    for (i = 0; i < list->length; ++i) {
+        if (list->values[i].length != 0) {
+            free(list->values[i].json);
+        }
+    }
+    free(list->values);
+    free(list);
+}
+
+static void free_view_btree_reduction_excluding_elements(view_btree_reduction_t *reduction)
+{
+    if (reduction != NULL) {
+        free(reduction->reduce_values);
+        free(reduction);
+    }
+}
+
+static void free_view_btree_value_excluding_elements(view_btree_value_t *value)
+{
+    if (value != NULL) {
+        free(value->values);
+        free(value);
+    }
+}
+

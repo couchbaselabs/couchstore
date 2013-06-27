@@ -23,6 +23,7 @@
 
 #include "../couch_btree.h"
 #include "../internal.h"
+#include "mapreduce/mapreduce.h"
 #include <stdint.h>
 #include <libcouchstore/visibility.h>
 #include <libcouchstore/couch_db.h>
@@ -52,6 +53,13 @@ extern "C" {
         uint64_t count;
         double sum, min, max, sumsqr;
     } stats_t;
+
+    typedef struct {
+        int                 num_functions;
+        mapreduce_error_t   mapreduce_error;
+        char                *error_msg;
+        void                *mapreduce_context;
+    } user_view_reducer_ctx_t;
 
     couchstore_error_t view_id_btree_reduce(char *dst,
                                             size_t *size_r,
@@ -100,6 +108,13 @@ extern "C" {
                                                  const nodelist *itmlist,
                                                  int count,
                                                  void *ctx);
+
+    couchstore_error_t view_btree_js_reduce(char *dst,
+                                            size_t *size_r,
+                                            const nodelist *leaflist,
+                                            int count,
+                                            void *ctx);
+
 #ifdef __cplusplus
 }
 #endif
