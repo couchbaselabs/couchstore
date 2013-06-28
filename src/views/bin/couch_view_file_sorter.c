@@ -30,6 +30,7 @@
 
 #define INITIAL_VIEW_FILE     'b'
 #define INCREMENTAL_VIEW_FILE 'u'
+#define INITIAL_SPATIAL_FILE  's'
 
 static char *read_line(char *buf, int size);
 
@@ -40,9 +41,13 @@ int main(int argc, char *argv[])
     char id_file[LINE_BUF_SIZE];
     int num_views;
     char **view_files;
+    double **extra_data = NULL;
     file_sorter_error_t error;
     int status = 0, i, j;
     char type;
+    /* The number of floats the bounding box consists of. It's two per
+     * dimension */
+    uint16_t *num_doubles = 0;
 
     (void) argc;
     (void) argv;
@@ -59,6 +64,7 @@ int main(int argc, char *argv[])
     switch (type) {
     case INITIAL_VIEW_FILE:
     case INCREMENTAL_VIEW_FILE:
+    case INITIAL_SPATIAL_FILE:
         break;
     default:
         fprintf(stderr, "Invalid view file type: %c.\n", type);
@@ -106,9 +112,63 @@ int main(int argc, char *argv[])
         }
     }
 
+    /* Spatial views get extra data transmitted */
+    if (type == INITIAL_SPATIAL_FILE) {
+        extra_data = (double **) calloc(num_views, sizeof(double *));
+        if (extra_data == NULL) {
+            fprintf(stderr, "Memory allocation failure.\n");
+            status = 1;
+            goto finished;
+        }
+        num_doubles = (uint16_t *) malloc(sizeof(uint16_t) * num_views);
+        if (num_doubles == NULL) {
+            free(extra_data);
+            fprintf(stderr, "Memory allocation failure.\n");
+            status = 1;
+            goto finished;
+        }
+
+        for (i = 0; i < num_views; ++i) {
+            if (fread(&num_doubles[i], sizeof(uint16_t), 1, stdin) < 1) {
+                free(extra_data);
+                free(num_doubles);
+                fprintf(stderr, "Error reading the number of doubles (%d).\n",
+                        (i + 1));
+                status = 1;
+                goto finished;
+            }
+
+            extra_data[i] = (double *) malloc(sizeof(double) * num_doubles[i]);
+            if (extra_data[i] == NULL) {
+                for (j = 0; j < i; ++j) {
+                    free(extra_data[j]);
+                }
+                free(extra_data);
+                free(num_doubles);
+                fprintf(stderr, "Memory allocation failure.\n");
+                status = 1;
+                goto finished;
+            }
+
+            if (fread(extra_data[i], sizeof(double), num_doubles[i],
+                      stdin) < num_doubles[i]) {
+                for (j = 0; j <= i; ++j) {
+                    free(extra_data[j]);
+                }
+                free(extra_data);
+                free(num_doubles);
+                fprintf(stderr, "Error reading extra data (%d).\n",
+                        (i + 1));
+                status = 1;
+                goto finished;
+            }
+        }
+    }
+
     if (strcmp(id_file, NIL_FILE) != 0) {
         switch (type) {
         case INITIAL_VIEW_FILE:
+        case INITIAL_SPATIAL_FILE:
             error = sort_view_ids_file(id_file, tmp_dir);
             break;
         case INCREMENTAL_VIEW_FILE:
@@ -118,7 +178,7 @@ int main(int argc, char *argv[])
         if (error != FILE_SORTER_SUCCESS) {
             fprintf(stderr, "Error sorting id file: %d\n", error);
             status = SORT_ERROR_CODE(error);
-            goto finished;
+            goto finished_spatial;
         }
     }
 
@@ -131,15 +191,29 @@ int main(int argc, char *argv[])
             case INCREMENTAL_VIEW_FILE:
                 error = sort_view_kvs_ops_file(view_files[i], tmp_dir);
                 break;
+            case INITIAL_SPATIAL_FILE:
+                /* For sorting the spatial file extra information
+                 * (the bounding box) is needed */
+                error = sort_spatial_kvs_file(view_files[i], tmp_dir,
+                                              extra_data[i], num_doubles[i]);
+                break;
             }
             if (error != FILE_SORTER_SUCCESS) {
                 fprintf(stderr, "Error sorting view %d file: %d\n", (i + 1), error);
                 status = SORT_ERROR_CODE(error);
-                goto finished;
+                goto finished_spatial;
             }
         }
     }
 
+ finished_spatial:
+    if (type == INITIAL_SPATIAL_FILE) {
+        for (i = 0; i < num_views; ++i) {
+            free(extra_data[i]);
+        }
+        free(extra_data);
+        free(num_doubles);
+    }
  finished:
     for (i = 0; i < num_views; ++i) {
         free(view_files[i]);

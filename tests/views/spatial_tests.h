@@ -3,7 +3,7 @@
 /**
  * @copyright 2013 Couchbase, Inc.
  *
- * @author Filipe Manana  <filipe@couchbase.com>
+ * @author Volker Mische <volker@couchbase.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -18,27 +18,23 @@
  * the License.
  **/
 
-#include "view_tests.h"
-#include "spatial_tests.h"
+#ifndef _VIEW_SPATIAL_TESTS_H
+#define _VIEW_SPATIAL_TESTS_H
 
+#include "config.h"
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include "../macros.h"
+#include "../src/views/bitmap.h"
+#include "../src/views/spatial.h"
 
-void view_tests()
-{
-    TPRINT("\n\nRunning view tests\n\n");
+#define TPRINT(...) fprintf(stderr, __VA_ARGS__)
 
-    test_bitmaps();
-    test_sorted_lists();
-    test_collate_json();
-    test_index_headers();
-    test_reductions();
-    test_keys();
-    test_values();
-    reducer_tests();
+void test_interleaving();
+void test_spatial_scale_factor();
+void test_spatial_center();
+void test_spatial_scale_point();
+void test_set_bit_sized();
 
-    /* spatial tests */
-    test_interleaving();
-    test_spatial_scale_factor();
-    test_spatial_center();
-    test_spatial_scale_point();
-    test_set_bit_sized();
-}
+#endif

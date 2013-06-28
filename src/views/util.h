@@ -37,22 +37,26 @@ extern "C" {
 
     enum view_record_type {
         INITIAL_BUILD_VIEW_RECORD,
-        INCREMENTAL_UPDATE_VIEW_RECORD
+        INCREMENTAL_UPDATE_VIEW_RECORD,
+        INITIAL_BUILD_SPATIAL_RECORD
     };
 
     typedef struct {
         FILE *src_f;
         FILE *dst_f;
         enum view_record_type type;
-        int (*key_cmp_fun)(const sized_buf *key1, const sized_buf *key2);
+        int (*key_cmp_fun)(const sized_buf *key1, const sized_buf *key2,
+                           const void *user_ctx);
+        const void *user_ctx;
     } view_file_merge_ctx_t;
 
-
     /* compare keys of a view btree */
-    int view_key_cmp(const sized_buf *key1, const sized_buf *key2);
+    int view_key_cmp(const sized_buf *key1, const sized_buf *key2,
+                     const void *user_ctx);
 
     /* compare keys of the id btree of an index */
-    int view_id_cmp(const sized_buf *key1, const sized_buf *key2);
+    int view_id_cmp(const sized_buf *key1, const sized_buf *key2,
+                    const void *user_ctx);
 
     /* read view index record from a file, obbeys the read record function
        prototype defined in src/file_merger.h */

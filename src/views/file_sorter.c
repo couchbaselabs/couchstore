@@ -20,6 +20,7 @@
 
 #include "file_sorter.h"
 #include "util.h"
+#include "spatial.h"
 
 #define SORT_MAX_BUFFER_SIZE       (64 * 1024 * 1024)
 #define SORT_MAX_NUM_TMP_FILES     16
@@ -78,6 +79,28 @@ file_sorter_error_t sort_view_ids_file(const char *file_path,
     ctx.type = INITIAL_BUILD_VIEW_RECORD;
 
     return do_sort_file(file_path, tmp_dir, &ctx);
+}
+
+
+LIBCOUCHSTORE_API
+file_sorter_error_t sort_spatial_kvs_file(const char *file_path,
+                                          const char *tmp_dir,
+                                          const double *mbb,
+                                          const uint16_t mbb_num)
+{
+    file_sorter_error_t ret;
+    view_file_merge_ctx_t ctx;
+    scale_factor_t *user_ctx = spatial_scale_factor(mbb, mbb_num/2,
+                                                    ZCODE_MAX_VALUE);
+
+    ctx.key_cmp_fun = spatial_key_cmp;
+    ctx.type = INITIAL_BUILD_SPATIAL_RECORD;
+    ctx.user_ctx = (void *)user_ctx;
+
+    ret = do_sort_file(file_path, tmp_dir, &ctx);
+
+    free_spatial_scale_factor(user_ctx);
+    return ret;
 }
 
 

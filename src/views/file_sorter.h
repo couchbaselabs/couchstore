@@ -59,6 +59,14 @@ extern "C" {
     file_sorter_error_t sort_view_ids_file(const char *file_path,
                                            const char *tmp_dir);
 
+    /*
+     * Sort a file containing records for a spatial index.
+     */
+    LIBCOUCHSTORE_API
+    file_sorter_error_t sort_spatial_kvs_file(const char *file_path,
+                                              const char *tmp_dir,
+                                              const double *mbb,
+                                              const uint16_t mbb_num);
 
 #ifdef __cplusplus
 }

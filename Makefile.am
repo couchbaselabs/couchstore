@@ -126,7 +126,9 @@ libcouchstore_la_SOURCES = \
                             src/views/util.h \
                             src/views/util.c \
                             src/views/reducers.h \
-                            src/views/reducers.c
+                            src/views/reducers.c \
+                            src/views/spatial.h \
+                            src/views/spatial.c
 
 
 libcouchstore_la_LDFLAGS = $(AM_LDFLAGS) $(ICU_LOCAL_LDFLAGS) -version-info $(LIBCOUCHSTORE_API_CURRENT):$(LIBCOUCHSTORE_API_REVISION):$(LIBCOUCHSTORE_API_AGE) -no-undefined
@@ -248,7 +250,9 @@ testapp_SOURCES += \
 	tests/views/reductions.c \
 	tests/views/keys.c \
 	tests/views/values.c \
-    tests/views/reducers.c
+	tests/views/reducers.c \
+	tests/views/spatial_tests.h \
+	tests/views/spatial.c
 
 testapp_CFLAGS = $(AM_CFLAGS)
 testapp_DEPENDENCIES = libcouchstore_tests.la libbyteswap.la libutil.la

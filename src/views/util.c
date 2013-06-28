@@ -25,7 +25,8 @@
 #include "collate_json.h"
 
 
-int view_key_cmp(const sized_buf *key1, const sized_buf *key2)
+int view_key_cmp(const sized_buf *key1, const sized_buf *key2,
+                 const void *user_ctx)
 {
     uint16_t json_key1_len = decode_raw16(*((raw_16 *) key1->buf));
     uint16_t json_key2_len = decode_raw16(*((raw_16 *) key2->buf));
@@ -38,6 +39,8 @@ int view_key_cmp(const sized_buf *key1, const sized_buf *key2)
         .buf = key2->buf + sizeof(uint16_t)
     };
     int res;
+
+    (void)user_ctx;
 
     res = CollateJSON(&json_key1, &json_key2, kCollateJSON_Unicode);
 
@@ -58,8 +61,10 @@ int view_key_cmp(const sized_buf *key1, const sized_buf *key2)
 }
 
 
-int view_id_cmp(const sized_buf *key1, const sized_buf *key2)
+int view_id_cmp(const sized_buf *key1, const sized_buf *key2,
+                const void *user_ctx)
 {
+    (void)user_ctx;
     return ebin_cmp(key1, key2);
 }
 
@@ -159,7 +164,7 @@ int compare_view_records(const void *r1, const void *r2, void *ctx)
     view_file_merge_record_t *rec2 = (view_file_merge_record_t *) r2;
     int res;
 
-    res = merge_ctx->key_cmp_fun(&rec1->k, &rec2->k);
+    res = merge_ctx->key_cmp_fun(&rec1->k, &rec2->k, merge_ctx->user_ctx);
 
     if (res == 0 && merge_ctx->type == INCREMENTAL_UPDATE_VIEW_RECORD) {
         return ((int) rec1->op) - ((int) rec2->op);
