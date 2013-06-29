@@ -1,3 +1,4 @@
+/* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 //
 //  node_types.c
 //  couchstore
@@ -11,7 +12,7 @@
 
 size_t read_kv(const void *buf, sized_buf *key, sized_buf *value)
 {
-    const raw_kv_length* kvlen = buf;
+    const raw_kv_length* kvlen = static_cast<const raw_kv_length*>(buf);
     uint32_t klen, vlen;
     decode_kv_length(kvlen, &klen, &vlen);
     key->size = klen;
@@ -23,7 +24,7 @@ size_t read_kv(const void *buf, sized_buf *key, sized_buf *value)
 
 void* write_kv(void *buf, sized_buf key, sized_buf value)
 {
-    uint8_t *dst = buf;
+    uint8_t *dst = static_cast<uint8_t*>(buf);
     *(raw_kv_length*)dst = encode_kv_length((uint32_t)key.size, (uint32_t)value.size);
     dst += sizeof(raw_kv_length);
     memcpy(dst, key.buf, key.size);
@@ -47,7 +48,7 @@ node_pointer *read_root(void *buf, int size)
     ptr->key.size = 0;
     ptr->pointer = position;
     ptr->subtreesize = subtreesize;
-    ptr->reduce_value.buf = buf;
+    ptr->reduce_value.buf = static_cast<char*>(buf);
     ptr->reduce_value.size = redsize;
     return ptr;
 }
@@ -58,7 +59,7 @@ size_t encode_root(void *buf, node_pointer *node)
         return 0;
     }
     if (buf) {
-        raw_btree_root *root = buf;
+        raw_btree_root *root = static_cast<raw_btree_root*>(buf);
         root->pointer = encode_raw48(node->pointer);
         root->subtreesize = encode_raw48(node->subtreesize);
         memcpy(root + 1, node->reduce_value.buf, node->reduce_value.size);

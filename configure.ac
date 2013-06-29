@@ -17,7 +17,7 @@
 AC_PREREQ(2.59)
 m4_include([m4/version.m4])
 AC_INIT(libcouchstore, VERSION_NUMBER, support@couchbase.com)
-AC_CONFIG_SRCDIR([src/couch_db.c])
+AC_CONFIG_SRCDIR([src/couch_db.cc])
 AC_CONFIG_AUX_DIR(config)
 AC_USE_SYSTEM_EXTENSIONS
 AM_INIT_AUTOMAKE(subdir-objects)
@@ -42,7 +42,7 @@ if test $ac_cv_func_fdatasync = no; then
  AC_DEFINE([fdatasync], [fsync], [Define to fsync if you lack fdatasync])
 fi
 
-COUCHBASE_GENERIC_COMPILER(c99)
+COUCHBASE_GENERIC_COMPILER(c89 cxx)
 
 PANDORA_HAVE_LIBLUA
 

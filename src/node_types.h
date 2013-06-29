@@ -9,11 +9,15 @@
 //  Copyright (c) 2012 Couchbase, Inc. All rights reserved.
 //
 
-#ifndef couchstore_node_types_h
-#define couchstore_node_types_h
+#ifndef COUCHSTORE_NODE_TYPES_H
+#define COUCHSTORE_NODE_TYPES_H
 
 #include "bitfield.h"
 #include "internal.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct {
     raw_08 version;
@@ -119,5 +123,9 @@ static inline uint64_t decode_sequence_key(const sized_buf *buf)
     const raw_by_seq_key *key = (const raw_by_seq_key*)buf->buf;
     return decode_raw48(key->sequence);
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

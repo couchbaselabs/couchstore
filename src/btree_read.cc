@@ -13,14 +13,14 @@ static couchstore_error_t btree_lookup_inner(couchfile_lookup_request *rq,
     int bufpos = 1, nodebuflen = 0;
 
     if (current == end) {
-        return 0;
+        return COUCHSTORE_SUCCESS;
     }
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
 
     char *nodebuf = NULL;
 
     nodebuflen = pread_compressed(rq->file, diskpos, &nodebuf);
-    error_unless(nodebuflen >= 0, nodebuflen);  // if negative, it's an error code
+    error_unless(nodebuflen >= 0, (static_cast<couchstore_error_t>(nodebuflen)));  // if negative, it's an error code
 
     if (nodebuf[0] == 0) { //KP Node
         while (bufpos < nodebuflen && current < end) {
@@ -101,4 +101,3 @@ couchstore_error_t btree_lookup(couchfile_lookup_request *rq,
     rq->in_fold = 0;
     return btree_lookup_inner(rq, root_pointer, 0, rq->num_keys);
 }
-

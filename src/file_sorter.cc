@@ -283,7 +283,7 @@ static file_sorter_error_t write_record_list(struct record_node *list,
         struct record_node *next = node->next;
         file_sorter_error_t err;
 
-        err = (*ctx->write_record)(f, node->record, ctx->user_ctx);
+        err = static_cast<file_sorter_error_t>((*ctx->write_record)(f, node->record, ctx->user_ctx));
         (*ctx->free_record)(node->record, ctx->user_ctx);
         free(node);
 

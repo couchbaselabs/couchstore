@@ -55,7 +55,8 @@ static void* add_chunk(arena* a, size_t size)
     if (size > chunk_size) {
         chunk_size = size;  // make sure the new chunk is big enough to fit 'size' bytes
     }
-    arena_chunk* chunk = malloc(sizeof(arena_chunk) + chunk_size);
+    arena_chunk* chunk;
+    chunk = static_cast<arena_chunk*>(malloc(sizeof(arena_chunk) + chunk_size));
     if (!chunk) {
         return NULL;
     }
@@ -64,7 +65,7 @@ static void* add_chunk(arena* a, size_t size)
 
     void* result = chunk_start(chunk);
     a->next_block = (char*)result + size;
-    a->end = chunk_end(chunk);
+    a->end = static_cast<char*>(chunk_end(chunk));
     a->cur_chunk = chunk;
     return result;
 }
@@ -72,7 +73,7 @@ static void* add_chunk(arena* a, size_t size)
 
 arena* new_arena(size_t chunk_size)
 {
-    arena* a = calloc(1, sizeof(arena));
+    arena* a = static_cast<arena*>(calloc(1, sizeof(arena)));
     if (a) {
         if (chunk_size == 0) {
             chunk_size = DEFAULT_CHUNK_SIZE;
@@ -166,8 +167,8 @@ void arena_free_from_mark(arena *a, const arena_position *mark)
     }
     assert(chunk != NULL || mark == NULL);   // If this fails, mark was bogus
 
-    a->next_block = (void*)mark;
-    a->end = chunk ? chunk_end(chunk) : NULL;
+    a->next_block = static_cast<char*>((void*)mark);
+    a->end = static_cast<char*>(chunk ? chunk_end(chunk) : NULL);
 #ifdef DEBUG
     memset(a->next_block, 0x55, (char*)a->end - (char*)a->next_block);
     // TODO: Somehow roll back blocks_allocated and bytes_allocated (how?)

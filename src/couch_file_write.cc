@@ -120,9 +120,9 @@ int db_write_buf(tree_file *file, const sized_buf *buf, cs_off_t *pos, size_t *d
     return 0;
 }
 
-int db_write_buf_compressed(tree_file *file, const sized_buf *buf, cs_off_t *pos, size_t *disk_size)
+couchstore_error_t db_write_buf_compressed(tree_file *file, const sized_buf *buf, cs_off_t *pos, size_t *disk_size)
 {
-    int errcode = 0;
+    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     sized_buf to_write;
     size_t max_size = snappy_max_compressed_length(buf->size);
 
@@ -134,7 +134,7 @@ int db_write_buf_compressed(tree_file *file, const sized_buf *buf, cs_off_t *pos
                                  &to_write.size) == SNAPPY_OK,
                  COUCHSTORE_ERROR_WRITE);
 
-    error_pass(db_write_buf(file, &to_write, pos, disk_size));
+    error_pass(static_cast<couchstore_error_t>(db_write_buf(file, &to_write, pos, disk_size)));
 cleanup:
     free(compressbuf);
     return errcode;

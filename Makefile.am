@@ -42,9 +42,10 @@ lib_LTLIBRARIES = libcouchstore.la
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libcouchstore.pc
 
-noinst_LTLIBRARIES = librfc1321.la libbyteswap.la libcouchstore_tests.la libmapreduce.la
+noinst_LTLIBRARIES = librfc1321.la libbyteswap.la libcouchstore_tests.la libmapreduce.la libutil.la
 
 libbyteswap_la_SOURCES = src/byteswap.c
+libutil_la_SOURCES = src/util.cc src/util.h
 
 librfc1321_la_SOURCES = \
                             src/rfc1321/md5c.c \
@@ -69,40 +70,39 @@ endif
 
 libcouchstore_la_SOURCES = \
                             config_static.h \
-                            src/arena.c \
+                            src/arena.cc \
                             src/arena.h \
                             src/bitfield.h \
-                            src/btree_modify.c \
-                            src/btree_read.c \
+                            src/btree_modify.cc \
+                            src/btree_read.cc \
                             src/couch_btree.h \
-                            src/couch_db.c \
-                            src/couch_save.c \
+                            src/couch_db.cc \
+                            src/couch_file_read.cc \
+                            src/couch_file_write.cc \
+                            src/couch_save.cc \
                             src/crc32.c \
                             src/crc32.h \
-                            src/couch_file_read.c \
-                            src/couch_file_write.c \
-                            src/db_compact.c \
+                            src/db_compact.cc \
                             src/fatbuf.h \
+                            src/file_merger.cc \
                             src/file_merger.h \
-                            src/file_merger.c \
+                            src/file_name_utils.cc \
                             src/file_name_utils.h \
-                            src/file_name_utils.c \
+                            src/file_sorter.cc \
                             src/file_sorter.h \
-                            src/file_sorter.c \
                             src/internal.h \
-                            src/iobuffer.c \
+                            src/iobuffer.cc \
                             src/iobuffer.h \
-                            src/llmsort.c \
-                            src/tree_writer.c \
-                            src/tree_writer.h \
-                            src/mergesort.c \
+                            src/llmsort.cc \
+                            src/mergesort.cc \
                             src/mergesort.h \
-                            src/node_types.c \
+                            src/node_types.cc \
                             src/node_types.h \
-                            src/reduces.c \
+                            src/reduces.cc \
                             src/reduces.h \
-                            src/strerror.c \
-                            src/util.c \
+                            src/strerror.cc \
+                            src/tree_writer.cc \
+                            src/tree_writer.h \
                             src/util.h \
                             src/views/collate_json.c \
                             src/views/collate_json.h \
@@ -138,11 +138,13 @@ else
 libcouchstore_la_SOURCES += src/os.c
 endif
 
-libcouchstore_la_CFLAGS = $(BASE_libcouchstore_la_CFLAGS) -DLIBCOUCHSTORE_INTERNAL=1
-libcouchstore_la_LIBADD = librfc1321.la libbyteswap.la libmapreduce.la $(ICU_LOCAL_LIBS) -lstdc++ -lsnappy -lpthread
+libcouchstore_la_CFLAGS = $(BASE_libcouchstore_la_CFLAGS)
+libcouchstore_la_CPPFLAGS = ${AM_CPPFLAGS} -DLIBCOUCHSTORE_INTERNAL=1
+libcouchstore_la_DEPENDENCIES =  librfc1321.la libbyteswap.la libmapreduce.la libutil.la
+libcouchstore_la_LIBADD = librfc1321.la libbyteswap.la libmapreduce.la libutil.la $(ICU_LOCAL_LIBS) -lstdc++ -lsnappy -lpthread
 
 libcouchstore_tests_la_SOURCES = $(libcouchstore_la_SOURCES)
-libcouchstore_tests_la_LDFLAGS = $(libcouchstore_la_LDFLAGS)
+libcouchstore_tests_la_LDFLAGS =  $(AM_LDFLAGS) $(ICU_LOCAL_LDFLAGS) --no-undefined
 libcouchstore_tests_la_CFLAGS = $(BASE_libcouchstore_la_CFLAGS)
 libcouchstore_tests_la_LIBADD = $(libcouchstore_la_LIBADD)
 
@@ -155,10 +157,10 @@ if WINDOWS
 couch_dbdump_LDADD += -lws2_32
 endif
 
-couch_dbinfo_SOURCES = src/dbinfo.c src/util.c
+couch_dbinfo_SOURCES = src/dbinfo.c
 couch_dbinfo_CFLAGS = $(AM_CFLAGS) -D__STDC_FORMAT_MACROS
-couch_dbinfo_DEPENDENCIES = libcouchstore.la libbyteswap.la
-couch_dbinfo_LDADD = libcouchstore.la libbyteswap.la
+couch_dbinfo_DEPENDENCIES = libcouchstore.la libbyteswap.la libutil.la
+couch_dbinfo_LDADD = libcouchstore.la libbyteswap.la libutil.la
 
 couch_compact_SOURCES = src/compactor.c
 couch_compact_DEPENDENCIES = libcouchstore.la
@@ -228,7 +230,7 @@ CLEANFILES = test.couch
 check_PROGRAMS = testapp
 TESTS = ${check_PROGRAMS}
 
-testapp_SOURCES = tests/testapp.c src/util.c tests/macros.h
+testapp_SOURCES = tests/testapp.c tests/macros.h
 testapp_SOURCES += \
 	tests/file_merger_tests.c \
 	tests/file_sorter_tests.c \
@@ -249,8 +251,8 @@ testapp_SOURCES += \
     tests/views/reducers.c
 
 testapp_CFLAGS = $(AM_CFLAGS)
-testapp_DEPENDENCIES = libcouchstore_tests.la libbyteswap.la
-testapp_LDADD = libcouchstore_tests.la libbyteswap.la libmapreduce.la
+testapp_DEPENDENCIES = libcouchstore_tests.la libbyteswap.la libutil.la
+testapp_LDADD = libcouchstore_tests.la libbyteswap.la libmapreduce.la libutil.la -lstdc++
 
 test: check-TESTS $(extra_tests)
 

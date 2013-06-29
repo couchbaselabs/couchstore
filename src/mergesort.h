@@ -3,6 +3,10 @@
 
 #include <stdio.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * Returns the length of the record read from the file on success.
  * Returns 0 when the file's EOF is reached, and a negative value
@@ -45,4 +49,10 @@ int merge_sort(FILE *unsorted_file, FILE *sorted_file,
                void *pointer,
                unsigned long block_size,
                unsigned long *pcount);
+
+#ifdef __cplusplus
+}
+#endif
+
+
 #endif

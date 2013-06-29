@@ -36,7 +36,12 @@ cleanup:
 // Attempts to initialize the database from a header at the given file position
 static couchstore_error_t find_header_at_pos(Db *db, cs_off_t pos)
 {
-    int errcode = COUCHSTORE_SUCCESS;
+    int seqrootsize;
+    int idrootsize;
+    int localrootsize;
+    char *root_data;
+    int header_len;
+    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     union {
         raw_file_header *raw;
         char *buf;
@@ -50,9 +55,9 @@ static couchstore_error_t find_header_at_pos(Db *db, cs_off_t pos)
         return COUCHSTORE_ERROR_CORRUPT;
     }
 
-    int header_len = pread_header(&db->file, pos, &header_buf.buf);
+    header_len = pread_header(&db->file, pos, &header_buf.buf);
     if (header_len < 0) {
-        error_pass(header_len);
+        error_pass(static_cast<couchstore_error_t>(header_len));
     }
 
     db->header.position = pos;
@@ -63,13 +68,13 @@ static couchstore_error_t find_header_at_pos(Db *db, cs_off_t pos)
     db->header.purge_seq = decode_raw48(header_buf.raw->purge_seq);
     db->header.purge_ptr = decode_raw48(header_buf.raw->purge_ptr);
     error_unless(db->header.purge_ptr <= db->header.position, COUCHSTORE_ERROR_CORRUPT);
-    int seqrootsize = decode_raw16(header_buf.raw->seqrootsize);
-    int idrootsize = decode_raw16(header_buf.raw->idrootsize);
-    int localrootsize = decode_raw16(header_buf.raw->localrootsize);
+    seqrootsize = decode_raw16(header_buf.raw->seqrootsize);
+    idrootsize = decode_raw16(header_buf.raw->idrootsize);
+    localrootsize = decode_raw16(header_buf.raw->localrootsize);
     error_unless(header_len == HEADER_BASE_SIZE + seqrootsize + idrootsize + localrootsize,
                  COUCHSTORE_ERROR_CORRUPT);
 
-    char *root_data = (char*) (header_buf.raw + 1);  // i.e. just past *header_buf
+    root_data = (char*) (header_buf.raw + 1);  // i.e. just past *header_buf
     error_pass(read_db_root(db, &db->header.by_seq_root, root_data, seqrootsize));
     root_data += seqrootsize;
     error_pass(read_db_root(db, &db->header.by_id_root, root_data, idrootsize));
@@ -169,7 +174,7 @@ LIBCOUCHSTORE_API
 couchstore_error_t couchstore_commit(Db *db)
 {
     cs_off_t curpos = db->file.pos;
-    sized_buf zerobyte = {"\0", 1};
+    sized_buf zerobyte = { const_cast<char*>("\0"), 1};
     size_t seqrootsize = 0, idrootsize = 0, localrootsize = 0;
     if (db->header.by_seq_root) {
         seqrootsize = 12 + db->header.by_seq_root->reduce_value.size;
@@ -224,7 +229,7 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
         return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
     }
 
-    if ((db = calloc(1, sizeof(Db))) == NULL) {
+    if ((db = static_cast<Db*>(calloc(1, sizeof(Db)))) == NULL) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
 
@@ -264,7 +269,7 @@ cleanup:
     return errcode;
 }
 
-LIBCOUCHSTORE_API 
+LIBCOUCHSTORE_API
 couchstore_error_t couchstore_drop_file(Db *db)
 {
     if(db->dropped) {
@@ -334,7 +339,7 @@ DocInfo* couchstore_alloc_docinfo(const sized_buf *id, const sized_buf *rev_meta
     if (rev_meta) {
         size += rev_meta->size;
     }
-    DocInfo* docInfo = malloc(size);
+    DocInfo* docInfo = static_cast<DocInfo*>(malloc(size));
     if (!docInfo) {
         return NULL;
     }
@@ -454,7 +459,7 @@ static couchstore_error_t bp_to_doc(Doc **pDoc, Db *db, cs_off_t bp, couchstore_
         bodylen = pread_bin(&db->file, bp, &docbody);
     }
 
-    error_unless(bodylen >= 0, bodylen);    // if bodylen is negative it's an error code
+    error_unless(bodylen >= 0, static_cast<couchstore_error_t>(bodylen));    // if bodylen is negative it's an error code
     error_unless(docbody || bodylen == 0, COUCHSTORE_ERROR_READ);
 
     error_unless(docbuf = fatbuf_alloc(sizeof(Doc) + bodylen), COUCHSTORE_ERROR_ALLOC_FAIL);
@@ -463,7 +468,7 @@ static couchstore_error_t bp_to_doc(Doc **pDoc, Db *db, cs_off_t bp, couchstore_
     if (bodylen == 0) { //Empty doc
         (*pDoc)->data.buf = NULL;
         (*pDoc)->data.size = 0;
-        return 0;
+        return COUCHSTORE_SUCCESS;
     }
 
     (*pDoc)->data.buf = (char *) fatbuf_get(docbuf, bodylen);
@@ -652,7 +657,7 @@ static couchstore_error_t lookup_callback(couchfile_lookup_request *rq,
         return COUCHSTORE_SUCCESS;
     }
 
-    const lookup_context *context = rq->callback_ctx;
+    const lookup_context *context = static_cast<const lookup_context *>(rq->callback_ctx);
     sized_buf *seqterm = (sized_buf *) k;
     DocInfo *docinfo = NULL;
     couchstore_error_t errcode;
@@ -663,7 +668,7 @@ static couchstore_error_t lookup_callback(couchfile_lookup_request *rq,
     }
     if (errcode == COUCHSTORE_ERROR_CORRUPT && (context->options & COUCHSTORE_INCLUDE_CORRUPT_DOCS)) {
         // Invoke callback even if doc info is corrupted/unreadable, if magic flag is set
-        docinfo = calloc(sizeof(DocInfo), 1);
+        docinfo = static_cast<DocInfo*>(calloc(sizeof(DocInfo), 1));
         docinfo->id = *seqterm;
         docinfo->rev_meta = *v;
     } else if (errcode) {
@@ -681,14 +686,16 @@ static couchstore_error_t lookup_callback(couchfile_lookup_request *rq,
     }
 
     if (context->walk_callback) {
-        errcode = context->walk_callback(context->db,
-                                         context->depth,
-                                         docinfo,
-                                         0,
-                                         NULL,
-                                         context->callback_context);
+        errcode = static_cast<couchstore_error_t>(context->walk_callback(context->db,
+                                                                         context->depth,
+                                                                         docinfo,
+                                                                         0,
+                                                                         NULL,
+                                                                         context->callback_context));
     } else {
-        errcode = context->callback(context->db, docinfo, context->callback_context);
+        errcode = static_cast<couchstore_error_t>(context->callback(context->db,
+                                                                    docinfo,
+                                                                    context->callback_context));
     }
     if (errcode <= 0) {
         couchstore_free_docinfo(docinfo);
@@ -780,7 +787,7 @@ static couchstore_error_t walk_node_callback(struct couchfile_lookup_request *rq
                                                  uint64_t subtreeSize,
                                                  const sized_buf *reduceValue)
 {
-    lookup_context* context = rq->callback_ctx;
+    lookup_context* context = static_cast<lookup_context*>(rq->callback_ctx);
     if (reduceValue) {
         int result = context->walk_callback(context->db,
                                             context->depth,
@@ -790,7 +797,7 @@ static couchstore_error_t walk_node_callback(struct couchfile_lookup_request *rq
                                             context->callback_context);
         context->depth++;
         if (result < 0)
-            return result;
+            return static_cast<couchstore_error_t>(result);
     } else {
         context->depth--;
     }
@@ -808,41 +815,48 @@ couchstore_error_t couchstore_walk_tree(Db *db,
                                         void *ctx)
 {
     couchstore_error_t errcode;
+    sized_buf startKey = {NULL, 0};
+    sized_buf *keylist;
+    sized_buf cmptmp;
+    couchfile_lookup_request rq;
+
     error_unless(!db->dropped, COUCHSTORE_ERROR_FILE_CLOSED);
     if (root == NULL) {
         return COUCHSTORE_SUCCESS;
     }
 
     // Invoke the callback on the root node:
-    errcode = callback(db, 0, NULL,
-                       root->subtreesize,
-                       &root->reduce_value,
-                       ctx);
+    errcode = static_cast<couchstore_error_t>(callback(db, 0, NULL,
+                                                       root->subtreesize,
+                                                       &root->reduce_value,
+                                                       ctx));
     if (errcode < 0) {
         return errcode;
     }
 
-    sized_buf startKey = {NULL, 0};
     if (startKeyPtr) {
         startKey = *startKeyPtr;
     }
-    sized_buf *keylist = &startKey;
+    keylist = &startKey;
 
-    lookup_context lookup_ctx = {db, options, NULL, ctx, by_id, 1, callback};
-    sized_buf cmptmp;
-    couchfile_lookup_request rq;
+    {
+        // Create a new scope here just to mute the warning from the
+        // compiler that the goto in the macro error_unless
+        // skips the initialization of lookup_ctx..
+        lookup_context lookup_ctx = {db, options, NULL, ctx, by_id, 1, callback};
 
-    rq.cmp.compare = compare;
-    rq.cmp.arg = &cmptmp;
-    rq.file = &db->file;
-    rq.num_keys = 1;
-    rq.keys = &keylist;
-    rq.callback_ctx = &lookup_ctx;
-    rq.fetch_callback = lookup_callback;
-    rq.node_callback = walk_node_callback;
-    rq.fold = 1;
+        rq.cmp.compare = compare;
+        rq.cmp.arg = &cmptmp;
+        rq.file = &db->file;
+        rq.num_keys = 1;
+        rq.keys = &keylist;
+        rq.callback_ctx = &lookup_ctx;
+        rq.fetch_callback = lookup_callback;
+        rq.node_callback = walk_node_callback;
+        rq.fold = 1;
 
-    error_pass(btree_lookup(&rq, root->pointer));
+        error_pass(btree_lookup(&rq, root->pointer));
+    }
 cleanup:
     return errcode;
 }
@@ -910,34 +924,36 @@ static couchstore_error_t iterate_docinfos(Db *db,
     }
 
     // Create an array of *pointers to* sized_bufs, which is what btree_lookup wants:
-    keyptrs = malloc(numDocs * sizeof(sized_buf*));
+    keyptrs = static_cast<const sized_buf**>(malloc(numDocs * sizeof(sized_buf*)));
     error_unless(keyptrs, COUCHSTORE_ERROR_ALLOC_FAIL);
 
-    unsigned i;
-    for (i = 0; i< numDocs; ++i) {
-        keyptrs[i] = &keys[i];
-    }
-    if (!fold) {
-        // Sort the key pointers:
-        qsort(keyptrs, numDocs, sizeof(keyptrs[0]), key_ptr_compare);
-    }
+    {
+        unsigned i;
+        for (i = 0; i< numDocs; ++i) {
+            keyptrs[i] = &keys[i];
+        }
+        if (!fold) {
+            // Sort the key pointers:
+            qsort(keyptrs, numDocs, sizeof(keyptrs[0]), key_ptr_compare);
+        }
 
-    // Construct the lookup request:
-    lookup_context cbctx = {db, 0, callback, ctx, (tree == db->header.by_id_root), 0, NULL};
-    couchfile_lookup_request rq;
-    sized_buf cmptmp;
-    rq.cmp.compare = key_compare;
-    rq.cmp.arg = &cmptmp;
-    rq.file = &db->file;
-    rq.num_keys = numDocs;
-    rq.keys = (sized_buf**) keyptrs;
-    rq.callback_ctx = &cbctx;
-    rq.fetch_callback = lookup_callback;
-    rq.node_callback = NULL;
-    rq.fold = fold;
+        // Construct the lookup request:
+        lookup_context cbctx = {db, 0, callback, ctx, (tree == db->header.by_id_root), 0, NULL};
+        couchfile_lookup_request rq;
+        sized_buf cmptmp;
+        rq.cmp.compare = key_compare;
+        rq.cmp.arg = &cmptmp;
+        rq.file = &db->file;
+        rq.num_keys = numDocs;
+        rq.keys = (sized_buf**) keyptrs;
+        rq.callback_ctx = &cbctx;
+        rq.fetch_callback = lookup_callback;
+        rq.node_callback = NULL;
+        rq.fold = fold;
 
-    // Go!
-    error_pass(btree_lookup(&rq, tree->pointer));
+        // Go!
+        error_pass(btree_lookup(&rq, tree->pointer));
+    }
 cleanup:
     free(keyptrs);
     return errcode;
@@ -967,15 +983,15 @@ couchstore_error_t couchstore_docinfos_by_sequence(Db *db,
                                                    void *ctx)
 {
     // Create the array of keys:
-    sized_buf *keylist = malloc(numDocs * sizeof(sized_buf));
-    raw_by_seq_key *keyvalues = malloc(numDocs * sizeof(raw_by_seq_key));
+    sized_buf *keylist = static_cast<sized_buf*>(malloc(numDocs * sizeof(sized_buf)));
+    raw_by_seq_key *keyvalues = static_cast<raw_by_seq_key*>(malloc(numDocs * sizeof(raw_by_seq_key)));
     couchstore_error_t errcode;
     error_unless(!db->dropped, COUCHSTORE_ERROR_FILE_CLOSED);
     error_unless(keylist && keyvalues, COUCHSTORE_ERROR_ALLOC_FAIL);
     unsigned i;
     for (i = 0; i< numDocs; ++i) {
         keyvalues[i].sequence = encode_raw48(sequence[i]);
-        keylist[i].buf = (void*) &keyvalues[i];
+        keylist[i].buf = static_cast<char*>((void*) &keyvalues[i]);
         keylist[i].size = sizeof(keyvalues[i]);
     }
 
@@ -1155,7 +1171,7 @@ struct _os_error *get_os_error_store(void) {
         ptr = calloc(1, sizeof(struct _os_error));
         pthread_setspecific(os_err_key, ptr);
     }
-    return ptr;
+    return static_cast<struct _os_error*>(ptr);
 }
 
 LIBCOUCHSTORE_API

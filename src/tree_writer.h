@@ -4,6 +4,9 @@
 #include <libcouchstore/couch_db.h>
 #include "couch_btree.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct TreeWriter TreeWriter;
 
@@ -59,5 +62,10 @@ couchstore_error_t TreeWriterWrite(TreeWriter* writer,
  *     <key bytes>
  *     <value bytes>
  */
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif // LIBCOUCHSTORE_TREE_WRITER_H

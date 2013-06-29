@@ -8,6 +8,10 @@
 #include "internal.h"
 #include "fatbuf.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** Plain lexicographic comparison of the contents of two sized_bufs. */
 int ebin_cmp(const sized_buf *e1, const sized_buf *e2);
 
@@ -47,5 +51,9 @@ int seq_cmp(const sized_buf *k1, const sized_buf *k2);
     do { \
         if((C) != 0) { error_pass(E); } \
     } while (0)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COUCHSTORE_UTIL_H */

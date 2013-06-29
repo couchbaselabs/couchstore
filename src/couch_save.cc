@@ -50,7 +50,7 @@ static couchstore_error_t write_doc(Db *db, const Doc *doc, uint64_t *bp,
     if (writeopts & COMPRESS_DOC_BODIES) {
         errcode = db_write_buf_compressed(&db->file, &doc->data, (cs_off_t *) bp, disk_size);
     } else {
-        errcode = db_write_buf(&db->file, &doc->data, (cs_off_t *) bp, disk_size);
+        errcode = static_cast<couchstore_error_t>(db_write_buf(&db->file, &doc->data, (cs_off_t *) bp, disk_size));
     }
 
     return errcode;
@@ -58,16 +58,16 @@ static couchstore_error_t write_doc(Db *db, const Doc *doc, uint64_t *bp,
 
 static int ebin_ptr_compare(const void *a, const void *b)
 {
-    const sized_buf* const* buf1 = a;
-    const sized_buf* const* buf2 = b;
+    const sized_buf* const* buf1 = static_cast<const sized_buf* const *>(a);
+    const sized_buf* const* buf2 = static_cast<const sized_buf* const *>(b);
     return ebin_cmp(*buf1, *buf2);
 }
 
 static int seq_action_compare(const void *actv1, const void *actv2)
 {
     const couchfile_modify_action *act1, *act2;
-    act1 = (const couchfile_modify_action *) actv1;
-    act2 = (const couchfile_modify_action *) actv2;
+    act1 = static_cast<const couchfile_modify_action *>(actv1);
+    act2 = static_cast<const couchfile_modify_action *>(actv2);
 
     uint64_t seq1, seq2;
 
@@ -151,6 +151,7 @@ static couchstore_error_t update_indexes(Db *db,
     couchfile_modify_request seqrq, idrq;
     sized_buf tmpsb;
     int ii;
+    index_update_ctx fetcharg;
 
     /*
     ** Two action list up to numdocs * 2 in size + Compare keys for ids,
@@ -162,17 +163,21 @@ static couchstore_error_t update_indexes(Db *db,
     actbuf = fatbuf_alloc(numdocs * size);
     error_unless(actbuf, COUCHSTORE_ERROR_ALLOC_FAIL);
 
-    idacts = fatbuf_get(actbuf, numdocs * sizeof(couchfile_modify_action) * 2);
-    seqacts = fatbuf_get(actbuf, numdocs * sizeof(couchfile_modify_action) * 2);
+    idacts = static_cast<couchfile_modify_action*>(fatbuf_get(actbuf, numdocs * sizeof(couchfile_modify_action) * 2));
+    seqacts = static_cast<couchfile_modify_action*>(fatbuf_get(actbuf, numdocs * sizeof(couchfile_modify_action) * 2));
     error_unless(idacts && seqacts, COUCHSTORE_ERROR_ALLOC_FAIL);
 
-    index_update_ctx fetcharg = {
-        seqacts, 0, &seqs, &seqvals, 0, actbuf
-    };
+    memset(&fetcharg, 0, sizeof(fetcharg));
+    fetcharg.seqacts = seqacts;
+    fetcharg.actpos = 0;
+    fetcharg.seqs = &seqs;
+    fetcharg.seqvals = &seqvals;
+    fetcharg.valpos = 0;
+    fetcharg.deltermbuf = actbuf;
 
     // Sort the array indexes of ids[] by ascending id. Since we can't pass context info to qsort,
     // actually sort an array of pointers to the elements of ids[], rather than the array indexes.
-    sorted_ids = malloc(numdocs * sizeof(sized_buf*));
+    sorted_ids = static_cast<const sized_buf**>(malloc(numdocs * sizeof(sized_buf*)));
     error_unless(sorted_ids, COUCHSTORE_ERROR_ALLOC_FAIL);
     for (ii = 0; ii < numdocs; ++ii) {
         sorted_ids[ii] = &ids[ii];
@@ -340,10 +345,10 @@ couchstore_error_t couchstore_save_documents(Db *db,
     }
 
 
-    seqklist = fatbuf_get(fb, numdocs * sizeof(sized_buf));
-    idklist = fatbuf_get(fb, numdocs * sizeof(sized_buf));
-    seqvlist = fatbuf_get(fb, numdocs * sizeof(sized_buf));
-    idvlist = fatbuf_get(fb, numdocs * sizeof(sized_buf));
+    seqklist = static_cast<sized_buf*>(fatbuf_get(fb, numdocs * sizeof(sized_buf)));
+    idklist = static_cast<sized_buf*>(fatbuf_get(fb, numdocs * sizeof(sized_buf)));
+    seqvlist = static_cast<sized_buf*>(fatbuf_get(fb, numdocs * sizeof(sized_buf)));
+    idvlist = static_cast<sized_buf*>(fatbuf_get(fb, numdocs * sizeof(sized_buf)));
 
     for (ii = 0; ii < numdocs; ii++) {
         if(options & COUCHSTORE_SEQUENCE_AS_IS) {

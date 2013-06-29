@@ -1,3 +1,4 @@
+/* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include "config.h"
 #include "internal.h"
 #include "couch_btree.h"
@@ -42,7 +43,7 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
 
     target->file.pos = 1;
     target->header.update_seq = source->header.update_seq;
-    if(flags & COUCHSTORE_COMPACT_FLAG_DROP_DELETES) {
+    if (flags & COUCHSTORE_COMPACT_FLAG_DROP_DELETES) {
         //Count the number of times purge has happened
         target->header.purge_seq = source->header.purge_seq + 1;
     } else {
@@ -50,7 +51,7 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
     }
     target->header.purge_ptr = source->header.purge_ptr;
 
-    if(source->header.by_seq_root) {
+    if (source->header.by_seq_root) {
         error_pass(TreeWriterOpen(NULL, ebin_cmp, by_id_reduce, by_id_rereduce, NULL, &ctx.tree_writer));
         error_pass(compact_seq_tree(source, target, &ctx));
         error_pass(TreeWriterSort(ctx.tree_writer));
@@ -59,7 +60,7 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
         ctx.tree_writer = NULL;
     }
 
-    if(source->header.local_docs_root) {
+    if (source->header.local_docs_root) {
         error_pass(compact_localdocs_tree(source, target, &ctx));
     }
     error_pass(couchstore_commit(target));
@@ -68,7 +69,7 @@ cleanup:
     delete_arena(ctx.transient_arena);
     delete_arena(ctx.persistent_arena);
     couchstore_close_db(target);
-    if(errcode != COUCHSTORE_SUCCESS && target != NULL) {
+    if (errcode != COUCHSTORE_SUCCESS && target != NULL) {
         unlink(target_filename);
     }
     return errcode;
@@ -82,12 +83,12 @@ couchstore_error_t couchstore_compact_db(Db* source, const char* target_filename
 //Copy buffer to arena
 static sized_buf* arena_copy_buf(arena* a, sized_buf *src)
 {
-    sized_buf *nbuf = arena_alloc(a, sizeof(sized_buf));
-    if(nbuf == NULL) {
+    sized_buf *nbuf = static_cast<sized_buf*>(arena_alloc(a, sizeof(sized_buf)));
+    if (nbuf == NULL) {
         return NULL;
     }
-    nbuf->buf = arena_alloc(a, src->size);
-    if(nbuf->buf == NULL) {
+    nbuf->buf = static_cast<char*>(arena_alloc(a, src->size));
+    if (nbuf->buf == NULL) {
         return NULL;
     }
     nbuf->size = src->size;
@@ -98,12 +99,19 @@ static sized_buf* arena_copy_buf(arena* a, sized_buf *src)
 static couchstore_error_t output_seqtree_item(sized_buf* k, sized_buf *v, compact_ctx *ctx)
 {
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
+    sized_buf *v_c;
+    const raw_seq_index_value* rawSeq;
+    uint32_t idsize, datasize;
+    uint32_t revMetaSize;
+    sized_buf id_k, id_v;
+    raw_id_index_value *raw;
     sized_buf *k_c = arena_copy_buf(ctx->transient_arena, k);
-    if(k_c == NULL) {
+
+    if (k_c == NULL) {
         error_pass(COUCHSTORE_ERROR_READ);
     }
-    sized_buf *v_c = arena_copy_buf(ctx->transient_arena, v);
-    if(v_c == NULL) {
+    v_c = arena_copy_buf(ctx->transient_arena, v);
+    if (v_c == NULL) {
         error_pass(COUCHSTORE_ERROR_READ);
     }
 
@@ -111,19 +119,17 @@ static couchstore_error_t output_seqtree_item(sized_buf* k, sized_buf *v, compac
     
     // Decode the by-sequence index value. See the file format doc or
     // assemble_id_index_value in couch_db.c:
-    const raw_seq_index_value* rawSeq = (const raw_seq_index_value*)v->buf;
-    uint32_t idsize, datasize;
+    rawSeq = (const raw_seq_index_value*)v->buf;
     decode_kv_length(&rawSeq->sizes, &idsize, &datasize);
-    uint32_t revMetaSize = (uint32_t)v->size - (sizeof(raw_seq_index_value) + idsize);
+    revMetaSize = (uint32_t)v->size - (sizeof(raw_seq_index_value) + idsize);
     
     // Set up sized_bufs for the ID tree key and value:
-    sized_buf id_k, id_v;
     id_k.buf = (char*)(rawSeq + 1);
     id_k.size = idsize;
     id_v.size = sizeof(raw_id_index_value) + revMetaSize;
-    id_v.buf = arena_alloc(ctx->transient_arena, id_v.size);
+    id_v.buf = static_cast<char*>(arena_alloc(ctx->transient_arena, id_v.size));
 
-    raw_id_index_value *raw = (raw_id_index_value*)id_v.buf;
+    raw = (raw_id_index_value*)id_v.buf;
     raw->db_seq = *(raw_48*)k->buf;  //Copy db seq from seq tree key
     raw->size = encode_raw32(datasize);
     raw->bp = rawSeq->bp;
@@ -133,7 +139,7 @@ static couchstore_error_t output_seqtree_item(sized_buf* k, sized_buf *v, compac
 
     error_pass(TreeWriterAddItem(ctx->tree_writer, id_k, id_v));
 
-    if(ctx->target_mr->count == 0) {
+    if (ctx->target_mr->count == 0) {
         /* No items queued, we must have just flushed. We can safely rewind the transient arena. */
         arena_free_all(ctx->transient_arena);
     }
@@ -148,12 +154,12 @@ static couchstore_error_t compact_seq_fetchcb(couchfile_lookup_request *rq, void
     raw_seq_index_value* rawSeq = (raw_seq_index_value*)v->buf;
     uint64_t bpWithDeleted = decode_raw48(rawSeq->bp);
     uint64_t bp = bpWithDeleted & ~BP_DELETED_FLAG;
-    if((bpWithDeleted & BP_DELETED_FLAG) &&
+    if ((bpWithDeleted & BP_DELETED_FLAG) &&
        (ctx->flags & COUCHSTORE_COMPACT_FLAG_DROP_DELETES)) {
         return COUCHSTORE_SUCCESS;
     }
 
-    if(bp != 0) {
+    if (bp != 0) {
         cs_off_t new_bp = 0;
         // Copy the document from the old db file to the new one:
         size_t new_size = 0;
@@ -161,9 +167,8 @@ static couchstore_error_t compact_seq_fetchcb(couchfile_lookup_request *rq, void
         item.buf = NULL;
 
         int itemsize = pread_bin(rq->file, bp, &item.buf);
-        if(itemsize < 0)
-        {
-            return itemsize;
+        if (itemsize < 0) {
+	    return static_cast<couchstore_error_t>(itemsize);
         }
         item.size = itemsize;
 
@@ -174,7 +179,7 @@ static couchstore_error_t compact_seq_fetchcb(couchfile_lookup_request *rq, void
         free(item.buf);
     }
 
-    return output_seqtree_item(k, v, ctx);
+    return output_seqtree_item(static_cast<sized_buf*>(k), v, ctx);
 }
 
 static couchstore_error_t compact_seq_tree(Db* source, Db* target, compact_ctx *ctx)
@@ -187,14 +192,14 @@ static couchstore_error_t compact_seq_tree(Db* source, Db* target, compact_ctx *
     couchfile_lookup_request srcfold;
     sized_buf low_key;
     //Keys in seq tree are 48-bit numbers, this is 0, lowest possible key
-    low_key.buf = "\0\0\0\0\0\0";
+    low_key.buf = const_cast<char*>("\0\0\0\0\0\0");
     low_key.size = 6;
     sized_buf *low_key_list = &low_key;
 
     ctx->target_mr = new_btree_modres(ctx->persistent_arena, ctx->transient_arena, &target->file,
                                       &seqcmp, by_seq_reduce, by_seq_rereduce, NULL,
                                       DB_CHUNK_THRESHOLD, DB_CHUNK_THRESHOLD);
-    if(ctx->target_mr == NULL) {
+    if (ctx->target_mr == NULL) {
         error_pass(COUCHSTORE_ERROR_ALLOC_FAIL);
     }
 
@@ -209,7 +214,7 @@ static couchstore_error_t compact_seq_tree(Db* source, Db* target, compact_ctx *
     srcfold.node_callback = NULL;
 
     errcode = btree_lookup(&srcfold, source->header.by_seq_root->pointer);
-    if(errcode == COUCHSTORE_SUCCESS) {
+    if (errcode == COUCHSTORE_SUCCESS) {
         target->header.by_seq_root = complete_new_btree(ctx->target_mr, &errcode);
     }
 cleanup:
@@ -222,8 +227,9 @@ static couchstore_error_t compact_localdocs_fetchcb(couchfile_lookup_request *rq
 {
     compact_ctx *ctx = (compact_ctx *) rq->callback_ctx;
     //printf("V: '%.*s'\n", v->size, v->buf);
-    return mr_push_item(arena_copy_buf(ctx->persistent_arena, k),
-            arena_copy_buf(ctx->persistent_arena, v), ctx->target_mr);
+    return mr_push_item(arena_copy_buf(ctx->persistent_arena, static_cast<sized_buf*>(k)),
+			arena_copy_buf(ctx->persistent_arena, v),
+			ctx->target_mr);
 }
 
 static couchstore_error_t compact_localdocs_tree(Db* source, Db* target, compact_ctx *ctx)
@@ -243,7 +249,7 @@ static couchstore_error_t compact_localdocs_tree(Db* source, Db* target, compact
     ctx->target_mr = new_btree_modres(ctx->persistent_arena, NULL, &target->file,
                                       &idcmp, NULL, NULL, NULL, DB_CHUNK_THRESHOLD,
                                       DB_CHUNK_THRESHOLD);
-    if(ctx->target_mr == NULL) {
+    if (ctx->target_mr == NULL) {
         error_pass(COUCHSTORE_ERROR_ALLOC_FAIL);
     }
 
@@ -258,7 +264,7 @@ static couchstore_error_t compact_localdocs_tree(Db* source, Db* target, compact
     srcfold.node_callback = NULL;
 
     errcode = btree_lookup(&srcfold, source->header.local_docs_root->pointer);
-    if(errcode == COUCHSTORE_SUCCESS) {
+    if (errcode == COUCHSTORE_SUCCESS) {
         target->header.local_docs_root = complete_new_btree(ctx->target_mr, &errcode);
     }
 cleanup:

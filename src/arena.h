@@ -6,10 +6,14 @@
 //  Copyright (c) 2012 Couchbase, Inc. All rights reserved.
 //
 
-#ifndef COUCH_ARENA_H
-#define COUCH_ARENA_H
+#ifndef COUCHSTORE_ARENA_H
+#define COUCHSTORE_ARENA_H
 
 #include <sys/types.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** Opaque arena-allocator object. */
 typedef struct arena arena;
@@ -75,5 +79,8 @@ void arena_free_from_mark(arena *a, const arena_position *mark);
  */
 void arena_free_all(arena *a);
 
+#ifdef __cplusplus
+}
+#endif
 
-#endif // COUCH_ARENA_H
+#endif // COUCHSTORE_ARENA_H

@@ -104,7 +104,7 @@ static int pread_bin_internal(tree_file *file, cs_off_t pos, char **ret_ptr, int
     }
     info.crc32 = ntohl(info.crc32);
 
-    char* buf = malloc(info.chunk_len);
+    char* buf = static_cast<char*>(malloc(info.chunk_len));
     if (!buf) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }

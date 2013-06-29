@@ -1,3 +1,4 @@
+/* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 //
 //  iobuffer.c
 //  couchstore
@@ -52,7 +53,7 @@ typedef struct buffered_file_handle {
 
 
 static file_buffer* new_buffer(buffered_file_handle* owner, size_t capacity) {
-    file_buffer *buf = malloc(sizeof(file_buffer) + capacity);
+    file_buffer *buf = static_cast<file_buffer*>(malloc(sizeof(file_buffer) + capacity));
     if (buf) {
         buf->prev = buf->next = NULL;
         buf->owner = owner;
@@ -223,7 +224,7 @@ static void buffered_destructor(couch_file_handle handle)
 
 static couch_file_handle buffered_constructor_with_raw_ops(const couch_file_ops* raw_ops)
 {
-    buffered_file_handle *h = malloc(sizeof(buffered_file_handle));
+    buffered_file_handle *h = static_cast<buffered_file_handle*>(malloc(sizeof(buffered_file_handle)));
     if (h) {
         h->raw_ops = raw_ops;
         h->raw_ops_handle = raw_ops->constructor(raw_ops->cookie);

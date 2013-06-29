@@ -1,3 +1,4 @@
+/* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /* Merge Sort
    by Philip J. Erdelsky
    pje@efgh.com
@@ -128,7 +129,7 @@ int merge_sort(FILE *unsorted_file, FILE *sorted_file,
                 return FILE_READ_ERROR;
             }
             if (block_count == block_size || (record_size == 0 && block_count != 0)) {
-                first = sort_linked_list(first, 0, compare_records, &comp, NULL);
+                first = static_cast<record_in_memory*>(sort_linked_list(first, 0, compare_records, &comp, NULL));
                 while (first != NULL) {
                     struct record_in_memory *next = first->next;
                     if ((*write)(source_tape[destination].fp, first->record,
