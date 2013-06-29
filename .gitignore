@@ -31,6 +31,7 @@
 /config/mkinstalldirs
 /config/plugin.ac
 /config/ar-lib
+/config/test-driver
 /configure
 /couch_compact
 /couch_dbdump
