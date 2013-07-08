@@ -100,7 +100,6 @@ couchstore_error_t encode_view_btree_key(const view_btree_key_t *key,
 }
 
 
-LIBCOUCHSTORE_API
 void free_view_btree_key(view_btree_key_t *key)
 {
     if (key == NULL) {
