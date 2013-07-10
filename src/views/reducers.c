@@ -10,7 +10,6 @@
 #include "values.h"
 #include "reducers.h"
 #include "../couch_btree.h"
-#include "mapreduce/mapreduce.h"
 
 #define DOUBLE_FMT "%.15lg"
 #define scan_stats(buf, sum, count, min, max, sumsqr) \
@@ -21,13 +20,13 @@
         sprintf(buf, "{\"sum\":%lg,\"count\":%llu,\"min\":%lg,\"max\":%lg,\"sumsqr\":%lg}",\
                 sum, count, min, max, sumsqr)
 
-static void free_view_btree_key_excluding_elements(view_btree_key_t *key);
+static void free_key_excluding_elements(view_btree_key_t *key);
 
-static void mapreduce_free_json_list_repeating_k(mapreduce_json_list_t *list);
+static void free_json_key_list(mapreduce_json_list_t *list);
 
-static void free_view_btree_reduction_excluding_elements(view_btree_reduction_t *reduction);
+static void free_reduction_excluding_elements(view_btree_reduction_t *reduction);
 
-static void free_view_btree_value_excluding_elements(view_btree_value_t *value);
+static void free_value_excluding_elements(view_btree_value_t *value);
 
 static int buf_to_str(const sized_buf *buf, char str[32])
 {
@@ -743,8 +742,8 @@ couchstore_error_t view_btree_js_reduce(char *dst,
             kl->values[kl->length].json = k->json_key.buf;
             kl->length++;
         }
-        free_view_btree_value_excluding_elements(v2);
-        free_view_btree_key_excluding_elements(k);
+        free_value_excluding_elements(v2);
+        free_key_excluding_elements(k);
     }
     ret = mapreduce_reduce_all(context, kl, vl, &rl, &error_msg);
     if (ret != MAPREDUCE_SUCCESS) {
@@ -766,14 +765,14 @@ couchstore_error_t view_btree_js_reduce(char *dst,
     errcode = encode_view_btree_reduction(r, dst, size_r);
 
 alloc_error:
-    mapreduce_free_json_list_repeating_k(kl);
+    free_json_key_list(kl);
     mapreduce_free_json_list(vl);
     mapreduce_free_json_list(rl);
-    free_view_btree_reduction_excluding_elements(r);
+    free_reduction_excluding_elements(r);
     return errcode;
 }
 
-static void free_view_btree_key_excluding_elements(view_btree_key_t *key)
+static void free_key_excluding_elements(view_btree_key_t *key)
 {
     if (key != NULL) {
         free(key->doc_id.buf);
@@ -781,17 +780,17 @@ static void free_view_btree_key_excluding_elements(view_btree_key_t *key)
     }
 }
 
-static void mapreduce_free_json_list_repeating_k(mapreduce_json_list_t *list)
+static void free_json_key_list(mapreduce_json_list_t *list)
 {
-    int i, j;
+    int i;
 
     if (list == NULL) {
         return;
     }
 
-    for (j = list->length - 1; j > 0; --j) {
-        if (list->values[j].json == list->values[j - 1].json) {
-            list->values[j].length = 0;
+    for (i = list->length - 1; i > 0; --i) {
+        if (list->values[i].json == list->values[i - 1].json) {
+            list->values[i].length = 0;
         }
     }
 
@@ -804,7 +803,7 @@ static void mapreduce_free_json_list_repeating_k(mapreduce_json_list_t *list)
     free(list);
 }
 
-static void free_view_btree_reduction_excluding_elements(view_btree_reduction_t *reduction)
+static void free_reduction_excluding_elements(view_btree_reduction_t *reduction)
 {
     if (reduction != NULL) {
         free(reduction->reduce_values);
@@ -812,7 +811,7 @@ static void free_view_btree_reduction_excluding_elements(view_btree_reduction_t 
     }
 }
 
-static void free_view_btree_value_excluding_elements(view_btree_value_t *value)
+static void free_value_excluding_elements(view_btree_value_t *value)
 {
     if (value != NULL) {
         free(value->values);
