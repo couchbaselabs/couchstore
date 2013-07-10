@@ -275,6 +275,7 @@ static void test_reduce_and_rereduce_success()
     assert(result->values[1].length == (sizeof("11") - 1));
     assert(strncmp(result->values[1].json, "11", (sizeof("11") - 1)) == 0);
 
+    mapreduce_free_json_list(result);
     mapreduce_json_t *reduction = NULL;
 
     /* reduce single function (1st) */
