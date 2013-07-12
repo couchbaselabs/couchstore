@@ -21,6 +21,8 @@ static void test_view_btree_stats_reducer();
 static void test_view_btree_stats_reducer_errors();
 static void test_view_btree_js_reducer();
 static void test_view_btree_js_reducer_errors();
+static void test_view_btree_js_rereducer();
+static void test_view_btree_js_rereducer_errors();
 
 void reducer_tests()
 {
@@ -38,6 +40,9 @@ void reducer_tests()
     test_view_btree_js_reducer();
     test_view_btree_js_reducer_errors();
     TPRINT("End of view btree js reducer tests\n");
+    test_view_btree_js_rereducer();
+    test_view_btree_js_rereducer_errors();
+    TPRINT("End of view btree js rereducer tests\n");
 }
 
 static void test_view_id_btree_reducer()
@@ -843,6 +848,223 @@ static void test_view_btree_js_reducer_errors()
                                   uctx.error_msg) == 0);
 
     mapreduce_free_error_msg(uctx.error_msg);
+    free_node_list(nl);
+    mapreduce_free_context(context);
+}
+
+static void test_view_btree_js_rereducer_errors()
+{
+    nodelist *nl = NULL;
+    node_pointer *np = NULL;
+    node_pointer *np2 = NULL;
+    char dst[MAX_REDUCTION_SIZE];
+    size_t size_r;
+    int count = 0;
+    /* partition ID is 1, two values, 5 and 6, ascii encoded */
+    char data_bin1[] = {0,1,0,0,1,53,0,0,1,54};
+    /*json_key size is 2, doc_id size is 4 */
+    char key_bin1[] = {0,2,53,54,11,22,33,44};
+    char reduce_bin[] = {
+        0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,2,49,49
+    };
+    /* partition ID is 2, two values, 5 and 6 */
+    char data_bin2[] = {0,2,0,0,1,53,0,0,1,54};
+    /* json_key size is 2, doc_id size is 5 */
+    char key_bin2[] = {0,2,53,54,11,22,33,44,55};
+    char reduce_bin2[] = {
+        0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,2,49,49
+    };
+    nodelist *nl2 = NULL;
+    user_view_reducer_ctx_t uctx;
+    void *context = NULL;
+    char *error_msg = NULL;
+    mapreduce_error_t ret;
+    const char *functions[] = {
+        "function(key, values, rereduce) { return values.length; }",
+        "function(key, values, rereduce) { return values[0].error.error; }"
+    };
+
+    ret = mapreduce_start_reduce_context(functions, 2, &context, &error_msg);
+    assert(ret == MAPREDUCE_SUCCESS);
+    assert(error_msg == NULL);
+    assert(context != NULL);
+    uctx.mapreduce_context = context;
+    uctx.mapreduce_error = MAPREDUCE_SUCCESS;
+    uctx.error_msg = NULL;
+    uctx.num_functions = 2;
+
+    nl = (nodelist *) malloc(sizeof(nodelist));
+    assert(nl != NULL);
+    count++;
+    nl->data.buf = data_bin1;
+    nl->data.size = sizeof(data_bin1);;
+    nl->key.buf = key_bin1;
+    nl->key.size = sizeof(key_bin1);
+    nl->pointer = NULL;
+    nl->next = NULL;
+
+    np = (node_pointer *) malloc(sizeof(node_pointer));
+    assert(np != NULL);
+    np->key.buf = key_bin1;
+    np->key.size = sizeof(key_bin1);
+    np->reduce_value.buf = reduce_bin;
+    np->reduce_value.size = sizeof(reduce_bin);
+    np->pointer = 0;
+    np->subtreesize = 2;
+    nl->pointer = np;
+
+    nl2 = (nodelist *) malloc(sizeof(nodelist));
+    assert(nl2 != NULL);
+    count++;
+    nl2->data.buf = data_bin2;
+    nl2->data.size = sizeof(data_bin2);
+    nl2->key.buf = key_bin2;
+    nl2->key.size = sizeof(key_bin2);
+    nl2->pointer = NULL;
+    nl2->next = NULL;
+    nl->next = nl2;
+
+    np2 = (node_pointer *) malloc(sizeof(node_pointer));
+    assert(np2 != NULL);
+
+    np2->key.buf = key_bin2;
+    np2->key.size = sizeof(key_bin2);
+    np2->reduce_value.buf = reduce_bin2;
+    np2->reduce_value.size = sizeof(reduce_bin2);
+    np2->pointer = 0;
+    np2->subtreesize = 2;
+    nl2->pointer = np2;
+
+    assert(view_btree_js_rereduce(dst, &size_r, nl, count, &uctx) == COUCHSTORE_ERROR_REDUCER_FAILURE);
+    assert(uctx.mapreduce_error == MAPREDUCE_RUNTIME_ERROR);
+    assert(uctx.error_msg != NULL);
+    assert(strcmp("TypeError: Cannot read property 'error' of undefined",
+                                  uctx.error_msg) == 0);
+
+    mapreduce_free_error_msg(uctx.error_msg);
+    free_node_list(nl);
+    mapreduce_free_context(context);
+}
+
+static void test_view_btree_js_rereducer()
+{
+    nodelist *nl = NULL;
+    node_pointer *np = NULL;
+    node_pointer *np2 = NULL;
+    view_btree_reduction_t *r = NULL;
+    char dst[MAX_REDUCTION_SIZE];
+    size_t size_r;
+    int count = 0;
+    /* partition ID is 1, two values, 5 and 6, ascii encoded */
+    char data_bin1[] = {0,1,0,0,1,53,0,0,1,54};
+    /*json_key size is 2, doc_id size is 4 */
+    char key_bin1[] = {0,2,53,54,11,22,33,44};
+    char reduce_bin[] = {
+        0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,2,49,49
+    };
+    /* partition ID is 2, two values, 5 and 6 */
+    char data_bin2[] = {0,2,0,0,1,53,0,0,1,54};
+    /* json_key size is 2, doc_id size is 5 */
+    char key_bin2[] = {0,2,53,54,11,22,33,44,55};
+    char reduce_bin2[] = {
+        0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,2,49,49
+    };
+    nodelist *nl2 = NULL;
+    int i;
+    user_view_reducer_ctx_t uctx;
+    void *context = NULL;
+    char *error_msg = NULL;
+    mapreduce_error_t ret;
+    const char *functions[] = {
+        "function(key, values, rereduce) { return values.length; }",
+        "function(key, values, rereduce) { return values[0]; }"
+    };
+
+    ret = mapreduce_start_reduce_context(functions, 2, &context, &error_msg);
+    assert(ret == MAPREDUCE_SUCCESS);
+    assert(error_msg == NULL);
+    assert(context != NULL);
+    uctx.mapreduce_context = context;
+    uctx.mapreduce_error = MAPREDUCE_SUCCESS;
+    uctx.error_msg = NULL;
+    uctx.num_functions = 2;
+
+    nl = (nodelist *) malloc(sizeof(nodelist));
+    assert(nl != NULL);
+    count++;
+    nl->data.buf = data_bin1;
+    nl->data.size = sizeof(data_bin1);;
+    nl->key.buf = key_bin1;
+    nl->key.size = sizeof(key_bin1);
+    nl->pointer = NULL;
+    nl->next = NULL;
+
+    np = (node_pointer *) malloc(sizeof(node_pointer));
+    assert(np != NULL);
+    np->key.buf = key_bin1;
+    np->key.size = sizeof(key_bin1);
+    np->reduce_value.buf = reduce_bin;
+    np->reduce_value.size = sizeof(reduce_bin);
+    np->pointer = 0;
+    np->subtreesize = 2;
+    nl->pointer = np;
+
+    nl2 = (nodelist *) malloc(sizeof(nodelist));
+    assert(nl2 != NULL);
+    count++;
+    nl2->data.buf = data_bin2;
+    nl2->data.size = sizeof(data_bin2);
+    nl2->key.buf = key_bin2;
+    nl2->key.size = sizeof(key_bin2);
+    nl2->pointer = NULL;
+    nl2->next = NULL;
+    nl->next = nl2;
+
+    np2 = (node_pointer *) malloc(sizeof(node_pointer));
+    assert(np2 != NULL);
+
+    np2->key.buf = key_bin2;
+    np2->key.size = sizeof(key_bin2);
+    np2->reduce_value.buf = reduce_bin2;
+    np2->reduce_value.size = sizeof(reduce_bin2);
+    np2->pointer = 0;
+    np2->subtreesize = 2;
+    nl2->pointer = np2;
+
+    assert(view_btree_js_rereduce(dst, &size_r, nl, count, &uctx) == COUCHSTORE_SUCCESS);
+    assert(decode_view_btree_reduction(dst, size_r, &r) == COUCHSTORE_SUCCESS);
+    assert(r->kv_count == 4);
+    assert(r->num_values == 2);
+    assert(uctx.mapreduce_error == MAPREDUCE_SUCCESS);
+    assert(uctx.error_msg == NULL);
+
+    assert(memcmp(r->reduce_values[0].buf, "2", 1) == 0);
+    assert(r->reduce_values[0].size == 1);
+    assert(memcmp(r->reduce_values[1].buf, "11", 2) == 0);
+    assert(r->reduce_values[1].size == 2);
+
+    assert(is_bit_set(&r->partitions_bitmap,1));
+    assert(is_bit_set(&r->partitions_bitmap,2));
+
+    for (i = 0; i < BITMAP_SIZE; ++i) {
+        if ((i != 1) && (i != 2)) {
+            assert (!(is_bit_set(&r->partitions_bitmap, i)));
+        }
+    }
+
+    free_view_btree_reduction(r);
     free_node_list(nl);
     mapreduce_free_context(context);
 }

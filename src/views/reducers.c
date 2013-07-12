@@ -772,6 +772,100 @@ alloc_error:
     return errcode;
 }
 
+couchstore_error_t view_btree_js_rereduce(char *dst,
+                                          size_t *size_r,
+                                          const nodelist *itmlist,
+                                          int count,
+                                          void *ctx)
+{
+    view_btree_reduction_t *r = NULL;
+    uint64_t subtree_count = 0;
+    uint64_t reduction_count = 0;
+    uint16_t j;
+    int cnt;
+    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
+    const nodelist *i;
+    user_view_reducer_ctx_t *uctx;
+    mapreduce_json_list_t *vl = NULL;
+    mapreduce_json_t *result = NULL;
+    mapreduce_error_t ret;
+    char *error_msg = NULL;
+    void *context = NULL;
+
+    uctx = (user_view_reducer_ctx_t *) ctx;
+    context = uctx->mapreduce_context;
+    assert(context);
+    r = (view_btree_reduction_t *) calloc(1, sizeof(view_btree_reduction_t));
+    if (r == NULL) {
+        errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
+        goto alloc_error;
+    }
+
+    vl = (mapreduce_json_list_t *) calloc(1, sizeof(mapreduce_json_list_t));
+    if (vl == NULL) {
+        errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
+        goto alloc_error;
+    }
+
+    cnt = count;
+    for (i = itmlist; i != NULL && count > 0; i = i->next, count--) {
+        view_btree_reduction_t *r2 = NULL;
+        errcode = decode_view_btree_reduction(i->pointer->reduce_value.buf,
+                                              i->pointer->reduce_value.size, &r2);
+        if (errcode != COUCHSTORE_SUCCESS) {
+            goto alloc_error;
+        }
+        union_bitmaps(&r->partitions_bitmap, &r2->partitions_bitmap);
+        reduction_count += r2->num_values;
+        subtree_count += r2->kv_count;
+        free_view_btree_reduction(r2);
+    }
+    r->kv_count = subtree_count;
+    vl->values = (mapreduce_json_t *) malloc(reduction_count * sizeof(mapreduce_json_t));
+    if (vl->values == NULL) {
+        errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
+        goto alloc_error;
+    }
+    for (i = itmlist; i != NULL && cnt > 0; i = i->next, cnt--) {
+        view_btree_reduction_t *r3 = NULL;
+        errcode = decode_view_btree_reduction(i->pointer->reduce_value.buf,
+                                              i->pointer->reduce_value.size, &r3);
+        if (errcode != COUCHSTORE_SUCCESS) {
+            goto alloc_error;
+        }
+        for (j = 0; j < r3->num_values; ++j) {
+            vl->values[vl->length].length = r3->reduce_values[j].size;
+            vl->values[vl->length].json = r3->reduce_values[j].buf;
+            vl->length++;
+        }
+        free_reduction_excluding_elements(r3);
+    }
+    r->num_values = uctx->num_functions;
+    r->reduce_values = (sized_buf *) calloc(r->num_values, sizeof(sized_buf));
+    if (r->reduce_values == NULL) {
+        errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
+        goto alloc_error;
+    }
+    for (j = 0; j < r->num_values; ++j) {
+        ret = mapreduce_rereduce(context, j + 1, vl, &result, &error_msg);
+        if (ret != MAPREDUCE_SUCCESS) {
+            uctx->error_msg = error_msg;
+            uctx->mapreduce_error = ret;
+            errcode = COUCHSTORE_ERROR_REDUCER_FAILURE;
+            goto alloc_error;
+        }
+        r->reduce_values[j].size = (size_t) result->length;
+        r->reduce_values[j].buf = result->json;
+        free(result);
+    }
+    errcode = encode_view_btree_reduction(r, dst, size_r);
+
+alloc_error:
+    mapreduce_free_json_list(vl);
+    free_view_btree_reduction(r);
+    return errcode;
+}
+
 static void free_key_excluding_elements(view_btree_key_t *key)
 {
     if (key != NULL) {
