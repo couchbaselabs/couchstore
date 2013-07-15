@@ -20,7 +20,9 @@ typedef struct compact_ctx {
     /* This is for stuff that lasts the duration of the b-tree writing (node pointers) */
     arena *persistent_arena;
     couchfile_modify_result *target_mr;
-    tree_file* target_file;
+    Db* target;
+    couchstore_compact_hook hook;
+    void* hook_ctx;
     couchstore_compact_flags flags;
 } compact_ctx;
 
@@ -29,16 +31,19 @@ static couchstore_error_t compact_localdocs_tree(Db* source, Db* target, compact
 
 couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filename,
                                             couchstore_compact_flags flags,
+                                            couchstore_compact_hook hook,
+                                            void* hook_ctx,
                                             const couch_file_ops *ops)
 {
     Db* target = NULL;
     couchstore_error_t errcode;
-    compact_ctx ctx = {NULL, new_arena(0), new_arena(0), NULL, 0};
+    compact_ctx ctx = {NULL, new_arena(0), new_arena(0), NULL, NULL, hook, hook_ctx, 0};
     ctx.flags = flags;
     error_unless(ctx.transient_arena && ctx.persistent_arena, COUCHSTORE_ERROR_ALLOC_FAIL);
 
     error_pass(couchstore_open_db_ex(target_filename, COUCHSTORE_OPEN_FLAG_CREATE, ops, &target));
 
+    ctx.target = target;
     target->file.pos = 1;
     target->header.update_seq = source->header.update_seq;
     if(flags & COUCHSTORE_COMPACT_FLAG_DROP_DELETES) {
@@ -61,6 +66,9 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
     if(source->header.local_docs_root) {
         error_pass(compact_localdocs_tree(source, target, &ctx));
     }
+    if(ctx.hook != NULL) {
+        error_pass(ctx.hook(ctx.target, NULL, ctx.hook_ctx));
+    }
     error_pass(couchstore_commit(target));
 cleanup:
     TreeWriterFree(ctx.tree_writer);
@@ -75,7 +83,7 @@ cleanup:
 
 couchstore_error_t couchstore_compact_db(Db* source, const char* target_filename)
 {
-    return couchstore_compact_db_ex(source, target_filename, 0, couchstore_get_default_file_ops());
+    return couchstore_compact_db_ex(source, target_filename, 0, NULL, NULL, couchstore_get_default_file_ops());
 }
 
 //Copy buffer to arena
@@ -143,13 +151,29 @@ cleanup:
 
 static couchstore_error_t compact_seq_fetchcb(couchfile_lookup_request *rq, void *k, sized_buf *v)
 {
+    DocInfo* info = NULL;
+    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     compact_ctx *ctx = (compact_ctx *) rq->callback_ctx;
     raw_seq_index_value* rawSeq = (raw_seq_index_value*)v->buf;
     uint64_t bpWithDeleted = decode_raw48(rawSeq->bp);
     uint64_t bp = bpWithDeleted & ~BP_DELETED_FLAG;
     if((bpWithDeleted & BP_DELETED_FLAG) &&
+       (ctx->hook == NULL) &&
        (ctx->flags & COUCHSTORE_COMPACT_FLAG_DROP_DELETES)) {
         return COUCHSTORE_SUCCESS;
+    }
+
+    if(ctx->hook) {
+        error_pass(by_seq_read_docinfo(&info, k, v));
+        int hook_action = ctx->hook(ctx->target, info, ctx->hook_ctx);
+        switch(hook_action) {
+            case COUCHSTORE_COMPACT_KEEP_ITEM:
+                break;
+            case COUCHSTORE_COMPACT_DROP_ITEM:
+                goto cleanup;
+            default:
+                error_pass(hook_action);
+        }
     }
 
     if(bp != 0) {
@@ -173,7 +197,10 @@ static couchstore_error_t compact_seq_fetchcb(couchfile_lookup_request *rq, void
         free(item.buf);
     }
 
-    return output_seqtree_item(k, v, ctx);
+    error_pass(output_seqtree_item(k, v, ctx));
+cleanup:
+    couchstore_free_docinfo(info);
+    return errcode;
 }
 
 static couchstore_error_t compact_seq_tree(Db* source, Db* target, compact_ctx *ctx)

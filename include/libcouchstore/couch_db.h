@@ -580,6 +580,23 @@ extern "C" {
     };
 
     /**
+     * A compactor hook will be given each DocInfo, and can either keep or drop the item
+     * based on its contents.
+     *
+     * It can also return a couchstore error code, which will abort the compaction.
+     *
+     * If a compactor hook is set, COUCHSTORE_COMPACT_FLAG_DROP_DELETES will *not* drop deletes,
+     * but will bump the purge counter. The hook is responsible for dropping deletes.
+     */
+    enum {
+        COUCHSTORE_COMPACT_KEEP_ITEM = 0,
+        COUCHSTORE_COMPACT_DROP_ITEM = 1
+    };
+    typedef int (*couchstore_compact_hook)(Db* target,
+                                           DocInfo *docinfo,
+                                           void *ctx);
+
+    /**
      * Compact a database. This creates a new DB file with the same data as the
      * source db, omitting data that is no longer needed.
      * Will use specified couch_file_ops to create and write the target db.
@@ -592,8 +609,9 @@ extern "C" {
      * @return COUCHSTORE_SUCCESS on success
      */
     LIBCOUCHSTORE_API
-    couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filename,
-                                                uint64_t flags, const couch_file_ops *ops);
+    couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filename, uint64_t flags, 
+                                                couchstore_compact_hook hook, void* hook_ctx,
+                                                const couch_file_ops *ops);
 
 
     /*////////////////////  MISC: */
