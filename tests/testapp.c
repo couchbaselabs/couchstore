@@ -653,7 +653,7 @@ static void mb5086(void)
 
 static void test_asis_seqs(void)
 {
-   Db *db;
+   Db *db = NULL;
    Doc d;
    DocInfo i;
    DocInfo *ir;
@@ -691,6 +691,9 @@ static void test_asis_seqs(void)
    couchstore_free_docinfo(ir);
 
 cleanup:
+   if (db != NULL) {
+       couchstore_close_db(db);
+   }
    assert(errcode == COUCHSTORE_SUCCESS);
 }
 
@@ -722,7 +725,7 @@ static void test_huge_revseq(void)
 static void test_dropped_handle(void)
 {
    couchstore_error_t errcode;
-   Db* db;
+   Db* db = NULL;
    Doc d;
    DocInfo i;
 
@@ -743,6 +746,9 @@ static void test_dropped_handle(void)
    try(couchstore_open_document(db, "test", 4, &rd, 0));
    couchstore_free_document(rd);
 cleanup:
+   if (db != NULL) {
+       couchstore_close_db(db);
+   }
    assert(errcode == COUCHSTORE_SUCCESS);
 }
 
