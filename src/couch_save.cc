@@ -10,6 +10,15 @@
 #include "reduces.h"
 #include "couch_btree.h"
 
+#define SEQ_INDEX_RAW_VALUE_SIZE(doc_info) \
+    (sizeof(raw_seq_index_value) + (doc_info).id.size + (doc_info).rev_meta.size)
+
+#define ID_INDEX_RAW_VALUE_SIZE(doc_info) \
+    (sizeof(raw_id_index_value) + (doc_info).rev_meta.size)
+
+#define RAW_SEQ_SIZE sizeof(raw_48)
+
+
 static size_t assemble_seq_index_value(DocInfo *docinfo, char *dst)
 {
     char* const start = dst;
@@ -272,8 +281,8 @@ static couchstore_error_t add_doc_to_update_list(Db *db,
     DocInfo updated = *info;
     updated.db_seq = seq;
 
-    seqterm->buf = (char *) fatbuf_get(fb, 6);
-    seqterm->size = 6;
+    seqterm->buf = (char *) fatbuf_get(fb, RAW_SEQ_SIZE);
+    seqterm->size = RAW_SEQ_SIZE;
     error_unless(seqterm->buf, COUCHSTORE_ERROR_ALLOC_FAIL);
     *(raw_48*)seqterm->buf = encode_raw48(seq);
 
@@ -298,11 +307,11 @@ static couchstore_error_t add_doc_to_update_list(Db *db,
 
     *idterm = updated.id;
 
-    seqval->buf = (char *) fatbuf_get(fb, (44 + updated.id.size + updated.rev_meta.size));
+    seqval->buf = (char *) fatbuf_get(fb, SEQ_INDEX_RAW_VALUE_SIZE(updated));
     error_unless(seqval->buf, COUCHSTORE_ERROR_ALLOC_FAIL);
     seqval->size = assemble_seq_index_value(&updated, seqval->buf);
 
-    idval->buf = (char *) fatbuf_get(fb, (44 + 10 + updated.rev_meta.size));
+    idval->buf = (char *) fatbuf_get(fb, ID_INDEX_RAW_VALUE_SIZE(updated));
     error_unless(idval->buf, COUCHSTORE_ERROR_ALLOC_FAIL);
     idval->size = assemble_id_index_value(&updated, idval->buf);
 
@@ -332,9 +341,9 @@ couchstore_error_t couchstore_save_documents(Db *db,
     for (ii = 0; ii < numdocs; ii++) {
         // Get additional size for terms to be inserted into indexes
         // IMPORTANT: This must match the sizes of the fatbuf_get calls in add_doc_to_update_list!
-        term_meta_size += 6
-                        + 44 + infos[ii]->id.size + infos[ii]->rev_meta.size
-                        + 44 + 10 + infos[ii]->rev_meta.size;
+        term_meta_size += RAW_SEQ_SIZE;
+        term_meta_size += SEQ_INDEX_RAW_VALUE_SIZE(*infos[ii]);
+        term_meta_size += ID_INDEX_RAW_VALUE_SIZE(*infos[ii]);
     }
 
     fb = fatbuf_alloc(term_meta_size +
