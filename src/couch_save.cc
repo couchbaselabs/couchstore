@@ -213,7 +213,6 @@ static couchstore_error_t update_indexes(Db *db,
     idrq.reduce = by_id_reduce;
     idrq.rereduce = by_id_rereduce;
     idrq.fetch_callback = idfetch_update_cb;
-    idrq.file = &db->file;
     idrq.compacting = 0;
     idrq.kv_chunk_threshold = DB_CHUNK_THRESHOLD;
     idrq.kp_chunk_threshold = DB_CHUNK_THRESHOLD;
