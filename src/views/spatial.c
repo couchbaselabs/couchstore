@@ -129,7 +129,7 @@ double *spatial_center(const sized_mbb_t *mbb)
     if (center == NULL) {
         return NULL;
     }
-    int i;
+    uint32_t i;
 
     for (i = 0; i < mbb->num; i += 2) {
         center[i/2] = mbb->mbb[i] + ((mbb->mbb[i+1] - mbb->mbb[i])/2);

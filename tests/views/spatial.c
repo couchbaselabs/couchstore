@@ -223,7 +223,7 @@ void test_spatial_scale_point()
 
 
 static int cmp_bytes(const unsigned char *bitmap,
-                     const unsigned char *expected,
+                     const char *expected,
                      const uint8_t size)
 {
     int result = 0;
