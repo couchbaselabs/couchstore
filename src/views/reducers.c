@@ -85,7 +85,6 @@ typedef struct {
 
 static void free_key_excluding_elements(view_btree_key_t *key);
 static void free_json_key_list(mapreduce_json_list_t *list);
-static void free_value_excluding_elements(view_btree_value_t *value);
 
 
 static int json_to_str(const mapreduce_json_t *buf, char str[32])
@@ -484,15 +483,6 @@ static void free_json_key_list(mapreduce_json_list_t *list)
 }
 
 
-static void free_value_excluding_elements(view_btree_value_t *value)
-{
-    if (value != NULL) {
-        free(value->values);
-        free(value);
-    }
-}
-
-
 view_reducer_ctx_t *make_view_reducer_ctx(const char *functions[],
                                           unsigned num_functions,
                                           char **error_msg)
@@ -649,25 +639,19 @@ couchstore_error_t view_btree_reduce(char *dst,
     couchstore_error_t ret = COUCHSTORE_SUCCESS;
     mapreduce_json_list_t *key_list = NULL;
     mapreduce_json_list_t *value_list = NULL;
+    view_btree_value_t **values = NULL;
 
+    values = (view_btree_value_t **) calloc(count, sizeof(view_btree_value_t *));
     red = (view_btree_reduction_t *) calloc(1, sizeof(*red));
-    if (red == NULL) {
-        ret = COUCHSTORE_ERROR_ALLOC_FAIL;
-        goto out;
-    }
     key_list = (mapreduce_json_list_t *) calloc(1, sizeof(*key_list));
-    if (key_list == NULL) {
-        ret = COUCHSTORE_ERROR_ALLOC_FAIL;
-        goto out;
-    }
     value_list = (mapreduce_json_list_t *) calloc(1, sizeof(*value_list));
-    if (value_list == NULL) {
+
+    if (values == NULL || red == NULL || key_list == NULL || value_list == NULL) {
         ret = COUCHSTORE_ERROR_ALLOC_FAIL;
         goto out;
     }
 
-    /* TODO: avoid multiple loops with full decodings all the time */
-    for (n = leaflist, c = count; n != NULL && c > 0; n = n->next, --c) {
+    for (n = leaflist, c = 0; n != NULL && c < count; n = n->next, ++c) {
         view_btree_value_t *v = NULL;
 
         ret = decode_view_btree_value(n->data.buf, n->data.size, &v);
@@ -676,7 +660,7 @@ couchstore_error_t view_btree_reduce(char *dst,
         }
         set_bit(&red->partitions_bitmap, v->partition);
         red->kv_count += v->num_values;
-        free_view_btree_value(v);
+        values[c] = v;
     }
 
     value_list->values = (mapreduce_json_t *) calloc(red->kv_count,
@@ -692,15 +676,10 @@ couchstore_error_t view_btree_reduce(char *dst,
         goto out;
     }
 
-    /* TODO: decode only what is needed at each iteration */
-    for (n = leaflist, c = count; n != NULL && c > 0; n = n->next, --c) {
-        view_btree_value_t *v = NULL;
+    for (n = leaflist, c = 0; n != NULL && c < count; n = n->next, ++c) {
+        view_btree_value_t *v = values[c];
         view_btree_key_t *k = NULL;
 
-        ret = decode_view_btree_value(n->data.buf, n->data.size, &v);
-        if (ret != COUCHSTORE_SUCCESS) {
-            goto out;
-        }
         ret = decode_view_btree_key(n->key.buf, n->key.size, &k);
         if (ret != COUCHSTORE_SUCCESS) {
             free_view_btree_value(v);
@@ -714,7 +693,6 @@ couchstore_error_t view_btree_reduce(char *dst,
             key_list->values[key_list->length].json = k->json_key.buf;
             key_list->length++;
         }
-        free_value_excluding_elements(v);
         free_key_excluding_elements(k);
     }
 
@@ -749,7 +727,16 @@ couchstore_error_t view_btree_reduce(char *dst,
         free(red);
     }
     free_json_key_list(key_list);
-    mapreduce_free_json_list(value_list);
+    if (values != NULL) {
+        for (c = 0; c < count; ++c) {
+            free_view_btree_value(values[c]);
+        }
+        free(values);
+    }
+    if (value_list != NULL) {
+        free(value_list->values);
+        free(value_list);
+    }
 
     return ret;
 }
@@ -770,26 +757,21 @@ couchstore_error_t view_btree_rereduce(char *dst,
     int c;
     couchstore_error_t ret = COUCHSTORE_SUCCESS;
     mapreduce_json_list_t *value_list = NULL;
+    view_btree_reduction_t **reductions = NULL;
 
+    reductions = (view_btree_reduction_t **) calloc(count, sizeof(view_btree_reduction_t *));
     red = (view_btree_reduction_t *) calloc(1, sizeof(*red));
-    if (red == NULL) {
-        ret = COUCHSTORE_ERROR_ALLOC_FAIL;
-        goto out;
-    }
     red->num_values = priv->num_reducers;
     red->reduce_values = (sized_buf *) calloc(red->num_values, sizeof(sized_buf));
-    if (red->reduce_values == NULL) {
-        ret = COUCHSTORE_ERROR_ALLOC_FAIL;
-        goto out;
-    }
     value_list = (mapreduce_json_list_t *) calloc(1, sizeof(*value_list));
-    if (value_list == NULL) {
+
+    if (reductions == NULL || red == NULL ||
+        red->reduce_values == NULL || value_list == NULL) {
         ret = COUCHSTORE_ERROR_ALLOC_FAIL;
         goto out;
     }
 
-    /* TODO: avoid multiple loops with full decodings all the time */
-    for (n = leaflist, c = count; n != NULL && c > 0; n = n->next, --c) {
+    for (n = leaflist, c = 0; n != NULL && c < count; n = n->next, ++c) {
         view_btree_reduction_t *r = NULL;
 
         ret = decode_view_btree_reduction(n->pointer->reduce_value.buf,
@@ -801,41 +783,25 @@ couchstore_error_t view_btree_rereduce(char *dst,
         union_bitmaps(&red->partitions_bitmap, &r->partitions_bitmap);
         assert(r->num_values == priv->num_reducers);
         red->kv_count += r->kv_count;
-        free_view_btree_reduction(r);
+        reductions[c] = r;
     }
 
-    value_list->values = (mapreduce_json_t *) calloc(count - c,
+    value_list->values = (mapreduce_json_t *) calloc(count,
                                                      sizeof(mapreduce_json_t));
     if (value_list->values == NULL) {
         ret = COUCHSTORE_ERROR_ALLOC_FAIL;
         goto out;
     }
 
-    /* TODO: decode only what is needed at each iteration */
     for (i = 0; i < priv->num_reducers; ++i) {
         sized_buf buf;
-        unsigned j;
 
-        for (n = leaflist, c = count; n != NULL && c > 0; n = n->next, --c) {
-            view_btree_reduction_t *r = NULL;
-
-            ret = decode_view_btree_reduction(n->pointer->reduce_value.buf,
-                                              n->pointer->reduce_value.size, &r);
-            if (ret != COUCHSTORE_SUCCESS) {
-                goto out;
-            }
+        for (n = leaflist, c = 0; n != NULL && c < count; n = n->next, ++c) {
+            view_btree_reduction_t *r = reductions[c];
 
             value_list->values[value_list->length].json = r->reduce_values[i].buf;
             value_list->values[value_list->length].length = r->reduce_values[i].size;
             value_list->length++;
-
-            for (j = 0; j < priv->num_reducers; ++j) {
-                if (j != i) {
-                    free(r->reduce_values[j].buf);
-                }
-            }
-            free(r->reduce_values);
-            free(r);
         }
 
         reducer = priv->reducers[i];
@@ -845,9 +811,6 @@ couchstore_error_t view_btree_rereduce(char *dst,
             goto out;
         }
 
-        for (j = 0; j < (unsigned) value_list->length; ++j) {
-            free(value_list->values[j].json);
-        }
         value_list->length = 0;
         red->reduce_values[i] = buf;
     }
@@ -862,7 +825,16 @@ couchstore_error_t view_btree_rereduce(char *dst,
         free(red->reduce_values);
         free(red);
     }
-    mapreduce_free_json_list(value_list);
+    if (reductions != NULL) {
+        for (c = 0; c < count; ++c) {
+            free_view_btree_reduction(reductions[c]);
+        }
+        free(reductions);
+    }
+    if (value_list != NULL) {
+        free(value_list->values);
+        free(value_list);
+    }
 
     return ret;
 }
