@@ -4,6 +4,7 @@
  * @copyright 2013 Couchbase, Inc.
  *
  * @author Filipe Manana  <filipe@couchbase.com>
+ * @author Fulu Li        <fulu@couchbase.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -33,20 +34,11 @@
 extern "C" {
 #endif
 
-    typedef enum {
-        VIEW_REDUCER_SUCCESS,
-        VIEW_REDUCER_ERROR_NOT_A_NUMBER,
-        VIEW_REDUCER_ERROR_BAD_STATS_OBJECT
-    } view_reducer_error_t;
-
     typedef struct {
-        /* For reduce operations that fail, this is the doc ID of the KV pair
-           that caused the failure. For example, for a _sum reducer, if there's
-           a value that is not a number, the reducer will abort and populate the
-           field 'error_doc_id' with the doc ID of the corresponding document,
-           and set 'error' to VIEW_REDUCER_ERROR_NOT_A_NUMBER. */
-        const char           *error_doc_id;
-        view_reducer_error_t  error;
+        /* If not NULL, an error happened and it contains a human
+           readable error message. */
+        const char           *error;
+        void                 *private;
     } view_reducer_ctx_t;
 
     typedef struct {
@@ -54,12 +46,12 @@ extern "C" {
         double sum, min, max, sumsqr;
     } stats_t;
 
-    typedef struct {
-        int                 num_functions;
-        mapreduce_error_t   mapreduce_error;
-        char                *error_msg;
-        void                *mapreduce_context;
-    } user_view_reducer_ctx_t;
+
+    view_reducer_ctx_t *make_view_reducer_ctx(const char *functions[],
+                                              unsigned num_functions,
+                                              char **error_msg);
+
+    void free_view_reducer_ctx(view_reducer_ctx_t *ctx);
 
     couchstore_error_t view_id_btree_reduce(char *dst,
                                             size_t *size_r,
@@ -73,53 +65,18 @@ extern "C" {
                                               int count,
                                               void *ctx);
 
-    couchstore_error_t view_btree_sum_reduce(char *dst,
-                                             size_t *size_r,
-                                             const nodelist *leaflist,
-                                             int count,
-                                             void *ctx);
+    couchstore_error_t view_btree_reduce(char *dst,
+                                         size_t *size_r,
+                                         const nodelist *leaflist,
+                                         int count,
+                                         void *ctx);
 
-    couchstore_error_t view_btree_sum_rereduce(char *dst,
-                                               size_t *size_r,
-                                               const nodelist *itmlist,
-                                               int count,
-                                               void *ctx);
+    couchstore_error_t view_btree_rereduce(char *dst,
+                                           size_t *size_r,
+                                           const nodelist *nodelist,
+                                           int count,
+                                           void *ctx);
 
-    couchstore_error_t view_btree_count_reduce(char *dst,
-                                               size_t *size_r,
-                                               const nodelist *leaflist,
-                                               int count,
-                                               void *ctx);
-
-    couchstore_error_t view_btree_count_rereduce(char *dst,
-                                                 size_t *size_r,
-                                                 const nodelist *itmlist,
-                                                 int count,
-                                                 void *ctx);
-
-    couchstore_error_t view_btree_stats_reduce(char *dst,
-                                               size_t *size_r,
-                                               const nodelist *leaflist,
-                                               int count,
-                                               void *ctx);
-
-    couchstore_error_t view_btree_stats_rereduce(char *dst,
-                                                 size_t *size_r,
-                                                 const nodelist *itmlist,
-                                                 int count,
-                                                 void *ctx);
-
-    couchstore_error_t view_btree_js_reduce(char *dst,
-                                            size_t *size_r,
-                                            const nodelist *leaflist,
-                                            int count,
-                                            void *ctx);
-
-    couchstore_error_t view_btree_js_rereduce(char *dst,
-                                              size_t *size_r,
-                                              const nodelist *itmlist,
-                                              int count,
-                                              void *ctx);
 #ifdef __cplusplus
 }
 #endif
