@@ -1,5 +1,5 @@
 #ifndef COUCHSTORE_CRC32_H
-#define COUCHSTORE_CRC_H 1
+#define COUCHSTORE_CRC32_H 1
 
 #include <sys/types.h>
 
