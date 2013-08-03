@@ -102,6 +102,7 @@ extern "C" {
     int db_write_buf(tree_file *file, const sized_buf *buf, cs_off_t *pos, size_t *disk_size);
     couchstore_error_t db_write_buf_compressed(tree_file *file, const sized_buf *buf, cs_off_t *pos, size_t *disk_size);
     struct _os_error *get_os_error_store(void);
+    couchstore_error_t by_seq_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v);
 
     extern pthread_key_t os_err_key;
 

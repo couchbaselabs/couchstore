@@ -374,7 +374,7 @@ void couchstore_free_document(Doc *doc)
     }
 }
 
-static couchstore_error_t by_seq_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
+couchstore_error_t by_seq_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
 {
     const raw_seq_index_value *raw = (const raw_seq_index_value*)v->buf;
     ssize_t extraSize = v->size - sizeof(*raw);
