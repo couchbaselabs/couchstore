@@ -21,20 +21,38 @@ class PurgeTest(unittest.TestCase):
         self.origdb = CouchStore(self.origname, 'c');
 
     def tearDown(self):
-        self.origdb.close()
-        os.remove(self.origname)
-        os.remove(self.purgedname)
-        os.rmdir(self.tmpdir)
+        try:
+            self.origdb.close()
+        except:
+            pass
+        try:
+            self.newdb.close()
+        except:
+            pass
+        try:
+            os.remove(self.origname)
+        except:
+            pass
+        try:
+            os.remove(self.purgedname)
+        except:
+            pass
+        try:
+            os.rmdir(self.tmpdir)
+        except:
+            pass
 
     def testPurgeCompact(self):
         # Save some docs
         self.origdb.save("foo1", "bar")
         self.origdb.save("foo2", "baz")
         self.origdb.save("foo3", "bell")
+        self.origdb.save("foo4", "a")
 
         # Delete some
         seqPurged = deleteAt(self.origdb, "foo2", 10)
         seqKept = deleteAt(self.origdb, "foo3", 20)
+        seqLateDelete = deleteAt(self.origdb, "foo4", 11)
         self.origdb.commit()
 
         os.system("./couch_compact --purge-before 15 " + self.origname + " " + self.purgedname)
@@ -43,6 +61,31 @@ class PurgeTest(unittest.TestCase):
         # Check purged item is not present in key tree and kept item is
         self.assertRaises(KeyError, self.newdb.getInfo, "foo2")
         self.assertIsNotNone(self.newdb.getInfo("foo3"))
+        self.assertRaises(KeyError, self.newdb.getInfo, "foo4")
+
+        self.newdb.close()
+
+        os.system("./couch_compact --purge-before 15 --purge-only-upto-seq " + str(seqKept) + " " + self.origname + " " + self.purgedname)
+        self.newdb = CouchStore(self.purgedname)
+
+        # Check purged item is not present in key tree and kept item is
+        self.assertRaises(KeyError, self.newdb.getInfo, "foo2")
+        self.assertIsNotNone(self.newdb.getInfo("foo3"))
+        # with purge-only-upto-seq just before deletion of foo4 we
+        # must find it after compaction
+        self.assertIsNotNone(self.newdb.getInfo("foo4"))
+
+        self.newdb.close()
+
+        os.system("./couch_compact --purge-before 15 --purge-only-upto-seq " + str(seqLateDelete) + " " + self.origname + " " + self.purgedname)
+        self.newdb = CouchStore(self.purgedname)
+
+        # Check purged item is not present in key tree and kept item is
+        self.assertRaises(KeyError, self.newdb.getInfo, "foo2")
+        self.assertIsNotNone(self.newdb.getInfo("foo3"))
+        # with purge-only-upto-seq just at deletion of foo4 we
+        # must not find it after compaction
+        self.assertRaises(KeyError, self.newdb.getInfo, "foo4")
 
         # Check purged item is not present in seq tree and kept item is
         self.assertRaises(KeyError, self.newdb.getInfoBySequence, seqPurged)
