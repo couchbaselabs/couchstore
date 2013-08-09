@@ -74,8 +74,8 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Error reading number of views.\n");
         exit(1);
     }
-    if (num_views <= 0) {
-        fprintf(stderr, "Number of views is negative or zero.\n");
+    if (num_views < 0) {
+        fprintf(stderr, "Number of views is negative.\n");
         exit(1);
     }
 
