@@ -516,7 +516,6 @@ couchstore_error_t couchstore_docinfo_by_id(Db *db,
     sized_buf key;
     sized_buf *keylist = &key;
     couchfile_lookup_request rq;
-    sized_buf cmptmp;
     couchstore_error_t errcode;
     error_unless(!db->dropped, COUCHSTORE_ERROR_FILE_CLOSED);
 
@@ -528,7 +527,6 @@ couchstore_error_t couchstore_docinfo_by_id(Db *db,
     key.size = idlen;
 
     rq.cmp.compare = ebin_cmp;
-    rq.cmp.arg = &cmptmp;
     rq.file = &db->file;
     rq.num_keys = 1;
     rq.keys = &keylist;
@@ -555,7 +553,6 @@ couchstore_error_t couchstore_docinfo_by_sequence(Db *db,
     sized_buf key;
     sized_buf *keylist = &key;
     couchfile_lookup_request rq;
-    sized_buf cmptmp;
     couchstore_error_t errcode;
     error_unless(!db->dropped, COUCHSTORE_ERROR_FILE_CLOSED);
 
@@ -568,7 +565,6 @@ couchstore_error_t couchstore_docinfo_by_sequence(Db *db,
     key.size = 6;
 
     rq.cmp.compare = seq_cmp;
-    rq.cmp.arg = &cmptmp;
     rq.file = &db->file;
     rq.num_keys = 1;
     rq.keys = &keylist;
@@ -718,7 +714,6 @@ couchstore_error_t couchstore_changes_since(Db *db,
     sized_buf *keylist = &since_term;
     lookup_context cbctx = {db, options, callback, ctx, 0, 0, NULL};
     couchfile_lookup_request rq;
-    sized_buf cmptmp;
     couchstore_error_t errcode;
 
     error_unless(!db->dropped, COUCHSTORE_ERROR_FILE_CLOSED);
@@ -731,7 +726,6 @@ couchstore_error_t couchstore_changes_since(Db *db,
     *(raw_48*)since_term.buf = encode_raw48(since);
 
     rq.cmp.compare = seq_cmp;
-    rq.cmp.arg = &cmptmp;
     rq.file = &db->file;
     rq.num_keys = 1;
     rq.keys = &keylist;
@@ -756,7 +750,6 @@ couchstore_error_t couchstore_all_docs(Db *db,
     sized_buf *keylist = &startKey;
     lookup_context cbctx = {db, options, callback, ctx, 1, 0, NULL};
     couchfile_lookup_request rq;
-    sized_buf cmptmp;
     couchstore_error_t errcode;
 
     error_unless(!db->dropped, COUCHSTORE_ERROR_FILE_CLOSED);
@@ -769,7 +762,6 @@ couchstore_error_t couchstore_all_docs(Db *db,
     }
 
     rq.cmp.compare = ebin_cmp;
-    rq.cmp.arg = &cmptmp;
     rq.file = &db->file;
     rq.num_keys = 1;
     rq.keys = &keylist;
@@ -817,7 +809,6 @@ couchstore_error_t couchstore_walk_tree(Db *db,
     couchstore_error_t errcode;
     sized_buf startKey = {NULL, 0};
     sized_buf *keylist;
-    sized_buf cmptmp;
     couchfile_lookup_request rq;
 
     error_unless(!db->dropped, COUCHSTORE_ERROR_FILE_CLOSED);
@@ -846,7 +837,6 @@ couchstore_error_t couchstore_walk_tree(Db *db,
         lookup_context lookup_ctx = {db, options, NULL, ctx, by_id, 1, callback};
 
         rq.cmp.compare = compare;
-        rq.cmp.arg = &cmptmp;
         rq.file = &db->file;
         rq.num_keys = 1;
         rq.keys = &keylist;
@@ -940,9 +930,7 @@ static couchstore_error_t iterate_docinfos(Db *db,
         // Construct the lookup request:
         lookup_context cbctx = {db, 0, callback, ctx, (tree == db->header.by_id_root), 0, NULL};
         couchfile_lookup_request rq;
-        sized_buf cmptmp;
         rq.cmp.compare = key_compare;
-        rq.cmp.arg = &cmptmp;
         rq.file = &db->file;
         rq.num_keys = numDocs;
         rq.keys = (sized_buf**) keyptrs;
@@ -1072,7 +1060,6 @@ couchstore_error_t couchstore_open_local_document(Db *db,
     sized_buf key;
     sized_buf *keylist = &key;
     couchfile_lookup_request rq;
-    sized_buf cmptmp;
     couchstore_error_t errcode;
     error_unless(!db->dropped, COUCHSTORE_ERROR_FILE_CLOSED);
     if (db->header.local_docs_root == NULL) {
@@ -1083,7 +1070,6 @@ couchstore_error_t couchstore_open_local_document(Db *db,
     key.size = idlen;
 
     rq.cmp.compare = ebin_cmp;
-    rq.cmp.arg = &cmptmp;
     rq.file = &db->file;
     rq.num_keys = 1;
     rq.keys = &keylist;
@@ -1107,7 +1093,6 @@ couchstore_error_t couchstore_save_local_document(Db *db, LocalDoc *lDoc)
 {
     couchstore_error_t errcode;
     couchfile_modify_action ldupdate;
-    sized_buf cmptmp;
     node_pointer *nroot = NULL;
     error_unless(!db->dropped, COUCHSTORE_ERROR_FILE_CLOSED);
 
@@ -1122,7 +1107,6 @@ couchstore_error_t couchstore_save_local_document(Db *db, LocalDoc *lDoc)
 
     couchfile_modify_request rq;
     rq.cmp.compare = ebin_cmp;
-    rq.cmp.arg = &cmptmp;
     rq.num_actions = 1;
     rq.actions = &ldupdate;
     rq.fetch_callback = NULL;

@@ -213,9 +213,7 @@ static couchstore_error_t compact_seq_tree(Db* source, Db* target, compact_ctx *
 {
     couchstore_error_t errcode;
     compare_info seqcmp;
-    sized_buf tmp;
     seqcmp.compare = seq_cmp;
-    seqcmp.arg = &tmp;
     couchfile_lookup_request srcfold;
     sized_buf low_key;
     //Keys in seq tree are 48-bit numbers, this is 0, lowest possible key
@@ -263,9 +261,7 @@ static couchstore_error_t compact_localdocs_tree(Db* source, Db* target, compact
 {
     couchstore_error_t errcode;
     compare_info idcmp;
-    sized_buf tmp;
     idcmp.compare = ebin_cmp;
-    idcmp.arg = &tmp;
     couchfile_lookup_request srcfold;
 
     sized_buf low_key;

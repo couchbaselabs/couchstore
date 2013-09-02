@@ -158,7 +158,6 @@ static couchstore_error_t update_indexes(Db *db,
     node_pointer *new_seq_root;
     couchstore_error_t errcode;
     couchfile_modify_request seqrq, idrq;
-    sized_buf tmpsb;
     int ii;
     index_update_ctx fetcharg;
 
@@ -206,7 +205,6 @@ static couchstore_error_t update_indexes(Db *db,
     }
 
     idrq.cmp.compare = ebin_cmp;
-    idrq.cmp.arg = &tmpsb;
     idrq.file = &db->file;
     idrq.actions = idacts;
     idrq.num_actions = numdocs * 2;
@@ -233,7 +231,6 @@ static couchstore_error_t update_indexes(Db *db,
           seq_action_compare);
 
     seqrq.cmp.compare = seq_cmp;
-    seqrq.cmp.arg = &tmpsb;
     seqrq.actions = seqacts;
     seqrq.num_actions = fetcharg.actpos;
     seqrq.reduce = by_seq_reduce;

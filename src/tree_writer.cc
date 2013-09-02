@@ -112,7 +112,6 @@ couchstore_error_t TreeWriterWrite(TreeWriter* writer,
     arena* transient_arena = new_arena(0);
     arena* persistent_arena = new_arena(0);
     compare_info idcmp;
-    sized_buf tmp;
     uint16_t klen;
     uint32_t vlen;
     sized_buf k, v;
@@ -125,7 +124,6 @@ couchstore_error_t TreeWriterWrite(TreeWriter* writer,
 
     // Create the structure to write the tree to the db:
     idcmp.compare = writer->key_compare;
-    idcmp.arg = &tmp;
 
     target_mr = new_btree_modres(persistent_arena,
                                  transient_arena,
