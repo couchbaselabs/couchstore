@@ -25,11 +25,10 @@
 #include <errno.h>
 #include <libcouchstore/couch_db.h>
 #include "../file_merger.h"
+#include "../util.h"
 
 #define LINE_BUF_SIZE (8 * 1024)
 #define MERGE_ERROR_CODE(Err) (100 + (Err))
-
-static char *read_line(char *buf, int size);
 
 
 int main(int argc, char *argv[])
@@ -80,7 +79,7 @@ int main(int argc, char *argv[])
             exit(1);
         }
 
-        if (read_line(view_files[i], LINE_BUF_SIZE) != view_files[i]) {
+        if (couchstore_read_line(stdin, view_files[i], LINE_BUF_SIZE) != view_files[i]) {
             for (j = 0; j <= i; ++j) {
                 free(view_files[j]);
             }
@@ -90,7 +89,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (read_line(dest_file, LINE_BUF_SIZE) != dest_file) {
+    if (couchstore_read_line(stdin, dest_file, LINE_BUF_SIZE) != dest_file) {
         fprintf(stderr, "Error reading destination file name.\n");
         status = 1;
         goto finished;
@@ -137,21 +136,4 @@ int main(int argc, char *argv[])
     free(view_files);
 
     return status;
-}
-
-
-static char *read_line(char *buf, int size)
-{
-    size_t len;
-
-    if (fgets(buf, size, stdin) != buf) {
-        return NULL;
-    }
-
-    len = strlen(buf);
-    if ((len >= 1) && (buf[len - 1] == '\n')) {
-        buf[len - 1] = '\0';
-    }
-
-    return buf;
 }

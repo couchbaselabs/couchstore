@@ -20,7 +20,8 @@ bin_PROGRAMS = \
 	couch_dbinfo \
 	couch_compact \
 	couch_view_file_sorter \
-	couch_view_file_merger
+	couch_view_file_merger \
+	couch_view_index_builder
 EXTRA_DIST = python LICENSE README.md
 
 if WINDOWS
@@ -127,6 +128,8 @@ libcouchstore_la_SOURCES = \
                             src/views/util.c \
                             src/views/reducers.h \
                             src/views/reducers.c \
+                            src/views/view_group.h \
+                            src/views/view_group.c \
                             src/views/spatial.h \
                             src/views/spatial.c
 
@@ -185,6 +188,15 @@ couch_view_file_merger_LDADD = libcouchstore.la libbyteswap.la -lsnappy
 
 if WINDOWS
 couch_view_file_merger_LDADD += -lws2_32
+endif
+
+couch_view_index_builder_SOURCES = src/views/bin/couch_view_index_builder.c
+couch_view_index_builder_DEPENDENCIES = libcouchstore.la
+couch_view_index_builder_CFLAGS = $(AM_CFLAGS) -D__STDC_FORMAT_MACROS
+couch_view_index_builder_LDADD = libcouchstore.la libbyteswap.la -lsnappy
+
+if WINDOWS
+couch_view_index_builder_LDADD += -lws2_32
 endif
 
 extra_tests=

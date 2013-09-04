@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../file_sorter.h"
+#include "../util.h"
 
 #define LINE_BUF_SIZE (8 * 1024)
 #define SORT_ERROR_CODE(Err) (100 + (Err))
@@ -31,8 +32,6 @@
 #define INITIAL_VIEW_FILE     'b'
 #define INCREMENTAL_VIEW_FILE 'u'
 #define INITIAL_SPATIAL_FILE  's'
-
-static char *read_line(char *buf, int size);
 
 
 int main(int argc, char *argv[])
@@ -52,7 +51,7 @@ int main(int argc, char *argv[])
     (void) argc;
     (void) argv;
 
-    if (read_line(tmp_dir, LINE_BUF_SIZE) != tmp_dir) {
+    if (couchstore_read_line(stdin, tmp_dir, LINE_BUF_SIZE) != tmp_dir) {
         fprintf(stderr, "Error reading temporary directory path.\n");
         exit(1);
     }
@@ -80,7 +79,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    if (read_line(id_file, LINE_BUF_SIZE) != id_file) {
+    if (couchstore_read_line(stdin, id_file, LINE_BUF_SIZE) != id_file) {
         fprintf(stderr, "Error reading id file path.\n");
         exit(1);
     }
@@ -102,7 +101,7 @@ int main(int argc, char *argv[])
             exit(1);
         }
 
-        if (read_line(view_files[i], LINE_BUF_SIZE) != view_files[i]) {
+        if (couchstore_read_line(stdin, view_files[i], LINE_BUF_SIZE) != view_files[i]) {
             for (j = 0; j <= i; ++j) {
                 free(view_files[j]);
             }
@@ -221,21 +220,4 @@ int main(int argc, char *argv[])
     free(view_files);
 
     return status;
-}
-
-
-static char *read_line(char *buf, int size)
-{
-    size_t len;
-
-    if (fgets(buf, size, stdin) != buf) {
-        return NULL;
-    }
-
-    len = strlen(buf);
-    if ((len >= 1) && (buf[len - 1] == '\n')) {
-        buf[len - 1] = '\0';
-    }
-
-    return buf;
 }

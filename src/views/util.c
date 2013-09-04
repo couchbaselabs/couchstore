@@ -19,6 +19,7 @@
  **/
 
 #include <stdlib.h>
+#include <string.h>
 #include "util.h"
 #include "../util.h"
 #include "../bitfield.h"
@@ -178,4 +179,22 @@ void free_view_record(void *record, void *ctx)
 {
     (void) ctx;
     free(record);
+}
+
+
+LIBCOUCHSTORE_API
+char *couchstore_read_line(FILE *in, char *buf, int size)
+{
+    size_t len;
+
+    if (fgets(buf, size, in) != buf) {
+        return NULL;
+    }
+
+    len = strlen(buf);
+    if ((len >= 1) && (buf[len - 1] == '\n')) {
+        buf[len - 1] = '\0';
+    }
+
+    return buf;
 }

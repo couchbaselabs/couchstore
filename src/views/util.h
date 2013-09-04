@@ -22,6 +22,7 @@
 #define _VIEW_UTILS_H
 
 #include "config.h"
+#include <stdio.h>
 #include <libcouchstore/couch_db.h>
 #include "../file_merger.h"
 
@@ -73,6 +74,9 @@ extern "C" {
     /* frees a view record, obbeys the record free function prototype
        defined in src/file_merger.h */
     void free_view_record(void *record, void *ctx);
+
+    LIBCOUCHSTORE_API
+    char *couchstore_read_line(FILE *in, char *buf, int size);
 
 #ifdef __cplusplus
 }
