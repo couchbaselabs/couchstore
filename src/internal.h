@@ -16,6 +16,7 @@
 #define COUCH_BLOCK_SIZE 4096
 #define COUCH_DISK_VERSION 11
 #define COUCH_SNAPPY_THRESHOLD 64
+#define MAX_DB_HEADER_SIZE 1024    // Conservative estimate; just for sanity check
 
 enum {
     /** Additional couchstore_docinfos_options flag */
@@ -96,7 +97,10 @@ extern "C" {
 
     /** Reads a file header from the file at a given position.
         Parameters and return value are the same as for pread_bin. */
-    int pread_header(tree_file *file, cs_off_t pos, char **ret_ptr);
+    int pread_header(tree_file *file,
+                     cs_off_t pos,
+                     char **ret_ptr,
+                     uint32_t max_header_size);
 
     couchstore_error_t write_header(tree_file *file, sized_buf *buf, cs_off_t *pos);
     int db_write_buf(tree_file *file, const sized_buf *buf, cs_off_t *pos, size_t *disk_size);

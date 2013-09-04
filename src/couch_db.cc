@@ -55,7 +55,7 @@ static couchstore_error_t find_header_at_pos(Db *db, cs_off_t pos)
         return COUCHSTORE_ERROR_CORRUPT;
     }
 
-    header_len = pread_header(&db->file, pos, &header_buf.buf);
+    header_len = pread_header(&db->file, pos, &header_buf.buf, MAX_DB_HEADER_SIZE);
     if (header_len < 0) {
         error_pass(static_cast<couchstore_error_t>(header_len));
     }

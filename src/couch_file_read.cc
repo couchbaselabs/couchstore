@@ -13,7 +13,6 @@
 #include "crc32.h"
 #include "util.h"
 
-#define MAX_HEADER_SIZE 1024    // Conservative estimate; just for sanity check
 
 couchstore_error_t tree_file_open(tree_file* file,
                                   const char *filename,
@@ -90,10 +89,16 @@ static couchstore_error_t read_skipping_prefixes(tree_file *file, cs_off_t *pos,
     return COUCHSTORE_SUCCESS;
 }
 
-/** Common subroutine of pread_bin, pread_compressed and pread_header.
-    Parameters and return value are the same as for pread_bin,
-    except the 'header' parameter which is 1 if reading a header, 0 otherwise. */
-static int pread_bin_internal(tree_file *file, cs_off_t pos, char **ret_ptr, int header)
+/*
+ * Common subroutine of pread_bin, pread_compressed and pread_header.
+ * Parameters and return value are the same as for pread_bin,
+ * except the 'max_header_size' parameter which is greater than 0 if
+ * reading a header, 0 otherwise.
+ */
+static int pread_bin_internal(tree_file *file,
+                              cs_off_t pos,
+                              char **ret_ptr,
+                              uint32_t max_header_size)
 {
     struct {
         uint32_t chunk_len;
@@ -106,8 +111,8 @@ static int pread_bin_internal(tree_file *file, cs_off_t pos, char **ret_ptr, int
     }
 
     info.chunk_len = ntohl(info.chunk_len) & ~0x80000000;
-    if (header) {
-        if (info.chunk_len < 4 || info.chunk_len > MAX_HEADER_SIZE)
+    if (max_header_size) {
+        if (info.chunk_len < 4 || info.chunk_len > max_header_size)
             return COUCHSTORE_ERROR_CORRUPT;
         info.chunk_len -= 4;    //Header len includes CRC len.
     }
@@ -130,9 +135,16 @@ static int pread_bin_internal(tree_file *file, cs_off_t pos, char **ret_ptr, int
     return info.chunk_len;
 }
 
-int pread_header(tree_file *file, cs_off_t pos, char **ret_ptr)
+int pread_header(tree_file *file,
+                 cs_off_t pos,
+                 char **ret_ptr,
+                 uint32_t max_header_size)
 {
-    return pread_bin_internal(file, pos + 1, ret_ptr, 1);
+    if (max_header_size == 0) {
+        return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
+    }
+
+    return pread_bin_internal(file, pos + 1, ret_ptr, max_header_size);
 }
 
 int pread_compressed(tree_file *file, cs_off_t pos, char **ret_ptr)
