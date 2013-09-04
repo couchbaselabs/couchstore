@@ -89,15 +89,15 @@ extern "C" {
                 or to NULL if the length is zero. Caller is responsible for freeing this buffer!
                 On failure, value pointed to is unaltered.
         @return The length of the chunk (zero is a valid length!), or a negative error code */
-    int pread_bin(tree_file *file, cs_off_t pos, char **ret_ptr);
+    int pread_bin(const tree_file *file, cs_off_t pos, char **ret_ptr);
 
     /** Reads a compressed chunk from the file at a given position.
         Parameters and return value are the same as for pread_bin. */
-    int pread_compressed(tree_file *file, cs_off_t pos, char **ret_ptr);
+    int pread_compressed(const tree_file *file, cs_off_t pos, char **ret_ptr);
 
     /** Reads a file header from the file at a given position.
         Parameters and return value are the same as for pread_bin. */
-    int pread_header(tree_file *file,
+    int pread_header(const tree_file *file,
                      cs_off_t pos,
                      char **ret_ptr,
                      uint32_t max_header_size);

@@ -64,7 +64,10 @@ void tree_file_close(tree_file* file)
 
 /** Read bytes from the database file, skipping over the header-detection bytes at every block
     boundary. */
-static couchstore_error_t read_skipping_prefixes(tree_file *file, cs_off_t *pos, ssize_t len, void *dst) {
+static couchstore_error_t read_skipping_prefixes(const tree_file *file,
+                                                 cs_off_t *pos,
+                                                 ssize_t len,
+                                                 void *dst) {
     if (*pos % COUCH_BLOCK_SIZE == 0) {
         ++*pos;
     }
@@ -95,7 +98,7 @@ static couchstore_error_t read_skipping_prefixes(tree_file *file, cs_off_t *pos,
  * except the 'max_header_size' parameter which is greater than 0 if
  * reading a header, 0 otherwise.
  */
-static int pread_bin_internal(tree_file *file,
+static int pread_bin_internal(const tree_file *file,
                               cs_off_t pos,
                               char **ret_ptr,
                               uint32_t max_header_size)
@@ -135,7 +138,7 @@ static int pread_bin_internal(tree_file *file,
     return info.chunk_len;
 }
 
-int pread_header(tree_file *file,
+int pread_header(const tree_file *file,
                  cs_off_t pos,
                  char **ret_ptr,
                  uint32_t max_header_size)
@@ -147,7 +150,7 @@ int pread_header(tree_file *file,
     return pread_bin_internal(file, pos + 1, ret_ptr, max_header_size);
 }
 
-int pread_compressed(tree_file *file, cs_off_t pos, char **ret_ptr)
+int pread_compressed(const tree_file *file, cs_off_t pos, char **ret_ptr)
 {
     char *compressed_buf;
     char *new_buf;
@@ -178,7 +181,7 @@ int pread_compressed(tree_file *file, cs_off_t pos, char **ret_ptr)
     return (int) uncompressed_len;
 }
 
-int pread_bin(tree_file *file, cs_off_t pos, char **ret_ptr)
+int pread_bin(const tree_file *file, cs_off_t pos, char **ret_ptr)
 {
     return pread_bin_internal(file, pos, ret_ptr, 0);
 }
