@@ -32,8 +32,6 @@ couchstore_error_t decode_view_btree_reduction(const char *bytes,
         goto alloc_error;
     }
 
-    r->reduce_values = NULL;
-
     assert(len >= 5);
     r->kv_count = dec_uint40(bytes);
     bytes += 5;
@@ -67,10 +65,13 @@ couchstore_error_t decode_view_btree_reduction(const char *bytes,
         return COUCHSTORE_ERROR_CORRUPT;
     }
 
-    r->reduce_values = (sized_buf *) malloc(r->num_values * sizeof(sized_buf));
-
-    if (r->reduce_values == NULL) {
-        goto alloc_error;
+    if (r->num_values > 0) {
+        r->reduce_values = (sized_buf *) malloc(r->num_values * sizeof(sized_buf));
+        if (r->reduce_values == NULL) {
+            goto alloc_error;
+        }
+    } else {
+        r->reduce_values = NULL;
     }
 
     for (j = 0; j< r->num_values; ++j) {

@@ -696,10 +696,12 @@ couchstore_error_t view_btree_reduce(char *dst,
         free_key_excluding_elements(k);
     }
 
-    red->reduce_values = (sized_buf *) calloc(priv->num_reducers, sizeof(sized_buf));
-    if (red->reduce_values == NULL) {
-        ret = COUCHSTORE_ERROR_ALLOC_FAIL;
-        goto out;
+    if (priv->num_reducers > 0) {
+        red->reduce_values = (sized_buf *) calloc(priv->num_reducers, sizeof(sized_buf));
+        if (red->reduce_values == NULL) {
+            ret = COUCHSTORE_ERROR_ALLOC_FAIL;
+            goto out;
+        }
     }
 
     red->num_values = priv->num_reducers;
@@ -761,12 +763,17 @@ couchstore_error_t view_btree_rereduce(char *dst,
 
     reductions = (view_btree_reduction_t **) calloc(count, sizeof(view_btree_reduction_t *));
     red = (view_btree_reduction_t *) calloc(1, sizeof(*red));
+
+    if (reductions == NULL || red == NULL) {
+        ret = COUCHSTORE_ERROR_ALLOC_FAIL;
+        goto out;
+    }
+
     red->num_values = priv->num_reducers;
     red->reduce_values = (sized_buf *) calloc(red->num_values, sizeof(sized_buf));
     value_list = (mapreduce_json_list_t *) calloc(1, sizeof(*value_list));
 
-    if (reductions == NULL || red == NULL ||
-        red->reduce_values == NULL || value_list == NULL) {
+    if (red->reduce_values == NULL || value_list == NULL) {
         ret = COUCHSTORE_ERROR_ALLOC_FAIL;
         goto out;
     }
@@ -786,11 +793,13 @@ couchstore_error_t view_btree_rereduce(char *dst,
         reductions[c] = r;
     }
 
-    value_list->values = (mapreduce_json_t *) calloc(count,
-                                                     sizeof(mapreduce_json_t));
-    if (value_list->values == NULL) {
-        ret = COUCHSTORE_ERROR_ALLOC_FAIL;
-        goto out;
+    if (priv->num_reducers > 0) {
+        value_list->values = (mapreduce_json_t *) calloc(count,
+                                                         sizeof(mapreduce_json_t));
+        if (value_list->values == NULL) {
+            ret = COUCHSTORE_ERROR_ALLOC_FAIL;
+            goto out;
+        }
     }
 
     for (i = 0; i < priv->num_reducers; ++i) {
