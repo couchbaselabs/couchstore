@@ -135,7 +135,6 @@ couchstore_error_t view_id_btree_reduce(char *dst,
 {
     view_id_btree_reduction_t *r = NULL;
     uint64_t subtree_count = 0;
-    uint16_t j;
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     const nodelist *i;
 
@@ -154,9 +153,7 @@ couchstore_error_t view_id_btree_reduce(char *dst,
             goto alloc_error;
         }
         set_bit(&r->partitions_bitmap, v->partition);
-        for (j = 0; j< v->num_view_keys_map; ++j) {
-            subtree_count += v->view_keys_map[j].num_keys;
-        }
+        subtree_count++;
         free_view_id_btree_value(v);
     }
     r->kv_count = subtree_count;

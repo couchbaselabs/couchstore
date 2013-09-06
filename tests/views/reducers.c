@@ -197,7 +197,7 @@ static void test_view_id_btree_reducer()
 
     assert(view_id_btree_reduce(dst, &size_r, nl, count, NULL) == COUCHSTORE_SUCCESS);
     assert(decode_view_id_btree_reduction(dst, &r) == COUCHSTORE_SUCCESS);
-    assert(r->kv_count == 5);
+    assert(r->kv_count == (uint64_t) count);
 
     for (i = 0; i < BITMAP_SIZE; ++i) {
         if ((i != 57) && (i != 67)) {
