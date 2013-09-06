@@ -12,12 +12,13 @@ static void exit_error(couchstore_error_t errcode)
 }
 
 static void usage(const char* prog) {
-    fprintf(stderr, "Usage: %s [--purge-before <timestamp>] [--dropdeletes] <input file> <output file>\n", prog);
+    fprintf(stderr, "Usage: %s [--purge-before <timestamp>] [--purge-only-upto-seq seq] [--dropdeletes] <input file> <output file>\n", prog);
     exit(-1);
 }
 
 typedef struct {
-    uint64_t purge_before;
+    uint64_t purge_before_ts;
+    uint64_t purge_before_seq;
     uint64_t max_purged_seq;
 } time_purge_ctx;
 
@@ -39,7 +40,8 @@ static int time_purge_hook(Db* target, DocInfo* info, void* ctx_p) {
     if(info->deleted && info->rev_meta.size >= 16) {
         const CouchbaseRevMeta* meta = (const CouchbaseRevMeta*)info->rev_meta.buf;
         uint32_t exptime = decode_raw32(meta->expiry);
-        if(exptime < ctx->purge_before) {
+        if(exptime < ctx->purge_before_ts
+           && (!ctx->purge_before_seq || info->db_seq <= ctx->purge_before_seq)) {
             if(ctx->max_purged_seq < info->db_seq) {
                 ctx->max_purged_seq = info->db_seq;
             }
@@ -73,8 +75,17 @@ int main(int argc, char** argv)
             }
             hook = time_purge_hook;
             hook_ctx = &timepurge;
-            timepurge.purge_before = atoi(argv[argp-1]);
-            printf("Purging items before timestamp %"PRIu64"\n", timepurge.purge_before);
+            timepurge.purge_before_ts = atoi(argv[argp-1]);
+            printf("Purging items before timestamp %"PRIu64"\n", timepurge.purge_before_ts);
+        }
+
+        if(!strcmp(argv[argp],"--purge-only-upto-seq")) {
+            if(argc - argp < 3) {
+                usage(argv[0]);
+            }
+            argp+=2;
+            timepurge.purge_before_seq = (uint64_t)(atoll(argv[argp-1]));
+            printf("Purging items only up-to seq %"PRIu64"\n", timepurge.purge_before_seq);
         }
 
         if(!strcmp(argv[argp],"--dropdeletes")) {
