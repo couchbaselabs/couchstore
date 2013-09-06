@@ -395,5 +395,10 @@ const couch_file_ops *couch_get_buffered_file_ops(const couch_file_ops* raw_ops,
                                                   couch_file_handle* handle)
 {
     *handle = buffered_constructor_with_raw_ops(raw_ops);
-    return &ops;
+
+    if (*handle) {
+        return &ops;
+    } else {
+        return NULL;
+    }
 }
