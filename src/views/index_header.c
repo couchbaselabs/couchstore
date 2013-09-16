@@ -246,6 +246,7 @@ couchstore_error_t encode_index_header(const index_header_t *header,
 {
     char *buf = NULL, *b = NULL;
     size_t sz = 0;
+    uint16_t id_btree_state_size;
 
     sz += 1;                     /* version */
     sz += 2;                     /* number of partitions */
@@ -255,14 +256,18 @@ couchstore_error_t encode_index_header(const index_header_t *header,
     sz += sorted_list_size(header->seqs) * (2 + 6);
     /* id btree state */
     sz += 2;
-    sz += sizeof(raw_btree_root);
-    sz += header->id_btree_state->reduce_value.size;
+    if (header->id_btree_state != NULL) {
+        sz += sizeof(raw_btree_root);
+        sz += header->id_btree_state->reduce_value.size;
+    }
     /* view btree states */
     sz += 1;
     for (int i = 0; i < header->num_views; ++i) {
         sz += 2;
-        sz += sizeof(raw_btree_root);
-        sz += header->view_btree_states[i]->reduce_value.size;
+        if (header->view_btree_states[i] != NULL) {
+            sz += sizeof(raw_btree_root);
+            sz += header->view_btree_states[i]->reduce_value.size;
+        }
     }
     /* has_replicas */
     sz += 1;
@@ -301,8 +306,12 @@ couchstore_error_t encode_index_header(const index_header_t *header,
 
     enc_part_seq_list(header->seqs, &b);
 
-    uint16_t id_btree_state_size = (uint16_t) sizeof(raw_btree_root);
-    id_btree_state_size += (uint16_t) header->id_btree_state->reduce_value.size;
+    if (header->id_btree_state != NULL) {
+        id_btree_state_size = (uint16_t) sizeof(raw_btree_root);
+        id_btree_state_size += (uint16_t) header->id_btree_state->reduce_value.size;
+    } else {
+        id_btree_state_size = 0;
+    }
     enc_uint16(id_btree_state_size, &b);
 
     encode_root(b, header->id_btree_state);
@@ -311,8 +320,12 @@ couchstore_error_t encode_index_header(const index_header_t *header,
     b[0] = (char) header->num_views;
     b += 1;
     for (int i = 0; i < header->num_views; ++i) {
-        uint16_t btree_state_size = (uint16_t) sizeof(raw_btree_root);
-        btree_state_size += (uint16_t) header->view_btree_states[i]->reduce_value.size;
+        uint16_t btree_state_size = 0;
+
+        if (header->view_btree_states[i] != NULL) {
+            btree_state_size = (uint16_t) sizeof(raw_btree_root);
+            btree_state_size += (uint16_t) header->view_btree_states[i]->reduce_value.size;
+        }
         enc_uint16(btree_state_size, &b);
 
         encode_root(b, header->view_btree_states[i]);
