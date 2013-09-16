@@ -128,7 +128,7 @@ couchstore_error_t mr_push_item(sized_buf *k, sized_buf *v, couchfile_modify_res
     dst->values_end->next = itm;
     dst->values_end = itm;
     //Encoded size (see flush_mr)
-    dst->node_len += k->size + v->size + 5;
+    dst->node_len += k->size + v->size + sizeof(raw_kv_length);
     dst->count++;
     return maybe_flush(dst);
 }
@@ -158,7 +158,7 @@ static couchstore_error_t mr_push_pointerinfo(node_pointer *ptr,
     }
     dst->values_end->next = pel;
     dst->values_end = pel;
-    dst->node_len += pel->key.size + pel->data.size + 5;
+    dst->node_len += pel->key.size + pel->data.size + sizeof(raw_kv_length);
     dst->count++;
     return maybe_flush(dst);
 }
@@ -226,7 +226,7 @@ static couchstore_error_t flush_mr_partial(couchfile_modify_result *res, size_t 
         if (i->pointer) {
             subtreesize += i->pointer->subtreesize;
         }
-        mr_quota -= i->key.size + i->data.size + 5;
+        mr_quota -= i->key.size + i->data.size + sizeof(raw_kv_length);
         final_key = i->key;
         i = i->next;
         res->count--;
@@ -304,7 +304,7 @@ static couchstore_error_t mr_move_pointers(couchfile_modify_result *src,
     nodelist *ptr = src->pointers->next;
     nodelist *next = ptr;
     while (ptr != NULL && errcode == 0) {
-        dst->node_len += ptr->data.size + ptr->key.size + 5;
+        dst->node_len += ptr->data.size + ptr->key.size + sizeof(raw_kv_length);
         dst->count++;
 
         next = ptr->next;
