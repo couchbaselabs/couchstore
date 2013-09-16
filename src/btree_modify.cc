@@ -613,7 +613,15 @@ node_pointer* complete_new_btree(couchfile_modify_result* mr, couchstore_error_t
         ret_ptr = targ_mr->values_end->pointer;
     }
 
-    return copy_node_pointer(ret_ptr);
+    if (*errcode != COUCHSTORE_SUCCESS || ret_ptr == NULL) {
+        return NULL;
+    }
+
+    ret_ptr = copy_node_pointer(ret_ptr);
+    if (ret_ptr == NULL) {
+        *errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
+    }
+    return ret_ptr;
 }
 
 node_pointer *modify_btree(couchfile_modify_request *rq,
