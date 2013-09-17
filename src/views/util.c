@@ -97,7 +97,6 @@ int read_view_record(FILE *in, void **buf, void *ctx)
         return FILE_MERGER_ERROR_FILE_READ;
     }
 
-    len = ntohl(len);
     klen = ntohs(klen);
     vlen = len - sizeof(klen) - klen;
     if (merge_ctx->type == INCREMENTAL_UPDATE_VIEW_RECORD) {
@@ -137,7 +136,6 @@ file_merger_error_t write_view_record(FILE *out, void *buf, void *ctx)
     if (merge_ctx->type == INCREMENTAL_UPDATE_VIEW_RECORD) {
         len += (uint32_t) sizeof(rec->op);
     }
-    len = htonl(len);
 
     if (fwrite(&len, sizeof(len), 1, out) != 1) {
         return FILE_MERGER_ERROR_FILE_WRITE;

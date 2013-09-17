@@ -368,7 +368,6 @@ static int read_record(FILE *f, arena *a, sized_buf *k, sized_buf *v)
         return COUCHSTORE_ERROR_READ;
     }
 
-    len = ntohl(len);
     klen = ntohs(klen);
     vlen = len - sizeof(klen) - klen;
 
