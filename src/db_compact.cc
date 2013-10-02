@@ -295,3 +295,9 @@ cleanup:
     return errcode;
 }
 
+couchstore_error_t couchstore_set_purge_seq(Db* target, uint64_t purge_seq) {
+    target->header.purge_seq = purge_seq;
+    return COUCHSTORE_SUCCESS;
+
+}
+

@@ -639,6 +639,17 @@ extern "C" {
                                            void *ctx);
 
     /**
+     * Set purge sequence number. This allows the compactor hook to set the highest
+     * purged sequence number into the header once compaction is complete
+     *
+     * @param target any database whose's purge_seq needs to be set
+     * @param purge_seq the sequence number to set into the header's purge_seq.
+     * @return COUCHSTORE_SUCCESS on success
+     */
+    LIBCOUCHSTORE_API
+    couchstore_error_t couchstore_set_purge_seq(Db* target, uint64_t purge_seq);
+
+    /**
      * Compact a database. This creates a new DB file with the same data as the
      * source db, omitting data that is no longer needed.
      * Will use specified couch_file_ops to create and write the target db.
