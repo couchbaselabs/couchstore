@@ -87,7 +87,7 @@ libcouchstore_la_SOURCES = \
                             src/fatbuf.h \
                             src/file_merger.cc \
                             src/file_merger.h \
-                            src/file_name_utils.cc \
+                            src/file_name_utils.c \
                             src/file_name_utils.h \
                             src/file_sorter.cc \
                             src/file_sorter.h \
