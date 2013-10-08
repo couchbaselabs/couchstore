@@ -4,6 +4,7 @@
  * @copyright 2013 Couchbase, Inc.
  *
  * @author Filipe Manana  <filipe@couchbase.com>
+ * @author Aliaksey Kandratsenka <alk@tut.by> (small optimization)
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -21,6 +22,7 @@
 #include "file_merger.h"
 #include <stdlib.h>
 #include <assert.h>
+#include <string.h>
 
 
 typedef struct {
@@ -40,13 +42,7 @@ typedef struct {
     struct file_merger_ctx_t  *ctx;
     record_t                  **data;
     unsigned                  count;
-} heap_t;
-
-#define HEAP_PARENT(i)      (((i) - 1) / 2)
-#define HEAP_LEFT(i)        ((2 * (i)) + 1)
-#define HEAP_RIGHT(i)       ((2 * (i)) + 2)
-#define HEAP_LESS(h, a, b)  \
-    ((*(h)->ctx->compare_records)((a)->data, (b)->data, (h)->ctx->user_ctx) < 0)
+} sorted_vector_t;
 
 typedef struct file_merger_ctx_t {
     unsigned                       num_files;
@@ -57,15 +53,14 @@ typedef struct file_merger_ctx_t {
     file_merger_record_free_t      free_record;
     file_merger_compare_records_t  compare_records;
     void                           *user_ctx;
-    heap_t                         heap;
+    sorted_vector_t                sorted_vector;
 } file_merger_ctx_t;
 
 
-static int  init_heap(heap_t *heap, unsigned max_elements, file_merger_ctx_t *ctx);
-static void heap_destroy(heap_t *heap);
-static record_t *heap_pop(heap_t *heap);
-static int  heap_push(heap_t *heap, record_t *record);
-static void min_heapify(heap_t *heap, unsigned i);
+static int  init_sorted_vector(sorted_vector_t *sorted_vector, unsigned max_elements, file_merger_ctx_t *ctx);
+static void sorted_vector_destroy(sorted_vector_t *sorted_vector);
+static record_t *sorted_vector_pop(sorted_vector_t *sorted_vector);
+static int  sorted_vector_add(sorted_vector_t *sorted_vector, record_t *record);
 
 static file_merger_error_t do_merge_files(file_merger_ctx_t *ctx);
 
@@ -94,21 +89,21 @@ file_merger_error_t merge_files(const char *source_files[],
     ctx.compare_records = compare_records;
     ctx.user_ctx = user_ctx;
 
-    if (!init_heap(&ctx.heap, num_files, &ctx)) {
+    if (!init_sorted_vector(&ctx.sorted_vector, num_files, &ctx)) {
         return FILE_MERGER_ERROR_ALLOC;
     }
 
     ctx.dest_file = fopen(dest_file, "ab");
 
     if (ctx.dest_file == NULL) {
-        heap_destroy(&ctx.heap);
+        sorted_vector_destroy(&ctx.sorted_vector);
         return FILE_MERGER_ERROR_OPEN_FILE;
     }
 
     ctx.files = (FILE **) malloc(sizeof(FILE *) * num_files);
 
     if (ctx.files == NULL) {
-        heap_destroy(&ctx.heap);
+        sorted_vector_destroy(&ctx.sorted_vector);
         fclose(ctx.dest_file);
         return FILE_MERGER_ERROR_ALLOC;
     }
@@ -122,7 +117,7 @@ file_merger_error_t merge_files(const char *source_files[],
             }
             free(ctx.files);
             fclose(ctx.dest_file);
-            heap_destroy(&ctx.heap);
+            sorted_vector_destroy(&ctx.sorted_vector);
 
             return FILE_MERGER_ERROR_OPEN_FILE;
         }
@@ -136,7 +131,7 @@ file_merger_error_t merge_files(const char *source_files[],
         }
     }
     free(ctx.files);
-    heap_destroy(&ctx.heap);
+    sorted_vector_destroy(&ctx.sorted_vector);
     fclose(ctx.dest_file);
 
     return ret;
@@ -167,17 +162,17 @@ static file_merger_error_t do_merge_files(file_merger_ctx_t *ctx)
             }
             record->data = record_data;
             record->file = i;
-            assert(heap_push(&ctx->heap, record) != 0);
+            assert(sorted_vector_add(&ctx->sorted_vector, record) != 0);
         }
     }
 
-    while (ctx->heap.count != 0) {
+    while (ctx->sorted_vector.count != 0) {
         record_t *record;
         void *record_data;
         int record_len;
         file_merger_error_t ret;
 
-        record = heap_pop(&ctx->heap);
+        record = sorted_vector_pop(&ctx->sorted_vector);
         assert(record != NULL);
         assert(ctx->files[record->file] != NULL);
 
@@ -201,7 +196,7 @@ static file_merger_error_t do_merge_files(file_merger_ctx_t *ctx)
         } else {
             (*ctx->free_record)(record->data, ctx->user_ctx);
             record->data = record_data;
-            assert(heap_push(&ctx->heap, record) != 0);
+            assert(sorted_vector_add(&ctx->sorted_vector, record) != 0);
         }
 
     }
@@ -210,99 +205,89 @@ static file_merger_error_t do_merge_files(file_merger_ctx_t *ctx)
 }
 
 
-static int init_heap(heap_t *heap,
-                     unsigned max_elements,
-                     file_merger_ctx_t *ctx)
+static int init_sorted_vector(sorted_vector_t *sorted_vector,
+                              unsigned max_elements,
+                              file_merger_ctx_t *ctx)
 {
-    heap->data = (record_t **) malloc(sizeof(record_t *) * max_elements);
-    if (heap->data == NULL) {
+    sorted_vector->data = (record_t **) malloc(sizeof(record_t *) * max_elements);
+    if (sorted_vector->data == NULL) {
         return 0;
     }
 
-    heap->count = 0;
-    heap->ctx = ctx;
+    sorted_vector->count = 0;
+    sorted_vector->ctx = ctx;
 
     return 1;
 }
 
 
-static void heap_destroy(heap_t *heap)
+static void sorted_vector_destroy(sorted_vector_t *sorted_vector)
 {
     unsigned i;
 
-    for (i = 0; i < heap->count; ++i) {
-        FREE_RECORD(heap->ctx, heap->data[i]);
+    for (i = 0; i < sorted_vector->count; ++i) {
+        FREE_RECORD(sorted_vector->ctx, sorted_vector->data[i]);
     }
 
-    free(heap->data);
+    free(sorted_vector->data);
 }
 
 
-static record_t *heap_pop(heap_t *heap)
+static record_t *sorted_vector_pop(sorted_vector_t *sorted_vector)
 {
     record_t *min;
 
-    if (heap->count == 0) {
+    if (sorted_vector->count == 0) {
         return NULL;
     }
 
-    min = heap->data[0];
-    heap->data[0] = heap->data[heap->count - 1];
-    heap->count -= 1;
-    min_heapify(heap, 0);
+    min = sorted_vector->data[0];
+    sorted_vector->count--;
+    memmove(sorted_vector->data + 0, sorted_vector->data + 1, sizeof(sorted_vector->data[0])*(sorted_vector->count));
 
     return min;
 }
 
 
-static int heap_push(heap_t *heap, record_t *record)
-{
-    unsigned i, parent;
+#define SORTED_VECTOR_LESS(h, a, b)  \
+    ((*(h)->ctx->compare_records)((a)->data, (b)->data, (h)->ctx->user_ctx) < 0)
 
-    if (heap->count == heap->ctx->num_files) {
-        /* heap full */
+static int sorted_vector_add(sorted_vector_t *sorted_vector, record_t *record)
+{
+    unsigned l, r;
+
+    if (sorted_vector->count == sorted_vector->ctx->num_files) {
+        /* sorted_vector full */
         return 0;
     }
 
-    heap->count += 1;
+    l = 0;
+    r = sorted_vector->count;
+    while (r - l > 1) {
+        unsigned pos = (l + r) / 2;
 
-    for (i = heap->count - 1; i > 0; i = parent) {
-        parent = HEAP_PARENT(i);
-        if (HEAP_LESS(heap, heap->data[parent], record)) {
-            break;
+        if (SORTED_VECTOR_LESS(sorted_vector, record, sorted_vector->data[pos])) {
+            r = pos;
+        } else {
+            l = pos;
         }
-        heap->data[i] = heap->data[parent];
     }
 
-    heap->data[i] = record;
+    if (l == 0 && r != 0) {
+        if (SORTED_VECTOR_LESS(sorted_vector, record, sorted_vector->data[0])) {
+            r = 0;
+        }
+    }
+
+    if (r < sorted_vector->count) {
+        memmove(sorted_vector->data + r + 1,
+                sorted_vector->data + r,
+                sizeof(sorted_vector->data[0]) * (sorted_vector->count - r));
+    }
+
+    sorted_vector->count += 1;
+
+    sorted_vector->data[r] = record;
 
     return 1;
-}
-
-
-static void min_heapify(heap_t *heap, unsigned i)
-{
-    record_t *rec;
-    unsigned l, r, min;
-
-    while (1) {
-        l = HEAP_LEFT(i);
-        r = HEAP_RIGHT(i);
-        min = i;
-
-        if ((l < heap->count) && HEAP_LESS(heap, heap->data[l], heap->data[min])) {
-            min = l;
-        }
-        if ((r < heap->count) && HEAP_LESS(heap, heap->data[r], heap->data[min])) {
-            min = r;
-        }
-        if (min == i) {
-            break;
-        }
-
-        rec = heap->data[i];
-        heap->data[i] = heap->data[min];
-        heap->data[min] = rec;
-        i = min;
-    }
 }
