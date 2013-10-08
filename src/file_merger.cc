@@ -156,13 +156,15 @@ static file_merger_error_t do_merge_files(file_merger_ctx_t *ctx)
         } else if (record_len < 0) {
             return (file_merger_error_t) record_len;
         } else {
+            int rv;
             record = (record_t *) malloc(sizeof(*record));
             if (record == NULL) {
                 return FILE_MERGER_ERROR_ALLOC;
             }
             record->data = record_data;
             record->file = i;
-            assert(sorted_vector_add(&ctx->sorted_vector, record) != 0);
+            rv = sorted_vector_add(&ctx->sorted_vector, record);
+            assert(rv);
         }
     }
 
@@ -194,9 +196,11 @@ static file_merger_error_t do_merge_files(file_merger_ctx_t *ctx)
             FREE_RECORD(ctx, record);
             return (file_merger_error_t) record_len;
         } else {
+            int rv;
             (*ctx->free_record)(record->data, ctx->user_ctx);
             record->data = record_data;
-            assert(sorted_vector_add(&ctx->sorted_vector, record) != 0);
+            rv = sorted_vector_add(&ctx->sorted_vector, record);
+            assert(rv);
         }
 
     }
