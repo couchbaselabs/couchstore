@@ -156,7 +156,8 @@ cleanup:
     return errcode;
 }
 
-static couchstore_error_t compact_seq_fetchcb(couchfile_lookup_request *rq, void *k, sized_buf *v)
+static couchstore_error_t compact_seq_fetchcb(couchfile_lookup_request *rq,
+                                              sized_buf *k, sized_buf *v)
 {
     DocInfo* info = NULL;
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
@@ -203,7 +204,7 @@ static couchstore_error_t compact_seq_fetchcb(couchfile_lookup_request *rq, void
         free(item.buf);
     }
 
-    error_pass(output_seqtree_item(static_cast<sized_buf*>(k), v, ctx));
+    error_pass(output_seqtree_item(k, v, ctx));
 cleanup:
     couchstore_free_docinfo(info);
     return errcode;
@@ -248,11 +249,12 @@ cleanup:
     return errcode;
 }
 
-static couchstore_error_t compact_localdocs_fetchcb(couchfile_lookup_request *rq, void *k, sized_buf *v)
+static couchstore_error_t compact_localdocs_fetchcb(couchfile_lookup_request *rq,
+                                                    sized_buf *k, sized_buf *v)
 {
     compact_ctx *ctx = (compact_ctx *) rq->callback_ctx;
     //printf("V: '%.*s'\n", v->size, v->buf);
-    return mr_push_item(arena_copy_buf(ctx->persistent_arena, static_cast<sized_buf*>(k)),
+    return mr_push_item(arena_copy_buf(ctx->persistent_arena, k),
 			arena_copy_buf(ctx->persistent_arena, v),
 			ctx->target_mr);
 }

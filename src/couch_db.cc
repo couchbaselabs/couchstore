@@ -484,27 +484,25 @@ cleanup:
 }
 
 static couchstore_error_t docinfo_fetch_by_id(couchfile_lookup_request *rq,
-                                              void *k,
+                                              sized_buf *k,
                                               sized_buf *v)
 {
-    sized_buf *id = (sized_buf *) k;
     DocInfo **pInfo = (DocInfo **) rq->callback_ctx;
     if (v == NULL) {
         return COUCHSTORE_ERROR_DOC_NOT_FOUND;
     }
-    return by_id_read_docinfo(pInfo, id, v);
+    return by_id_read_docinfo(pInfo, k, v);
 }
 
 static couchstore_error_t docinfo_fetch_by_seq(couchfile_lookup_request *rq,
-                                               void *k,
+                                               sized_buf *k,
                                                sized_buf *v)
 {
-    sized_buf *id = (sized_buf *) k;
     DocInfo **pInfo = (DocInfo **) rq->callback_ctx;
     if (v == NULL) {
         return COUCHSTORE_ERROR_DOC_NOT_FOUND;
     }
-    return by_seq_read_docinfo(pInfo, id, v);
+    return by_seq_read_docinfo(pInfo, k, v);
 }
 
 LIBCOUCHSTORE_API
@@ -647,25 +645,24 @@ typedef struct {
 
 // btree_lookup callback, called while iterating keys
 static couchstore_error_t lookup_callback(couchfile_lookup_request *rq,
-                                          void *k, sized_buf *v)
+                                          sized_buf *k, sized_buf *v)
 {
     if (v == NULL) {
         return COUCHSTORE_SUCCESS;
     }
 
     const lookup_context *context = static_cast<const lookup_context *>(rq->callback_ctx);
-    sized_buf *seqterm = (sized_buf *) k;
     DocInfo *docinfo = NULL;
     couchstore_error_t errcode;
     if (context->by_id) {
-        errcode = by_id_read_docinfo(&docinfo, seqterm, v);
+        errcode = by_id_read_docinfo(&docinfo, k, v);
     } else {
-        errcode = by_seq_read_docinfo(&docinfo, seqterm, v);
+        errcode = by_seq_read_docinfo(&docinfo, k, v);
     }
     if (errcode == COUCHSTORE_ERROR_CORRUPT && (context->options & COUCHSTORE_INCLUDE_CORRUPT_DOCS)) {
         // Invoke callback even if doc info is corrupted/unreadable, if magic flag is set
         docinfo = static_cast<DocInfo*>(calloc(sizeof(DocInfo), 1));
-        docinfo->id = *seqterm;
+        docinfo->id = *k;
         docinfo->rev_meta = *v;
     } else if (errcode) {
         return errcode;
@@ -1020,10 +1017,9 @@ couchstore_error_t couchstore_db_info(Db *db, DbInfo* dbinfo) {
 }
 
 static couchstore_error_t local_doc_fetch(couchfile_lookup_request *rq,
-                                          void *k,
+                                          sized_buf *k,
                                           sized_buf *v)
 {
-    sized_buf *id = (sized_buf *) k;
     LocalDoc **lDoc = (LocalDoc **) rq->callback_ctx;
     LocalDoc *dp;
 
@@ -1031,21 +1027,21 @@ static couchstore_error_t local_doc_fetch(couchfile_lookup_request *rq,
         *lDoc = NULL;
         return COUCHSTORE_SUCCESS;
     }
-    fatbuf *ldbuf = fatbuf_alloc(sizeof(LocalDoc) + id->size + v->size);
+    fatbuf *ldbuf = fatbuf_alloc(sizeof(LocalDoc) + k->size + v->size);
     if (ldbuf == NULL) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
 
     dp = *lDoc = (LocalDoc *) fatbuf_get(ldbuf, sizeof(LocalDoc));
-    dp->id.buf = (char *) fatbuf_get(ldbuf, id->size);
-    dp->id.size = id->size;
+    dp->id.buf = (char *) fatbuf_get(ldbuf, k->size);
+    dp->id.size = k->size;
 
     dp->json.buf = (char *) fatbuf_get(ldbuf, v->size);
     dp->json.size = v->size;
 
     dp->deleted = 0;
 
-    memcpy(dp->id.buf, id->buf, id->size);
+    memcpy(dp->id.buf, k->buf, k->size);
     memcpy(dp->json.buf, v->buf, v->size);
 
     return COUCHSTORE_SUCCESS;
