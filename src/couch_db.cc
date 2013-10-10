@@ -374,7 +374,9 @@ void couchstore_free_document(Doc *doc)
     }
 }
 
-couchstore_error_t by_seq_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
+couchstore_error_t by_seq_read_docinfo(DocInfo **pInfo,
+                                       const sized_buf *k,
+                                       const sized_buf *v)
 {
     const raw_seq_index_value *raw = (const raw_seq_index_value*)v->buf;
     ssize_t extraSize = v->size - sizeof(*raw);
@@ -408,7 +410,9 @@ couchstore_error_t by_seq_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf 
     return COUCHSTORE_SUCCESS;
 }
 
-static couchstore_error_t by_id_read_docinfo(DocInfo **pInfo, sized_buf *k, sized_buf *v)
+static couchstore_error_t by_id_read_docinfo(DocInfo **pInfo,
+                                             const sized_buf *k,
+                                             const sized_buf *v)
 {
     const raw_id_index_value *raw = (const raw_id_index_value*)v->buf;
     ssize_t revMetaSize = v->size - sizeof(*raw);
@@ -484,8 +488,8 @@ cleanup:
 }
 
 static couchstore_error_t docinfo_fetch_by_id(couchfile_lookup_request *rq,
-                                              sized_buf *k,
-                                              sized_buf *v)
+                                              const sized_buf *k,
+                                              const sized_buf *v)
 {
     DocInfo **pInfo = (DocInfo **) rq->callback_ctx;
     if (v == NULL) {
@@ -495,8 +499,8 @@ static couchstore_error_t docinfo_fetch_by_id(couchfile_lookup_request *rq,
 }
 
 static couchstore_error_t docinfo_fetch_by_seq(couchfile_lookup_request *rq,
-                                               sized_buf *k,
-                                               sized_buf *v)
+                                               const sized_buf *k,
+                                               const sized_buf *v)
 {
     DocInfo **pInfo = (DocInfo **) rq->callback_ctx;
     if (v == NULL) {
@@ -645,7 +649,8 @@ typedef struct {
 
 // btree_lookup callback, called while iterating keys
 static couchstore_error_t lookup_callback(couchfile_lookup_request *rq,
-                                          sized_buf *k, sized_buf *v)
+                                          const sized_buf *k,
+                                          const sized_buf *v)
 {
     if (v == NULL) {
         return COUCHSTORE_SUCCESS;
@@ -1017,8 +1022,8 @@ couchstore_error_t couchstore_db_info(Db *db, DbInfo* dbinfo) {
 }
 
 static couchstore_error_t local_doc_fetch(couchfile_lookup_request *rq,
-                                          sized_buf *k,
-                                          sized_buf *v)
+                                          const sized_buf *k,
+                                          const sized_buf *v)
 {
     LocalDoc **lDoc = (LocalDoc **) rq->callback_ctx;
     LocalDoc *dp;

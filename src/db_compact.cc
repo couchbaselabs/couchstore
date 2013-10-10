@@ -89,7 +89,7 @@ couchstore_error_t couchstore_compact_db(Db* source, const char* target_filename
 }
 
 //Copy buffer to arena
-static sized_buf* arena_copy_buf(arena* a, sized_buf *src)
+static sized_buf* arena_copy_buf(arena* a, const sized_buf *src)
 {
     sized_buf *nbuf = static_cast<sized_buf*>(arena_alloc(a, sizeof(sized_buf)));
     if (nbuf == NULL) {
@@ -104,7 +104,9 @@ static sized_buf* arena_copy_buf(arena* a, sized_buf *src)
     return nbuf;
 }
 
-static couchstore_error_t output_seqtree_item(sized_buf* k, sized_buf *v, compact_ctx *ctx)
+static couchstore_error_t output_seqtree_item(const sized_buf *k,
+                                              const sized_buf *v,
+                                              compact_ctx *ctx)
 {
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     sized_buf *v_c;
@@ -157,7 +159,8 @@ cleanup:
 }
 
 static couchstore_error_t compact_seq_fetchcb(couchfile_lookup_request *rq,
-                                              sized_buf *k, sized_buf *v)
+                                              const sized_buf *k,
+                                              const sized_buf *v)
 {
     DocInfo* info = NULL;
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
@@ -172,7 +175,7 @@ static couchstore_error_t compact_seq_fetchcb(couchfile_lookup_request *rq,
     }
 
     if(ctx->hook) {
-        error_pass(by_seq_read_docinfo(&info, static_cast<sized_buf*>(k), v));
+        error_pass(by_seq_read_docinfo(&info, k, v));
         int hook_action = ctx->hook(ctx->target, info, ctx->hook_ctx);
         switch(hook_action) {
             case COUCHSTORE_COMPACT_KEEP_ITEM:
@@ -250,7 +253,8 @@ cleanup:
 }
 
 static couchstore_error_t compact_localdocs_fetchcb(couchfile_lookup_request *rq,
-                                                    sized_buf *k, sized_buf *v)
+                                                    const sized_buf *k,
+                                                    const sized_buf *v)
 {
     compact_ctx *ctx = (compact_ctx *) rq->callback_ctx;
     //printf("V: '%.*s'\n", v->size, v->buf);
