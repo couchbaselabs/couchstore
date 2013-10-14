@@ -104,6 +104,9 @@ AC_DEFUN([COUCHBASE_GENERIC_COMPILER], [
         CFLAGS="$save_CFLAGS"
         AC_MSG_RESULT([$gcc_fvisibility_supported])
 
+        AS_CASE([$host_os],
+          [mingw*], [gcc_fvisibility_supported="no"])
+
         AS_IF([test x"$gcc_fvisibility_supported" = xyes],
               [VISIBILITY="$GCC_VISIBILITY"],
               [VISIBILITY=""])
