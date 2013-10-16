@@ -103,7 +103,7 @@ class DbInfoStruct (Structure):
                 ("doc_count", c_ulonglong),
                 ("deleted_count", c_ulonglong),
                 ("space_used", c_ulonglong),
-                ("header_position", c_size_t) ]
+                ("header_position", c_ulonglong) ]
 
 
 ### DOCUMENT INFO CLASS:
