@@ -88,6 +88,7 @@ view_group_info_t *couchstore_read_view_group_info(FILE *in_stream,
     char buf[4096];
     char *dup;
     int i, j;
+    int reduce_len;
 
     info = (view_group_info_t *) calloc(1, sizeof(*info));
     if (info == NULL) {
@@ -161,16 +162,26 @@ view_group_info_t *couchstore_read_view_group_info(FILE *in_stream,
             }
             bti->names[j] = (const char *) dup;
 
-            if (couchstore_read_line(in_stream, buf, sizeof(buf)) != buf) {
+            if (fscanf(in_stream, "%d\n", &reduce_len) != 1) {
                 fprintf(error_stream,
-                        "Error reading btree %d view %d reducer\n", i, j);
+                        "Error reading btree %d view %d "
+                        "reduce function size\n", i, j);
                 goto out_error;
             }
-            dup = strdup(buf);
+
+            dup = (char *) malloc(reduce_len + 1);
             if (dup == NULL) {
                 fprintf(error_stream, "Memory allocation failure\n");
                 goto out_error;
             }
+
+            if (fread(dup, reduce_len, 1, in_stream) != 1) {
+                fprintf(error_stream,
+                        "Error reading btree %d view %d reducer\n", i, j);
+                free(dup);
+                goto out_error;
+            }
+            dup[reduce_len] = '\0';
             bti->reducers[j] = (const char *) dup;
         }
     }
