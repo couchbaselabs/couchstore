@@ -124,19 +124,19 @@ static int compareStringsASCII(const char** in1, const char** in2)
                 return -1;
         } else if (c2 == '"')
             return 1;
-        
+
         // Handle escape sequences:
         if (c1 == '\\')
             c1 = ConvertJSONEscape(&str1);
         if (c2 == '\\')
             c2 = ConvertJSONEscape(&str2);
-        
+
         // Compare the next characters:
         int s = cmp(c1, c2);
         if (s)
             return s;
     }
-    
+
     // Strings are equal, so update the positions:
     *in1 = str1 + 1;
     *in2 = str2 + 1;
@@ -162,7 +162,7 @@ static const char* createStringFromJSON(const char** in, size_t *length, bool *f
     }
     *in = str + 1;
     *length = str - start;
-    
+
     *freeWhenDone = false;
     if (escapes > 0) {
         *length -= escapes;
@@ -178,7 +178,7 @@ static const char* createStringFromJSON(const char** in, size_t *length, bool *f
         start = buf;
         *freeWhenDone = true;
     }
-    
+
     return start;
 }
 
@@ -187,7 +187,7 @@ static int compareUnicode(const char* str1, size_t len1,
                           const char* str2, size_t len2)
 {
     static UCollator* coll = NULL;
-    
+
     UErrorCode status = U_ZERO_ERROR;
     if (!coll) {
         coll = ucol_open("", &status);
@@ -199,23 +199,23 @@ static int compareUnicode(const char* str1, size_t len1,
 
     UCharIterator iterA, iterB;
     int result;
-    
+
     uiter_setUTF8(&iterA, str1, (int)len1);
     uiter_setUTF8(&iterB, str2, (int)len2);
-    
+
     result = ucol_strcollIter(coll, &iterA, &iterB, &status);
-    
+
     if (U_FAILURE(status)) {
         fprintf(stderr, "CouchStore CollateJSON: ICU error %d\n", (int)status);
         return -1;
     }
-    
+
     if (result < 0) {
         return -1;
     } else if (result > 0) {
         return 1;
     }
-    
+
     return 0;
 }
 
@@ -226,9 +226,9 @@ static int compareStringsUnicode(const char** in1, const char** in2)
     bool free1, free2;
     const char* str1 = createStringFromJSON(in1, &len1, &free1);
     const char* str2 = createStringFromJSON(in2, &len2, &free2);
-    
+
     int result = compareUnicode(str1, len1, str2, len2);
-    
+
     if (free1) {
         free((char*)str1);
     }
@@ -266,7 +266,7 @@ int CollateJSON(const sized_buf *buf1,
     const char* str1 = buf1->buf;
     const char* str2 = buf2->buf;
     int depth = 0;
-    
+
     do {
         // Get the types of the next token in each string:
         ValueType type1 = valueTypeOf(*str1);
@@ -277,7 +277,7 @@ int CollateJSON(const sized_buf *buf1,
                 return cmp(type1, type2);
             else
                 return cmp(kRawOrderOfValueType[type1], kRawOrderOfValueType[type2]);
-            
+
         // If types match, compare the actual token values:
         } else switch (type1) {
             case kNull:
