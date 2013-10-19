@@ -13,6 +13,7 @@
 #include <string.h>
 #include <unicode/ucol.h>
 #include <unicode/ucasemap.h>
+#include <unicode/ucnv.h>
 
 
 static int cmp(int n1, int n2)
@@ -183,8 +184,8 @@ static const char* createStringFromJSON(const char** in, size_t *length, bool *f
 }
 
 
-static int compareUnicode(const char* str1, size_t len1,
-                          const char* str2, size_t len2)
+static int compareUnicodeSlow(const char* str1, size_t len1,
+                              const char* str2, size_t len2)
 {
     static UCollator* coll = NULL;
 
@@ -217,6 +218,88 @@ static int compareUnicode(const char* str1, size_t len1,
     }
 
     return 0;
+}
+
+
+static int convertUTF8toUChar(const char *src, UChar *dst, int len)
+{
+    static UConverter *c;
+    UErrorCode status;
+
+    if (!c) {
+        status = U_ZERO_ERROR;
+        c = ucnv_open("UTF-8", &status);
+        if (!c) {
+            fprintf(stderr, "CouchStore CollateJSON: Couldn't initialize ICU (%d)\n", (int)status);
+            abort();
+        }
+    }
+
+    UChar *p = dst;
+    const char *s = src;
+
+    while (len) {
+        unsigned char ch = (unsigned char)(*s);
+        if ((ch & 0x80)) {
+            goto icu_conv;
+        }
+        *p++ = (UChar)(ch);
+        s++;
+        len--;
+    }
+
+    return p - dst;
+
+icu_conv:
+    status = U_ZERO_ERROR;
+    ucnv_toUnicode(c, &p, p + len, &s, s + len, NULL, TRUE, &status);
+
+    if (U_FAILURE(status)) {
+        return -1;
+    }
+
+    return p - dst;
+}
+
+static int compareUnicode(const char* str1, size_t len1,
+                          const char* str2, size_t len2)
+{
+    static UCollator* coll = NULL;
+
+    UErrorCode status = U_ZERO_ERROR;
+    if (!coll) {
+        coll = ucol_open("", &status);
+        if (U_FAILURE(status)) {
+            fprintf(stderr, "CouchStore CollateJSON: Couldn't initialize ICU (%d)\n", (int)status);
+            return -1;
+        }
+    }
+
+    if (len1 > 256 || len2 > 256) {
+        return compareUnicodeSlow(str1, len1, str2, len2);
+    }
+
+    UChar b1[len1];
+    UChar b2[len2];
+
+    len1 = convertUTF8toUChar(str1, b1, len1);
+    len2 = convertUTF8toUChar(str2, b2, len2);
+
+    if (len1 < 0 || len2 < 0) {
+        /* something went wrong with utf8->utf32 conversion */
+        return compareUnicodeSlow(str1, len1, str2, len2);
+    }
+
+    int result = ucol_strcoll(coll, b1, len1, b2, len2);
+
+    if (result < 0) {
+        return -1;
+    } else if (result > 0) {
+        return 1;
+    }
+
+    return 0;
+
 }
 
 
