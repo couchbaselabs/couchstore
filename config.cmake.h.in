@@ -1,0 +1,10 @@
+#pragma once
+
+#cmakedefine HAVE_NETINET_IN_H ${HAVE_NETINET_IN_H}
+#cmakedefine HAVE_ARPA_INET_H ${HAVE_ARPA_INET_H}
+#cmakedefine HAVE_INTTYPES_H ${HAVE_INTTYPES_H}
+
+#cmakedefine HAVE_FDATASYNC ${HAVE_FDATASYNC}
+#cmakedefine HAVE_STRDUP ${HAVE_STRDUP}
+
+#include "config_static.h"

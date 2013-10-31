@@ -432,7 +432,7 @@ static couchstore_error_t by_id_read_docinfo(DocInfo **pInfo,
     content_meta = decode_raw08(raw->content_meta);
     revnum = decode_raw48(raw->rev_seq);
 
-    sized_buf rev_meta = {v->buf + sizeof(*raw), revMetaSize};
+    sized_buf rev_meta = {v->buf + sizeof(*raw), static_cast<size_t>(revMetaSize)};
     DocInfo* docInfo = couchstore_alloc_docinfo(k, &rev_meta);
     if (!docInfo) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;

@@ -40,6 +40,10 @@
 #include <netinet/in.h>
 #endif
 
+#ifdef HAVE_ARPA_INET_H
+#include <arpa/inet.h>
+#endif
+
 #ifdef HAVE_INTTYPES_H
 #include <inttypes.h>
 #endif

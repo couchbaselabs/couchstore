@@ -64,3 +64,12 @@
 /testapp
 /writetest
 xcuserdata/
+
+/CMakeFiles/
+/CTestTestfile.cmake
+/cmake_install.cmake
+/couchstore_testapp
+/*.dylib*
+/*.so*
+/*.dll*
+/Testing/
