@@ -7,8 +7,10 @@
 #include <string.h>
 
 
-// Variable-width types. Since these are made out of chars they will be byte-aligned,
-// so structs consisting only of these will be packed.
+/*
+ * Variable-width types. Since these are made out of chars they will be
+ * byte-aligned, so structs consisting only of these will be packed.
+ */
 
 typedef struct {
     uint8_t raw_bytes[1];
@@ -39,7 +41,7 @@ typedef struct {
 } raw_64;
 
 
-// Functions for decoding raw_xx types to native integers:
+/* Functions for decoding raw_xx types to native integers: */
 
 #define DECODE_RAW(DST_TYPE, FLIP_FN) \
     DST_TYPE value = 0; \
@@ -82,11 +84,11 @@ static inline uint64_t decode_raw64(raw_64 raw)
 }
 
 
-// Functions for encoding native integers to raw_xx types:
+/* Functions for encoding native integers to raw_xx types: */
 
 #define ENCODE_RAW(FLIP_FN, RAW_TYPE) \
-    value = FLIP_FN(value); \
     RAW_TYPE raw; \
+    value = FLIP_FN(value); \
     memcpy(&raw, (char*)&value + sizeof(value) - sizeof(raw), sizeof(raw)); \
     return raw
 

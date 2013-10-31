@@ -1,10 +1,10 @@
-//
-//  arena.h
-//  couchstore
-//
-//  Created by Jens Alfke on 4/13/12.
-//  Copyright (c) 2012 Couchbase, Inc. All rights reserved.
-//
+/*
+**  arena.h
+**  couchstore
+**
+**  Created by Jens Alfke on 4/13/12.
+**  Copyright (c) 2012 Couchbase, Inc. All rights reserved.
+*/
 
 #ifndef COUCHSTORE_ARENA_H
 #define COUCHSTORE_ARENA_H
@@ -83,4 +83,4 @@ void arena_free_all(arena *a);
 }
 #endif
 
-#endif // COUCHSTORE_ARENA_H
+#endif /* COUCHSTORE_ARENA_H */

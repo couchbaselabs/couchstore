@@ -77,7 +77,7 @@ static couchstore_error_t couch_open(couch_file_handle* handle, const char *path
             return COUCHSTORE_ERROR_OPEN_FILE;
         }
     }
-    // Tell the caller about the new handle (file descriptor)
+    /* Tell the caller about the new handle (file descriptor) */
     *handle = fd_to_handle(fd);
     return COUCHSTORE_SUCCESS;
 }
@@ -128,13 +128,13 @@ static couchstore_error_t couch_sync(couch_file_handle handle)
 static couch_file_handle couch_constructor(void* cookie)
 {
     (void) cookie;
-    // We don't have a file descriptor till couch_open runs, so return an invalid value for now.
+    /* We don't have a file descriptor till couch_open runs, so return an invalid value for now. */
     return fd_to_handle(-1);
 }
 
 static void couch_destructor(couch_file_handle handle)
 {
-    // nothing to do here
+    /* nothing to do here */
     (void)handle;
 }
 

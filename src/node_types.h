@@ -1,13 +1,15 @@
-//
-//  node_types.h
-//  couchstore
-//
-//  Created by Jens Alfke on 4/25/12.
-//  Modified by Filipe Manana on 6/19/13 to fix some GCC warnings regarding
-//  violation of strict aliasing rules.
-//
-//  Copyright (c) 2012 Couchbase, Inc. All rights reserved.
-//
+/*
+**
+**  node_types.h
+**  couchstore
+**
+**  Created by Jens Alfke on 4/25/12.
+**  Modified by Filipe Manana on 6/19/13 to fix some GCC warnings regarding
+**  violation of strict aliasing rules.
+**
+**  Copyright (c) 2012 Couchbase, Inc. All rights reserved.
+**
+*/
 
 #ifndef COUCHSTORE_NODE_TYPES_H
 #define COUCHSTORE_NODE_TYPES_H
@@ -27,13 +29,13 @@ typedef struct {
     raw_16 seqrootsize;
     raw_16 idrootsize;
     raw_16 localrootsize;
-    // Three variable-size raw_btree_root structures follow
+    /* Three variable-size raw_btree_root structures follow */
 } raw_file_header;
 
 typedef struct {
     raw_48 pointer;
     raw_48 subtreesize;
-    // Variable-size reduce value follows
+    /* Variable-size reduce value follows */
 } raw_btree_root;
 
 /** Packed key-and-value length type. Key length is 12 bits, value length is 28. */
@@ -45,7 +47,7 @@ typedef struct {
     raw_48 pointer;
     raw_48 subtreesize;
     raw_16 reduce_value_size;
-    // Variable-size reduce value follows
+    /* Variable-size reduce value follows */
 } raw_node_pointer;
 
 typedef struct {
@@ -55,22 +57,22 @@ typedef struct {
 typedef struct {
     raw_48 db_seq;
     raw_32 size;
-    raw_48 bp;                 // high bit is 'deleted' flag
+    raw_48 bp;                 /* high bit is 'deleted' flag */
     raw_48 rev_seq;
     raw_08 content_meta;
-    // Variable-size rev_meta data follows
+    /* Variable-size rev_meta data follows */
 } raw_id_index_value;
 
 typedef struct {
     raw_kv_length sizes;
-    raw_48 bp;                 // high bit is 'deleted' flag
+    raw_48 bp;                 /* high bit is 'deleted' flag */
     raw_48 rev_seq;
     raw_08 content_meta;
-    // Variable-size id follows
-    // Variable-size rev_meta data follows
+    /* Variable-size id follows */
+    /* Variable-size rev_meta data follows */
 } raw_seq_index_value;
 
-// Mask for the 'deleted' bit in .bp fields
+/* Mask for the 'deleted' bit in .bp fields */
 #define BP_DELETED_FLAG 0x800000000000
 
 
@@ -84,7 +86,7 @@ size_t encode_root(void *buf, node_pointer *node);
  */
 static inline void decode_kv_length(const raw_kv_length *kv, uint32_t *klen, uint32_t *vlen)
 {
-    //12, 28 bit
+    /* 12, 28 bit */
     *klen = (uint16_t) ((kv->raw_kv[0] << 4) | ((kv->raw_kv[1] & 0xf0) >> 4));
     memcpy(vlen, &kv->raw_kv[1], 4);
     *vlen = ntohl(*vlen) & 0x0FFFFFFF;
@@ -99,8 +101,8 @@ static inline raw_kv_length encode_kv_length(size_t klen, size_t vlen)
 
     vlen = htonl(vlen);
     memcpy(&kv.raw_kv[1], &vlen, 4);
-    kv.raw_kv[0] = (uint8_t)(klen >> 4);    // upper 8 bits of klen
-    kv.raw_kv[1] |= (klen & 0xF) << 4;     // lower 4 bits of klen in upper half of byte
+    kv.raw_kv[0] = (uint8_t)(klen >> 4);    /* upper 8 bits of klen */
+    kv.raw_kv[1] |= (klen & 0xF) << 4;     /* lower 4 bits of klen in upper half of byte */
     return kv;
 }
 

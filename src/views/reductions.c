@@ -239,4 +239,3 @@ static void enc_raw40(uint64_t u, char **buf)
     memcpy(*buf, &r, 5);
     *buf += 5;
 }
-

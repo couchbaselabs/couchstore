@@ -16,7 +16,7 @@
 #define COUCH_BLOCK_SIZE 4096
 #define COUCH_DISK_VERSION 11
 #define COUCH_SNAPPY_THRESHOLD 64
-#define MAX_DB_HEADER_SIZE 1024    // Conservative estimate; just for sanity check
+#define MAX_DB_HEADER_SIZE 1024    /* Conservative estimate; just for sanity check */
 
 enum {
     /** Additional couchstore_docinfos_options flag */
@@ -27,7 +27,7 @@ enum {
 extern "C" {
 #endif
 
-    // Structure representing an open file; "superclass" of Db
+     /* Structure representing an open file; "superclass" of Db */
     typedef struct _treefile {
         uint64_t pos;
         const couch_file_ops *ops;

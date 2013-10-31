@@ -22,7 +22,7 @@
 #ifndef COUCHSTORE_CONFIG_STATIC_H
 #define COUCHSTORE_CONFIG_STATIC_H 1
 
-//Large File Support
+/* Large File Support */
 #define _LARGE_FILE 1
 #ifndef _FILE_OFFSET_BITS
 #  define _FILE_OFFSET_BITS 64
@@ -45,15 +45,15 @@
 #endif
 
 #ifdef __APPLE__
-#define fdatasync(FD) fsync(FD)  // autoconf things OS X has fdatasync but it doesn't
+#define fdatasync(FD) fsync(FD)  /* autoconf things OS X has fdatasync but it doesn't */
 #ifndef HAVE_HTONLL
-// On Darwin, use built-in functions for 64-bit byte-swap:
+/* On Darwin, use built-in functions for 64-bit byte-swap: */
 #include <libkern/OSByteOrder.h>
 #define ntohll(n) OSSwapBigToHostInt64(n)
 #define htonll(n) OSSwapHostToBigInt64(n)
 #define HAVE_HTONLL
-#endif // HAVE_HTONLL
-#endif // __APPLE__
+#endif /* HAVE_HTONLL */
+#endif /* __APPLE__ */
 
 #ifndef HAVE_HTONLL
 #ifdef WORDS_BIGENDIAN
