@@ -142,12 +142,13 @@ couchstore_error_t encode_view_btree_value(const view_btree_value_t *value,
 
 void free_view_btree_value(view_btree_value_t *value)
 {
+    int i;
     if (value == NULL) {
         return;
     }
 
     if (value->values != NULL){
-        for (int i = 0; i < value->num_values; ++i) {
+        for (i = 0; i < value->num_values; ++i) {
             free(value->values[i].buf);
         }
         free(value->values);
@@ -338,17 +339,17 @@ couchstore_error_t encode_view_id_btree_value(const view_id_btree_value_t *value
 
 void free_view_id_btree_value(view_id_btree_value_t *value)
 {
+    int i;
+    int j;
+
     if (value == NULL) {
         return;
     }
 
     if (value->view_keys_map != NULL){
-
-        for (int i = 0; i < value->num_view_keys_map; ++i) {
-
+        for (i = 0; i < value->num_view_keys_map; ++i) {
             if (value->view_keys_map[i].json_keys != NULL) {
-
-                for (int j = 0; j <value->view_keys_map[i].num_keys; ++j) {
+                for (j = 0; j <value->view_keys_map[i].num_keys; ++j) {
                     free (value->view_keys_map[i].json_keys[j].buf);
                 }
 
@@ -375,4 +376,3 @@ static void enc_raw24(uint32_t u, char **buf)
     memcpy(*buf, &v, 3);
     *buf += 3;
 }
-

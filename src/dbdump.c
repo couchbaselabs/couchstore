@@ -12,7 +12,7 @@
 
 typedef enum {
     DumpBySequence,
-    DumpByID,
+    DumpByID
 } DumpMode;
 
 static DumpMode mode = DumpBySequence;
@@ -35,12 +35,14 @@ static void printsb(const sized_buf *sb)
 
 static void printsbhex(const sized_buf *sb, int with_ascii)
 {
+    size_t i;
+
     if (sb->buf == NULL) {
         printf("null\n");
         return;
     }
     printf("{");
-    for (size_t i = 0; i < sb->size; ++i) {
+    for (i = 0; i < sb->size; ++i) {
         printf("%.02x", (uint8_t)sb->buf[i]);
         if (i % 4 == 3) {
             printf(" ");
@@ -49,7 +51,7 @@ static void printsbhex(const sized_buf *sb, int with_ascii)
     printf("}");
     if (with_ascii) {
         printf("  (\"");
-        for (size_t i = 0; i < sb->size; ++i) {
+        for (i = 0; i < sb->size; ++i) {
             uint8_t ch = sb->buf[i];
             if (ch < 32 || ch >= 127) {
                 ch = '?';
@@ -64,10 +66,12 @@ static void printsbhex(const sized_buf *sb, int with_ascii)
 static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
 {
     int *count = (int *) ctx;
-    (*count)++;
     Doc *doc = NULL;
     uint64_t cas;
     uint32_t expiry, flags;
+    couchstore_error_t docerr;
+    (*count)++;
+
     if (mode == DumpBySequence) {
         printf("Doc seq: %"PRIu64"\n", docinfo->db_seq);
         printf("     id: ");
@@ -98,14 +102,16 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
         printf("     doc deleted\n");
     }
 
-    couchstore_error_t docerr = couchstore_open_doc_with_docinfo(db, docinfo, &doc, 0);
+    docerr = couchstore_open_doc_with_docinfo(db, docinfo, &doc, 0);
     if(docerr != COUCHSTORE_SUCCESS) {
         printf("     could not read document body: %s\n", couchstore_strerror(docerr));
     } else if (doc && (docinfo->content_meta & COUCH_DOC_IS_COMPRESSED)) {
         size_t rlen;
-        snappy_uncompressed_length(doc->data.buf, doc->data.size, &rlen);
-        char *decbuf = (char *) malloc(rlen);
+        char *decbuf;
         size_t uncompr_len;
+
+        snappy_uncompressed_length(doc->data.buf, doc->data.size, &rlen);
+        decbuf = malloc(rlen);
         snappy_uncompress(doc->data.buf, doc->data.size, decbuf, &uncompr_len);
         printf("     data: (snappy) %.*s\n", (int) uncompr_len, decbuf);
         free(decbuf);
@@ -126,15 +132,18 @@ static int visit_node(Db *db,
                       const sized_buf* reduceValue,
                       void *ctx)
 {
+    int i;
     (void) db;
-    for (int i = 0; i < depth; ++i)
+
+    for (i = 0; i < depth; ++i)
         printf("  ");
     if (reduceValue) {
-        // This is a tree node:
+        /* This is a tree node: */
         printf("+ (%llu) ", (unsigned long long) subtreeSize);
         printsbhex(reduceValue, 0);
     } else if (docinfo->bp > 0) {
-        // This is a document:
+        int *count;
+        /* This is a document: */
         printf("%c (%llu) ", (docinfo->deleted ? 'x' : '*'),
                (unsigned long long) docinfo->size);
         if (mode == DumpBySequence) {
@@ -142,10 +151,10 @@ static int visit_node(Db *db,
         }
         printsb(&docinfo->id);
 
-        int *count = (int *) ctx;
+        count = (int *) ctx;
         (*count)++;
     } else {
-        // Document, but not in a known format:
+        /* Document, but not in a known format: */
         printf("**corrupt?** ");
         printsbhex(&docinfo->rev_meta, 1);
     }
@@ -157,14 +166,14 @@ static int process_file(const char *file, int *total)
 {
     Db *db;
     couchstore_error_t errcode;
+    int count = 0;
+
     errcode = couchstore_open_db(file, COUCHSTORE_OPEN_FLAG_RDONLY, &db);
     if (errcode != COUCHSTORE_SUCCESS) {
         fprintf(stderr, "Failed to open \"%s\": %s\n",
                 file, couchstore_strerror(errcode));
         return -1;
     }
-
-    int count = 0;
 
     switch (mode) {
         case DumpBySequence:
@@ -205,11 +214,14 @@ static void usage(void) {
 
 int main(int argc, char **argv)
 {
+    int error = 0;
+    int count = 0;
+    int ii = 1;
+
     if (argc < 2) {
         usage();
     }
 
-    int ii = 1;
     while (strncmp(argv[ii], "-", 1) == 0) {
         if (strcmp(argv[ii], "--byid") == 0) {
             mode = DumpByID;
@@ -227,8 +239,6 @@ int main(int argc, char **argv)
         usage();
     }
 
-    int error = 0;
-    int count = 0;
     for (; ii < argc; ++ii) {
         error += process_file(argv[ii], &count);
     }
@@ -240,4 +250,3 @@ int main(int argc, char **argv)
         exit(EXIT_SUCCESS);
     }
 }
-

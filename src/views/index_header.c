@@ -247,6 +247,10 @@ couchstore_error_t encode_index_header(const index_header_t *header,
     char *buf = NULL, *b = NULL;
     size_t sz = 0;
     uint16_t id_btree_state_size;
+    int i;
+    size_t comp_size;
+    char *comp;
+    snappy_status res;
 
     sz += 1;                     /* version */
     sz += 2;                     /* number of partitions */
@@ -262,7 +266,7 @@ couchstore_error_t encode_index_header(const index_header_t *header,
     }
     /* view btree states */
     sz += 1;
-    for (int i = 0; i < header->num_views; ++i) {
+    for (i = 0; i < header->num_views; ++i) {
         sz += 2;
         if (header->view_btree_states[i] != NULL) {
             sz += sizeof(raw_btree_root);
@@ -319,7 +323,7 @@ couchstore_error_t encode_index_header(const index_header_t *header,
 
     b[0] = (char) header->num_views;
     b += 1;
-    for (int i = 0; i < header->num_views; ++i) {
+    for (i = 0; i < header->num_views; ++i) {
         uint16_t btree_state_size = 0;
 
         if (header->view_btree_states[i] != NULL) {
@@ -341,14 +345,14 @@ couchstore_error_t encode_index_header(const index_header_t *header,
     enc_seq_list(header->pending_transition.unindexable, &b);
     enc_part_seq_list(header->unindexable_seqs, &b);
 
-    size_t comp_size = snappy_max_compressed_length(sz);
-    char *comp = (char *) malloc(16 + comp_size);
+    comp_size = snappy_max_compressed_length(sz);
+    comp = (char *) malloc(16 + comp_size);
 
     if (comp == NULL) {
         goto alloc_error;
     }
 
-    snappy_status res = snappy_compress(buf, sz, comp + 16, &comp_size);
+    res = snappy_compress(buf, sz, comp + 16, &comp_size);
 
     if (res != SNAPPY_OK) {
         /* TODO: a new error for couchstore_error_t */
@@ -373,6 +377,8 @@ couchstore_error_t encode_index_header(const index_header_t *header,
 
 void free_index_header(index_header_t *header)
 {
+    int i;
+
     if (header == NULL) {
         return;
     }
@@ -381,7 +387,7 @@ void free_index_header(index_header_t *header)
     free(header->id_btree_state);
 
     if (header->view_btree_states != NULL) {
-        for (int i = 0; i < header->num_views; ++i) {
+        for (i = 0; i < header->num_views; ++i) {
             free(header->view_btree_states[i]);
         }
         free(header->view_btree_states);

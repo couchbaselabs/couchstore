@@ -115,11 +115,12 @@ couchstore_error_t encode_view_btree_reduction(const view_btree_reduction_t *red
 {
     char *b = NULL;
     size_t sz = 0;
+    int i;
 
     sz += 5;                     /* kv_count */
     sz += BITMASK_BYTE_SIZE; /* partitions bitmap */
     /* reduce values */
-    for (int i = 0; i < reduction->num_values; ++i) {
+    for (i = 0; i < reduction->num_values; ++i) {
         sz += 2;             /* size_t */
         sz += reduction->reduce_values[i].size;
     }
@@ -135,7 +136,7 @@ couchstore_error_t encode_view_btree_reduction(const view_btree_reduction_t *red
     memcpy(b, &reduction->partitions_bitmap, BITMASK_BYTE_SIZE);
     b += BITMASK_BYTE_SIZE;
 
-    for (int i = 0; i < reduction->num_values; ++i) {
+    for (i = 0; i < reduction->num_values; ++i) {
         enc_uint16(reduction->reduce_values[i].size, &b);
 
         memcpy(b, reduction->reduce_values[i].buf, reduction->reduce_values[i].size);
@@ -150,12 +151,14 @@ couchstore_error_t encode_view_btree_reduction(const view_btree_reduction_t *red
 
 void free_view_btree_reduction(view_btree_reduction_t *reduction)
 {
+    int i;
+
     if (reduction == NULL) {
         return;
     }
 
     if (reduction->reduce_values != NULL){
-        for (int i = 0; i < reduction->num_values; ++i) {
+        for (i = 0; i < reduction->num_values; ++i) {
             free(reduction->reduce_values[i].buf);
         }
         free(reduction->reduce_values);

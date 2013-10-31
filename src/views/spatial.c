@@ -126,10 +126,10 @@ void free_spatial_scale_factor(scale_factor_t *sf)
 double *spatial_center(const sized_mbb_t *mbb)
 {
     double *center = (double *)malloc(sizeof(double) * (mbb->num/2));
+    uint32_t i;
     if (center == NULL) {
         return NULL;
     }
-    uint32_t i;
 
     for (i = 0; i < mbb->num; i += 2) {
         center[i/2] = mbb->mbb[i] + ((mbb->mbb[i+1] - mbb->mbb[i])/2);
