@@ -252,7 +252,7 @@ static int convertUTF8toUChar(const char *src, UChar *dst, int len)
 
 icu_conv:
     status = U_ZERO_ERROR;
-    ucnv_toUnicode(c, &p, p + len, &s, s + len, NULL, TRUE, &status);
+    ucnv_toUnicode(c, &p, p + len + 1, &s, s + len + 1, NULL, TRUE, &status);
 
     if (U_FAILURE(status)) {
         return -1;
@@ -281,11 +281,12 @@ static int compareUnicode(const char* str1, size_t len1,
 
     UChar b1[len1];
     UChar b2[len2];
+    int ret1, ret2;
 
-    len1 = convertUTF8toUChar(str1, b1, len1);
-    len2 = convertUTF8toUChar(str2, b2, len2);
+    ret1 = convertUTF8toUChar(str1, b1, len1);
+    ret2 = convertUTF8toUChar(str2, b2, len2);
 
-    if (len1 < 0 || len2 < 0) {
+    if (ret1 < 0 || ret2 < 0) {
         /* something went wrong with utf8->utf32 conversion */
         return compareUnicodeSlow(str1, len1, str2, len2);
     }
