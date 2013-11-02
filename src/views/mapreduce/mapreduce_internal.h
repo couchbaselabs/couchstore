@@ -36,9 +36,13 @@
 
 class MapReduceError;
 
-typedef std::list<mapreduce_json_t>                   json_results_list_t;
-typedef std::list<mapreduce_kv_t>                     kv_list_int_t;
-typedef std::vector< v8::Persistent<v8::Function> >   function_vector_t;
+typedef std::list<mapreduce_json_t>                    json_results_list_t;
+typedef std::list<mapreduce_kv_t>                      kv_list_int_t;
+#ifdef V8_POST_3_19_API
+typedef std::vector< v8::Persistent<v8::Function>* >   function_vector_t;
+#else
+typedef std::vector< v8::Persistent<v8::Function> >    function_vector_t;
+#endif
 
 typedef struct {
     v8::Persistent<v8::Context> jsContext;
