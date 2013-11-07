@@ -273,6 +273,7 @@ testapp_SOURCES += \
 
 testapp_CFLAGS = $(AM_CFLAGS)
 testapp_DEPENDENCIES = libcouchstore_tests.la libbyteswap.la libutil.la
+testapp_LDFLAGS = $(AM_LDFLAGS) $(ICU_LOCAL_LDFLAGS)
 testapp_LDADD = libcouchstore_tests.la libbyteswap.la libmapreduce.la libutil.la -lstdc++
 
 test: check-TESTS $(extra_tests)
