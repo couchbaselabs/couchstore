@@ -4,9 +4,9 @@
 
 #if defined(LIBCOUCHSTORE_INTERNAL)
 
-#ifdef __SUNPRO_C
+#if defined (__SUNPRO_C) && (__SUNPRO_C >= 0x550)
 #define LIBCOUCHSTORE_API __global
-#elif defined(HAVE_VISIBILITY) && HAVE_VISIBILITY
+#elif defined __GNUC__
 #define LIBCOUCHSTORE_API __attribute__ ((visibility("default")))
 #elif defined(_MSC_VER)
 #define LIBCOUCHSTORE_API extern __declspec(dllexport)
