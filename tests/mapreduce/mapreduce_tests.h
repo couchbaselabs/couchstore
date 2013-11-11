@@ -28,12 +28,10 @@
 #include "../macros.h"
 #include "../../src/views/mapreduce/mapreduce.h"
 
-#define TPRINT(...) fprintf(stderr, __VA_ARGS__)
-
 /* main test function */
-void mapreduce_tests();
-void map_tests();
-void reduce_tests();
-void builtin_tests();
+void mapreduce_tests(void);
+void map_tests(void);
+void reduce_tests(void);
+void builtin_tests(void);
 
 #endif

@@ -69,37 +69,37 @@ void test_keys()
     char *id_btree_k_bin3 = NULL;
     size_t id_btree_k_bin3_size = 0;
 
-    TPRINT("Decoding a view btree key ...\n");
+    fprintf(stderr, "Decoding a view btree key ...\n");
     view_btree_key_t *k = test_view_btree_key_decoding(key_bin, sizeof(key_bin));
 
-    TPRINT("Decoding a view id btree key ...\n");
+    fprintf(stderr, "Decoding a view id btree key ...\n");
     view_id_btree_key_t *id_btree_k = test_view_id_btree_key_decoding(id_btree_key_bin, sizeof(id_btree_key_bin));
 
-    TPRINT("Encoding the previously decoded view btree key ...\n");
+    fprintf(stderr, "Encoding the previously decoded view btree key ...\n");
     test_view_btree_key_encoding(k, &k_bin2, &k_bin2_size);
 
     assert(k_bin2_size == sizeof(key_bin));
     assert(memcmp(k_bin2, key_bin, k_bin2_size) == 0);
 
-    TPRINT("Encoding the previously decoded view id btree key ...\n");
+    fprintf(stderr, "Encoding the previously decoded view id btree key ...\n");
     test_view_id_btree_key_encoding(id_btree_k, &id_btree_k_bin2, &id_btree_k_bin2_size);
 
     assert(id_btree_k_bin2_size == sizeof(id_btree_key_bin));
     assert(memcmp(id_btree_k_bin2, id_btree_key_bin, id_btree_k_bin2_size) == 0);
 
-    TPRINT("Decoding the previously encoded view btree key ...\n");
+    fprintf(stderr, "Decoding the previously encoded view btree key ...\n");
     view_btree_key_t *k2 = test_view_btree_key_decoding(k_bin2, k_bin2_size);
 
-    TPRINT("Decoding the previously encoded view id btree key ...\n");
+    fprintf(stderr, "Decoding the previously encoded view id btree key ...\n");
     view_id_btree_key_t *id_btree_k2 = test_view_id_btree_key_decoding(id_btree_k_bin2, id_btree_k_bin2_size);
 
-    TPRINT("Encoding the previously decoded view btree key ...\n");
+    fprintf(stderr, "Encoding the previously decoded view btree key ...\n");
     test_view_btree_key_encoding(k2, &k_bin3, &k_bin3_size);
 
     assert(k_bin3_size == sizeof(key_bin));
     assert(memcmp(k_bin3, key_bin, k_bin3_size) == 0);
 
-    TPRINT("Encoding the previously decoded view id btree key ...\n");
+    fprintf(stderr, "Encoding the previously decoded view id btree key ...\n");
     test_view_id_btree_key_encoding(id_btree_k2, &id_btree_k_bin3, &id_btree_k_bin3_size);
 
     assert(id_btree_k_bin3_size == sizeof(id_btree_key_bin));

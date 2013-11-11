@@ -102,38 +102,38 @@ void test_reductions()
     char id_btree_r_bin3[MAX_REDUCTION_SIZE];
     size_t id_btree_r_bin3_size = 0;
 
-    TPRINT("Decoding a view btree reduction ...\n");
+    fprintf(stderr, "Decoding a view btree reduction ...\n");
     view_btree_reduction_t *r = test_view_btree_reduction_decoding(reduction_bin,
                                                                    sizeof(reduction_bin));
 
-    TPRINT("Decoding a view id btree reduction ...\n");
+    fprintf(stderr, "Decoding a view id btree reduction ...\n");
     view_id_btree_reduction_t *id_btree_r = test_view_id_btree_reduction_decoding(id_btree_reduction_bin);
 
-    TPRINT("Encoding the previously decoded view btree reduction ...\n");
+    fprintf(stderr, "Encoding the previously decoded view btree reduction ...\n");
     test_view_btree_reduction_encoding(r, r_bin2, &r_bin2_size);
 
     assert(r_bin2_size == sizeof(reduction_bin));
     assert(memcmp(r_bin2, reduction_bin, r_bin2_size) == 0);
 
-    TPRINT("Encoding the previously decoded view id btree reduction ...\n");
+    fprintf(stderr, "Encoding the previously decoded view id btree reduction ...\n");
     test_view_id_btree_reduction_encoding(id_btree_r, id_btree_r_bin2, &id_btree_r_bin2_size);
 
     assert(id_btree_r_bin2_size == sizeof(id_btree_reduction_bin));
     assert(memcmp(id_btree_r_bin2, id_btree_reduction_bin, id_btree_r_bin2_size) == 0);
 
-    TPRINT("Decoding the previously encoded view btree reduction ...\n");
+    fprintf(stderr, "Decoding the previously encoded view btree reduction ...\n");
     view_btree_reduction_t *r2 = test_view_btree_reduction_decoding(r_bin2, r_bin2_size);
 
-    TPRINT("Decoding the previously encoded view id btree reduction ...\n");
+    fprintf(stderr, "Decoding the previously encoded view id btree reduction ...\n");
     view_id_btree_reduction_t *id_btree_r2 = test_view_id_btree_reduction_decoding(id_btree_r_bin2);
 
-    TPRINT("Encoding the previously decoded view btree reduciton ...\n");
+    fprintf(stderr, "Encoding the previously decoded view btree reduciton ...\n");
     test_view_btree_reduction_encoding(r2, r_bin3, &r_bin3_size);
 
     assert(r_bin3_size == sizeof(reduction_bin));
     assert(memcmp(r_bin3, reduction_bin, r_bin3_size) == 0);
 
-    TPRINT("Encoding the previously decoded view id btree reduciton ...\n");
+    fprintf(stderr, "Encoding the previously decoded view id btree reduciton ...\n");
     test_view_id_btree_reduction_encoding(id_btree_r2, id_btree_r_bin3, &id_btree_r_bin3_size);
 
     assert(id_btree_r_bin3_size == sizeof(id_btree_reduction_bin));

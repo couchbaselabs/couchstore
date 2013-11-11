@@ -29,12 +29,10 @@
 #include "../src/views/bitmap.h"
 #include "../src/views/spatial.h"
 
-#define TPRINT(...) fprintf(stderr, __VA_ARGS__)
-
-void test_interleaving();
-void test_spatial_scale_factor();
-void test_spatial_center();
-void test_spatial_scale_point();
-void test_set_bit_sized();
+void test_interleaving(void);
+void test_spatial_scale_factor(void);
+void test_spatial_center(void);
+void test_spatial_scale_point(void);
+void test_set_bit_sized(void);
 
 #endif

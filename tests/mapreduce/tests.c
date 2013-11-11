@@ -23,7 +23,7 @@
 
 void mapreduce_tests()
 {
-    TPRINT("\n\nRunning mapreduce tests\n\n");
+    fprintf(stderr, "\n\nRunning mapreduce tests\n\n");
 
     map_tests();
     reduce_tests();

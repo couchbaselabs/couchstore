@@ -20,16 +20,14 @@
 
 #include "view_tests.h"
 
-
-void test_bitmaps()
+void test_bitmaps(void)
 {
-    TPRINT("Running view bitmap tests\n");
-
     bitmap_t bm, bm1, bm2;
     uint16_t one_bits[] = {1023, 1013, 500, 401, 1, 7, 666, 69};
     int set;
     uint16_t i, j;
 
+    fprintf(stderr, "Running view bitmap tests\n");
     memset(&bm, 0, sizeof(bitmap_t));
     for (j = 0; j < (sizeof(one_bits) / sizeof(uint16_t)); ++j) {
         set_bit(&bm, one_bits[j]);

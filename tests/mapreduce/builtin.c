@@ -28,33 +28,22 @@
     "  \"date\":\"+033658-09-27T01:46:40.000Z\"" \
     "}"
 
+#if __STDC_VERSION__ >=199901L
+#define ASSIGN(x) x =
+#else
+#define ASSIGN(x)
+#endif
+
 static const mapreduce_json_t doc = {
-    .json = DOC_BODY,
-    .length = sizeof(DOC_BODY) - 1
+    ASSIGN(.json) DOC_BODY,
+    ASSIGN(.length) sizeof(DOC_BODY) - 1
 };
 static const mapreduce_json_t meta = {
-    .json = "{\"id\":\"doc1\"}",
-    .length = sizeof("{\"id\":\"doc1\"}") - 1
+    ASSIGN(.json) "{\"id\":\"doc1\"}",
+    ASSIGN(.length) sizeof("{\"id\":\"doc1\"}") - 1
 };
 
-static void test_sum_function();
-static void test_b64decode_function();
-static void test_date_to_array_function();
-
-
-void builtin_tests()
-{
-    TPRINT("Running mapreduce builtin tests\n");
-
-    for (int i = 0; i < 100; ++i) {
-        test_sum_function();
-        test_b64decode_function();
-        test_date_to_array_function();
-    }
-}
-
-
-static void test_sum_function()
+static void test_sum_function(void)
 {
     void *context = NULL;
     char *error_msg = NULL;
@@ -90,8 +79,7 @@ static void test_sum_function()
     mapreduce_free_context(context);
 }
 
-
-static void test_b64decode_function()
+static void test_b64decode_function(void)
 {
     void *context = NULL;
     char *error_msg = NULL;
@@ -129,8 +117,7 @@ static void test_b64decode_function()
     mapreduce_free_context(context);
 }
 
-
-static void test_date_to_array_function()
+static void test_date_to_array_function(void)
 {
     void *context = NULL;
     char *error_msg = NULL;
@@ -164,4 +151,16 @@ static void test_date_to_array_function()
 
     mapreduce_free_map_result_list(result);
     mapreduce_free_context(context);
+}
+
+void builtin_tests(void)
+{
+    int i;
+    fprintf(stderr, "Running mapreduce builtin tests\n");
+
+    for (i = 0; i < 100; ++i) {
+        test_sum_function();
+        test_b64decode_function();
+        test_date_to_array_function();
+    }
 }

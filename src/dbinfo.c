@@ -41,6 +41,7 @@ static int process_file(const char *file)
 {
     Db *db;
     couchstore_error_t errcode;
+    uint64_t btreesize = 0;
 
     errcode = couchstore_open_db(file, COUCHSTORE_OPEN_FLAG_RDONLY, &db);
     if (errcode != COUCHSTORE_SUCCESS) {
@@ -49,7 +50,6 @@ static int process_file(const char *file)
         return -1;
     }
 
-    uint64_t btreesize = 0;
     printf("DB Info (%s)\n", file);
     printf("   file format version: %"PRIu64"\n", db->header.disk_version);
     printf("   update_seq: %"PRIu64"\n", db->header.update_seq);
@@ -70,13 +70,15 @@ static int process_file(const char *file)
 
 int main(int argc, char **argv)
 {
+    int error = 0;
+    int ii;
+
     if (argc < 2) {
         printf("USAGE: %s <file.couch>\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
-    int error = 0;
-    for (int ii = 1; ii < argc; ++ii) {
+    for (ii = 1; ii < argc; ++ii) {
         error += process_file(argv[ii]);
     }
 

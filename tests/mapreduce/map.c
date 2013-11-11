@@ -21,64 +21,41 @@
 #include "mapreduce_tests.h"
 #include <string.h>
 
+#if __STDC_VERSION__ >=199901L
+#define ASSIGN(x) x =
+#else
+#define ASSIGN(x)
+#endif
 
 static const mapreduce_json_t doc1 = {
-    .json = "{\"value\": 1}",
-    .length = sizeof("{\"value\": 1}") - 1
+    ASSIGN(.json) "{\"value\": 1}",
+    ASSIGN(.length) sizeof("{\"value\": 1}") - 1
 };
 static const mapreduce_json_t meta1 = {
-    .json = "{\"id\":\"doc1\"}",
-    .length = sizeof("{\"id\":\"doc1\"}") - 1
+    ASSIGN(.json) "{\"id\":\"doc1\"}",
+    ASSIGN(.length) sizeof("{\"id\":\"doc1\"}") - 1
 };
 
 static const mapreduce_json_t doc2 = {
-    .json = "{\"value\": 2}",
-    .length = sizeof("{\"value\": 2}") - 1
+    ASSIGN(.json) "{\"value\": 2}",
+    ASSIGN(.length) sizeof("{\"value\": 2}") - 1
 };
 static const mapreduce_json_t meta2 = {
-    .json = "{\"id\":\"doc2\"}",
-    .length = sizeof("{\"id\":\"doc2\"}") - 1
+    ASSIGN(.json) "{\"id\":\"doc2\"}",
+    ASSIGN(.length) sizeof("{\"id\":\"doc2\"}") - 1
 };
 
 static const mapreduce_json_t doc3 = {
-    .json = "{\"value\": 3}",
-    .length = sizeof("{\"value\": 3}") - 1
+    ASSIGN(.json) "{\"value\": 3}",
+    ASSIGN(.length) sizeof("{\"value\": 3}") - 1
 };
 static const mapreduce_json_t meta3 = {
-    .json = "{\"id\":\"doc3\"}",
-    .length = sizeof("{\"id\":\"doc3\"}") - 1
+    ASSIGN(.json) "{\"id\":\"doc3\"}",
+    ASSIGN(.length) sizeof("{\"id\":\"doc3\"}") - 1
 };
 
-static void test_bad_syntax_functions();
-static void test_runtime_exception();
-static void test_runtime_error();
-static void test_map_no_emit();
-static void test_map_single_emit();
-static void test_map_multiple_emits();
-static void test_timeout();
 
-
-void map_tests()
-{
-    TPRINT("Running map tests\n");
-
-    mapreduce_set_timeout(1);
-    test_timeout();
-
-    for (int i = 0; i < 100; ++i) {
-        test_bad_syntax_functions();
-        test_runtime_exception();
-        test_runtime_error();
-        test_map_no_emit();
-        test_map_single_emit();
-        test_map_multiple_emits();
-    }
-
-    test_timeout();
-}
-
-
-static void test_bad_syntax_functions()
+static void test_bad_syntax_functions(void)
 {
     void *context = NULL;
     char *error_msg = NULL;
@@ -98,7 +75,7 @@ static void test_bad_syntax_functions()
 }
 
 
-static void test_runtime_exception()
+static void test_runtime_exception(void)
 {
     void *context = NULL;
     char *error_msg = NULL;
@@ -128,7 +105,7 @@ static void test_runtime_exception()
 }
 
 
-static void test_runtime_error()
+static void test_runtime_error(void)
 {
     void *context = NULL;
     char *error_msg = NULL;
@@ -159,7 +136,7 @@ static void test_runtime_error()
 }
 
 
-static void test_map_no_emit()
+static void test_map_no_emit(void)
 {
     void *context = NULL;
     char *error_msg = NULL;
@@ -192,7 +169,7 @@ static void test_map_no_emit()
 }
 
 
-static void test_map_single_emit()
+static void test_map_single_emit(void)
 {
     void *context = NULL;
     char *error_msg = NULL;
@@ -272,7 +249,7 @@ static void test_map_single_emit()
 }
 
 
-static void test_map_multiple_emits()
+static void test_map_multiple_emits(void)
 {
     void *context = NULL;
     char *error_msg = NULL;
@@ -464,7 +441,7 @@ static void test_map_multiple_emits()
 }
 
 
-static void test_timeout()
+static void test_timeout(void)
 {
     void *context = NULL;
     char *error_msg = NULL;
@@ -508,4 +485,25 @@ static void test_timeout()
 
     mapreduce_free_map_result_list(result);
     mapreduce_free_context(context);
+}
+
+void map_tests(void)
+{
+    int i;
+
+    fprintf(stderr, "Running map tests\n");
+
+    mapreduce_set_timeout(1);
+    test_timeout();
+
+    for (i = 0; i < 100; ++i) {
+        test_bad_syntax_functions();
+        test_runtime_exception();
+        test_runtime_error();
+        test_map_no_emit();
+        test_map_single_emit();
+        test_map_multiple_emits();
+    }
+
+    test_timeout();
 }

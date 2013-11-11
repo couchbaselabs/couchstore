@@ -29,7 +29,7 @@ static int int_cmp_fun(const void *a, const void *b)
 
 void test_sorted_lists()
 {
-    TPRINT("Running view sorted_list tests\n");
+    fprintf(stderr, "Running view sorted_list tests\n");
 
     int elements[] = { 100, 10, 9, 30, 40, 20, 11, 12 };
     int *sorted_elements;

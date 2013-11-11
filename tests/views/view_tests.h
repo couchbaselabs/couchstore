@@ -34,16 +34,14 @@
 #include "../src/views/values.h"
 #include "../src/views/reducers.h"
 
-#define TPRINT(...) fprintf(stderr, __VA_ARGS__)
-
-void view_tests();
-void test_bitmaps();
-void test_sorted_lists();
-void test_collate_json();
-void test_index_headers();
-void test_reductions();
-void test_keys();
-void test_values();
-void reducer_tests();
+void view_tests(void);
+void test_bitmaps(void);
+void test_sorted_lists(void);
+void test_collate_json(void);
+void test_index_headers(void);
+void test_reductions(void);
+void test_keys(void);
+void test_values(void);
+void reducer_tests(void);
 
 #endif

@@ -86,7 +86,7 @@ void test_interleaving()
     uint32_t *numbers;
     uint32_t numbers_size;
 
-    TPRINT("Running spatial interleaving tests\n");
+    fprintf(stderr, "Running spatial interleaving tests\n");
 
     numbers_size = 2 * sizeof(uint32_t);
     numbers = (uint32_t *)malloc(numbers_size);
@@ -155,7 +155,7 @@ void test_spatial_scale_factor()
     uint32_t max = ZCODE_MAX_VALUE;
     scale_factor_t *sf = NULL;
 
-    TPRINT("Running spatial scale factor tests\n");
+    fprintf(stderr, "Running spatial scale factor tests\n");
 
     sf = spatial_scale_factor(mbb, dim, max);
 
@@ -180,7 +180,7 @@ void test_spatial_center()
     sized_mbb_t mbb_struct;
     double *center;
 
-    TPRINT("Running spatial scale factor tests\n");
+    fprintf(stderr, "Running spatial scale factor tests\n");
 
     mbb_struct.mbb = mbb;
     mbb_struct.num = sizeof(mbb)/sizeof(double);
@@ -208,7 +208,7 @@ void test_spatial_scale_point()
     scale_factor_t *sf = NULL;
     uint32_t *scaled;
 
-    TPRINT("Running spatial scale point tests\n");
+    fprintf(stderr, "Running spatial scale point tests\n");
 
     sf = spatial_scale_factor(mbb, dim, max);
     scaled = spatial_scale_point(point, sf);
@@ -241,7 +241,7 @@ void test_set_bit_sized()
     unsigned char* bitmap = b2c("00010001", size);
     unsigned char* bitmap2 = b2c("0000000000000000", 2);
 
-    TPRINT("Running set bit sized tests\n");
+    fprintf(stderr, "Running set bit sized tests\n");
 
     set_bit_sized(bitmap, size, 1);
     assert(cmp_bytes(bitmap, "00010011", size));

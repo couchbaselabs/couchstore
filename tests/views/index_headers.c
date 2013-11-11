@@ -38,6 +38,13 @@ static index_header_t *test_index_header_decoding(const char *header_bin, size_t
     index_header_t *header = NULL;
     bitmap_t expected_active, expected_passive, expected_cleanup;
     unsigned i;
+    int ii;
+    uint16_t jj;
+    int num_unindexable;
+    int num_reps;
+    int num_pending_active;
+    int num_pending_passive;
+    int num_pending_unindexable;
 
     assert(decode_index_header(header_bin, header_bin_size, &header) == COUCHSTORE_SUCCESS);
     assert(header != NULL);
@@ -66,9 +73,10 @@ static index_header_t *test_index_header_decoding(const char *header_bin, size_t
     assert(memcmp(&header->cleanup_bitmask, &expected_cleanup, sizeof(expected_cleanup)) == 0);
 
     assert(sorted_list_size(header->seqs) == 58);
-    for (uint16_t i = 0; i < 64; ++i) {
+    for (jj = 0; jj < 64; ++jj) {
+        part_seq_t rs, *pseq;
 
-        switch (i) {
+        switch (jj) {
             /* unindexable */
         case 0:
         case 63:
@@ -82,24 +90,23 @@ static index_header_t *test_index_header_decoding(const char *header_bin, size_t
             break;
         }
 
-        part_seq_t rs, *pseq;
-        rs.part_id = i;
+        rs.part_id = jj;
 
         pseq = (part_seq_t *) sorted_list_get(header->seqs, &rs);
         assert(pseq != NULL);
-        assert(pseq->part_id == i);
+        assert(pseq->part_id == jj);
         assert(pseq->seq == 1221);
     }
 
-    int num_unindexable = sizeof(unindexable) / sizeof(unindexable[0]);
+    num_unindexable = sizeof(unindexable) / sizeof(unindexable[0]);
     assert(sorted_list_size(header->unindexable_seqs) == num_unindexable);
-    for (int i = 0; i < num_unindexable; ++i) {
+    for (ii = 0; ii < num_unindexable; ++ii) {
         part_seq_t rs, *pseq;
-        rs.part_id = unindexable[i];
+        rs.part_id = unindexable[ii];
 
         pseq = (part_seq_t *) sorted_list_get(header->unindexable_seqs, &rs);
         assert(pseq != NULL);
-        assert(pseq->part_id == unindexable[i]);
+        assert(pseq->part_id == unindexable[ii]);
         assert(pseq->seq == 1221);
     }
 
@@ -121,47 +128,45 @@ static index_header_t *test_index_header_decoding(const char *header_bin, size_t
     assert(header->has_replica == 1);
     assert(header->replicas_on_transfer != NULL);
 
-    int num_reps = (sizeof(replicas_on_transfer) /
-                    sizeof(replicas_on_transfer[0]));
+    num_reps = (sizeof(replicas_on_transfer) / sizeof(replicas_on_transfer[0]));
 
     assert(sorted_list_size(header->replicas_on_transfer) == num_reps);
-    for (int i = 0; i < num_reps; ++i) {
+    for (ii = 0; ii < num_reps; ++ii) {
         uint16_t *part_id = sorted_list_get(header->replicas_on_transfer,
-                                            &replicas_on_transfer[i]);
+                                            &replicas_on_transfer[ii]);
         assert(part_id != NULL);
-        assert(*part_id == replicas_on_transfer[i]);
+        assert(*part_id == replicas_on_transfer[ii]);
     }
 
-    int num_pending_active = sizeof(pending_active) / sizeof(pending_active[0]);
+    num_pending_active = sizeof(pending_active) / sizeof(pending_active[0]);
     assert(sorted_list_size(header->pending_transition.active) == num_pending_active);
-    for (int i = 0; i < num_pending_active; ++i) {
+    for (ii = 0; ii < num_pending_active; ++ii) {
         uint16_t *part_id = sorted_list_get(header->pending_transition.active,
-                                            &pending_active[i]);
+                                            &pending_active[ii]);
         assert(part_id != NULL);
-        assert(*part_id == pending_active[i]);
+        assert(*part_id == pending_active[ii]);
     }
 
-    int num_pending_passive = sizeof(pending_passive) / sizeof(pending_passive[0]);
+    num_pending_passive = sizeof(pending_passive) / sizeof(pending_passive[0]);
     assert(sorted_list_size(header->pending_transition.passive) == num_pending_passive);
-    for (int i = 0; i < num_pending_passive; ++i) {
+    for (ii = 0; ii < num_pending_passive; ++ii) {
         uint16_t *part_id = sorted_list_get(header->pending_transition.passive,
-                                            &pending_passive[i]);
+                                            &pending_passive[ii]);
         assert(part_id != NULL);
-        assert(*part_id == pending_passive[i]);
+        assert(*part_id == pending_passive[ii]);
     }
 
-    int num_pending_unindexable = sizeof(pending_unindexable) / sizeof(pending_unindexable[0]);
+    num_pending_unindexable = sizeof(pending_unindexable) / sizeof(pending_unindexable[0]);
     assert(sorted_list_size(header->pending_transition.unindexable) == num_pending_unindexable);
-    for (int i = 0; i < num_pending_unindexable; ++i) {
+    for (ii = 0; ii < num_pending_unindexable; ++ii) {
         uint16_t *part_id = sorted_list_get(header->pending_transition.unindexable,
-                                            &pending_unindexable[i]);
+                                            &pending_unindexable[ii]);
         assert(part_id != NULL);
-        assert(*part_id == pending_unindexable[i]);
+        assert(*part_id == pending_unindexable[ii]);
     }
 
     return header;
 }
-
 
 static void test_index_header_encoding(const index_header_t *header,
                                        char **buffer,
@@ -173,10 +178,16 @@ static void test_index_header_encoding(const index_header_t *header,
     assert(res == COUCHSTORE_SUCCESS);
 }
 
-
-void test_index_headers()
+void test_index_headers(void)
 {
-    char header_bin[] = {
+    index_header_t*header;
+    index_header_t *header2;
+    char *header_bin2 = NULL;
+    size_t header_bin2_size = 0;
+    char *header_bin3 = NULL;
+    size_t header_bin3_size = 0;
+
+    unsigned char header_bin[] = {
         5,226,251,160,170,107,207,39,248,218,139,62,137,58,95,46,204,10,12,1,0,64,0,
         254,1,0,218,1,0,0,136,5,1,4,0,136,254,127,0,218,127,0,8,0,83,119,9,1,254,128,
         0,222,128,0,0,36,5,121,20,136,0,0,58,0,1,1,11,12,4,197,0,2,13,8,0,3,13,8,0,4,
@@ -194,25 +205,19 @@ void test_index_headers()
         61,0,2,0,15,0,58,105,173,44,0,0,4,197,0,63,0,0,0,0,4,197
     };
 
-    TPRINT("Decoding an index header...\n");
-    index_header_t *header = test_index_header_decoding(header_bin, sizeof(header_bin));
+    fprintf(stderr, "Decoding an index header...\n");
+    header = test_index_header_decoding((const char*)header_bin, sizeof(header_bin));
 
-    TPRINT("Encoding the previously decoded header...\n");
-    char *header_bin2 = NULL;
-    size_t header_bin2_size = 0;
-
+    fprintf(stderr, "Encoding the previously decoded header...\n");
     test_index_header_encoding(header, &header_bin2, &header_bin2_size);
 
     assert(header_bin2_size == sizeof(header_bin));
     assert(memcmp(header_bin2, header_bin, header_bin2_size) == 0);
 
-    TPRINT("Decoding the previously encoded header...\n");
-    index_header_t *header2 = test_index_header_decoding(header_bin2, header_bin2_size);
+    fprintf(stderr, "Decoding the previously encoded header...\n");
+    header2 = test_index_header_decoding(header_bin2, header_bin2_size);
 
-    TPRINT("Encoding the previously decoded header...\n");
-    char *header_bin3 = NULL;
-    size_t header_bin3_size = 0;
-
+    fprintf(stderr, "Encoding the previously decoded header...\n");
     test_index_header_encoding(header2, &header_bin3, &header_bin3_size);
 
     assert(header_bin3_size == sizeof(header_bin));

@@ -20,21 +20,21 @@ static void test_view_btree_no_reducers();
 
 void reducer_tests()
 {
-    TPRINT("Running built-in reducer tests ... \n");
+    fprintf(stderr, "Running built-in reducer tests ... \n");
     test_view_id_btree_reducer();
-    TPRINT("End of built-in view id btree reducer tests\n");
+    fprintf(stderr, "End of built-in view id btree reducer tests\n");
     test_view_btree_sum_reducer();
-    TPRINT("End of built-in view btree sum reducer tests\n");
+    fprintf(stderr, "End of built-in view btree sum reducer tests\n");
     test_view_btree_count_reducer();
-    TPRINT("End of built-in view btree count reducer tests\n");
+    fprintf(stderr, "End of built-in view btree count reducer tests\n");
     test_view_btree_stats_reducer();
-    TPRINT("End of built-in view btree stats reducer tests\n");
+    fprintf(stderr, "End of built-in view btree stats reducer tests\n");
     test_view_btree_js_reducer();
-    TPRINT("End of view btree js reducer tests\n");
+    fprintf(stderr, "End of view btree js reducer tests\n");
     test_view_btree_multiple_reducers();
-    TPRINT("End of view btree multiple reducer tests\n");
+    fprintf(stderr, "End of view btree multiple reducer tests\n");
     test_view_btree_no_reducers();
-    TPRINT("End of view btree no reducer tests\n");
+    fprintf(stderr, "End of view btree no reducer tests\n");
 }
 
 
