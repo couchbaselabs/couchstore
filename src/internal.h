@@ -11,7 +11,6 @@
 
 #include <libcouchstore/couch_db.h>
 #include "config.h"
-#include <pthread.h>
 
 #define COUCH_BLOCK_SIZE 4096
 #define COUCH_DISK_VERSION 11
@@ -33,6 +32,7 @@ extern "C" {
         const couch_file_ops *ops;
         couch_file_handle handle;
         const char* path;
+        couchstore_error_info_t lastError;
     } tree_file;
 
     typedef struct _nodepointer {
@@ -52,13 +52,6 @@ extern "C" {
         uint64_t purge_ptr;
         uint64_t position;
     } db_header;
-
-    struct _os_error {
-        int errno_err;
-#ifdef WINDOWS
-        DWORD win_err;
-#endif
-    };
 
     struct _db {
         tree_file file;
@@ -89,15 +82,15 @@ extern "C" {
                 or to NULL if the length is zero. Caller is responsible for freeing this buffer!
                 On failure, value pointed to is unaltered.
         @return The length of the chunk (zero is a valid length!), or a negative error code */
-    int pread_bin(const tree_file *file, cs_off_t pos, char **ret_ptr);
+    int pread_bin(tree_file *file, cs_off_t pos, char **ret_ptr);
 
     /** Reads a compressed chunk from the file at a given position.
         Parameters and return value are the same as for pread_bin. */
-    int pread_compressed(const tree_file *file, cs_off_t pos, char **ret_ptr);
+    int pread_compressed(tree_file *file, cs_off_t pos, char **ret_ptr);
 
     /** Reads a file header from the file at a given position.
         Parameters and return value are the same as for pread_bin. */
-    int pread_header(const tree_file *file,
+    int pread_header(tree_file *file,
                      cs_off_t pos,
                      char **ret_ptr,
                      uint32_t max_header_size);
@@ -109,8 +102,6 @@ extern "C" {
     couchstore_error_t by_seq_read_docinfo(DocInfo **pInfo,
                                            const sized_buf *k,
                                            const sized_buf *v);
-
-    extern pthread_key_t os_err_key;
 
 #ifdef __cplusplus
 }

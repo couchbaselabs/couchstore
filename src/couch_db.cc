@@ -47,7 +47,8 @@ static couchstore_error_t find_header_at_pos(Db *db, cs_off_t pos)
         char *buf;
     } header_buf = { NULL };
     uint8_t buf[2];
-    ssize_t readsize = db->file.ops->pread(db->file.handle, buf, 2, pos);
+    ssize_t readsize = db->file.ops->pread(&db->file.lastError, db->file.handle,
+                                           buf, 2, pos);
     error_unless(readsize == 2, COUCHSTORE_ERROR_READ);
     if (buf[0] == 0) {
         return COUCHSTORE_ERROR_NO_HEADER;
@@ -189,7 +190,8 @@ couchstore_error_t couchstore_commit(Db *db)
     //Extend file size to where end of header will land before we do first sync
     db_write_buf(&db->file, &zerobyte, NULL, NULL);
 
-    couchstore_error_t errcode = db->file.ops->sync(db->file.handle);
+    couchstore_error_t errcode = db->file.ops->sync(&db->file.lastError,
+                                                    db->file.handle);
 
     //Set the pos back to where it was when we started to write the real header.
     db->file.pos = curpos;
@@ -198,7 +200,7 @@ couchstore_error_t couchstore_commit(Db *db)
     }
 
     if (errcode == COUCHSTORE_SUCCESS) {
-        errcode = db->file.ops->sync(db->file.handle);
+        errcode = db->file.ops->sync(&db->file.lastError, db->file.handle);
     }
 
     return errcode;
@@ -245,7 +247,7 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
 
     error_pass(tree_file_open(&db->file, filename, openflags, ops));
 
-    if ((db->file.pos = db->file.ops->goto_eof(db->file.handle)) == 0) {
+    if ((db->file.pos = db->file.ops->goto_eof(&db->file.lastError, db->file.handle)) == 0) {
         /* This is an empty file. Create a new fileheader unless the
          * user wanted a read-only version of the file
          */
@@ -1137,45 +1139,29 @@ void couchstore_free_local_document(LocalDoc *lDoc)
     }
 }
 
-pthread_key_t os_err_key;
-pthread_once_t os_err_init = PTHREAD_ONCE_INIT;
-
-static void os_error_destroy(void* err_ptr) {
-    free(err_ptr);
-}
-
-static void init_os_error_key(void) {
-    pthread_key_create(&os_err_key, os_error_destroy);
-}
-
-struct _os_error *get_os_error_store(void) {
-    int once = pthread_once(&os_err_init, init_os_error_key);
-    assert(once == 0);
-    void *ptr;
-    if((ptr = pthread_getspecific(os_err_key)) == NULL) {
-        ptr = calloc(1, sizeof(struct _os_error));
-        pthread_setspecific(os_err_key, ptr);
-    }
-    return static_cast<struct _os_error*>(ptr);
-}
-
 LIBCOUCHSTORE_API
-void couchstore_last_os_error(char* buf, size_t size) {
-    struct _os_error *err = get_os_error_store();
-#ifndef WINDOWS
-    snprintf(buf, size, "errno = %d: `%s'", err->errno_err, strerror(err->errno_err));
-#else
+couchstore_error_t couchstore_last_os_error(const Db *db,
+                                            char* buf,
+                                            size_t size) {
+    if (db == NULL) {
+        return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
+    }
+    const couchstore_error_info_t *err = &db->file.lastError;
+
+#ifdef WIN32
     char* win_msg = NULL;
     FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER |
                    FORMAT_MESSAGE_FROM_SYSTEM |
                    FORMAT_MESSAGE_IGNORE_INSERTS,
-                   NULL, err->win_err,
+                   NULL, err->error,
                    MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
                    (LPTSTR) &win_msg,
                    0, NULL);
-    snprintf(buf, size, "errno = %d: `%s', WINAPI error = %d: `%s'",
-                        err->errno_err, strerror(err->errno_err),
-                        err->win_err, win_msg);
+    snprintf(buf, size, "WINAPI error = %d: '%s'", err->error, win_msg);
     LocalFree(win_msg);
+#else
+    snprintf(buf, size, "errno = %d: '%s'", err->error, strerror(err->error));
 #endif
+
+    return COUCHSTORE_SUCCESS;
 }

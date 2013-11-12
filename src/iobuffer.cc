@@ -97,14 +97,20 @@ static size_t write_to_buffer(file_buffer* buf, const void *bytes, size_t nbyte,
     offset_in_buffer += buffer_nbyte;
     if (offset_in_buffer > buf->length)
         buf->length = offset_in_buffer;
-    
+
     return buffer_nbyte;
 }
 
 // Write the current buffer to disk and empty it.
-static couchstore_error_t flush_buffer(file_buffer* buf) {
+static couchstore_error_t flush_buffer(couchstore_error_info_t *errinfo,
+                                       file_buffer* buf) {
     while (buf->length > 0 && buf->dirty) {
-        ssize_t raw_written = buf->owner->raw_ops->pwrite(buf->owner->raw_ops_handle, buf->bytes, buf->length, buf->offset);
+        ssize_t raw_written;
+        raw_written = buf->owner->raw_ops->pwrite(errinfo,
+                                                  buf->owner->raw_ops_handle,
+                                                  buf->bytes,
+                                                  buf->length,
+                                                  buf->offset);
 #if LOG_BUFFER
         fprintf(stderr, "BUFFER: %p flush %zd bytes at %zd --> %zd\n",
                 buf, buf->length, buf->offset, raw_written);
@@ -135,15 +141,18 @@ static size_t read_from_buffer(file_buffer* buf, void *bytes, size_t nbyte, cs_o
 }
 
 
-static couchstore_error_t load_buffer_from(file_buffer* buf, cs_off_t offset, size_t nbyte) {
+static couchstore_error_t load_buffer_from(couchstore_error_info_t *errinfo,
+                                           file_buffer* buf,
+                                           cs_off_t offset,
+                                           size_t nbyte) {
     if (buf->dirty) {
         // If buffer contains data to be written, flush it first:
-        couchstore_error_t err = flush_buffer(buf);
+        couchstore_error_t err = flush_buffer(errinfo, buf);
         if (err < 0) {
             return err;
         }
     }
-    
+
     if (offset < buf->offset || offset + nbyte > buf->offset + buf->capacity) {
         // Reset the buffer to empty if it has to move:
         buf->offset = offset;
@@ -151,10 +160,11 @@ static couchstore_error_t load_buffer_from(file_buffer* buf, cs_off_t offset, si
     }
 
     // Read data to extend the buffer to its capacity (if possible):
-    ssize_t bytes_read = buf->owner->raw_ops->pread(buf->owner->raw_ops_handle,
-                                           buf->bytes + buf->length,
-                                           buf->capacity - buf->length,
-                                           buf->offset + buf->length);
+    ssize_t bytes_read = buf->owner->raw_ops->pread(errinfo,
+                                                    buf->owner->raw_ops_handle,
+                                                    buf->bytes + buf->length,
+                                                    buf->capacity - buf->length,
+                                                    buf->offset + buf->length);
 #if LOG_BUFFER
     fprintf(stderr, "BUFFER: %p loaded %zd bytes from %zd\n", buf, bytes_read, offset + buf->length);
 #endif
@@ -205,14 +215,15 @@ static file_buffer* find_buffer(buffered_file_handle* h, cs_off_t offset) {
 //////// FILE API:
 
 
-static void buffered_destructor(couch_file_handle handle)
+static void buffered_destructor(couchstore_error_info_t *errinfo,
+                                couch_file_handle handle)
 {
     buffered_file_handle *h = (buffered_file_handle*)handle;
     if (!h) {
         return;
     }
-    h->raw_ops->destructor(h->raw_ops_handle);
-	
+    h->raw_ops->destructor(errinfo, h->raw_ops_handle);
+
     free_buffer(h->write_buffer);
     file_buffer* buffer, *next;
     for (buffer = h->first_buffer; buffer; buffer = next) {
@@ -222,62 +233,71 @@ static void buffered_destructor(couch_file_handle handle)
     free(h);
 }
 
-static couch_file_handle buffered_constructor_with_raw_ops(const couch_file_ops* raw_ops)
+static couch_file_handle buffered_constructor_with_raw_ops(couchstore_error_info_t *errinfo, const couch_file_ops* raw_ops)
 {
     buffered_file_handle *h = static_cast<buffered_file_handle*>(malloc(sizeof(buffered_file_handle)));
     if (h) {
         h->raw_ops = raw_ops;
-        h->raw_ops_handle = raw_ops->constructor(raw_ops->cookie);
+        h->raw_ops_handle = raw_ops->constructor(errinfo, raw_ops->cookie);
         h->nbuffers = 1;
         h->write_buffer = new_buffer(h, WRITE_BUFFER_CAPACITY);
         h->first_buffer = new_buffer(h, READ_BUFFER_CAPACITY);
-        
+
         if (!h->write_buffer || !h->first_buffer) {
-            buffered_destructor((couch_file_handle)h);
+            buffered_destructor(errinfo, (couch_file_handle)h);
             h = NULL;
         }
     }
     return (couch_file_handle) h;
 }
 
-static couch_file_handle buffered_constructor(void* cookie)
+static couch_file_handle buffered_constructor(couchstore_error_info_t *errinfo,
+                                              void* cookie)
 {
     (void) cookie;
-    return buffered_constructor_with_raw_ops(couchstore_get_default_file_ops());
+    return buffered_constructor_with_raw_ops(errinfo, couchstore_get_default_file_ops());
 }
 
-static couchstore_error_t buffered_open(couch_file_handle* handle, const char *path, int oflag)
+static couchstore_error_t buffered_open(couchstore_error_info_t *errinfo,
+                                        couch_file_handle* handle,
+                                        const char *path,
+                                        int oflag)
 {
     buffered_file_handle *h = (buffered_file_handle*)*handle;
-    return h->raw_ops->open(&h->raw_ops_handle, path, oflag);
+    return h->raw_ops->open(errinfo, &h->raw_ops_handle, path, oflag);
 }
 
-static void buffered_close(couch_file_handle handle)
+static void buffered_close(couchstore_error_info_t *errinfo,
+                           couch_file_handle handle)
 {
     buffered_file_handle *h = (buffered_file_handle*)handle;
     if (!h) {
         return;
     }
-    flush_buffer(h->write_buffer);
-    h->raw_ops->close(h->raw_ops_handle);
+    flush_buffer(errinfo, h->write_buffer);
+    h->raw_ops->close(errinfo, h->raw_ops_handle);
 }
 
-static ssize_t buffered_pread(couch_file_handle handle, void *buf, size_t nbyte, cs_off_t offset)
+static ssize_t buffered_pread(couchstore_error_info_t *errinfo,
+                              couch_file_handle handle,
+                              void *buf,
+                              size_t nbyte,
+                              cs_off_t offset)
 {
 #if LOG_BUFFER
     //fprintf(stderr, "r");
 #endif
     buffered_file_handle *h = (buffered_file_handle*)handle;
     // Flush the write buffer before trying to read anything:
-    couchstore_error_t err = flush_buffer(h->write_buffer);
+    couchstore_error_t err = flush_buffer(errinfo, h->write_buffer);
     if (err < 0) {
         return err;
     }
-    
+
     ssize_t total_read = 0;
     while (nbyte > 0) {
         file_buffer* buffer = find_buffer(h, offset);
-        
+
         // Read as much as we can from the current buffer:
         ssize_t nbyte_read = read_from_buffer(buffer, buf, nbyte, offset);
         if (nbyte_read == 0) {
@@ -290,7 +310,7 @@ static ssize_t buffered_pread(couch_file_handle handle, void *buf, size_t nbyte,
             } else*/ {
                 // Move the buffer to cover the remainder of the data to be read.
                 cs_off_t block_start = offset - (offset % READ_BUFFER_CAPACITY);
-                err = load_buffer_from(buffer, block_start, (size_t)(offset + nbyte - block_start));
+                err = load_buffer_from(errinfo, buffer, block_start, (size_t)(offset + nbyte - block_start));
                 if (err < 0) {
                     return err;
                 }
@@ -307,7 +327,11 @@ static ssize_t buffered_pread(couch_file_handle handle, void *buf, size_t nbyte,
     return total_read;
 }
 
-static ssize_t buffered_pwrite(couch_file_handle handle, const void *buf, size_t nbyte, cs_off_t offset)
+static ssize_t buffered_pwrite(couchstore_error_info_t *errinfo,
+                               couch_file_handle handle,
+                               const void *buf,
+                               size_t nbyte,
+                               cs_off_t offset)
 {
 #if LOG_BUFFER
     //fprintf(stderr, "w");
@@ -315,10 +339,10 @@ static ssize_t buffered_pwrite(couch_file_handle handle, const void *buf, size_t
     if (nbyte == 0) {
         return 0;
     }
-    
+
     buffered_file_handle *h = (buffered_file_handle*)handle;
     file_buffer* buffer = h->write_buffer;
-    
+
     // Write data to the current buffer:
     size_t nbyte_written = write_to_buffer(buffer, buf, nbyte, offset);
     if (nbyte_written > 0) {
@@ -326,21 +350,22 @@ static ssize_t buffered_pwrite(couch_file_handle handle, const void *buf, size_t
         offset += nbyte_written;
         nbyte -= nbyte_written;
     }
-        
+
     // Flush the buffer if it's full, or if it isn't aligned with the current write:
     if (buffer->length == buffer->capacity || nbyte_written == 0) {
-        couchstore_error_t error = flush_buffer(buffer);
+        couchstore_error_t error = flush_buffer(errinfo, buffer);
         if (error < 0)
             return error;
     }
-    
+
     if (nbyte > 0) {
         ssize_t written;
         // If the remaining data will fit into the buffer, write it; else write directly:
         if (nbyte <= (buffer->capacity - buffer->length)) {
             written = write_to_buffer(buffer, buf, nbyte, offset);
         } else {
-            written = h->raw_ops->pwrite(h->raw_ops_handle, buf, nbyte, offset);
+            written = h->raw_ops->pwrite(errinfo, h->raw_ops_handle, buf,
+                                         nbyte, offset);
 #if LOG_BUFFER
             fprintf(stderr, "BUFFER: passthru %zd bytes at %zd --> %zd\n",
                     nbyte, offset, written);
@@ -355,30 +380,36 @@ static ssize_t buffered_pwrite(couch_file_handle handle, const void *buf, size_t
     return nbyte_written;
 }
 
-static cs_off_t buffered_goto_eof(couch_file_handle handle)
+static cs_off_t buffered_goto_eof(couchstore_error_info_t *errinfo,
+                                  couch_file_handle handle)
 {
     buffered_file_handle *h = (buffered_file_handle*)handle;
-    return h->raw_ops->goto_eof(h->raw_ops_handle);
+    return h->raw_ops->goto_eof(errinfo, h->raw_ops_handle);
 }
 
-static couchstore_error_t buffered_sync(couch_file_handle handle)
+static couchstore_error_t buffered_sync(couchstore_error_info_t *errinfo,
+                                        couch_file_handle handle)
 {
     buffered_file_handle *h = (buffered_file_handle*)handle;
-    couchstore_error_t err = flush_buffer(h->write_buffer);
+    couchstore_error_t err = flush_buffer(errinfo, h->write_buffer);
     if (err == COUCHSTORE_SUCCESS) {
-        err = h->raw_ops->sync(h->raw_ops_handle);
+        err = h->raw_ops->sync(errinfo, h->raw_ops_handle);
     }
     return err;
 }
 
-static couchstore_error_t buffered_advise(couch_file_handle handle, cs_off_t offs, cs_off_t len, couchstore_file_advice_t adv)
+static couchstore_error_t buffered_advise(couchstore_error_info_t *errinfo,
+                                          couch_file_handle handle,
+                                          cs_off_t offs,
+                                          cs_off_t len,
+                                          couchstore_file_advice_t adv)
 {
     buffered_file_handle *h = (buffered_file_handle*)handle;
-    return h->raw_ops->advise(h->raw_ops_handle, offs, len, adv);
+    return h->raw_ops->advise(errinfo, h->raw_ops_handle, offs, len, adv);
 }
 
 static const couch_file_ops ops = {
-    (uint64_t)4,
+    (uint64_t)5,
     buffered_constructor,
     buffered_open,
     buffered_close,
@@ -391,10 +422,11 @@ static const couch_file_ops ops = {
     NULL
 };
 
-const couch_file_ops *couch_get_buffered_file_ops(const couch_file_ops* raw_ops,
+const couch_file_ops *couch_get_buffered_file_ops(couchstore_error_info_t *errinfo,
+                                                  const couch_file_ops* raw_ops,
                                                   couch_file_handle* handle)
 {
-    *handle = buffered_constructor_with_raw_ops(raw_ops);
+    *handle = buffered_constructor_with_raw_ops(errinfo, raw_ops);
 
     if (*handle) {
         return &ops;

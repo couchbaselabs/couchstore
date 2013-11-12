@@ -27,7 +27,8 @@ static ssize_t raw_write(tree_file *file, const sized_buf *buf, cs_off_t pos)
         }
 
         if (write_pos % COUCH_BLOCK_SIZE == 0) {
-            written = file->ops->pwrite(file->handle, &blockprefix, 1, write_pos);
+            written = file->ops->pwrite(&file->lastError, file->handle,
+                                        &blockprefix, 1, write_pos);
             if (written < 0) {
                 return written;
             }
@@ -35,7 +36,8 @@ static ssize_t raw_write(tree_file *file, const sized_buf *buf, cs_off_t pos)
             continue;
         }
 
-        written = file->ops->pwrite(file->handle, buf->buf + buf_pos, block_remain, write_pos);
+        written = file->ops->pwrite(&file->lastError, file->handle,
+                                    buf->buf + buf_pos, block_remain, write_pos);
         if (written < 0) {
             return written;
         }
@@ -64,7 +66,8 @@ couchstore_error_t write_header(tree_file *file, sized_buf *buf, cs_off_t *pos)
     memcpy(&headerbuf[1], &size, 4);
     memcpy(&headerbuf[5], &crc32, 4);
 
-    written = file->ops->pwrite(file->handle, &headerbuf, sizeof(headerbuf), write_pos);
+    written = file->ops->pwrite(&file->lastError, file->handle,
+                                &headerbuf, sizeof(headerbuf), write_pos);
     if (written < 0) {
         return (couchstore_error_t)written;
     }

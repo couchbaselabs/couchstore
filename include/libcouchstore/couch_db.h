@@ -90,7 +90,7 @@ extern "C" {
      * @param db Pointer to the database handle to drop the file from.
      * @return COUCHSTORE_SUCCESS upon success
      */
-    LIBCOUCHSTORE_API 
+    LIBCOUCHSTORE_API
     couchstore_error_t couchstore_drop_file(Db *db);
 
     /**
@@ -98,7 +98,7 @@ extern "C" {
      * same as the file previously attached to this handle, at least up to the
      * position the file was at when the file was dropped.
      *
-     * @param db The database handle to reattach the file to.  
+     * @param db The database handle to reattach the file to.
      * @param filename The name of the file containing the database
      * @param flags Additional flags for how the database should
      *              be opened. See couchstore_open_flags_* for the
@@ -384,7 +384,7 @@ extern "C" {
          */
         COUCHSTORE_NO_DELETES = 4
     };
-    
+
     /**
      * Iterate through the changes since sequence number `since`.
      *
@@ -594,7 +594,7 @@ extern "C" {
     LIBCOUCHSTORE_API
     void couchstore_free_local_document(LocalDoc *lDoc);
 
-    
+
     /*////////////////////  UTILITIES: */
 
     /**
@@ -662,7 +662,7 @@ extern "C" {
      * @return COUCHSTORE_SUCCESS on success
      */
     LIBCOUCHSTORE_API
-    couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filename, uint64_t flags, 
+    couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filename, uint64_t flags,
                                                 couchstore_compact_hook hook, void* hook_ctx,
                                                 const couch_file_ops *ops);
 
@@ -688,7 +688,9 @@ extern "C" {
      * @param size The size of the buffer.
      */
      LIBCOUCHSTORE_API
-     void couchstore_last_os_error(char* buf, size_t size);
+     couchstore_error_t couchstore_last_os_error(const Db *db,
+                                                 char* buf,
+                                                 size_t size);
 
 #ifdef __cplusplus
 }

@@ -67,7 +67,7 @@ extern "C" {
                                                    uint64_t *header_pos,
                                                    view_error_t *error_info);
 
-    couchstore_error_t read_view_group_header(const view_group_info_t *info,
+    couchstore_error_t read_view_group_header(view_group_info_t *info,
                                               index_header_t **header);
 
     couchstore_error_t write_view_group_header(tree_file *file,

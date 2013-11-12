@@ -18,7 +18,8 @@
  * @return the couch_file_ops to use, or NULL on failure
  */
 
-const couch_file_ops *couch_get_buffered_file_ops(const couch_file_ops* raw_ops,
+const couch_file_ops *couch_get_buffered_file_ops(couchstore_error_info_t *errinfo,
+                                                  const couch_file_ops* raw_ops,
                                                   couch_file_handle* handle);
 
 #endif // LIBCOUCHSTORE_IOBUFFER_H

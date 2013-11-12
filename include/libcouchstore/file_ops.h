@@ -11,10 +11,19 @@ extern "C" {
 #endif
 
     /**
-     * Abstract file handle. Implementations can use it for anything they want, whether
-     * a pointer to an allocated data structure, or an integer such as a Unix file descriptor.
+     * Abstract file handle. Implementations can use it for anything
+     * they want, whether a pointer to an allocated data structure, or
+     * an integer such as a Unix file descriptor.
      */
     typedef struct couch_file_handle_opaque* couch_file_handle;
+
+    typedef struct {
+#ifdef WIN32
+        DWORD error;
+#else
+        int error;
+#endif
+    } couchstore_error_info_t;
 
     /**
      * A structure that defines the implementation of the file I/O primitives
@@ -22,36 +31,44 @@ extern "C" {
      */
     typedef struct {
         /**
-         * Version number that describes the layout of the structure. Should be set
-         * to 4.
+         * Version number that describes the layout of the
+         * structure. Should be set to 5
          */
         uint64_t version;
 
         /**
-         * Initialize state (e.g. allocate memory) for a file handle before opening a file.
-         * This callback is optional and doesn't need to do anything at all; it can just return
-         * NULL if there isn't anything to do.
+         * Initialize state (e.g. allocate memory) for a file handle
+         * before opening a file.  This callback is optional and
+         * doesn't need to do anything at all; it can just return NULL
+         * if there isn't anything to do.
          */
-        couch_file_handle (*constructor)(void* cookie);
+        couch_file_handle (*constructor)(couchstore_error_info_t *errinfo,
+                                         void* cookie);
 
         /**
          * Open a file.
          *
-         * @param on input, a pointer to the file handle that was returned by the constructor
-         *        function. The function can change this value if it wants to; the value stored
-         *        here on return is the one that will be passed to the other functions.
+         * @param on input, a pointer to the file handle that was
+         *        returned by the constructor function. The function
+         *        can change this value if it wants to; the value
+         *        stored here on return is the one that will be passed
+         *        to the other functions.
          * @param path the name of the file
          * @param flags flags as specified by UNIX open(2) system call
          * @return COUCHSTORE_SUCCESS upon success.
          */
-        couchstore_error_t (*open)(couch_file_handle* handle, const char *path, int oflag);
+        couchstore_error_t (*open)(couchstore_error_info_t *errinfo,
+                                   couch_file_handle* handle,
+                                   const char *path,
+                                   int oflag);
 
         /**
          * Close file associated with this handle.
          *
          * @param handle file handle to close
          */
-        void (*close)(couch_file_handle handle);
+        void (*close)(couchstore_error_info_t *errinfo,
+                      couch_file_handle handle);
 
         /**
          * Read a chunk of data from a given offset in the file.
@@ -63,7 +80,11 @@ extern "C" {
          * @return number of bytes read (which may be less than nbytes),
          *         or a value <= 0 if an error occurred
          */
-        ssize_t (*pread)(couch_file_handle handle, void *buf, size_t nbytes, cs_off_t offset);
+        ssize_t (*pread)(couchstore_error_info_t *errinfo,
+                         couch_file_handle handle,
+                         void *buf,
+                         size_t nbytes,
+                         cs_off_t offset);
 
         /**
          * Write a chunk of data to a given offset in the file.
@@ -75,15 +96,21 @@ extern "C" {
          * @return number of bytes written (which may be less than nbytes),
          *         or a value <= 0 if an error occurred
          */
-        ssize_t (*pwrite)(couch_file_handle handle, const void *buf, size_t nbytes, cs_off_t offset);
+        ssize_t (*pwrite)(couchstore_error_info_t *errinfo,
+                          couch_file_handle handle,
+                          const void *buf,
+                          size_t nbytes,
+                          cs_off_t offset);
 
         /**
          * Move to the end of the file.
          *
          * @param handle file handle to move the filepointer in
-         * @return the offset (from beginning of the file), or -1 if the operation failed
+         * @return the offset (from beginning of the file), or -1 if
+         *         the operation failed
          */
-        cs_off_t (*goto_eof)(couch_file_handle handle);
+        cs_off_t (*goto_eof)(couchstore_error_info_t *errinfo,
+                             couch_file_handle handle);
 
         /**
          * Flush the buffers to disk
@@ -91,16 +118,22 @@ extern "C" {
          * @param handle file handle to flush
          * @return COUCHSTORE_SUCCESS upon success
          */
-        couchstore_error_t (*sync)(couch_file_handle handle);
+        couchstore_error_t (*sync)(couchstore_error_info_t *errinfo,
+                                   couch_file_handle handle);
 
         /**
          * Give filesystem caching advice.
          * @param handle file handle to give advice on
          * @param offset offset to start at
          * @param len length of range to advise on
-         * @param advice the advice type, see couchstore_file_advice_t in couch_common.h
+         * @param advice the advice type, see couchstore_file_advice_t
+         *        in couch_common.h
          */
-        couchstore_error_t (*advise)(couch_file_handle handle, cs_off_t offset, cs_off_t len, couchstore_file_advice_t advice);
+        couchstore_error_t (*advise)(couchstore_error_info_t *errinfo,
+                                     couch_file_handle handle,
+                                     cs_off_t offset,
+                                     cs_off_t len,
+                                     couchstore_file_advice_t advice);
 
         /**
          * Called as part of shutting down the db instance this instance was
@@ -108,11 +141,12 @@ extern "C" {
          *
          * @param handle file handle to be released
          */
-        void (*destructor)(couch_file_handle handle);
+        void (*destructor)(couchstore_error_info_t *errinfo,
+                           couch_file_handle handle);
 
         /**
-         * Will be passed to handle constructor. Can be used to keep global state across
-         * all handles.
+         * Will be passed to handle constructor. Can be used to keep
+         * global state across all handles.
          */
         void *cookie;
     } couch_file_ops;

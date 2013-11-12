@@ -43,10 +43,16 @@ docset testdocset;
 fatbuf *docsetbuf = NULL;
 char testfilepath[1024] = "testfile.couch";
 
-static void print_os_err() {
+static void print_os_err(Db *db) {
     char emsg[512];
-    couchstore_last_os_error(emsg, 512);
-    fprintf(stderr, "OS Error: %s\n", emsg);
+    couchstore_error_t ret;
+    ret = couchstore_last_os_error(db, emsg, 512);
+
+    if (ret == COUCHSTORE_SUCCESS) {
+        fprintf(stderr, "OS Error: %s\n", emsg);
+    } else {
+        fprintf(stderr, "error: %s\n", couchstore_strerror(ret));
+    }
 }
 
 static void test_raw_08(uint8_t value)
@@ -113,7 +119,7 @@ static void test_bitfield_fns(void)
         raw_08 f;
     } packed;
     assert(sizeof(packed) == 19);
-    
+
     raw_kv_length kv;
     assert(sizeof(kv) == 5);
     kv = encode_kv_length(1234, 123456);
@@ -121,7 +127,7 @@ static void test_bitfield_fns(void)
     decode_kv_length(&kv, &klen, &vlen);
     assert(klen == 1234);
     assert(vlen == 123456);
-    
+
     test_raw_08(0);
     test_raw_08(UINT8_MAX);
     test_raw_16(0);
@@ -130,7 +136,7 @@ static void test_bitfield_fns(void)
     test_raw_32(0);
     test_raw_32(12345678);
     test_raw_32(UINT32_MAX);
-    
+
     uint8_t expected1[8] = {0x12, 0x34, 0x56, 0x78, 0x90};
     test_raw_40(0x1234567890LL, expected1);
     uint8_t expected2[8] = {0x09, 0x87, 0x65, 0x43, 0x21};
@@ -459,7 +465,7 @@ static void test_dump_empty_db(void)
     unlink(testfilepath);
     Db *db;
     couchstore_error_t errcode;
-    
+
     try(couchstore_open_db(testfilepath, COUCHSTORE_OPEN_FLAG_CREATE, &db));
     try(couchstore_close_db(db));
     try(couchstore_open_db(testfilepath, 0, &db));
@@ -515,11 +521,11 @@ static void test_open_file_error(void)
     fprintf(stderr, "opening nonexistent file errors... ");
     fflush(stderr);
     unlink(testfilepath);
-    Db *db;
+    Db *db = NULL;
     int errcode = couchstore_open_db(testfilepath, 0, &db);
 
-    if(errcode != 0) {
-        print_os_err();
+    if (errcode != 0) {
+        print_os_err(db);
     }
 
     assert(errcode == COUCHSTORE_ERROR_NO_SUCH_FILE);
@@ -681,7 +687,7 @@ static void test_asis_seqs(void)
    try(couchstore_docinfo_by_id(db, "test", 4, &ir));
    assert(ir->db_seq == 1);
    couchstore_free_docinfo(ir);
-   
+
    try(couchstore_docinfo_by_id(db, "test_two", 8, &ir));
    assert(ir->db_seq == 12);
    couchstore_free_docinfo(ir);
@@ -777,7 +783,7 @@ int main(int argc, const char *argv[])
     if (argc > 1)
         strcpy(testfilepath, argv[1]);
     printf("Using test database at %s\n", testfilepath);
-    
+
     test_bitfield_fns();
 
     test_open_file_error();

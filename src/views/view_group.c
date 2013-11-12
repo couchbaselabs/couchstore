@@ -224,8 +224,8 @@ void couchstore_free_view_group_info(view_group_info_t *info)
 static void close_view_group_file(view_group_info_t *info)
 {
     if (info->file.ops != NULL) {
-        info->file.ops->close(info->file.handle);
-        info->file.ops->destructor(info->file.handle);
+        info->file.ops->close(NULL, info->file.handle);
+        info->file.ops->destructor(NULL, info->file.handle);
         info->file.ops = NULL;
         info->file.handle = NULL;
     }
@@ -579,12 +579,12 @@ static couchstore_error_t build_view_btree(const char *source_file,
 }
 
 
-couchstore_error_t read_view_group_header(const view_group_info_t *info,
+couchstore_error_t read_view_group_header(view_group_info_t *info,
                                           index_header_t **header)
 {
     couchstore_error_t ret;
     cs_off_t pos = info->header_pos;
-    const tree_file *file = &info->file;
+    tree_file *file = &info->file;
     char *header_buf = NULL;
     int header_len;
     char buf;
@@ -593,7 +593,7 @@ couchstore_error_t read_view_group_header(const view_group_info_t *info,
         return COUCHSTORE_ERROR_FILE_CLOSED;
     }
 
-    if (info->file.ops->pread(file->handle, &buf, 1, pos) != 1) {
+    if (info->file.ops->pread(NULL, file->handle, &buf, 1, pos) != 1) {
         return COUCHSTORE_ERROR_READ;
     }
     if (buf == 0) {
