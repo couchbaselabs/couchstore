@@ -74,13 +74,13 @@ typedef struct {
 } reducer_private_t;
 
 
-#define DOUBLE_FMT "%.15lg"
+#define DOUBLE_FMT "%.15g"
 #define scan_stats(buf, sum, count, min, max, sumsqr) \
         sscanf(buf, "{\"sum\":%lg,\"count\":%"SCNu64",\"min\":%lg,\"max\":%lg,\"sumsqr\":%lg}",\
                &sum, &count, &min, &max, &sumsqr)
 
 #define sprint_stats(buf, sum, count, min, max, sumsqr) \
-        sprintf(buf, "{\"sum\":%lg,\"count\":%llu,\"min\":%lg,\"max\":%lg,\"sumsqr\":%lg}",\
+        sprintf(buf, "{\"sum\":%g,\"count\":%"PRIu64",\"min\":%g,\"max\":%g,\"sumsqr\":%g}",\
                 sum, count, min, max, sumsqr)
 
 static void free_key_excluding_elements(view_btree_key_t *key);
@@ -282,7 +282,7 @@ static couchstore_error_t builtin_count_reducer(const mapreduce_json_list_t *key
         }
     }
 
-    size = sprintf(red, "%llu", (unsigned long long) count);
+    size = sprintf(red, "%"PRIu64, count);
     assert(size > 0);
     buf->buf = (char *) malloc(size);
     if (buf->buf == NULL) {
@@ -376,7 +376,7 @@ static couchstore_error_t builtin_stats_reducer(const mapreduce_json_list_t *key
         }
     }
 
-    size = sprint_stats(red, s.sum, (unsigned long long) s.count, s.min, s.max, s.sumsqr);
+    size = sprint_stats(red, s.sum, s.count, s.min, s.max, s.sumsqr);
     assert(size > 0);
     buf->buf = (char *) malloc(size);
     if (buf->buf == NULL) {
@@ -515,11 +515,10 @@ view_reducer_ctx_t *make_view_reducer_ctx(const char *functions[],
         } else {
             mapreduce_error_t mapred_error;
             void *mapred_ctx = NULL;
-            const char *sources[] = { functions[i] };
 
             priv->reducers[i] = js_reducer;
             /* TODO: use single reduce context for all JS functions */
-            mapred_error = mapreduce_start_reduce_context(sources, 1,
+            mapred_error = mapreduce_start_reduce_context(&functions[i], 1,
                                                           &mapred_ctx,
                                                           error_msg);
             if (mapred_error != MAPREDUCE_SUCCESS) {

@@ -91,13 +91,14 @@ static int digitToInt(int c)
 
 char ConvertJSONEscape(const char **in)
 {
+    int uc;
     char c = *++(*in);
     switch (c) {
         case 'u': {
             /* \u is a Unicode escape; 4 hex digits follow. */
             const char* digits = *in + 1;
             *in += 4;
-            int uc = (digitToInt(digits[0]) << 12) | (digitToInt(digits[1]) << 8) |
+            uc = (digitToInt(digits[0]) << 12) | (digitToInt(digits[1]) << 8) |
                      (digitToInt(digits[2]) <<  4) | (digitToInt(digits[3]));
             if (uc > 127)
                 fprintf(stderr, "CouchStore CollateJSON: Can't correctly compare \\u%.4s\n", digits);
@@ -115,6 +116,7 @@ char ConvertJSONEscape(const char **in)
 static int compareStringsASCII(const char** in1, const char** in2)
 {
     const char* str1 = *in1, *str2 = *in2;
+    int s;
     while(true) {
         char c1 = *++str1;
         char c2 = *++str2;
@@ -136,7 +138,7 @@ static int compareStringsASCII(const char** in1, const char** in2)
             c2 = ConvertJSONEscape(&str2);
 
         /* Compare the next characters: */
-        int s = cmp(c1, c2);
+        s = cmp(c1, c2);
         if (s)
             return s;
     }
@@ -150,6 +152,9 @@ static int compareStringsASCII(const char** in1, const char** in2)
 
 static const char* createStringFromJSON(const char** in, size_t *length, bool *freeWhenDone)
 {
+    char* buf;
+    char* dst;
+    char c;
     /* Scan the JSON string to find its length and whether it contains
        escapes: */
     const char* start = ++*in;
@@ -171,9 +176,8 @@ static const char* createStringFromJSON(const char** in, size_t *length, bool *f
     *freeWhenDone = false;
     if (escapes > 0) {
         *length -= escapes;
-        char* buf = malloc(*length);
-        char* dst = buf;
-        char c;
+        buf = malloc(*length);
+        dst = buf;
         for (str = start; (c = *str) != '"'; ++str) {
             if (c == '\\')
                 c = ConvertJSONEscape(&str);
@@ -192,6 +196,8 @@ static int compareUnicodeSlow(const char* str1, size_t len1,
                               const char* str2, size_t len2)
 {
     static UCollator* coll = NULL;
+    UCharIterator iterA, iterB;
+    int result;
 
     UErrorCode status = U_ZERO_ERROR;
     if (!coll) {
@@ -201,9 +207,6 @@ static int compareUnicodeSlow(const char* str1, size_t len1,
             return -1;
         }
     }
-
-    UCharIterator iterA, iterB;
-    int result;
 
     uiter_setUTF8(&iterA, str1, (int)len1);
     uiter_setUTF8(&iterB, str2, (int)len2);
@@ -229,6 +232,8 @@ static int convertUTF8toUChar(const char *src, UChar *dst, int len)
 {
     static UConverter *c;
     UErrorCode status;
+    UChar *p = dst;
+    const char *s = src;
 
     if (!c) {
         status = U_ZERO_ERROR;
@@ -238,9 +243,6 @@ static int convertUTF8toUChar(const char *src, UChar *dst, int len)
             abort();
         }
     }
-
-    UChar *p = dst;
-    const char *s = src;
 
     while (len) {
         unsigned char ch = (unsigned char)(*s);
@@ -269,6 +271,10 @@ static int compareUnicode(const char* str1, size_t len1,
                           const char* str2, size_t len2)
 {
     static UCollator* coll = NULL;
+    UChar *b1;
+    UChar *b2;
+    int ret1, ret2;
+    int result;
 
     UErrorCode status = U_ZERO_ERROR;
     if (!coll) {
@@ -283,19 +289,28 @@ static int compareUnicode(const char* str1, size_t len1,
         return compareUnicodeSlow(str1, len1, str2, len2);
     }
 
-    UChar b1[len1];
-    UChar b2[len2];
-    int ret1, ret2;
+    b1 = malloc(len1 * sizeof(UChar));
+    b2 = malloc(len2 * sizeof(UChar));
+    if (b1 == NULL || b2 == NULL) {
+        free(b1);
+        free(b2);
+        fprintf(stderr, "CouchStore CollateJSON: Couldn't allocate memory\n");
+        return -2;
+    }
 
     ret1 = convertUTF8toUChar(str1, b1, len1);
     ret2 = convertUTF8toUChar(str2, b2, len2);
 
     if (ret1 < 0 || ret2 < 0) {
         /* something went wrong with utf8->utf32 conversion */
+        free(b1);
+        free(b2);
         return compareUnicodeSlow(str1, len1, str2, len2);
     }
 
-    int result = ucol_strcoll(coll, b1, len1, b2, len2);
+    result = ucol_strcoll(coll, b1, len1, b2, len2);
+    free(b1);
+    free(b2);
 
     if (result < 0) {
         return -1;
@@ -328,19 +343,23 @@ static int compareStringsUnicode(const char** in1, const char** in2)
 
 
 static double readNumber(const char* start, const char* end, char** endOfNumber) {
-    assert(end > start);
     /* First copy the string into a zero-terminated buffer so we can safely
        call strtod: */
-    size_t len = end - start;
     char buf[50];
-    char* str = (len < sizeof(buf)) ? buf : malloc(len + 1);
+    char* endInStr;
+    double result;
+    size_t len;
+    char* str;
+
+    assert(end > start);
+    len = end - start;
+    str = (len < sizeof(buf)) ? buf : malloc(len + 1);
     if (!str)
         return 0.0;
     memcpy(str, start, len);
     str[len] = '\0';
 
-    char* endInStr;
-    double result = strtod(str, &endInStr);
+    result = strtod(str, &endInStr);
     *endOfNumber = (char*)start + (endInStr - str);
     if (len >= sizeof(buf))
         free(str);

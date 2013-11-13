@@ -31,29 +31,26 @@ int view_key_cmp(const sized_buf *key1, const sized_buf *key2,
 {
     uint16_t json_key1_len = decode_raw16(*((raw_16 *) key1->buf));
     uint16_t json_key2_len = decode_raw16(*((raw_16 *) key2->buf));
-    sized_buf json_key1 = {
-        .size = json_key1_len,
-        .buf = key1->buf + sizeof(uint16_t)
-    };
-    sized_buf json_key2 = {
-        .size = json_key2_len,
-        .buf = key2->buf + sizeof(uint16_t)
-    };
+    sized_buf json_key1;
+    sized_buf json_key2;
+    sized_buf doc_id1;
+    sized_buf doc_id2;
     int res;
 
     (void)user_ctx;
 
+    json_key1.buf = key1->buf + sizeof(uint16_t);
+    json_key1.size = json_key1_len;
+    json_key2.buf = key2->buf + sizeof(uint16_t);
+    json_key2.size = json_key2_len;
+
     res = CollateJSON(&json_key1, &json_key2, kCollateJSON_Unicode);
 
     if (res == 0) {
-        sized_buf doc_id1 = {
-            .size = key1->size - sizeof(uint16_t) - json_key1.size,
-            .buf = key1->buf + sizeof(uint16_t) + json_key1.size
-        };
-        sized_buf doc_id2 = {
-            .size = key2->size - sizeof(uint16_t) - json_key2.size,
-            .buf = key2->buf + sizeof(uint16_t) + json_key2.size
-        };
+        doc_id1.buf = key1->buf + sizeof(uint16_t) + json_key1.size;
+        doc_id1.size = key1->size - sizeof(uint16_t) - json_key1.size;
+        doc_id2.buf = key2->buf + sizeof(uint16_t) + json_key2.size;
+        doc_id2.size = key2->size - sizeof(uint16_t) - json_key2.size;
 
         res = ebin_cmp(&doc_id1, &doc_id2);
     }

@@ -878,7 +878,7 @@ static void test_view_btree_stats_reducer()
     assert(red->kv_count == 55);
     assert(red->num_values == 1);
     assert(red->reduce_values[0].size == strlen(expected_rereduction));
-    assert(strncmp(red->reduce_values[0].buf, expected_rereduction, sizeof(expected_rereduction)) == 0);
+    assert(strncmp(red->reduce_values[0].buf, expected_rereduction, red->reduce_values[0].size) == 0);
 
     for (i = 0; i < BITMAP_SIZE; ++i) {
         if ((i != 10) && (i != 333) && (i != 777) && (i != 1011)) {
