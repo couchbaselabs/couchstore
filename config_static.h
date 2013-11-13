@@ -50,39 +50,9 @@
 
 #ifdef __APPLE__
 #define fdatasync(FD) fsync(FD)  /* autoconf things OS X has fdatasync but it doesn't */
-#ifndef HAVE_HTONLL
-/* On Darwin, use built-in functions for 64-bit byte-swap: */
-#include <libkern/OSByteOrder.h>
-#define ntohll(n) OSSwapBigToHostInt64(n)
-#define htonll(n) OSSwapHostToBigInt64(n)
-#define HAVE_HTONLL
-#endif /* HAVE_HTONLL */
 #endif /* __APPLE__ */
 
-#ifndef HAVE_HTONLL
-#ifdef WORDS_BIGENDIAN
-#define ntohll(a) a
-#define htonll(a) a
-#elif defined(__GLIBC__)
-#define HAVE_HTONLL 1
-/* GNU libc does have bswap which is optimized implementation */
-#include <byteswap.h>
-#define ntohll(a) bswap_64(a)
-#define htonll(a) bswap_64(a)
-#else
-#define ntohll(a) couchstore_byteswap64(a)
-#define htonll(a) couchstore_byteswap64(a)
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-   extern uint64_t couchstore_byteswap64(uint64_t val);
-#ifdef __cplusplus
-}
-#endif
-#endif /* WORDS_BIGENDIAN */
-#endif /* HAVE_HTONLL */
-
+#include <platform/platform.h>
 
 #ifdef linux
 #undef ntohs

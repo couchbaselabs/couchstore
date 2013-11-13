@@ -8,6 +8,7 @@ INCLUDE(CheckTypeSize)
 INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/include
                            ${CMAKE_CURRENT_SOURCE_DIR}/src
                            ${CMAKE_CURRENT_BINARY_DIR}
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../platform/include
                            ${CMAKE_INSTALL_PREFIX}/include)
 INCLUDE_DIRECTORIES(AFTER ${ICU_INCLUDE_DIR}
                           ${V8_INCLUDE_DIR}
@@ -16,7 +17,6 @@ INCLUDE_DIRECTORIES(AFTER ${ICU_INCLUDE_DIR}
 CHECK_INCLUDE_FILES("netinet/in.h" HAVE_NETINET_IN_H)
 CHECK_INCLUDE_FILES("inttypes.h" HAVE_INTTYPES_H)
 CHECK_SYMBOL_EXISTS(fdatasync "unistd.h" HAVE_FDATASYNC)
-CHECK_SYMBOL_EXISTS(htonll "winsock2.h arpa/inet.h" HAVE_HTONLL)
 
 IF (WIN32)
   SET(COUCHSTORE_FILE_OPS "src/os_win.c")
@@ -25,7 +25,7 @@ ELSE(WIN32)
 ENDIF(WIN32)
 
 SET(COUCHSTORE_SOURCES src/arena.cc src/btree_modify.cc src/btree_read.cc
-            src/byteswap.c src/couch_db.cc src/couch_file_read.cc
+            src/couch_db.cc src/couch_file_read.cc
             src/couch_file_write.cc src/couch_save.cc src/crc32.c
             src/db_compact.cc src/file_merger.cc src/file_name_utils.c
             src/file_sorter.cc src/iobuffer.cc src/llmsort.cc
@@ -39,7 +39,7 @@ SET(COUCHSTORE_SOURCES src/arena.cc src/btree_modify.cc src/btree_read.cc
             src/views/reductions.c src/views/sorted_list.c
             src/views/spatial.c src/views/util.c src/views/values.c
             src/views/view_group.c ${COUCHSTORE_FILE_OPS})
-SET(COUCHSTORE_LIBRARIES ${V8_LIBRARIES} ${ICU_LIBRARIES} ${SNAPPY_LIBRARIES})
+SET(COUCHSTORE_LIBRARIES ${V8_LIBRARIES} ${ICU_LIBRARIES} ${SNAPPY_LIBRARIES} platform)
 
 ADD_LIBRARY(couchstore SHARED ${COUCHSTORE_SOURCES})
 SET_TARGET_PROPERTIES(couchstore PROPERTIES COMPILE_FLAGS -DLIBCOUCHSTORE_INTERNAL=1)
