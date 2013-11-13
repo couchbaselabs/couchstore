@@ -33,26 +33,6 @@
 #define VIEW_KP_CHUNK_THRESHOLD (6 * 1024)
 #define MAX_HEADER_SIZE         (64 * 1024)
 
-#ifndef HAVE_STRDUP
-static char *strdup(const char *s)
-{
-    size_t len = strlen(s);
-    char *c = (char *) malloc(len + 1);
-
-    if (c != NULL) {
-        memcpy(c, s, len);
-        c[len] = '\0';
-    }
-    return c;
-}
-#else
-# ifndef _BSD_SOURCE
-#  define _BSD_SOURCE
-# endif
-extern char *strdup(const char *);
-#endif
-
-
 static couchstore_error_t open_view_group_file(const char *path,
                                                couchstore_open_flags open_flags,
                                                tree_file *file);
