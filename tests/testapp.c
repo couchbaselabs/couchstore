@@ -18,8 +18,8 @@ extern void mapreduce_tests();
 extern void view_tests();
 
 #define ZERO(V) memset(&(V), 0, sizeof(V))
-//Only use the macro SETDOC with constants!
-//it uses sizeof()
+/* Only use the macro SETDOC with constants!
+   it uses sizeof() */
 #define SETDOC(N, I, D, M)  \
    setdoc(&testdocset.docs[N], &testdocset.infos[N], I, strlen(I), \
          D, sizeof(D) - 1, M, strlen(M)); testdocset.datasize += sizeof(D) - 1;
@@ -263,7 +263,7 @@ static void test_save_docs(int count, const char *doc_tpl)
     fflush(stderr);
 
     docset_init(count);
-    srandom(0xdeadbeef);  // doc IDs should be consistent across runs
+    srandom(0xdeadbeef);  /* doc IDs should be consistent across runs */
     for (i = 0; i < count; ++i) {
         idBuf = (char *) malloc(sizeof(char) * 32);
         assert(idBuf != NULL);
@@ -298,7 +298,7 @@ static void test_save_docs(int count, const char *doc_tpl)
 
     try(couchstore_open_db(testfilepath, 0, &db));
 
-    // Read back by doc ID:
+    /* Read back by doc ID: */
     fprintf(stderr, "get by ID... ");
     testdocset.pos = 0;
     for (i = 0; i < count; ++i) {
@@ -309,7 +309,7 @@ static void test_save_docs(int count, const char *doc_tpl)
         couchstore_free_docinfo(out_info);
     }
 
-    // Read back in bulk by doc ID:
+    /* Read back in bulk by doc ID: */
     fprintf(stderr, "bulk IDs... ");
     ids = malloc(count * sizeof(sized_buf));
     for (i = 0; i < count; ++i) {
@@ -320,7 +320,7 @@ static void test_save_docs(int count, const char *doc_tpl)
     assert(testdocset.counters.totaldocs == count);
     assert(testdocset.counters.deleted == 0);
 
-    // Read back by sequence:
+    /* Read back by sequence: */
     fprintf(stderr, "get by sequence... ");
     sequences = malloc(count * sizeof(*sequences));
     testdocset.pos = 0;
@@ -333,7 +333,7 @@ static void test_save_docs(int count, const char *doc_tpl)
         couchstore_free_docinfo(out_info);
     }
 
-    // Read back in bulk by sequence:
+    /* Read back in bulk by sequence: */
     fprintf(stderr, "bulk sequences... ");
     testdocset.pos = 0;
     ZERO(testdocset.counters);
@@ -341,7 +341,7 @@ static void test_save_docs(int count, const char *doc_tpl)
     assert(testdocset.counters.totaldocs == count);
     assert(testdocset.counters.deleted == 0);
 
-    // Read back using changes_since:
+    /* Read back using changes_since: */
     fprintf(stderr, "changes_since... ");
     testdocset.pos = 0;
     ZERO(testdocset.counters);
@@ -402,13 +402,13 @@ static void test_save_doc(void)
     try(couchstore_commit(db));
     couchstore_close_db(db);
 
-    // Check that sequence numbers got filled in
+    /* Check that sequence numbers got filled in */
     unsigned i;
     for (i = 0; i < 4; ++i) {
         assert(testdocset.infos[i].db_seq == i + 1);
     }
 
-    //Read back
+    /* Read back */
     try(couchstore_open_db(testfilepath, 0, &db));
     try(couchstore_changes_since(db, 0, 0, docset_check, &testdocset));
     assert(testdocset.counters.totaldocs == 4);
@@ -440,7 +440,8 @@ static void test_compressed_doc_body(void)
     DocInfo *nfoptrs [2] =  { &testdocset.infos[0],
                               &testdocset.infos[1]
                             };
-    testdocset.infos[1].content_meta = COUCH_DOC_IS_COMPRESSED; //Mark doc2 as to be snappied.
+    /* Mark doc2 as to be snappied. */
+    testdocset.infos[1].content_meta = COUCH_DOC_IS_COMPRESSED;
     unlink(testfilepath);
     Db *db;
     try(couchstore_open_db(testfilepath, COUCHSTORE_OPEN_FLAG_CREATE, &db));
@@ -448,7 +449,7 @@ static void test_compressed_doc_body(void)
                                       COMPRESS_DOC_BODIES));
     try(couchstore_commit(db));
     couchstore_close_db(db);
-    //Read back
+    /* Read back */
     try(couchstore_open_db(testfilepath, 0, &db));
     try(couchstore_changes_since(db, 0, 0, docset_check, &testdocset));
     assert(testdocset.counters.totaldocs == 2);
@@ -530,7 +531,7 @@ static void test_open_file_error(void)
 
     assert(errcode == COUCHSTORE_ERROR_NO_SUCH_FILE);
 
-    // make sure os.c didn't accidentally call close(0):
+    /* make sure os.c didn't accidentally call close(0): */
     assert(lseek(0, 0, SEEK_CUR) >= 0 || errno != EBADF);
 }
 
@@ -559,7 +560,7 @@ static int docmap_check(Db *db, DocInfo *info, void *ctx)
     int i;
     char buffer[100];
     memcpy(buffer, info->id.buf, info->id.size);
-    buffer[info->id.size] = 0; // null terminate
+    buffer[info->id.size] = 0; /* null terminate */
     sscanf(buffer, "doc%d", &i);
     assert(docmap[i] == 0);
     docmap[i] = 1;
@@ -598,21 +599,21 @@ static void test_changes_no_dups(void)
     }
     unlink(testfilepath);
     try(couchstore_open_db(testfilepath, COUCHSTORE_OPEN_FLAG_CREATE, &db));
-    // only save half the docs at first.
+    /* only save half the docs at first. */
     try(couchstore_save_documents(db, docptrs, nfoptrs, numdocs/2, 0));
     try(couchstore_commit(db));
     couchstore_close_db(db);
 
     for (i=0; i < numdocs/2; i++) {
-        // increment the rev for already added docs
+        /* increment the rev for already added docs */
         nfoptrs[i]->rev_seq++;
     }
-    srand(10); // make deterministic
-    // now shuffle so some bulk updates contain previous docs and new docs
+    srand(10); /* make deterministic */
+    /* now shuffle so some bulk updates contain previous docs and new docs */
     shuffle(docptrs, nfoptrs, numdocs);
     try(couchstore_open_db(testfilepath, 0, &db));
     for (i=0; i < numdocs; i += updatebatch) {
-        // now do bulk updates and check the changes for dups
+        /* now do bulk updates and check the changes for dups */
         try(couchstore_save_documents(db, docptrs + i, nfoptrs + i, updatebatch, 0));
         try(couchstore_commit(db));
         memset(docmap, 0, numdocs);
@@ -817,7 +818,7 @@ int main(int argc, const char *argv[])
     fprintf(stderr, " OK\n");
     unlink(testfilepath);
 
-    // make sure os.c didn't accidentally call close(0):
+    /* make sure os.c didn't accidentally call close(0): */
     assert(lseek(0, 0, SEEK_CUR) >= 0 || errno != EBADF);
 
     mapreduce_tests();

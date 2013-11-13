@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
-//  Reference: http://wiki.apache.org/couchdb/View_collation
+/*  Reference: http://wiki.apache.org/couchdb/View_collation */
 
 #include "../src/views/collate_json.h"
 #include "../macros.h"
@@ -11,8 +11,8 @@
 
 static int collateStrs(const char* str1, const char* str2, CollateJSONMode mode)
 {
-    // Be evil and put numeric garbage past the ends of str1 and str2, to make sure it
-    // doesn't confuse the numeric parsing in the collator:
+    /* Be evil and put numeric garbage past the ends of str1 and str2, to make
+       sure it doesn't confuse the numeric parsing in the collator: */
     size_t len1 = strlen(str1), len2 = strlen(str2);
     char padded1[len1 + 3], padded2[len2 + 3];
     strcpy(padded1, str1);
@@ -121,8 +121,8 @@ static void TestCollateNestedArrays()
 
 static void TestCollateUnicodeStrings()
 {
-    // Make sure that TDJSON never creates escape sequences we can't parse.
-    // That includes "\unnnn" for non-ASCII chars, and "\t", "\b", etc.
+    /* Make sure that TDJSON never creates escape sequences we can't parse.
+       That includes "\unnnn" for non-ASCII chars, and "\t", "\b", etc. */
     fprintf(stderr, "Unicode... ");
     CollateJSONMode mode = kCollateJSON_Unicode;
     assert_eq(collateStrs("\"fréd\"", "\"fréd\"", mode), 0);

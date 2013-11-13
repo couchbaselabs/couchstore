@@ -84,7 +84,7 @@ size_t encode_root(void *buf, node_pointer *node);
 /**
  * Reads a 12-bit key length and 28-bit value length, packed into 5 bytes big-endian.
  */
-static inline void decode_kv_length(const raw_kv_length *kv, uint32_t *klen, uint32_t *vlen)
+static void decode_kv_length(const raw_kv_length *kv, uint32_t *klen, uint32_t *vlen)
 {
     /* 12, 28 bit */
     *klen = (uint16_t) ((kv->raw_kv[0] << 4) | ((kv->raw_kv[1] & 0xf0) >> 4));
@@ -95,7 +95,7 @@ static inline void decode_kv_length(const raw_kv_length *kv, uint32_t *klen, uin
 /**
  * Returns an encoded 5-byte key/value length pair.
  */
-static inline raw_kv_length encode_kv_length(size_t klen, size_t vlen)
+static raw_kv_length encode_kv_length(size_t klen, size_t vlen)
 {
     raw_kv_length kv;
 
@@ -120,7 +120,7 @@ void* write_kv(void *buf, sized_buf key, sized_buf value);
 /**
  * Reads a 48-bit sequence number out of a sized_buf.
  */
-static inline uint64_t decode_sequence_key(const sized_buf *buf)
+static uint64_t decode_sequence_key(const sized_buf *buf)
 {
     const raw_by_seq_key *key = (const raw_by_seq_key*)buf->buf;
     return decode_raw48(key->sequence);

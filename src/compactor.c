@@ -31,7 +31,7 @@ typedef struct {
 static int time_purge_hook(Db* target, DocInfo* info, void* ctx_p) {
     time_purge_ctx* ctx = (time_purge_ctx*) ctx_p;
 
-    //Compaction finished
+    /* Compaction finished */
     if(info == NULL) {
         target->header.purge_seq = ctx->max_purged_seq;
         return COUCHSTORE_SUCCESS;

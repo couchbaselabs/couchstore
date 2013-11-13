@@ -13,18 +13,18 @@
 #include <stdio.h>
 #endif
 
-static inline void save_errno(couchstore_error_info_t *errinfo) {
+static void save_errno(couchstore_error_info_t *errinfo) {
     if (errinfo) {
         errinfo->error = errno;
     }
 }
 
-static inline int handle_to_fd(couch_file_handle handle)
+static int handle_to_fd(couch_file_handle handle)
 {
     return (int)(intptr_t)handle;
 }
 
-static inline couch_file_handle fd_to_handle(int fd)
+static couch_file_handle fd_to_handle(int fd)
 {
     return (couch_file_handle)(intptr_t)fd;
 }

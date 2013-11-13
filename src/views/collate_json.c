@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
-// Reference: http://wiki.apache.org/couchdb/View_collation
+/* Reference: http://wiki.apache.org/couchdb/View_collation */
 
 #include "config.h"
 #include "collate_json.h"
@@ -27,7 +27,8 @@ static int dcmp(double n1, double n2)
 }
 
 
-// Types of values, ordered according to CouchDB collation order (see view_collation.js tests)
+/* Types of values, ordered according to CouchDB collation order
+   (see view_collation.js tests) */
 typedef enum {
     kEndArray,
     kEndObject,
@@ -44,8 +45,9 @@ typedef enum {
 } ValueType;
 
 
-// "Raw" ordering is: 0:number, 1:false, 2:null, 3:true, 4:object, 5:array, 6:string
-// (according to view_collation_raw.js)
+/* "Raw" ordering is:
+   0:number, 1:false, 2:null, 3:true, 4:object, 5:array, 6:string
+   (according to view_collation_raw.js) */
 static int8_t kRawOrderOfValueType[] = {
     -4, -3, -2, -1,
     2, 1, 3, 0, 6, 5, 4,
@@ -92,7 +94,7 @@ char ConvertJSONEscape(const char **in)
     char c = *++(*in);
     switch (c) {
         case 'u': {
-            // \u is a Unicode escape; 4 hex digits follow.
+            /* \u is a Unicode escape; 4 hex digits follow. */
             const char* digits = *in + 1;
             *in += 4;
             int uc = (digitToInt(digits[0]) << 12) | (digitToInt(digits[1]) << 8) |
@@ -117,7 +119,8 @@ static int compareStringsASCII(const char** in1, const char** in2)
         char c1 = *++str1;
         char c2 = *++str2;
 
-        // If one string ends, the other is greater; if both end, they're equal:
+        /* If one string ends, the other is greater; if both end,
+           they're equal */
         if (c1 == '"') {
             if (c2 == '"')
                 break;
@@ -126,19 +129,19 @@ static int compareStringsASCII(const char** in1, const char** in2)
         } else if (c2 == '"')
             return 1;
 
-        // Handle escape sequences:
+        /* Handle escape sequences: */
         if (c1 == '\\')
             c1 = ConvertJSONEscape(&str1);
         if (c2 == '\\')
             c2 = ConvertJSONEscape(&str2);
 
-        // Compare the next characters:
+        /* Compare the next characters: */
         int s = cmp(c1, c2);
         if (s)
             return s;
     }
 
-    // Strings are equal, so update the positions:
+    /* Strings are equal, so update the positions: */
     *in1 = str1 + 1;
     *in2 = str2 + 1;
     return 0;
@@ -147,7 +150,8 @@ static int compareStringsASCII(const char** in1, const char** in2)
 
 static const char* createStringFromJSON(const char** in, size_t *length, bool *freeWhenDone)
 {
-    // Scan the JSON string to find its length and whether it contains escapes:
+    /* Scan the JSON string to find its length and whether it contains
+       escapes: */
     const char* start = ++*in;
     unsigned escapes = 0;
     const char* str;
@@ -155,7 +159,7 @@ static const char* createStringFromJSON(const char** in, size_t *length, bool *f
         if (*str == '\\') {
             ++str;
             if (*str == 'u') {
-                escapes += 5;  // \uxxxx adds 5 bytes
+                escapes += 5;  /* \uxxxx adds 5 bytes */
                 str += 4;
             } else
                 escapes += 1;
@@ -325,7 +329,8 @@ static int compareStringsUnicode(const char** in1, const char** in2)
 
 static double readNumber(const char* start, const char* end, char** endOfNumber) {
     assert(end > start);
-    // First copy the string into a zero-terminated buffer so we can safely call strtod:
+    /* First copy the string into a zero-terminated buffer so we can safely
+       call strtod: */
     size_t len = end - start;
     char buf[50];
     char* str = (len < sizeof(buf)) ? buf : malloc(len + 1);
@@ -352,17 +357,17 @@ int CollateJSON(const sized_buf *buf1,
     int depth = 0;
 
     do {
-        // Get the types of the next token in each string:
+        /* Get the types of the next token in each string: */
         ValueType type1 = valueTypeOf(*str1);
         ValueType type2 = valueTypeOf(*str2);
-        // If types don't match, stop and return their relative ordering:
+        /* If types don't match, stop and return their relative ordering: */
         if (type1 != type2) {
             if (mode != kCollateJSON_Raw)
                 return cmp(type1, type2);
             else
                 return cmp(kRawOrderOfValueType[type1], kRawOrderOfValueType[type2]);
 
-        // If types match, compare the actual token values:
+        /* If types match, compare the actual token values: */
         } else switch (type1) {
             case kNull:
             case kTrue:
@@ -377,15 +382,16 @@ int CollateJSON(const sized_buf *buf1,
                 char* next1, *next2;
                 int diff;
                 if (depth == 0) {
-                    // At depth 0, be careful not to fall off the end of the input, because there
-                    // won't be any delimiters (']' or '}') after the number!
+                    /* At depth 0, be careful not to fall off the end of the
+                       input, because there won't be any delimiters (']' or
+                       '}') after the number! */
                     diff = dcmp( readNumber(str1, buf1->buf + buf1->size, &next1),
                                  readNumber(str2, buf2->buf + buf2->size, &next2) );
                 } else {
                     diff = dcmp( strtod(str1, &next1), strtod(str2, &next2) );
                 }
                 if (diff)
-                    return diff;    // Numbers don't match
+                    return diff; /* Numbers don't match */
                 str1 = next1;
                 str2 = next2;
                 break;
@@ -397,7 +403,7 @@ int CollateJSON(const sized_buf *buf1,
                 else
                     diff = compareStringsASCII(&str1, &str2);
                 if (diff)
-                    return diff;    // Strings don't match
+                    return diff; /* Strings don't match */
                 break;
             }
             case kArray:
@@ -420,6 +426,7 @@ int CollateJSON(const sized_buf *buf1,
             case kIllegal:
                 return 0;
         }
-    } while (depth > 0);    // Keep going as long as we're inside an array or object
+    /* Keep going as long as we're inside an array or object */
+    } while (depth > 0);
     return 0;
 }

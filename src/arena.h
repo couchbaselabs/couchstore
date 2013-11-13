@@ -55,7 +55,7 @@ void* arena_alloc_unaligned(arena* a, size_t size);
 #ifdef DEBUG
 void arena_free(arena*, void*);
 #else
-static inline void arena_free(arena* a, void* block) {
+static void arena_free(arena* a, void* block) {
     (void)a;
     (void)block;
 }
