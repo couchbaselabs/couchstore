@@ -48,6 +48,10 @@
 #include <inttypes.h>
 #endif
 
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
 #ifdef __APPLE__
 #define fdatasync(FD) fsync(FD)  /* autoconf things OS X has fdatasync but it doesn't */
 #endif /* __APPLE__ */

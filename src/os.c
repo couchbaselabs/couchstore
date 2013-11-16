@@ -2,7 +2,6 @@
 #include "config.h"
 #include <assert.h>
 #include <sys/types.h>
-#include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
 

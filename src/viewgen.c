@@ -4,8 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-
 
 static int usage() {
     fprintf(stderr, "Usage: couch_viewgen [flag] <input file> [[flag] <input file> ...] <output file>\n"

@@ -3,6 +3,7 @@
 #cmakedefine HAVE_NETINET_IN_H ${HAVE_NETINET_IN_H}
 #cmakedefine HAVE_ARPA_INET_H ${HAVE_ARPA_INET_H}
 #cmakedefine HAVE_INTTYPES_H ${HAVE_INTTYPES_H}
+#cmakedefine HAVE_UNISTD_H ${HAVE_UNISTD_H}
 
 #cmakedefine HAVE_FDATASYNC ${HAVE_FDATASYNC}
 
