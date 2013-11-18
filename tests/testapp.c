@@ -288,7 +288,7 @@ static void test_save_docs(int count, const char *doc_tpl)
         nfoptrs[i] = &testdocset.infos[i];
     }
 
-    unlink(testfilepath);
+    remove(testfilepath);
     Db *db;
     try(couchstore_open_db(testfilepath, COUCHSTORE_OPEN_FLAG_CREATE, &db));
     assert(strcmp(couchstore_get_db_filename(db), testfilepath) == 0);
@@ -388,7 +388,7 @@ static void test_save_doc(void)
     SETDOC(1, "doc2", "{\"test_doc_index\":2}", zerometa);
     SETDOC(2, "doc3", "{\"test_doc_index\":3}", zerometa);
     SETDOC(3, "doc4", "{\"test_doc_index\":4}", zerometa);
-    unlink(testfilepath);
+    remove(testfilepath);
     Db *db;
     try(couchstore_open_db(testfilepath, COUCHSTORE_OPEN_FLAG_CREATE, &db));
     try(couchstore_save_document(db, &testdocset.docs[0],
@@ -442,7 +442,7 @@ static void test_compressed_doc_body(void)
                             };
     /* Mark doc2 as to be snappied. */
     testdocset.infos[1].content_meta = COUCH_DOC_IS_COMPRESSED;
-    unlink(testfilepath);
+    remove(testfilepath);
     Db *db;
     try(couchstore_open_db(testfilepath, COUCHSTORE_OPEN_FLAG_CREATE, &db));
     try(couchstore_save_documents(db, docptrs, nfoptrs, 2,
@@ -463,7 +463,7 @@ static void test_dump_empty_db(void)
 {
     fprintf(stderr, "dump empty db... ");
     fflush(stderr);
-    unlink(testfilepath);
+    remove(testfilepath);
     Db *db;
     couchstore_error_t errcode;
 
@@ -496,7 +496,7 @@ static void test_local_docs(void)
     Db *db;
     LocalDoc lDocWrite;
     LocalDoc *lDocRead = NULL;
-    unlink(testfilepath);
+    remove(testfilepath);
     try(couchstore_open_db(testfilepath, COUCHSTORE_OPEN_FLAG_CREATE, &db));
     lDocWrite.id.buf = "_local/testlocal";
     lDocWrite.id.size = 16;
@@ -521,7 +521,7 @@ static void test_open_file_error(void)
 {
     fprintf(stderr, "opening nonexistent file errors... ");
     fflush(stderr);
-    unlink(testfilepath);
+    remove(testfilepath);
     Db *db = NULL;
     int errcode = couchstore_open_db(testfilepath, 0, &db);
 
@@ -597,7 +597,7 @@ static void test_changes_no_dups(void)
         docptrs[i] = &testdocset.docs[i];
         nfoptrs[i] = &testdocset.infos[i];
     }
-    unlink(testfilepath);
+    remove(testfilepath);
     try(couchstore_open_db(testfilepath, COUCHSTORE_OPEN_FLAG_CREATE, &db));
     /* only save half the docs at first. */
     try(couchstore_save_documents(db, docptrs, nfoptrs, numdocs/2, 0));
@@ -807,16 +807,16 @@ int main(int argc, const char *argv[])
     fprintf(stderr, " OK\n");
     mb5086();
     fprintf(stderr, " OK\n");
-    unlink(testfilepath);
+    remove(testfilepath);
     test_huge_revseq();
     fprintf(stderr, " OK\n");
-    unlink(testfilepath);
+    remove(testfilepath);
     test_asis_seqs();
     fprintf(stderr, " OK\n");
-    unlink(testfilepath);
+    remove(testfilepath);
     test_dropped_handle();
     fprintf(stderr, " OK\n");
-    unlink(testfilepath);
+    remove(testfilepath);
 
     /* make sure os.c didn't accidentally call close(0): */
     assert(lseek(0, 0, SEEK_CUR) >= 0 || errno != EBADF);
