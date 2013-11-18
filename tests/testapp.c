@@ -1,6 +1,5 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include "config.h"
-#include <unistd.h>
 #include <libcouchstore/couch_db.h>
 #include "../src/fatbuf.h"
 #include "../src/internal.h"
@@ -263,11 +262,11 @@ static void test_save_docs(int count, const char *doc_tpl)
     fflush(stderr);
 
     docset_init(count);
-    srandom(0xdeadbeef);  /* doc IDs should be consistent across runs */
+    srand(0xdeadbeef); /* doc IDs should be consistent across runs */
     for (i = 0; i < count; ++i) {
         idBuf = (char *) malloc(sizeof(char) * 32);
         assert(idBuf != NULL);
-        int idsize = sprintf(idBuf, "doc%d-%lu", i, (unsigned long)random());
+        int idsize = sprintf(idBuf, "doc%d-%lu", i, (unsigned long)rand());
         valueBuf = (char *) malloc(sizeof(char) * (strlen(doc_tpl) + 20));
         assert(valueBuf != NULL);
         int valsize = sprintf(valueBuf, doc_tpl, i + 1);
@@ -532,7 +531,9 @@ static void test_open_file_error(void)
     assert(errcode == COUCHSTORE_ERROR_NO_SUCH_FILE);
 
     /* make sure os.c didn't accidentally call close(0): */
+#ifndef WIN32
     assert(lseek(0, 0, SEEK_CUR) >= 0 || errno != EBADF);
+#endif
 }
 
 static void shuffle(Doc **docs, DocInfo **docinfos, size_t n)
@@ -819,7 +820,9 @@ int main(int argc, const char *argv[])
     remove(testfilepath);
 
     /* make sure os.c didn't accidentally call close(0): */
+#ifndef WIN32
     assert(lseek(0, 0, SEEK_CUR) >= 0 || errno != EBADF);
+#endif
 
     mapreduce_tests();
     view_tests();

@@ -19,17 +19,14 @@
 /**
  * Implementation of all exported (public) functions, pure C.
  **/
-
 #include "mapreduce.h"
 #include "mapreduce_internal.h"
 #include <iostream>
 #include <map>
 #include <cstring>
 #include <assert.h>
-#include <pthread.h>
 
 #if defined(WIN32) || defined(_WIN32)
-#include <windows.h>
 #define doSleep(Secs) Sleep(Secs * 1000)
 #else
 #include <unistd.h>
@@ -38,12 +35,31 @@
 
 static const char *MEM_ALLOC_ERROR_MSG = "memory allocation failure";
 
-static pthread_t terminator_thread;
+static cb_thread_t terminator_thread;
 static bool terminator_thread_created = false;
 static volatile unsigned int terminator_timeout = 5;
 
 static std::map<uintptr_t, mapreduce_ctx_t *> ctx_registry;
-static pthread_mutex_t ctx_registry_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+class RegistryMutex {
+public:
+    RegistryMutex() {
+        cb_mutex_initialize(&mutex);
+    }
+    ~RegistryMutex() {
+        cb_mutex_destroy(&mutex);
+    }
+    void lock() {
+        cb_mutex_enter(&mutex);
+    }
+    void unlock() {
+        cb_mutex_exit(&mutex);
+    }
+private:
+    cb_mutex_t mutex;
+};
+
+static RegistryMutex registryMutex;
 
 
 static mapreduce_error_t start_context(const char *functions[],
@@ -59,7 +75,7 @@ static void copy_error_msg(const std::string &msg, char **to);
 
 static void register_ctx(mapreduce_ctx_t *ctx);
 static void unregister_ctx(mapreduce_ctx_t *ctx);
-static void *terminator_loop(void *);
+static void terminator_loop(void *);
 
 
 LIBMAPREDUCE_API
@@ -393,11 +409,10 @@ static void copy_error_msg(const std::string &msg, char **to)
 static void register_ctx(mapreduce_ctx_t *ctx)
 {
     uintptr_t key = reinterpret_cast<uintptr_t>(ctx);
-
-    pthread_mutex_lock(&ctx_registry_mutex);
+    registryMutex.lock();
 
     if (!terminator_thread_created) {
-        int ret = pthread_create(&terminator_thread, NULL, terminator_loop, NULL);
+        int ret = cb_create_thread(&terminator_thread, terminator_loop, NULL, 1);
         if (ret != 0) {
             std::cerr << "Error creating terminator thread: " << ret << std::endl;
             exit(1);
@@ -406,7 +421,7 @@ static void register_ctx(mapreduce_ctx_t *ctx)
     }
 
     ctx_registry[key] = ctx;
-    pthread_mutex_unlock(&ctx_registry_mutex);
+    registryMutex.unlock();
 }
 
 
@@ -414,19 +429,19 @@ static void unregister_ctx(mapreduce_ctx_t *ctx)
 {
     uintptr_t key = reinterpret_cast<uintptr_t>(ctx);
 
-    pthread_mutex_lock(&ctx_registry_mutex);
+    registryMutex.lock();
     ctx_registry.erase(key);
-    pthread_mutex_unlock(&ctx_registry_mutex);
+    registryMutex.unlock();
 }
 
 
-static void *terminator_loop(void *)
+static void terminator_loop(void *)
 {
     std::map<uintptr_t, mapreduce_ctx_t *>::iterator it;
     time_t now;
 
     while (true) {
-        pthread_mutex_lock(&ctx_registry_mutex);
+        registryMutex.lock();
         now = time(NULL);
         for (it = ctx_registry.begin(); it != ctx_registry.end(); ++it) {
             mapreduce_ctx_t *ctx = (*it).second;
@@ -438,9 +453,7 @@ static void *terminator_loop(void *)
             }
         }
 
-        pthread_mutex_unlock(&ctx_registry_mutex);
+        registryMutex.unlock();
         doSleep(terminator_timeout);
     }
-
-    return NULL;
 }

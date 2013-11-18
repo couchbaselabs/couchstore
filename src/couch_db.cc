@@ -1157,7 +1157,7 @@ couchstore_error_t couchstore_last_os_error(const Db *db,
                    MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
                    (LPTSTR) &win_msg,
                    0, NULL);
-    snprintf(buf, size, "WINAPI error = %d: '%s'", err->error, win_msg);
+    _snprintf(buf, size, "WINAPI error = %d: '%s'", err->error, win_msg);
     LocalFree(win_msg);
 #else
     snprintf(buf, size, "errno = %d: '%s'", err->error, strerror(err->error));

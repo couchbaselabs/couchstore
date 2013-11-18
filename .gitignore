@@ -73,3 +73,8 @@ xcuserdata/
 /*.so*
 /*.dll*
 /Testing/
+/*.exe*
+/*.ilk
+/*.pdb
+/*.exp
+/*.lib

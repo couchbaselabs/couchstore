@@ -66,8 +66,8 @@
 #endif
 
 #if defined(WIN32) || defined(_WIN32)
-#include <windows.h>
 #define WINDOWS
+#define V8_POST_3_19_API
 #endif
 
 #endif

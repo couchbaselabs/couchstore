@@ -16,7 +16,7 @@
 
 #else
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(LIBCOUCHSTORE_NO_VISIBILITY)
 #define LIBCOUCHSTORE_API extern __declspec(dllimport)
 #else
 #define LIBCOUCHSTORE_API

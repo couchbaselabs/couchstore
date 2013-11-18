@@ -14,15 +14,28 @@ static int collateStrs(const char* str1, const char* str2, CollateJSONMode mode)
     /* Be evil and put numeric garbage past the ends of str1 and str2, to make
        sure it doesn't confuse the numeric parsing in the collator: */
     size_t len1 = strlen(str1), len2 = strlen(str2);
-    char padded1[len1 + 3], padded2[len2 + 3];
+    char *padded1 = malloc(len1 + 3);
+    char *padded2 = malloc(len2 + 3);
+    int ret;
+    sized_buf buf1;
+    sized_buf buf2;
+
+    assert(padded1);
+    assert(padded2);
+
     strcpy(padded1, str1);
     strcat(padded1, "99");
     strcpy(padded2, str2);
     strcat(padded2, "88");
 
-    sized_buf buf1 = {padded1, len1};
-    sized_buf buf2 = {padded2, len2};
-    return CollateJSON(&buf1, &buf2, mode);
+    buf1.buf = padded1;
+    buf1.size = len1;
+    buf2.buf = padded2;
+    buf2.size = len2;
+    ret =  CollateJSON(&buf1, &buf2, mode);
+    free(padded1);
+    free(padded2);
+    return ret;
 }
 
 

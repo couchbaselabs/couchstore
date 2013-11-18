@@ -2,7 +2,6 @@
 #include "config.h"
 #include <assert.h>
 #include <sys/types.h>
-#include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
 
@@ -17,7 +16,7 @@
 #include <share.h>
 #include <assert.h>
 
-static inline DWORD save_windows_error(couchstore_error_info_t *errinfo) {
+static DWORD save_windows_error(couchstore_error_info_t *errinfo) {
     DWORD err = GetLastError();
     if (errinfo) {
         errinfo->error = err;
@@ -26,12 +25,12 @@ static inline DWORD save_windows_error(couchstore_error_info_t *errinfo) {
     return err;
 }
 
-static inline HANDLE handle_to_win(couch_file_handle handle)
+static HANDLE handle_to_win(couch_file_handle handle)
 {
     return (HANDLE)(intptr_t)handle;
 }
 
-static inline couch_file_handle win_to_handle(HANDLE hdl)
+static couch_file_handle win_to_handle(HANDLE hdl)
 {
     return (couch_file_handle)(intptr_t)hdl;
 }
