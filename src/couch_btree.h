@@ -72,6 +72,16 @@ extern "C" {
         } value;
     } couchfile_modify_action;
 
+    /* Guided purge related constants */
+#define PURGE_ITEM    0
+#define PURGE_STOP    1
+#define PURGE_KEEP    2
+#define PURGE_PARTIAL 3
+
+    /* Returns purge action or error code */
+    typedef int (*purge_kp_fn)(const node_pointer *nptr, void *ctx);
+    typedef int (*purge_kv_fn)(const sized_buf *key, const sized_buf *val, void *ctx);
+
     typedef struct couchfile_modify_request {
         compare_info cmp;
         tree_file *file;
@@ -81,6 +91,11 @@ extern "C" {
         reduce_fn reduce;
         reduce_fn rereduce;
         void *user_reduce_ctx;
+        /* For guided btree purge */
+        purge_kp_fn purge_kp;
+        purge_kv_fn purge_kv;
+        int enable_purging;
+        void *guided_purge_ctx;
         /*  We're in the compactor */
         int compacting;
         int kv_chunk_threshold;
@@ -124,6 +139,9 @@ extern "C" {
                                               int kp_chunk_threshold);
 
     node_pointer* complete_new_btree(couchfile_modify_result* mr, couchstore_error_t *errcode);
+
+    node_pointer *guided_purge_btree(couchfile_modify_request *rq, node_pointer *root,
+                                                couchstore_error_t *errcode);
 
 #ifdef __cplusplus
 }

@@ -667,3 +667,164 @@ node_pointer *modify_btree(couchfile_modify_request *rq,
     delete_arena(a);
     return ret_ptr;
 }
+
+
+static couchstore_error_t purge_node(couchfile_modify_request *rq,
+                                      node_pointer *nptr,
+                                      couchfile_modify_result *dst)
+{
+    char *nodebuf = NULL;  // FYI, nodebuf is a malloced block, not in the arena
+    int bufpos = 1;
+    int nodebuflen = 0;
+    int action;
+    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
+    couchfile_modify_result *local_result = NULL;
+
+    if (nptr == NULL) {
+        return errcode;
+    }
+
+    // noop: add back current node to destination
+    if (!rq->enable_purging) {
+        dst->modified = 1;
+        return mr_push_pointerinfo(nptr, dst);
+    }
+
+    if ((nodebuflen = pread_compressed(rq->file, nptr->pointer, (char **) &nodebuf)) < 0) {
+        error_pass(COUCHSTORE_ERROR_READ);
+    }
+
+    local_result = make_modres(dst->arena, rq);
+    error_unless(local_result, COUCHSTORE_ERROR_ALLOC_FAIL);
+
+    if (nodebuf[0] == 1) { //KV Node
+        local_result->node_type = KV_NODE;
+        while (bufpos < nodebuflen) {
+            sized_buf cmp_key, val_buf;
+            bufpos += read_kv(nodebuf + bufpos, &cmp_key, &val_buf);
+
+            if (rq->enable_purging) {
+                action = rq->purge_kv(&cmp_key, &val_buf, rq->guided_purge_ctx);
+                if (action < 0) {
+                    errcode = (couchstore_error_t ) action;
+                    goto cleanup;
+                }
+            } else {
+                action = PURGE_KEEP;
+            }
+
+            switch (action) {
+            case PURGE_ITEM:
+                local_result->modified = 1;
+                break;
+
+            case PURGE_STOP:
+                rq->enable_purging = 0;
+
+            case PURGE_KEEP:
+                errcode = mr_push_item(&cmp_key, &val_buf, local_result);
+                if (errcode != COUCHSTORE_SUCCESS) {
+                    goto cleanup;
+                }
+                break;
+            }
+        }
+    } else if (nodebuf[0] == 0) { //KP Node
+        local_result->node_type = KP_NODE;
+        while (bufpos < nodebuflen) {
+            sized_buf cmp_key, val_buf;
+            bufpos += read_kv(nodebuf + bufpos, &cmp_key, &val_buf);
+
+            node_pointer *desc = read_pointer(dst->arena, &cmp_key, val_buf.buf);
+            if (!desc) {
+                errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
+                goto cleanup;
+            }
+
+            if (rq->enable_purging) {
+                action = rq->purge_kp(desc, rq->guided_purge_ctx);
+                if (action < 0) {
+                    errcode = (couchstore_error_t ) action;
+                    goto cleanup;
+                }
+            } else {
+                action = PURGE_KEEP;
+            }
+
+            switch (action) {
+            case PURGE_ITEM:
+                local_result->modified = 1;
+                break;
+
+            case PURGE_STOP:
+                rq->enable_purging = 0;
+
+            case PURGE_KEEP:
+                errcode = mr_push_pointerinfo(desc, local_result);
+                if (errcode != COUCHSTORE_SUCCESS) {
+                    goto cleanup;
+                }
+                break;
+
+            case PURGE_PARTIAL:
+                errcode = purge_node(rq, desc, local_result);
+                if (errcode != COUCHSTORE_SUCCESS) {
+                    goto cleanup;
+                }
+                break;
+            }
+        }
+    } else {
+        errcode = COUCHSTORE_ERROR_CORRUPT;
+        goto cleanup;
+    }
+
+    // Write out changes and add node back to parent
+    if (local_result->modified) {
+        error_pass(flush_mr(local_result));
+        dst->modified = 1;
+        error_pass(mr_move_pointers(local_result, dst));
+    }
+
+cleanup:
+    free(nodebuf);
+    return errcode;
+}
+
+
+node_pointer *guided_purge_btree(couchfile_modify_request *rq, node_pointer *root,
+                                                couchstore_error_t *errcode)
+{
+    rq->enable_purging = 1;
+    arena* a = new_arena(0);
+    if (!a) {
+        *errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
+        return NULL;
+    }
+
+    node_pointer *ret_ptr = root;
+    couchfile_modify_result *root_result = make_modres(a, rq);
+    if (!root_result) {
+        delete_arena(a);
+        *errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
+        return NULL;
+    }
+
+    root_result->node_type = KP_NODE;
+    *errcode = purge_node(rq, root, root_result);
+    if (*errcode < 0) {
+        delete_arena(a);
+        return NULL;
+    }
+
+    if (root_result->modified) {
+        ret_ptr = root_result->values_end->pointer;
+    }
+
+    if (ret_ptr && ret_ptr != root) {
+        ret_ptr = copy_node_pointer(ret_ptr);
+    }
+
+    delete_arena(a);
+    return ret_ptr;
+}
