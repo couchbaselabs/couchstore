@@ -20,7 +20,7 @@
 
 #include "config.h"
 #include "util.h"
-
+#include "file_merger.h"
 
 static file_merger_error_t merge_view_files(const char *source_files[],
                                             unsigned num_source_files,

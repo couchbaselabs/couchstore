@@ -135,9 +135,9 @@ void* arena_alloc(arena* a, size_t size)
     return (char*)arena_alloc_unaligned(a, size + padding) + padding;
 }
 
-#ifdef DEBUG
 void arena_free(arena* a, void* block)
 {
+#ifdef DEBUG
     if (block) {
         arena_chunk* chunk;
         for (chunk = a->cur_chunk; chunk; chunk = chunk->prev_chunk) {
@@ -149,8 +149,11 @@ void arena_free(arena* a, void* block)
         assert(a->blocks_allocated > 0);
         --a->blocks_allocated;
     }
-}
+#else
+    (void)a;
+    (void)block;
 #endif
+}
 
 const arena_position* arena_mark(arena *a)
 {

@@ -6,6 +6,9 @@
 #include <assert.h>
 #include <string.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * Variable-width types. Since these are made out of chars they will be
@@ -42,90 +45,57 @@ typedef struct {
 
 
 /* Functions for decoding raw_xx types to native integers: */
+#define encode_raw08(a) couchstore_encode_raw08(a)
+#define encode_raw16(a) couchstore_encode_raw16(a)
+#define encode_raw24(a) couchstore_encode_raw24(a)
+#define encode_raw32(a) couchstore_encode_raw32(a)
+#define encode_raw40(a) couchstore_encode_raw40(a)
+#define encode_raw48(a) couchstore_encode_raw48(a)
+#define encode_raw64(a) couchstore_encode_raw64(a)
 
-#define DECODE_RAW(DST_TYPE, FLIP_FN) \
-    DST_TYPE value = 0; \
-    memcpy((char*)&value + sizeof(value) - sizeof(raw), &(raw), sizeof(raw)); \
-    return FLIP_FN(value)
+#define decode_raw08(a) couchstore_decode_raw08(a)
+#define decode_raw16(a) couchstore_decode_raw16(a)
+#define decode_raw24(a) couchstore_decode_raw24(a)
+#define decode_raw32(a) couchstore_decode_raw32(a)
+#define decode_raw40(a) couchstore_decode_raw40(a)
+#define decode_raw48(a) couchstore_decode_raw48(a)
+#define decode_raw64(a) couchstore_decode_raw64(a)
 
-static uint8_t decode_raw08(raw_08 raw)
-{
-    return raw.raw_bytes[0];
-}
-
-static uint16_t decode_raw16(raw_16 raw)
-{
-    DECODE_RAW(uint16_t, ntohs);
-}
-
-static uint32_t decode_raw24(raw_24 raw)
-{
-    DECODE_RAW(uint32_t, ntohl);
-}
-
-static uint32_t decode_raw32(raw_32 raw)
-{
-    DECODE_RAW(uint32_t, ntohl);
-}
-
-static uint64_t decode_raw40(raw_40 raw)
-{
-    DECODE_RAW(uint64_t, ntohll);
-}
-
-static uint64_t decode_raw48(raw_48 raw)
-{
-    DECODE_RAW(uint64_t, ntohll);
-}
-
-static uint64_t decode_raw64(raw_64 raw)
-{
-    DECODE_RAW(uint64_t, ntohll);
-}
-
+    LIBCOUCHSTORE_API
+    uint8_t couchstore_decode_raw08(raw_08 raw);
+    LIBCOUCHSTORE_API
+    uint16_t couchstore_decode_raw16(raw_16 raw);
+    LIBCOUCHSTORE_API
+    uint32_t couchstore_decode_raw24(raw_24 raw);
+    LIBCOUCHSTORE_API
+    uint32_t couchstore_decode_raw32(raw_32 raw);
+    LIBCOUCHSTORE_API
+    uint64_t couchstore_decode_raw40(raw_40 raw);
+    LIBCOUCHSTORE_API
+    uint64_t couchstore_decode_raw48(raw_48 raw);
+    LIBCOUCHSTORE_API
+    uint64_t couchstore_decode_raw64(raw_64 raw);
 
 /* Functions for encoding native integers to raw_xx types: */
 
-#define ENCODE_RAW(FLIP_FN, RAW_TYPE) \
-    RAW_TYPE raw; \
-    value = FLIP_FN(value); \
-    memcpy(&raw, (char*)&value + sizeof(value) - sizeof(raw), sizeof(raw)); \
-    return raw
+    LIBCOUCHSTORE_API
+    raw_08 couchstore_encode_raw08(uint8_t value);
+    LIBCOUCHSTORE_API
+    raw_16 couchstore_encode_raw16(uint16_t value);
+    LIBCOUCHSTORE_API
+    raw_24 couchstore_encode_raw24(uint32_t value);
+    LIBCOUCHSTORE_API
+    raw_32 couchstore_encode_raw32(uint32_t value);
+    LIBCOUCHSTORE_API
+    raw_40 couchstore_encode_raw40(uint64_t value);
+    LIBCOUCHSTORE_API
+    raw_48 couchstore_encode_raw48(uint64_t value);
+    LIBCOUCHSTORE_API
+    raw_64 couchstore_encode_raw64(uint64_t value);
 
-
-static raw_08 encode_raw08(uint8_t value)
-{
-    ENCODE_RAW((uint8_t), raw_08);
+#ifdef __cplusplus
 }
+#endif
 
-static raw_16 encode_raw16(uint16_t value)
-{
-    ENCODE_RAW(htons, raw_16);
-}
-
-static raw_24 encode_raw24(uint32_t value)
-{
-    ENCODE_RAW(htonl, raw_24);
-}
-
-static raw_32 encode_raw32(uint32_t value)
-{
-    ENCODE_RAW(htonl, raw_32);
-}
-
-static raw_40 encode_raw40(uint64_t value)
-{
-    ENCODE_RAW(htonll, raw_40);
-}
-
-static raw_48 encode_raw48(uint64_t value)
-{
-    ENCODE_RAW(htonll, raw_48);
-}
-
-static raw_64 encode_raw64(uint64_t value)
-{
-    ENCODE_RAW(htonll, raw_64);
-}
 
 #endif

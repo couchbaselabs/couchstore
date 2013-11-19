@@ -74,3 +74,28 @@ size_t encode_root(void *buf, node_pointer *node)
     }
     return sizeof(raw_btree_root) + node->reduce_value.size;
 }
+
+void decode_kv_length(const raw_kv_length *kv, uint32_t *klen, uint32_t *vlen)
+{
+    /* 12, 28 bit */
+    *klen = (uint16_t) ((kv->raw_kv[0] << 4) | ((kv->raw_kv[1] & 0xf0) >> 4));
+    memcpy(vlen, &kv->raw_kv[1], 4);
+    *vlen = ntohl(*vlen) & 0x0FFFFFFF;
+}
+
+raw_kv_length encode_kv_length(size_t klen, size_t vlen)
+{
+    raw_kv_length kv;
+
+    vlen = htonl(vlen);
+    memcpy(&kv.raw_kv[1], &vlen, 4);
+    kv.raw_kv[0] = (uint8_t)(klen >> 4);    /* upper 8 bits of klen */
+    kv.raw_kv[1] |= (klen & 0xF) << 4;     /* lower 4 bits of klen in upper half of byte */
+    return kv;
+}
+
+uint64_t decode_sequence_key(const sized_buf *buf)
+{
+    const raw_by_seq_key *key = (const raw_by_seq_key*)buf->buf;
+    return decode_raw48(key->sequence);
+}
