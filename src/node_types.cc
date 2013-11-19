@@ -86,9 +86,8 @@ void decode_kv_length(const raw_kv_length *kv, uint32_t *klen, uint32_t *vlen)
 raw_kv_length encode_kv_length(size_t klen, size_t vlen)
 {
     raw_kv_length kv;
-
-    vlen = htonl(vlen);
-    memcpy(&kv.raw_kv[1], &vlen, 4);
+    uint32_t len = htonl((uint32_t)vlen);
+    memcpy(&kv.raw_kv[1], &len, 4);
     kv.raw_kv[0] = (uint8_t)(klen >> 4);    /* upper 8 bits of klen */
     kv.raw_kv[1] |= (klen & 0xF) << 4;     /* lower 4 bits of klen in upper half of byte */
     return kv;
