@@ -269,7 +269,11 @@ testapp_SOURCES += \
 	tests/views/values.c \
 	tests/views/reducers.c \
 	tests/views/spatial_tests.h \
-	tests/views/spatial.c
+	tests/views/spatial.c \
+	tests/btree_purge/purge_tests.h \
+	tests/btree_purge/tests.c \
+	tests/btree_purge/purge.c
+
 
 testapp_CFLAGS = $(AM_CFLAGS)
 testapp_DEPENDENCIES = libcouchstore_tests.la libbyteswap.la libutil.la

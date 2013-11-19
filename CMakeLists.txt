@@ -146,6 +146,9 @@ ADD_EXECUTABLE(couchstore_testapp tests/testapp.c
 	tests/views/values.c
 	tests/views/reducers.c
 	tests/views/spatial.c
+	tests/btree_purge/purge_tests.h
+	tests/btree_purge/tests.c
+	tests/btree_purge/purge.c
         ${COUCHSTORE_SOURCES} )
 SET_TARGET_PROPERTIES(couchstore_testapp PROPERTIES COMPILE_FLAGS "-DLIBCOUCHSTORE_NO_VISIBILITY=1")
 

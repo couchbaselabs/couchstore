@@ -14,6 +14,7 @@
 
 extern void mapreduce_tests();
 extern void view_tests();
+extern void purge_tests();
 
 #define ZERO(V) memset(&(V), 0, sizeof(V))
 /* Only use the macro SETDOC with constants!
@@ -839,6 +840,7 @@ int main(int argc, const char *argv[])
 
     mapreduce_tests();
     view_tests();
+    purge_tests();
 
     return 0;
 }
