@@ -213,6 +213,9 @@ static couchstore_error_t update_indexes(Db *db,
     idrq.rereduce = by_id_rereduce;
     idrq.fetch_callback = idfetch_update_cb;
     idrq.compacting = 0;
+    idrq.enable_purging = false;
+    idrq.purge_kp = NULL;
+    idrq.purge_kv = NULL;
     idrq.kv_chunk_threshold = DB_CHUNK_THRESHOLD;
     idrq.kp_chunk_threshold = DB_CHUNK_THRESHOLD;
 
@@ -238,6 +241,9 @@ static couchstore_error_t update_indexes(Db *db,
     seqrq.rereduce = by_seq_rereduce;
     seqrq.file = &db->file;
     seqrq.compacting = 0;
+    seqrq.enable_purging = false;
+    seqrq.purge_kp = NULL;
+    seqrq.purge_kv = NULL;
     seqrq.kv_chunk_threshold = DB_CHUNK_THRESHOLD;
     seqrq.kp_chunk_threshold = DB_CHUNK_THRESHOLD;
 

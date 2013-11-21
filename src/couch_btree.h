@@ -140,7 +140,8 @@ extern "C" {
 
     node_pointer* complete_new_btree(couchfile_modify_result* mr, couchstore_error_t *errcode);
 
-    node_pointer *guided_purge_btree(couchfile_modify_request *rq, node_pointer *root,
+    node_pointer *guided_purge_btree(couchfile_modify_request *rq,
+                                                node_pointer *root,
                                                 couchstore_error_t *errcode);
 
 #ifdef __cplusplus

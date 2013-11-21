@@ -28,29 +28,17 @@
 
 char testpurgefile[1024] = "purge.couch";
 typedef couchstore_error_t (*fetch_callback_fn)(couchfile_lookup_request *,
-                                        const sized_buf *,
-                                        const sized_buf *);
+                                                const sized_buf *,
+                                                const sized_buf *);
 /* Compare helper function */
-static int ebin_cmp(const sized_buf *e1, const sized_buf *e2)
+static int int_cmp(const sized_buf *a, const sized_buf *b)
 {
 
-    size_t size;
-    int cmp;
-    if (e2->size < e1->size) {
-        size = e2->size;
-    } else {
-        size = e1->size;
+    if (!a->size || !b->size) {
+        return 0;
     }
 
-    cmp = memcmp(e1->buf, e2->buf, size);
-    if (cmp == 0) {
-        if (size < e2->size) {
-            return -1;
-        } else if (size < e1->size) {
-            return 1;
-        }
-    }
-    return cmp;
+    return *((int *) a->buf) - *((int *) b->buf);
 }
 
 /* Read a field from reduce value */
@@ -71,7 +59,9 @@ static int red_intval(const node_pointer *ptr, int i)
 }
 
 /* Reduction functions */
-static couchstore_error_t count_reduce(char *dst, size_t *size_r, const nodelist *leaflist, int count, void *ctx)
+static couchstore_error_t count_reduce(char *dst, size_t *size_r,
+                                                const nodelist *leaflist,
+                                                int count, void *ctx)
 {
     int *dst_count = (int *) dst;
     (void) leaflist;
@@ -84,7 +74,10 @@ static couchstore_error_t count_reduce(char *dst, size_t *size_r, const nodelist
     return COUCHSTORE_SUCCESS;
 }
 
-static couchstore_error_t count_rereduce(char *dst, size_t *size_r, const nodelist *ptrlist, int count, void *ctx)
+static couchstore_error_t count_rereduce(char *dst, size_t *size_r,
+                                                    const nodelist *ptrlist,
+                                                    int count,
+                                                    void *ctx)
 {
     int total = 0;
     int *dst_count = (int *) dst;
@@ -93,7 +86,7 @@ static couchstore_error_t count_rereduce(char *dst, size_t *size_r, const nodeli
     (void) ctx;
 
     while (i != NULL && count > 0) {
-        const int *reduce = (const int*) i->pointer->reduce_value.buf;
+        const int *reduce = (const int *) i->pointer->reduce_value.buf;
         total += *reduce;
         i = i->next;
         count--;
@@ -105,10 +98,13 @@ static couchstore_error_t count_rereduce(char *dst, size_t *size_r, const nodeli
     return COUCHSTORE_SUCCESS;
 }
 
-static couchstore_error_t evenodd_reduce(char *dst, size_t *size_r, const nodelist *leaflist, int count, void *ctx)
+static couchstore_error_t evenodd_reduce(char *dst, size_t *size_r,
+                                                    const nodelist *leaflist,
+                                                    int count,
+                                                    void *ctx)
 {
     int *evenodd = (int *) dst;
-    int E=0,O=0;
+    int E = 0, O = 0;
     int *val;
 
     (void) size_r;
@@ -127,16 +123,19 @@ static couchstore_error_t evenodd_reduce(char *dst, size_t *size_r, const nodeli
 
     evenodd[0] = E;
     evenodd[1] = O;
-    *size_r = sizeof(int)*2;
+    *size_r = sizeof(int) * 2;
 
     return COUCHSTORE_SUCCESS;
 }
 
-static couchstore_error_t evenodd_rereduce(char *dst, size_t *size_r, const nodelist *leaflist, int count, void *ctx)
+static couchstore_error_t evenodd_rereduce(char *dst, size_t *size_r,
+                                                    const nodelist *leaflist,
+                                                    int count,
+                                                    void *ctx)
 {
     int *evenodd = (int *) dst;
     int *node_evenodd;
-    int E=0,O=0;
+    int E = 0, O = 0;
 
     (void) size_r;
     (void) ctx;
@@ -150,18 +149,21 @@ static couchstore_error_t evenodd_rereduce(char *dst, size_t *size_r, const node
 
     evenodd[0] = E;
     evenodd[1] = O;
-    *size_r = sizeof(int)*2;
+    *size_r = sizeof(int) * 2;
 
     return COUCHSTORE_SUCCESS;
 }
 
-static couchstore_error_t uniq_reduce(char *dst, size_t *size_r, const nodelist *leaflist, int count, void *ctx)
+static couchstore_error_t uniq_reduce(char *dst, size_t *size_r,
+                                                    const nodelist *leaflist,
+                                                    int count,
+                                                    void *ctx)
 {
     int map[64];
     int *val;
     int total = 0;
     int i, pos;
-    memset(map,0,64*sizeof(int));
+    memset(map, 0, 64 * sizeof(int));
     val = (int *) dst;
     val[0] = count;
 
@@ -180,30 +182,33 @@ static couchstore_error_t uniq_reduce(char *dst, size_t *size_r, const nodelist 
     val = (int *) dst;
     val[1] = total;
     pos = 2;
-    for(i=0; i<64; i++) {
+    for (i = 0; i < 64; i++) {
         if (map[i] == 1) {
             val[pos++] = i;
         }
     }
 
-    *size_r = sizeof(int)*(total+2);
+    *size_r = sizeof(int) * (total + 2);
 
     return COUCHSTORE_SUCCESS;
 }
 
-static couchstore_error_t uniq_rereduce(char *dst, size_t *size_r, const nodelist *leaflist, int count, void *ctx)
+static couchstore_error_t uniq_rereduce(char *dst, size_t *size_r,
+                                                    const nodelist *leaflist,
+                                                    int count,
+                                                    void *ctx)
 {
     int map[64];
     int *val;
     int i, pos, unique_count = 0, total_count = 0;
     (void) ctx;
 
-    memset(map,0,64*sizeof(int));
+    memset(map, 0, 64 * sizeof(int));
 
     while (count--) {
         val = (int *) leaflist->pointer->reduce_value.buf;
         total_count += val[0];
-        for (i=2; i<val[1]+2; i++) {
+        for (i = 2; i < val[1] + 2; i++) {
 
             if (!map[val[i]]) {
                 map[val[i]] = 1;
@@ -220,7 +225,7 @@ static couchstore_error_t uniq_rereduce(char *dst, size_t *size_r, const nodelis
     val[1] = unique_count;
 
     pos = 2;
-    for(i=0; i<64; i++) {
+    for (i = 0; i < 64; i++) {
         if (map[i] == 1) {
             val[pos++] = i;
 
@@ -228,7 +233,7 @@ static couchstore_error_t uniq_rereduce(char *dst, size_t *size_r, const nodelis
     }
 
 
-    *size_r = sizeof(int)*(unique_count+2);
+    *size_r = sizeof(int) * (unique_count + 2);
 
     return COUCHSTORE_SUCCESS;
 }
@@ -285,7 +290,8 @@ static int evenodd_purge_kp(const node_pointer *ptr, void *ctx)
     return PURGE_PARTIAL;
 }
 
-static int evenodd_purge_kv(const sized_buf *key, const sized_buf *val, void *ctx)
+static int evenodd_purge_kv(const sized_buf *key, const sized_buf *val,
+                                                            void *ctx)
 {
     int *count = (int *) ctx;
     int *num = (int *) key->buf;
@@ -301,7 +307,8 @@ static int evenodd_purge_kv(const sized_buf *key, const sized_buf *val, void *ct
     return PURGE_ITEM;
 }
 
-static int evenodd_stop_purge_kv(const sized_buf *key, const sized_buf *val, void *ctx)
+static int evenodd_stop_purge_kv(const sized_buf *key, const sized_buf *val,
+                                                                void *ctx)
 {
     int *count = (int *) ctx;
     int *num = (int *) key->buf;
@@ -326,7 +333,7 @@ static int skip_purge_kp(const node_pointer *ptr, void *ctx)
     int len, range_start, range_end;
     len = red_intval(ptr, 1);
     range_start = red_intval(ptr, 2);
-    range_end = red_intval(ptr, len+1);
+    range_end = red_intval(ptr, len + 1);
 
     if (!len) {
         return PURGE_KEEP;
@@ -354,7 +361,9 @@ static int skip_purge_kv(const sized_buf *key, const sized_buf *val, void *ctx)
 }
 
 /* Btree iterator callbacks */
-static couchstore_error_t check_vals_callback(couchfile_lookup_request *rq, const sized_buf *k, const sized_buf *v)
+static couchstore_error_t check_vals_callback(couchfile_lookup_request *rq,
+                                                            const sized_buf *k,
+                                                            const sized_buf *v)
 {
 
     int *ctx = rq->callback_ctx;
@@ -365,29 +374,60 @@ static couchstore_error_t check_vals_callback(couchfile_lookup_request *rq, cons
     return COUCHSTORE_SUCCESS;
 }
 
-static couchstore_error_t check_odd_callback(couchfile_lookup_request *rq, const sized_buf *k, const sized_buf *v)
+static couchstore_error_t check_odd_callback(couchfile_lookup_request *rq,
+                                                            const sized_buf *k,
+                                                            const sized_buf *v)
 {
-    int *num = (int *) k->buf;
-    assert(*num % 2 == 0);
+    int *key = (int *) k->buf;
+    assert(*key % 2 == 0);
 
     return COUCHSTORE_SUCCESS;
 }
 
-static couchstore_error_t check_odd_stop_callback(couchfile_lookup_request *rq, const sized_buf *k, const sized_buf *v)
+static couchstore_error_t check_odd2_callback(couchfile_lookup_request *rq,
+                                                            const sized_buf *k,
+                                                            const sized_buf *v)
 {
-    int *num = (int *) k->buf;
-    switch (*num) {
-        case 1:
-        case 3:
-        case 5:
-        case 7:
-            assert(0);
+    int *key = (int *) k->buf;
+    int *val = (int *) v->buf;
+    assert(*key % 2 == 0);
+
+    switch ((*key)) {
+    case 2:
+    case 14006:
+    case 500000:
+        assert(*key == *val);
+        break;
+    case 4:
+    case 10:
+    case 200000:
+        assert(0);
+    default:
+        assert(*val == (*key % 64));
     }
 
     return COUCHSTORE_SUCCESS;
 }
 
-static couchstore_error_t  check_skiprange_callback(couchfile_lookup_request *rq, const sized_buf *k, const sized_buf *v)
+static couchstore_error_t check_odd_stop_callback(couchfile_lookup_request *rq,
+                                                            const sized_buf *k,
+                                                            const sized_buf *v)
+{
+    int *num = (int *) k->buf;
+    switch (*num) {
+    case 1:
+    case 3:
+    case 5:
+    case 7:
+        assert(0);
+    }
+
+    return COUCHSTORE_SUCCESS;
+}
+
+static couchstore_error_t  check_skiprange_callback(couchfile_lookup_request *rq,
+                                                            const sized_buf *k,
+                                                            const sized_buf *v)
 {
     int *key = (int *) k->buf;
     int *val = (int *) v->buf;
@@ -401,9 +441,9 @@ static couchstore_error_t  check_skiprange_callback(couchfile_lookup_request *rq
 
 /* Helper function to populate a btree  with {1..N} sequence */
 static node_pointer *insert_items(tree_file *file, node_pointer *root,
-                                    reduce_fn reduce,
-                                    reduce_fn rereduce,
-                                    int n)
+                                  reduce_fn reduce,
+                                  reduce_fn rereduce,
+                                  int n)
 {
 
     int errcode, i;
@@ -419,10 +459,9 @@ static node_pointer *insert_items(tree_file *file, node_pointer *root,
     vals = (sized_buf *) calloc(n, sizeof(sized_buf));
     acts = (couchfile_modify_action *) calloc(n, sizeof(couchfile_modify_action));
 
-    for (i=0; i<n; i++)
-    {
-        arr1[i] = i+1;
-        arr2[i] = (i+1) % 64;
+    for (i = 0; i < n; i++) {
+        arr1[i] = i + 1;
+        arr2[i] = (i + 1) % 64;
 
         keys[i].size = sizeof(int);
         keys[i].buf = (void *) &arr1[i];
@@ -435,15 +474,15 @@ static node_pointer *insert_items(tree_file *file, node_pointer *root,
         acts[i].key = &keys[i];
     }
 
-    rq.cmp.compare = ebin_cmp;
+    rq.cmp.compare = int_cmp;
     rq.file = file;
     rq.actions = acts;
     rq.num_actions = n;
     rq.reduce = reduce;
     rq.rereduce = rereduce;
     rq.compacting = 0;
-    rq.kv_chunk_threshold = 6*1024;
-    rq.kp_chunk_threshold = 6*1024;
+    rq.kv_chunk_threshold = 6 * 1024;
+    rq.kp_chunk_threshold = 6 * 1024;
 
     nroot = modify_btree(&rq, root, &errcode);
     free(arr1);
@@ -459,22 +498,22 @@ static node_pointer *insert_items(tree_file *file, node_pointer *root,
 
 /* Helper function to create a purge btree modify request */
 static couchfile_modify_request purge_request(tree_file *file, reduce_fn reduce,
-                                                    reduce_fn rereduce,
-                                                    purge_kp_fn purge_kp,
-                                                    purge_kv_fn purge_kv,
-                                                    void *purge_ctx)
+                                                          reduce_fn rereduce,
+                                                          purge_kp_fn purge_kp,
+                                                          purge_kv_fn purge_kv,
+                                                          void *purge_ctx)
 {
     couchfile_modify_request rq;
 
-    rq.cmp.compare = ebin_cmp;
+    rq.cmp.compare = int_cmp;
     rq.file = file;
     rq.actions = NULL;
     rq.num_actions = 0;
     rq.reduce = reduce;
     rq.rereduce = rereduce;
     rq.compacting = 0;
-    rq.kv_chunk_threshold = 6*1024;
-    rq.kp_chunk_threshold = 6*1024;
+    rq.kv_chunk_threshold = 6 * 1024;
+    rq.kp_chunk_threshold = 6 * 1024;
     rq.purge_kp = purge_kp;
     rq.purge_kv = purge_kv;
     rq.enable_purging = 1;
@@ -485,14 +524,15 @@ static couchfile_modify_request purge_request(tree_file *file, reduce_fn reduce,
 }
 
 /* Btree iterator helper function */
-static couchstore_error_t iter_btree(tree_file *file, node_pointer *root, void *ctx,
-                                                     fetch_callback_fn callback)
+static couchstore_error_t iter_btree(tree_file *file, node_pointer *root,
+                                                    void *ctx,
+                                                    fetch_callback_fn callback)
 {
     couchfile_lookup_request rq;
     sized_buf k = {NULL, 0};
     sized_buf *keys = &k;
 
-    rq.cmp.compare = ebin_cmp;
+    rq.cmp.compare = int_cmp;
     rq.file = file;
     rq.num_keys = 1;
     rq.keys = &keys;
@@ -512,16 +552,15 @@ void test_no_purge_items()
     int errcode, N;
     int redval;
     int ctx[2];
-    int purge_sum[2] = {0,0};
-    Db *db;
-    node_pointer *root, *newroot;
+    int purge_sum[2] = {0, 0};
+    Db *db = NULL;
+    node_pointer *root = NULL, *newroot = NULL;
     couchfile_modify_request purge_rq;
     fprintf(stderr, "\nExecuting test_no_purge_items...\n");
 
     N = 211341;
     ctx[0] = N;
     ctx[1] = 1;
-    root = NULL;
     remove(testpurgefile);
     try(couchstore_open_db(testpurgefile, COUCHSTORE_OPEN_FLAG_CREATE, &db));
     root = insert_items(&db->file, NULL, count_reduce, count_rereduce, N);
@@ -531,7 +570,8 @@ void test_no_purge_items()
     assert(redval == N);
     fprintf(stderr, "Initial reduce value equals N\n");
 
-    purge_rq = purge_request(&db->file, count_reduce, count_rereduce, keepall_purge_kp, keepall_purge_kv, (void *) purge_sum);
+    purge_rq = purge_request(&db->file, count_reduce, count_rereduce,
+                    keepall_purge_kp, keepall_purge_kv, (void *) purge_sum);
     newroot = guided_purge_btree(&purge_rq, root, &errcode);
 
     assert(purge_sum[0] == 0 && purge_sum[1] == 0);
@@ -543,7 +583,13 @@ void test_no_purge_items()
 
     try(iter_btree(&db->file, newroot, &ctx, check_vals_callback));
     fprintf(stderr, "Btree has same values after guided purge\n");
+
 cleanup:
+    free(root);
+    if (root != newroot) {
+        free(newroot);
+    }
+    couchstore_close_db(db);
     assert(errcode == 0);
 }
 
@@ -551,14 +597,13 @@ void test_all_purge_items()
 {
     int errcode, N;
     int redval;
-    int purge_sum[2] = {0,0};
-    Db *db;
-    node_pointer *root, *newroot;
+    int purge_sum[2] = {0, 0};
+    Db *db = NULL;
+    node_pointer *root = NULL, *newroot = NULL;
     couchfile_modify_request purge_rq;
     fprintf(stderr, "\nExecuting test_all_purge_items...\n");
 
     N = 211341;
-    root = NULL;
     remove(testpurgefile);
     try(couchstore_open_db(testpurgefile, COUCHSTORE_OPEN_FLAG_CREATE, &db));
     root = insert_items(&db->file, NULL, count_reduce, count_rereduce, N);
@@ -568,7 +613,8 @@ void test_all_purge_items()
     assert(redval == N);
     fprintf(stderr, "Initial reduce value equals N\n");
 
-    purge_rq = purge_request(&db->file, count_reduce, count_rereduce, all_purge_kp, all_purge_kv, (void *) &purge_sum);
+    purge_rq = purge_request(&db->file, count_reduce, count_rereduce,
+                            all_purge_kp, all_purge_kv, (void *) &purge_sum);
     newroot = guided_purge_btree(&purge_rq, root, &errcode);
 
     assert(purge_sum[0] == 0 && purge_sum[1] == N);
@@ -582,6 +628,9 @@ void test_all_purge_items()
     fprintf(stderr, "Btree is empty after guided purge\n");
 
 cleanup:
+    free(root);
+    free(newroot);
+    couchstore_close_db(db);
     assert(errcode == 0);
 }
 
@@ -591,14 +640,14 @@ void test_partial_purge_items()
     int errcode, N;
     int exp_evenodd[2];
     int purge_count = 0;
-    Db *db;
-    node_pointer *root, *newroot;
+    Db *db = NULL;
+    node_pointer *root = NULL, *newroot = NULL;
     couchfile_modify_request purge_rq;
     fprintf(stderr, "\nExecuting test_partial_purge_items...\n");
 
     N = 211341;
-    exp_evenodd[0] = N/2;
-    exp_evenodd[1] = N/2 + N%2;
+    exp_evenodd[0] = N / 2;
+    exp_evenodd[1] = N / 2 + N % 2;
 
     remove(testpurgefile);
     try(couchstore_open_db(testpurgefile, COUCHSTORE_OPEN_FLAG_CREATE, &db));
@@ -608,7 +657,8 @@ void test_partial_purge_items()
     assert(exp_evenodd[0] == red_intval(root, 0) && exp_evenodd[1] == red_intval(root, 1));
     fprintf(stderr, "Initial reduce value equals {NumEven, NumOdd}\n");
 
-    purge_rq = purge_request(&db->file, evenodd_reduce, evenodd_rereduce, evenodd_purge_kp, evenodd_purge_kv, (void *) &purge_count);
+    purge_rq = purge_request(&db->file, evenodd_reduce, evenodd_rereduce,
+                    evenodd_purge_kp, evenodd_purge_kv, (void *) &purge_count);
     newroot = guided_purge_btree(&purge_rq, root, &errcode);
 
     assert(purge_count == exp_evenodd[1]);
@@ -621,14 +671,17 @@ void test_partial_purge_items()
     fprintf(stderr, "Btree has no odd values after guided purge\n");
 
 cleanup:
+    free(root);
+    free(newroot);
+    couchstore_close_db(db);
     assert(errcode == 0);
 }
 
 void test_partial_purge_items2()
 {
     int errcode, N;
-    Db *db;
-    node_pointer *root, *newroot;
+    Db *db = NULL;
+    node_pointer *root = NULL, *newroot = NULL;
     int range_start, range_end;
     int count, purge_count = 0, iter_context = -1;
     couchfile_modify_request purge_rq;
@@ -642,27 +695,31 @@ void test_partial_purge_items2()
 
     count = red_intval(root, 1);
     range_start = red_intval(root, 2);
-    range_end = red_intval(root, count+1);
+    range_end = red_intval(root, count + 1);
     assert(range_start == 0 && range_end == 63);
 
     fprintf(stderr, "Initial reduce value equals seq{0, 63}\n");
 
-    purge_rq = purge_request(&db->file, uniq_reduce, uniq_rereduce, skip_purge_kp, skip_purge_kv, (void *) &purge_count);
+    purge_rq = purge_request(&db->file, uniq_reduce, uniq_rereduce,
+                        skip_purge_kp, skip_purge_kv, (void *) &purge_count);
     newroot = guided_purge_btree(&purge_rq, root, &errcode);
 
-    assert(purge_count == N/2);
+    assert(purge_count == N / 2);
     fprintf(stderr, "guided_purge returned correct accumulator N/2\n");
 
     count = red_intval(newroot, 1);
     range_start = red_intval(newroot, 2);
-    range_end = red_intval(newroot, count+1);
-    assert(red_intval(newroot, 0) == N/2 && range_start == 0 && range_end == 31);
+    range_end = red_intval(newroot, count + 1);
+    assert(red_intval(newroot, 0) == N / 2 && range_start == 0 && range_end == 31);
     fprintf(stderr, "Reduce value after guided purge equals {0, 31}\n");
 
     try(iter_btree(&db->file, newroot, &iter_context, check_skiprange_callback));
     fprintf(stderr, "Btree has only values within the range {0, 31} and keys are sorted\n");
 
 cleanup:
+    free(root);
+    free(newroot);
+    couchstore_close_db(db);
     assert(errcode == 0);
 }
 
@@ -671,14 +728,14 @@ void test_partial_purge_with_stop()
     int errcode, N;
     int exp_evenodd[2];
     int purge_count = 0;
-    Db *db;
-    node_pointer *root, *newroot;
+    Db *db = NULL;
+    node_pointer *root = NULL, *newroot = NULL;
     couchfile_modify_request purge_rq;
     fprintf(stderr, "\nExecuting test_partial_purge_items...\n");
 
     N = 211341;
-    exp_evenodd[0] = N/2;
-    exp_evenodd[1] = N/2 + N%2;
+    exp_evenodd[0] = N / 2;
+    exp_evenodd[1] = N / 2 + N % 2;
 
     remove(testpurgefile);
     try(couchstore_open_db(testpurgefile, COUCHSTORE_OPEN_FLAG_CREATE, &db));
@@ -688,22 +745,106 @@ void test_partial_purge_with_stop()
     assert(exp_evenodd[0] == red_intval(root, 0) && exp_evenodd[1] == red_intval(root, 1));
     fprintf(stderr, "Initial reduce value equals {NumEven, NumOdd}\n");
 
-    purge_rq = purge_request(&db->file, evenodd_reduce, evenodd_rereduce, evenodd_purge_kp, evenodd_stop_purge_kv, (void *) &purge_count);
+    purge_rq = purge_request(&db->file, evenodd_reduce, evenodd_rereduce,
+            evenodd_purge_kp, evenodd_stop_purge_kv, (void *) &purge_count);
     newroot = guided_purge_btree(&purge_rq, root, &errcode);
 
     assert(purge_count == 4);
     fprintf(stderr, "guided_purge returned correct accumulator - 4\n");
 
     assert(red_intval(newroot, 0) == exp_evenodd[0]);
-    assert(red_intval(newroot, 1) == (exp_evenodd[1]-4));
+    assert(red_intval(newroot, 1) == (exp_evenodd[1] - 4));
     fprintf(stderr, "Reduce value after guided purge equals {NumEven, NumOdd-4}\n");
 
     try(iter_btree(&db->file, newroot, NULL, check_odd_stop_callback));
     fprintf(stderr, "Btree does not contain first 4 odd values after guided purge\n");
 
 cleanup:
+    free(root);
+    free(newroot);
+    couchstore_close_db(db);
     assert(errcode == 0);
+}
 
+void test_add_remove_purge()
+{
+    int errcode, N, i;
+    int exp_evenodd[2];
+    int purge_count = 0;
+    Db *db = NULL;
+    node_pointer *root = NULL, *newroot = NULL;
+    couchfile_modify_request purge_rq;
+    int *arr = NULL;
+    couchfile_modify_action *acts = NULL;
+    sized_buf *keys = NULL;
+    fprintf(stderr, "\nExecuting test_add_remove_purge...\n");
+
+    N = 211341;
+    exp_evenodd[0] = N / 2;
+    exp_evenodd[1] = N / 2 + N % 2;
+
+    remove(testpurgefile);
+    try(couchstore_open_db(testpurgefile, COUCHSTORE_OPEN_FLAG_CREATE, &db));
+    root = insert_items(&db->file, NULL, evenodd_reduce, evenodd_rereduce, N);
+    assert(root != NULL);
+
+    assert(exp_evenodd[0] == red_intval(root, 0) && exp_evenodd[1] == red_intval(root, 1));
+    fprintf(stderr, "Initial reduce value equals {NumEven, NumOdd}\n");
+
+    purge_rq = purge_request(&db->file, evenodd_reduce, evenodd_rereduce,
+                    evenodd_purge_kp, evenodd_purge_kv, (void *) &purge_count);
+
+    /* Add few add and remove actions in the modify request */
+    arr = (int *) calloc(6, sizeof(int));
+    keys = (sized_buf *) calloc(6, sizeof(sized_buf));
+    acts = (couchfile_modify_action *) calloc(6, sizeof(couchfile_modify_action));
+
+    arr[0] = 2;
+    arr[1] = 4;
+    arr[2] = 10;
+    arr[3] = 14006;
+    arr[4] = 200000;
+    arr[5] = 500000;
+
+    acts[0].type = ACTION_INSERT;
+    acts[1].type = ACTION_REMOVE;
+    acts[2].type = ACTION_REMOVE;
+    acts[3].type = ACTION_INSERT;
+    acts[4].type = ACTION_REMOVE;
+    acts[5].type = ACTION_INSERT;
+
+
+    for (i = 0; i < 6; i++) {
+        keys[i].size  = sizeof(int);
+        keys[i].buf = (void *) &arr[i];
+        acts[i].key = &keys[i];
+        acts[i].value.data = &keys[i];
+    }
+
+    purge_rq.actions = acts;
+    purge_rq.num_actions = 6;
+    purge_rq.enable_purging = 1;
+    newroot = modify_btree(&purge_rq, root, &errcode);
+
+
+    assert(purge_count == exp_evenodd[1]);
+    fprintf(stderr, "Btree add_remove with purge returned correct purge_count - Numodds\n");
+
+    assert(red_intval(newroot, 0) == (exp_evenodd[0] - 2) && red_intval(newroot, 1) == 0);
+    fprintf(stderr, "Btree reduce value equals - {NumEven-2, 0}\n");
+
+    try(iter_btree(&db->file, newroot, NULL, check_odd2_callback));
+    fprintf(stderr, "Btree has no odd values after guided purge\n");
+    fprintf(stderr, "Keys 4,10,200000 are not in tree after guided purge\n");
+
+cleanup:
+    free(root);
+    free(newroot);
+    free(keys);
+    free(acts);
+    free(arr);
+    couchstore_close_db(db);
+    assert(errcode == 0);
 }
 
 void test_only_single_leafnode()
@@ -711,13 +852,12 @@ void test_only_single_leafnode()
     int errcode, N;
     int redval;
     int purge_sum[2] = {0,0};
-    Db *db;
-    node_pointer *root, *newroot;
+    Db *db = NULL;
+    node_pointer *root = NULL, *newroot = NULL;
     couchfile_modify_request purge_rq;
 
     fprintf(stderr, "\nExecuting test_only_single_leafnode...\n");
     N = 2;
-    root = NULL;
     remove(testpurgefile);
     try(couchstore_open_db(testpurgefile, COUCHSTORE_OPEN_FLAG_CREATE, &db));
     root = insert_items(&db->file, NULL, count_reduce, count_rereduce, N);
@@ -741,5 +881,8 @@ void test_only_single_leafnode()
     fprintf(stderr, "Btree is empty after guided purge\n");
 
 cleanup:
+    free(root);
+    free(newroot);
+    couchstore_close_db(db);
     assert(errcode == 0);
 }

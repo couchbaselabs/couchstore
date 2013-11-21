@@ -29,6 +29,8 @@ void test_all_purge_items(void);
 void test_partial_purge_items(void);
 void test_partial_purge_items2(void);
 void test_partial_purge_with_stop(void);
+void test_add_remove_purge(void);
+
 void purge_tests(void);
 void test_only_single_leafnode(void);
 

@@ -13,6 +13,9 @@
 
 static couchstore_error_t flush_mr_partial(couchfile_modify_result *res, size_t mr_quota);
 static couchstore_error_t flush_mr(couchfile_modify_result *res);
+static couchstore_error_t purge_node(couchfile_modify_request *rq,
+                                      node_pointer *nptr,
+                                      couchfile_modify_result *dst);
 
 static couchstore_error_t maybe_flush(couchfile_modify_result *mr)
 {
@@ -97,6 +100,9 @@ couchfile_modify_result *new_btree_modres(arena *a, arena *transient_arena, tree
     rq->rereduce = rereduce;
     rq->user_reduce_ctx = user_reduce_ctx;
     rq->compacting = 1;
+    rq->enable_purging = 0;
+    rq->purge_kp = NULL;
+    rq->purge_kv = NULL;
     rq->kv_chunk_threshold = kv_chunk_threshold;
     rq->kp_chunk_threshold = kp_chunk_threshold;
 
@@ -322,6 +328,76 @@ cleanup:
     return errcode;
 }
 
+// Perform purging for a kv-node if it qualifies for purging
+static couchstore_error_t maybe_purgekv(couchfile_modify_request *rq,
+                                            sized_buf *key,
+                                            sized_buf *val,
+                                            couchfile_modify_result *result)
+{
+    int action;
+    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
+
+    if (rq->enable_purging && rq->purge_kv) {
+        action = rq->purge_kv(key, val, rq->guided_purge_ctx);
+        if (action < 0) {
+            return (couchstore_error_t) action;
+        }
+    } else {
+        action = PURGE_KEEP;
+    }
+
+    switch (action) {
+    case PURGE_ITEM:
+        result->modified = 1;
+        break;
+
+    case PURGE_STOP:
+        rq->enable_purging = 0;
+
+    case PURGE_KEEP:
+        errcode = mr_push_item(key, val, result);
+        break;
+    }
+
+    return errcode;
+}
+
+// Perform purging for a kp-node if it qualifies for purging
+static couchstore_error_t maybe_purgekp(couchfile_modify_request *rq, node_pointer *node,
+                                        couchfile_modify_result *result)
+{
+    int action;
+    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
+
+    if (rq->enable_purging && rq->purge_kp) {
+        action = rq->purge_kp(node, rq->guided_purge_ctx);
+        if (action < 0) {
+            return (couchstore_error_t) action;
+        }
+    } else {
+        action = PURGE_KEEP;
+    }
+
+    switch (action) {
+    case PURGE_ITEM:
+        result->modified = 1;
+        break;
+
+    case PURGE_PARTIAL:
+        errcode = purge_node(rq, node, result);
+        break;
+
+    case PURGE_STOP:
+        rq->enable_purging = 0;
+
+    case PURGE_KEEP:
+        errcode = mr_push_pointerinfo(node, result);
+        break;
+    }
+
+    return errcode;
+}
+
 static couchstore_error_t modify_node(couchfile_modify_request *rq,
                                       node_pointer *nptr,
                                       int start, int end,
@@ -357,7 +433,10 @@ static couchstore_error_t modify_node(couchfile_modify_request *rq,
                 int cmp_val = rq->cmp.compare(&cmp_key, rq->actions[start].key);
 
                 if (cmp_val < 0) { //Key less than action key
-                    mr_push_item(&cmp_key, &val_buf, local_result);
+                    errcode = maybe_purgekv(rq, &cmp_key, &val_buf, local_result);
+                    if (errcode != COUCHSTORE_SUCCESS) {
+                        goto cleanup;
+                    }
                 } else if (cmp_val > 0) { //Key greater than action key
                     switch (rq->actions[start].type) {
                     case ACTION_INSERT:
@@ -404,7 +483,10 @@ static couchstore_error_t modify_node(couchfile_modify_request *rq,
             }
             if (start == end && !advance) {
                 //If we've exhausted actions then just keep this key
-                mr_push_item(&cmp_key, &val_buf, local_result);
+                errcode = maybe_purgekv(rq, &cmp_key, &val_buf, local_result);
+                if (errcode != COUCHSTORE_SUCCESS) {
+                    goto cleanup;
+                }
             }
         }
         while (start < end) {
@@ -459,7 +541,7 @@ static couchstore_error_t modify_node(couchfile_modify_request *rq,
                     goto cleanup;
                 }
 
-                errcode = mr_push_pointerinfo(add, local_result);
+                errcode = maybe_purgekp(rq, add, local_result);
                 if (errcode != COUCHSTORE_SUCCESS) {
                     goto cleanup;
                 }
@@ -495,7 +577,7 @@ static couchstore_error_t modify_node(couchfile_modify_request *rq,
                 goto cleanup;
             }
 
-            errcode = mr_push_pointerinfo(add, local_result);
+            errcode = maybe_purgekp(rq, add, local_result);
             if (errcode != COUCHSTORE_SUCCESS) {
                 goto cleanup;
             }
@@ -668,15 +750,13 @@ node_pointer *modify_btree(couchfile_modify_request *rq,
     return ret_ptr;
 }
 
-
 static couchstore_error_t purge_node(couchfile_modify_request *rq,
-                                      node_pointer *nptr,
-                                      couchfile_modify_result *dst)
+                                     node_pointer *nptr,
+                                     couchfile_modify_result *dst)
 {
     char *nodebuf = NULL;  // FYI, nodebuf is a malloced block, not in the arena
     int bufpos = 1;
     int nodebuflen = 0;
-    int action;
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     couchfile_modify_result *local_result = NULL;
 
@@ -703,30 +783,9 @@ static couchstore_error_t purge_node(couchfile_modify_request *rq,
             sized_buf cmp_key, val_buf;
             bufpos += read_kv(nodebuf + bufpos, &cmp_key, &val_buf);
 
-            if (rq->enable_purging) {
-                action = rq->purge_kv(&cmp_key, &val_buf, rq->guided_purge_ctx);
-                if (action < 0) {
-                    errcode = (couchstore_error_t ) action;
-                    goto cleanup;
-                }
-            } else {
-                action = PURGE_KEEP;
-            }
-
-            switch (action) {
-            case PURGE_ITEM:
-                local_result->modified = 1;
-                break;
-
-            case PURGE_STOP:
-                rq->enable_purging = 0;
-
-            case PURGE_KEEP:
-                errcode = mr_push_item(&cmp_key, &val_buf, local_result);
-                if (errcode != COUCHSTORE_SUCCESS) {
-                    goto cleanup;
-                }
-                break;
+            errcode = maybe_purgekv(rq, &cmp_key, &val_buf, local_result);
+            if (errcode != COUCHSTORE_SUCCESS) {
+                goto cleanup;
             }
         }
     } else if (nodebuf[0] == 0) { //KP Node
@@ -741,37 +800,9 @@ static couchstore_error_t purge_node(couchfile_modify_request *rq,
                 goto cleanup;
             }
 
-            if (rq->enable_purging) {
-                action = rq->purge_kp(desc, rq->guided_purge_ctx);
-                if (action < 0) {
-                    errcode = (couchstore_error_t ) action;
-                    goto cleanup;
-                }
-            } else {
-                action = PURGE_KEEP;
-            }
-
-            switch (action) {
-            case PURGE_ITEM:
-                local_result->modified = 1;
-                break;
-
-            case PURGE_STOP:
-                rq->enable_purging = 0;
-
-            case PURGE_KEEP:
-                errcode = mr_push_pointerinfo(desc, local_result);
-                if (errcode != COUCHSTORE_SUCCESS) {
-                    goto cleanup;
-                }
-                break;
-
-            case PURGE_PARTIAL:
-                errcode = purge_node(rq, desc, local_result);
-                if (errcode != COUCHSTORE_SUCCESS) {
-                    goto cleanup;
-                }
-                break;
+            errcode = maybe_purgekp(rq, desc, local_result);
+            if (errcode != COUCHSTORE_SUCCESS) {
+                goto cleanup;
             }
         }
     } else {
@@ -790,7 +821,6 @@ cleanup:
     free(nodebuf);
     return errcode;
 }
-
 
 node_pointer *guided_purge_btree(couchfile_modify_request *rq, node_pointer *root,
                                                 couchstore_error_t *errcode)

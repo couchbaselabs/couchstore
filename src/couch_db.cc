@@ -1116,6 +1116,9 @@ couchstore_error_t couchstore_save_local_document(Db *db, LocalDoc *lDoc)
     rq.reduce = NULL;
     rq.rereduce = NULL;
     rq.file = &db->file;
+    rq.enable_purging = false;
+    rq.purge_kp = NULL;
+    rq.purge_kv = NULL;
     rq.compacting = 0;
     rq.kv_chunk_threshold = DB_CHUNK_THRESHOLD;
     rq.kp_chunk_threshold = DB_CHUNK_THRESHOLD;

@@ -29,4 +29,5 @@ void purge_tests()
     test_partial_purge_items2();
     test_partial_purge_with_stop();
     test_only_single_leafnode();
+    test_add_remove_purge();
 }
