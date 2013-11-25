@@ -80,4 +80,37 @@ void test_bitmaps(void)
     union_bitmaps(&bm1, &bm2);
     assert(bm1.chunks[0] == 0x80);
     assert(bm1.chunks[127] == 0x01);
+
+    /* Tests for intersection operation */
+    memset(&bm1, 0, sizeof(bitmap_t));
+    memset(&bm2, 0, sizeof(bitmap_t));
+    set_bit(&bm1, 0);
+    set_bit(&bm1, 7);
+    set_bit(&bm2, 800);
+    set_bit(&bm2, 801);
+    intersect_bitmaps(&bm1, &bm2);
+    assert(bm1.chunks[0] == 0x0);
+    assert(bm1.chunks[100] == 0x0);
+
+    set_bit(&bm1, 0);
+    set_bit(&bm1, 1023);
+    set_bit(&bm2, 7);
+    set_bit(&bm2, 1023);
+
+    intersect_bitmaps(&bm1, &bm2);
+    assert(bm1.chunks[0] == 0x80);
+    assert(bm1.chunks[127] == 0x0);
+
+    /* Tests for is_equal operation */
+    memset(&bm1, 0, sizeof(bitmap_t));
+    memset(&bm2, 0, sizeof(bitmap_t));
+    assert(is_equal_bitmap(&bm1, &bm2));
+    set_bit(&bm1, 7);
+    set_bit(&bm1, 500);
+    set_bit(&bm2, 7);
+    set_bit(&bm2, 500);
+    assert(is_equal_bitmap(&bm1, &bm2));
+    set_bit(&bm2, 1000);
+    assert(!is_equal_bitmap(&bm1, &bm2));
+
 }
