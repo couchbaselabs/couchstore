@@ -19,6 +19,11 @@ CHECK_INCLUDE_FILES("inttypes.h" HAVE_INTTYPES_H)
 CHECK_INCLUDE_FILES("unistd.h" HAVE_UNISTD_H)
 CHECK_SYMBOL_EXISTS(fdatasync "unistd.h" HAVE_FDATASYNC)
 
+IF (EXISTS /usr/local/Cellar/v8/)
+  # Homebrew provides at least version 3.21.17
+  ADD_DEFINITIONS(-DV8_POST_3_19_API=1)
+ENDIF(EXISTS /usr/local/Cellar/v8/)
+
 IF (WIN32)
   SET(COUCHSTORE_FILE_OPS "src/os_win.c")
 ELSE(WIN32)
