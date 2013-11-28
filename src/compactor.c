@@ -59,13 +59,13 @@ int main(int argc, char** argv)
     time_purge_ctx timepurge = {0, 0};
     couchstore_compact_hook hook = NULL;
     void* hook_ctx = NULL;
+    int argp = 1;
+    couchstore_compact_flags flags = 0;
+    const couch_file_ops* target_io_ops = couchstore_get_default_file_ops();
     if(argc < 3)
     {
         usage(argv[0]);
     }
-    int argp = 1;
-    couchstore_compact_flags flags = 0;
-    const couch_file_ops* target_io_ops = couchstore_get_default_file_ops();
 
     while(argv[argp][0] == '-') {
         if(!strcmp(argv[argp],"--purge-before")) {
@@ -111,4 +111,3 @@ int main(int argc, char** argv)
     printf("Compacted %s -> %s\n", argv[argp - 1], argv[argp]);
     return 0;
 }
-

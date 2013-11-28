@@ -68,12 +68,16 @@ void test_keys()
     size_t k_bin3_size = 0;
     char *id_btree_k_bin3 = NULL;
     size_t id_btree_k_bin3_size = 0;
+    view_btree_key_t *k;
+    view_id_btree_key_t *id_btree_k;
+    view_btree_key_t *k2;
+    view_id_btree_key_t *id_btree_k2;
 
     fprintf(stderr, "Decoding a view btree key ...\n");
-    view_btree_key_t *k = test_view_btree_key_decoding(key_bin, sizeof(key_bin));
+    k = test_view_btree_key_decoding(key_bin, sizeof(key_bin));
 
     fprintf(stderr, "Decoding a view id btree key ...\n");
-    view_id_btree_key_t *id_btree_k = test_view_id_btree_key_decoding(id_btree_key_bin, sizeof(id_btree_key_bin));
+    id_btree_k = test_view_id_btree_key_decoding(id_btree_key_bin, sizeof(id_btree_key_bin));
 
     fprintf(stderr, "Encoding the previously decoded view btree key ...\n");
     test_view_btree_key_encoding(k, &k_bin2, &k_bin2_size);
@@ -88,10 +92,10 @@ void test_keys()
     assert(memcmp(id_btree_k_bin2, id_btree_key_bin, id_btree_k_bin2_size) == 0);
 
     fprintf(stderr, "Decoding the previously encoded view btree key ...\n");
-    view_btree_key_t *k2 = test_view_btree_key_decoding(k_bin2, k_bin2_size);
+    k2 = test_view_btree_key_decoding(k_bin2, k_bin2_size);
 
     fprintf(stderr, "Decoding the previously encoded view id btree key ...\n");
-    view_id_btree_key_t *id_btree_k2 = test_view_id_btree_key_decoding(id_btree_k_bin2, id_btree_k_bin2_size);
+    id_btree_k2 = test_view_id_btree_key_decoding(id_btree_k_bin2, id_btree_k_bin2_size);
 
     fprintf(stderr, "Encoding the previously decoded view btree key ...\n");
     test_view_btree_key_encoding(k2, &k_bin3, &k_bin3_size);

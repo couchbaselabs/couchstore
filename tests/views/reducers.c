@@ -8,35 +8,17 @@
 
 #define BITMAP_SIZE 1024
 
-static void free_node_list(nodelist *nl);
-static void test_view_id_btree_reducer();
-static void test_view_btree_sum_reducer();
-static void test_view_btree_count_reducer();
-static void test_view_btree_stats_reducer();
-static void test_view_btree_js_reducer();
-static void test_view_btree_multiple_reducers();
-static void test_view_btree_no_reducers();
-
-
-void reducer_tests()
+static void free_node_list(nodelist *nl)
 {
-    fprintf(stderr, "Running built-in reducer tests ... \n");
-    test_view_id_btree_reducer();
-    fprintf(stderr, "End of built-in view id btree reducer tests\n");
-    test_view_btree_sum_reducer();
-    fprintf(stderr, "End of built-in view btree sum reducer tests\n");
-    test_view_btree_count_reducer();
-    fprintf(stderr, "End of built-in view btree count reducer tests\n");
-    test_view_btree_stats_reducer();
-    fprintf(stderr, "End of built-in view btree stats reducer tests\n");
-    test_view_btree_js_reducer();
-    fprintf(stderr, "End of view btree js reducer tests\n");
-    test_view_btree_multiple_reducers();
-    fprintf(stderr, "End of view btree multiple reducer tests\n");
-    test_view_btree_no_reducers();
-    fprintf(stderr, "End of view btree no reducer tests\n");
+    nodelist *tmp;
+    tmp = nl;
+    while (tmp != NULL ){
+        nl = nl->next;
+        free(tmp->pointer);
+        free(tmp);
+        tmp = nl;
+    }
 }
-
 
 static void free_id_value(view_id_btree_value_t *value)
 {
@@ -48,20 +30,17 @@ static void free_id_value(view_id_btree_value_t *value)
     free(value->view_keys_map);
 }
 
-
 static void free_view_value(view_btree_value_t *value)
 {
     free(value->values);
 }
-
 
 static void free_view_reduction(view_btree_reduction_t *red)
 {
     free(red->reduce_values);
 }
 
-
-static void test_view_id_btree_reducer()
+static void test_view_id_btree_reducer(void)
 {
     nodelist *nl = NULL;
     node_pointer *np = NULL;
@@ -239,21 +218,7 @@ static void test_view_id_btree_reducer()
     free(data_bin2);
 }
 
-
-static void free_node_list(nodelist *nl)
-{
-    nodelist *tmp;
-    tmp = nl;
-    while (tmp != NULL ){
-        nl = nl->next;
-        free(tmp->pointer);
-        free(tmp);
-        tmp = nl;
-    }
-}
-
-
-static void test_view_btree_sum_reducer()
+static void test_view_btree_sum_reducer(void)
 {
     char *error_msg = NULL;
     view_reducer_ctx_t *ctx = NULL;
@@ -484,8 +449,7 @@ static void test_view_btree_sum_reducer()
     free_node_list(nl);
 }
 
-
-static void test_view_btree_count_reducer()
+static void test_view_btree_count_reducer(void)
 {
     char *error_msg = NULL;
     view_reducer_ctx_t *ctx = NULL;
@@ -684,8 +648,7 @@ static void test_view_btree_count_reducer()
     free_node_list(nl);
 }
 
-
-static void test_view_btree_stats_reducer()
+static void test_view_btree_stats_reducer(void)
 {
     char *error_msg = NULL;
     view_reducer_ctx_t *ctx = NULL;
@@ -904,8 +867,7 @@ static void test_view_btree_stats_reducer()
     free_node_list(nl);
 }
 
-
-static void test_view_btree_js_reducer()
+static void test_view_btree_js_reducer(void)
 {
     char *error_msg = NULL;
     view_reducer_ctx_t *ctx = NULL;
@@ -1126,8 +1088,7 @@ static void test_view_btree_js_reducer()
     free_node_list(nl);
 }
 
-
-static void test_view_btree_multiple_reducers()
+static void test_view_btree_multiple_reducers(void)
 {
     char *error_msg = NULL;
     view_reducer_ctx_t *ctx = NULL;
@@ -1366,8 +1327,7 @@ static void test_view_btree_multiple_reducers()
     free_node_list(nl);
 }
 
-
-static void test_view_btree_no_reducers()
+static void test_view_btree_no_reducers(void)
 {
     char *error_msg = NULL;
     view_reducer_ctx_t *ctx = NULL;
@@ -1557,4 +1517,23 @@ static void test_view_btree_no_reducers()
     free(value2_bin);
     free(value3_bin);
     free_node_list(nl);
+}
+
+void reducer_tests(void)
+{
+    fprintf(stderr, "Running built-in reducer tests ... \n");
+    test_view_id_btree_reducer();
+    fprintf(stderr, "End of built-in view id btree reducer tests\n");
+    test_view_btree_sum_reducer();
+    fprintf(stderr, "End of built-in view btree sum reducer tests\n");
+    test_view_btree_count_reducer();
+    fprintf(stderr, "End of built-in view btree count reducer tests\n");
+    test_view_btree_stats_reducer();
+    fprintf(stderr, "End of built-in view btree stats reducer tests\n");
+    test_view_btree_js_reducer();
+    fprintf(stderr, "End of view btree js reducer tests\n");
+    test_view_btree_multiple_reducers();
+    fprintf(stderr, "End of view btree multiple reducer tests\n");
+    test_view_btree_no_reducers();
+    fprintf(stderr, "End of view btree no reducer tests\n");
 }

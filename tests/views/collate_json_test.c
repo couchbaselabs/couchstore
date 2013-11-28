@@ -46,7 +46,7 @@ static void testEscape(const char* source, char decoded) {
 }
 
 
-static void TestCollateConvertEscape()
+static void TestCollateConvertEscape(void)
 {
     fprintf(stderr, "escapes... ");
     testEscape("\\\\",    '\\');
@@ -56,10 +56,10 @@ static void TestCollateConvertEscape()
     testEscape("\\u0000", 0);
 }
 
-static void TestCollateScalars()
+static void TestCollateScalars(void)
 {
-    fprintf(stderr, "scalars... ");
     CollateJSONMode mode = kCollateJSON_Unicode;
+    fprintf(stderr, "scalars... ");
     assert_eq(collateStrs("true", "false", mode), 1);
     assert_eq(collateStrs("false", "true", mode), -1);
     assert_eq(collateStrs("null", "17", mode), -1);
@@ -78,10 +78,10 @@ static void TestCollateScalars()
     assert_eq(collateStrs("\"B\"", "\"aa\"", mode), 1);
 }
 
-static void TestCollateASCII()
+static void TestCollateASCII(void)
 {
-    fprintf(stderr, "ASCII... ");
     CollateJSONMode mode = kCollateJSON_ASCII;
+    fprintf(stderr, "ASCII... ");
     assert_eq(collateStrs("true", "false", mode), 1);
     assert_eq(collateStrs("false", "true", mode), -1);
     assert_eq(collateStrs("null", "17", mode), -1);
@@ -98,10 +98,10 @@ static void TestCollateASCII()
     assert_eq(collateStrs("\"B\"", "\"a\"", mode), -1);
 }
 
-static void TestCollateRaw()
+static void TestCollateRaw(void)
 {
-    fprintf(stderr, "raw... ");
     CollateJSONMode mode = kCollateJSON_Raw;
+    fprintf(stderr, "raw... ");
     assert_eq(collateStrs("false", "17", mode), 1);
     assert_eq(collateStrs("false", "true", mode), -1);
     assert_eq(collateStrs("null", "true", mode), -1);
@@ -110,10 +110,10 @@ static void TestCollateRaw()
     assert_eq(collateStrs("[\"b\"]", "[\"b\",\"c\",\"a\"]", mode), -1);
 }
 
-static void TestCollateArrays()
+static void TestCollateArrays(void)
 {
-    fprintf(stderr, "arrays... ");
     CollateJSONMode mode = kCollateJSON_Unicode;
+    fprintf(stderr, "arrays... ");
     assert_eq(collateStrs("[]", "\"foo\"", mode), 1);
     assert_eq(collateStrs("[]", "[]", mode), 0);
     assert_eq(collateStrs("[true]", "[true]", mode), 0);
@@ -124,27 +124,27 @@ static void TestCollateArrays()
     assert_eq(collateStrs("[123.4,\"wow\"]", "[123.40,789]", mode), 1);
 }
 
-static void TestCollateNestedArrays()
+static void TestCollateNestedArrays(void)
 {
-    fprintf(stderr, "nesting... ");
     CollateJSONMode mode = kCollateJSON_Unicode;
+    fprintf(stderr, "nesting... ");
     assert_eq(collateStrs("[[]]", "[]", mode), 1);
     assert_eq(collateStrs("[1,[2,3],4]", "[1,[2,3.1],4,5,6]", mode), -1);
 }
 
-static void TestCollateUnicodeStrings()
+static void TestCollateUnicodeStrings(void)
 {
     /* Make sure that TDJSON never creates escape sequences we can't parse.
        That includes "\unnnn" for non-ASCII chars, and "\t", "\b", etc. */
-    fprintf(stderr, "Unicode... ");
     CollateJSONMode mode = kCollateJSON_Unicode;
+    fprintf(stderr, "Unicode... ");
     assert_eq(collateStrs("\"fréd\"", "\"fréd\"", mode), 0);
     assert_eq(collateStrs("\"ømø\"",  "\"omo\"", mode), 1);
     assert_eq(collateStrs("\"\t\"",   "\" \"", mode), -1);
     assert_eq(collateStrs("\"\001\"", "\" \"", mode), -1);
 }
 
-void test_collate_json()
+void test_collate_json(void)
 {
     fprintf(stderr, "JSON collation: ");
     TestCollateConvertEscape();
@@ -155,5 +155,4 @@ void test_collate_json()
     TestCollateNestedArrays();
     TestCollateUnicodeStrings();
     fprintf(stderr, "OK\n");
-
 }

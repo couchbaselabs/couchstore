@@ -29,8 +29,6 @@ static int int_cmp_fun(const void *a, const void *b)
 
 void test_sorted_lists()
 {
-    fprintf(stderr, "Running view sorted_list tests\n");
-
     int elements[] = { 100, 10, 9, 30, 40, 20, 11, 12 };
     int *sorted_elements;
     int num_elements = sizeof(elements) / sizeof(elements[0]);
@@ -40,6 +38,7 @@ void test_sorted_lists()
     int i;
     void *iterator;
 
+    fprintf(stderr, "Running view sorted_list tests\n");
     sorted_elements = (int *) malloc(sizeof(elements));
     assert(sorted_elements != NULL);
     memcpy(sorted_elements, elements, sizeof(elements));

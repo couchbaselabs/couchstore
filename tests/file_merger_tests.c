@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include "macros.h"
 #include "../src/file_merger.h"
-
+#include "file_tests.h"
 
 #define N_FILES 4
 #define MAX_RECORDS_PER_FILE 100
@@ -31,8 +31,8 @@
 
 static int read_record(FILE *f, void **buffer, void *ctx)
 {
-    (void) ctx;
     int *rec = (int *) malloc(sizeof(int));
+    (void) ctx;
 
     if (rec == NULL) {
         return FILE_MERGER_ERROR_ALLOC;
@@ -110,7 +110,7 @@ static unsigned long check_file_sorted(const char *file_path)
 }
 
 
-void file_merger_tests()
+void file_merger_tests(void)
 {
     const char *source_files[N_FILES] = {
         "sorted_file_1.tmp",

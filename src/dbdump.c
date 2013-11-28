@@ -139,15 +139,15 @@ static int visit_node(Db *db,
         printf("  ");
     if (reduceValue) {
         /* This is a tree node: */
-        printf("+ (%llu) ", (unsigned long long) subtreeSize);
+        printf("+ (%"PRIu64") ", subtreeSize);
         printsbhex(reduceValue, 0);
     } else if (docinfo->bp > 0) {
         int *count;
         /* This is a document: */
-        printf("%c (%llu) ", (docinfo->deleted ? 'x' : '*'),
-               (unsigned long long) docinfo->size);
+        printf("%c (%"PRIu64") ", (docinfo->deleted ? 'x' : '*'),
+               docinfo->size);
         if (mode == DumpBySequence) {
-            printf("#%llu ", (unsigned long long) docinfo->db_seq);
+            printf("#%"PRIu64" ", docinfo->db_seq);
         }
         printsb(&docinfo->id);
 

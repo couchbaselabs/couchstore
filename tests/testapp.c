@@ -10,9 +10,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "macros.h"
+#include "file_tests.h"
 
-extern void file_merger_tests();
-extern void file_sorter_tests();
 extern void mapreduce_tests();
 extern void view_tests();
 
@@ -101,14 +100,10 @@ static void test_raw_48(uint64_t value, const uint8_t expected[8])
 
 static void test_bitfield_fns(void)
 {
-    assert(sizeof(cs_off_t) == 8);
-
-    assert(sizeof(raw_08) == 1);
-    assert(sizeof(raw_16) == 2);
-    assert(sizeof(raw_32) == 4);
-    assert(sizeof(raw_40) == 5);
-    assert(sizeof(raw_48) == 6);
-
+    uint8_t expected1[8] = {0x12, 0x34, 0x56, 0x78, 0x90};
+    uint8_t expected2[8] = {0x09, 0x87, 0x65, 0x43, 0x21};
+    uint8_t expected3[8] = {0x12, 0x34, 0x56, 0x78, 0x90, 0xAB};
+    uint8_t expected4[8] = {0xBA, 0x98, 0x76, 0x54, 0x32, 0x10};
     struct {
         raw_08 a;
         raw_48 b;
@@ -117,12 +112,21 @@ static void test_bitfield_fns(void)
         raw_32 e;
         raw_08 f;
     } packed;
+    raw_kv_length kv;
+    uint32_t klen, vlen;
+
+    assert(sizeof(cs_off_t) == 8);
+
+    assert(sizeof(raw_08) == 1);
+    assert(sizeof(raw_16) == 2);
+    assert(sizeof(raw_32) == 4);
+    assert(sizeof(raw_40) == 5);
+    assert(sizeof(raw_48) == 6);
+
     assert(sizeof(packed) == 19);
 
-    raw_kv_length kv;
     assert(sizeof(kv) == 5);
     kv = encode_kv_length(1234, 123456);
-    uint32_t klen, vlen;
     decode_kv_length(&kv, &klen, &vlen);
     assert(klen == 1234);
     assert(vlen == 123456);
@@ -136,13 +140,9 @@ static void test_bitfield_fns(void)
     test_raw_32(12345678);
     test_raw_32(UINT32_MAX);
 
-    uint8_t expected1[8] = {0x12, 0x34, 0x56, 0x78, 0x90};
     test_raw_40(0x1234567890LL, expected1);
-    uint8_t expected2[8] = {0x09, 0x87, 0x65, 0x43, 0x21};
     test_raw_40(0x0987654321LL, expected2);
-    uint8_t expected3[8] = {0x12, 0x34, 0x56, 0x78, 0x90, 0xAB};
     test_raw_48(0x1234567890ABLL, expected3);
-    uint8_t expected4[8] = {0xBA, 0x98, 0x76, 0x54, 0x32, 0x10};
     test_raw_48(0xBA9876543210LL, expected4);
 }
 
@@ -178,8 +178,8 @@ static void docset_init(int numdocs)
 
 static int counter_inc(Db *db, DocInfo *info, void *ctx)
 {
-    (void)db;
     counterset *ctr = ctx;
+    (void)db;
     ctr->totaldocs++;
     if (info->deleted) {
         ctr->deleted++;
@@ -194,13 +194,14 @@ static int docset_check(Db *db, DocInfo *info, void *ctx)
     int errcode = 0;
     docset *ds = ctx;
     counterset *ctr = &ds->counters;
+    Doc *doc;
+
     ctr->totaldocs++;
     if (info->deleted) {
         ctr->deleted++;
     }
     EQUAL_INFO_BUF(id);
     EQUAL_INFO_BUF(rev_meta);
-    Doc *doc;
     try(couchstore_open_doc_with_docinfo(db, info, &doc, DECOMPRESS_DOC_BODIES));
     if (testdocset.docs[testdocset.pos].data.size > 0) {
         assert(doc);
@@ -219,11 +220,12 @@ static int dociter_check(Db *db, DocInfo *info, void *ctx)
     int errcode = 0;
     docset *ds = ctx;
     counterset *ctr = &ds->counters;
+    Doc *doc;
+
     ctr->totaldocs++;
     if (info->deleted) {
         ctr->deleted++;
     }
-    Doc *doc;
     try(couchstore_open_doc_with_docinfo(db, info, &doc, DECOMPRESS_DOC_BODIES));
     assert(doc);
     couchstore_free_document(doc);
@@ -257,6 +259,8 @@ static void test_save_docs(int count, const char *doc_tpl)
     uint64_t docssize = 0;
     uint64_t dbfilesize = 0;
     uint64_t *sequences = NULL;
+    const raw_by_id_reduce *reduce;
+    Db *db;
 
     fprintf(stderr, "save_docs (doc count %d)... ", count);
     fflush(stderr);
@@ -264,12 +268,15 @@ static void test_save_docs(int count, const char *doc_tpl)
     docset_init(count);
     srand(0xdeadbeef); /* doc IDs should be consistent across runs */
     for (i = 0; i < count; ++i) {
+        int idsize;
+        int valsize;
+
         idBuf = (char *) malloc(sizeof(char) * 32);
         assert(idBuf != NULL);
-        int idsize = sprintf(idBuf, "doc%d-%lu", i, (unsigned long)rand());
+        idsize = sprintf(idBuf, "doc%d-%lu", i, (unsigned long)rand());
         valueBuf = (char *) malloc(sizeof(char) * (strlen(doc_tpl) + 20));
         assert(valueBuf != NULL);
-        int valsize = sprintf(valueBuf, doc_tpl, i + 1);
+        valsize = sprintf(valueBuf, doc_tpl, i + 1);
         setdoc(&testdocset.docs[i], &testdocset.infos[i],
                 idBuf, idsize, valueBuf, valsize, zerometa, sizeof(zerometa));
         testdocset.datasize += valsize;
@@ -288,7 +295,6 @@ static void test_save_docs(int count, const char *doc_tpl)
     }
 
     remove(testfilepath);
-    Db *db;
     try(couchstore_open_db(testfilepath, COUCHSTORE_OPEN_FLAG_CREATE, &db));
     assert(strcmp(couchstore_get_db_filename(db), testfilepath) == 0);
     try(couchstore_save_documents(db, docptrs, nfoptrs, count, 0));
@@ -350,7 +356,7 @@ static void test_save_docs(int count, const char *doc_tpl)
 
     idtreesize = db->header.by_id_root->subtreesize;
     seqtreesize = db->header.by_seq_root->subtreesize;
-    const raw_by_id_reduce *reduce = (const raw_by_id_reduce*)db->header.by_id_root->reduce_value.buf;
+    reduce = (const raw_by_id_reduce*)db->header.by_id_root->reduce_value.buf;
     docssize = decode_raw48(reduce->size);
     dbfilesize = db->file.pos;
 
@@ -379,16 +385,18 @@ cleanup:
 
 static void test_save_doc(void)
 {
+    int errcode = 0;
+    Db *db;
+    unsigned i;
+    DbInfo info;
     fprintf(stderr, "save_doc... ");
     fflush(stderr);
-    int errcode = 0;
     docset_init(4);
     SETDOC(0, "doc1", "{\"test_doc_index\":1}", zerometa);
     SETDOC(1, "doc2", "{\"test_doc_index\":2}", zerometa);
     SETDOC(2, "doc3", "{\"test_doc_index\":3}", zerometa);
     SETDOC(3, "doc4", "{\"test_doc_index\":4}", zerometa);
     remove(testfilepath);
-    Db *db;
     try(couchstore_open_db(testfilepath, COUCHSTORE_OPEN_FLAG_CREATE, &db));
     try(couchstore_save_document(db, &testdocset.docs[0],
                                      &testdocset.infos[0], 0));
@@ -402,7 +410,6 @@ static void test_save_doc(void)
     couchstore_close_db(db);
 
     /* Check that sequence numbers got filled in */
-    unsigned i;
     for (i = 0; i < 4; ++i) {
         assert(testdocset.infos[i].db_seq == i + 1);
     }
@@ -413,7 +420,6 @@ static void test_save_doc(void)
     assert(testdocset.counters.totaldocs == 4);
     assert(testdocset.counters.deleted == 0);
 
-    DbInfo info;
     assert(couchstore_db_info(db, &info) == COUCHSTORE_SUCCESS);
     assert(info.last_sequence == 4);
     assert(info.doc_count == 4);
@@ -427,22 +433,25 @@ cleanup:
 
 static void test_compressed_doc_body(void)
 {
+    Db *db;
+    Doc *docptrs[2];
+    DocInfo *nfoptrs[2];
+    int errcode = 0;
+
     fprintf(stderr, "compressed bodies... ");
     fflush(stderr);
-    int errcode = 0;
     docset_init(2);
     SETDOC(0, "doc1", "{\"test_doc_index\":1, \"val\":\"blah blah blah blah blah blah\"}", zerometa);
     SETDOC(1, "doc2", "{\"test_doc_index\":2, \"val\":\"blah blah blah blah blah blah\"}", zerometa);
-    Doc *docptrs [2] =  { &testdocset.docs[0],
-                          &testdocset.docs[1]
-                        };
-    DocInfo *nfoptrs [2] =  { &testdocset.infos[0],
-                              &testdocset.infos[1]
-                            };
+
+    docptrs[0] = &testdocset.docs[0];
+    docptrs[1] = &testdocset.docs[1];
+    nfoptrs[0] = &testdocset.infos[0];
+    nfoptrs[1] = &testdocset.infos[1];
+
     /* Mark doc2 as to be snappied. */
     testdocset.infos[1].content_meta = COUCH_DOC_IS_COMPRESSED;
     remove(testfilepath);
-    Db *db;
     try(couchstore_open_db(testfilepath, COUCHSTORE_OPEN_FLAG_CREATE, &db));
     try(couchstore_save_documents(db, docptrs, nfoptrs, 2,
                                       COMPRESS_DOC_BODIES));
@@ -460,11 +469,13 @@ cleanup:
 
 static void test_dump_empty_db(void)
 {
+    Db *db;
+    couchstore_error_t errcode;
+    DbInfo info;
+
     fprintf(stderr, "dump empty db... ");
     fflush(stderr);
     remove(testfilepath);
-    Db *db;
-    couchstore_error_t errcode;
 
     try(couchstore_open_db(testfilepath, COUCHSTORE_OPEN_FLAG_CREATE, &db));
     try(couchstore_close_db(db));
@@ -473,7 +484,6 @@ static void test_dump_empty_db(void)
     assert(counters.totaldocs == 0);
     assert(counters.deleted == 0);
 
-    DbInfo info;
     assert(couchstore_db_info(db, &info) == COUCHSTORE_SUCCESS);
     assert(strcmp(info.filename, testfilepath) == 0);
     assert(info.last_sequence == 0);
@@ -489,12 +499,12 @@ cleanup:
 
 static void test_local_docs(void)
 {
-    fprintf(stderr, "local docs... ");
-    fflush(stderr);
     int errcode = 0;
     Db *db;
     LocalDoc lDocWrite;
     LocalDoc *lDocRead = NULL;
+    fprintf(stderr, "local docs... ");
+    fflush(stderr);
     remove(testfilepath);
     try(couchstore_open_db(testfilepath, COUCHSTORE_OPEN_FLAG_CREATE, &db));
     lDocWrite.id.buf = "_local/testlocal";
@@ -518,11 +528,13 @@ cleanup:
 
 static void test_open_file_error(void)
 {
+    Db *db = NULL;
+    int errcode;
+
     fprintf(stderr, "opening nonexistent file errors... ");
     fflush(stderr);
     remove(testfilepath);
-    Db *db = NULL;
-    int errcode = couchstore_open_db(testfilepath, 0, &db);
+    errcode = couchstore_open_db(testfilepath, 0, &db);
 
     if (errcode != 0) {
         print_os_err(db);
@@ -556,10 +568,10 @@ static void shuffle(Doc **docs, DocInfo **docinfos, size_t n)
 
 static int docmap_check(Db *db, DocInfo *info, void *ctx)
 {
-    (void)db;
     char* docmap = (char*)ctx;
     int i;
     char buffer[100];
+    (void)db;
     memcpy(buffer, info->id.buf, info->id.size);
     buffer[info->id.size] = 0; /* null terminate */
     sscanf(buffer, "doc%d", &i);
@@ -570,8 +582,6 @@ static int docmap_check(Db *db, DocInfo *info, void *ctx)
 
 static void test_changes_no_dups(void)
 {
-    fprintf(stderr, "changes no dupes... ");
-    fflush(stderr);
     int errcode = 0;
     int i;
     const int numdocs = 10000;
@@ -580,6 +590,10 @@ static void test_changes_no_dups(void)
     DocInfo **nfoptrs;
     char *docmap;
     Db *db;
+    DbInfo info;
+    fprintf(stderr, "changes no dupes... ");
+    fflush(stderr);
+
     docset_init(numdocs);
     for (i=0; i < numdocs; i++) {
         char* id = malloc(100);
@@ -621,7 +635,6 @@ static void test_changes_no_dups(void)
         try(couchstore_changes_since(db, 0, 0, docmap_check, docmap));
     }
 
-    DbInfo info;
     assert(couchstore_db_info(db, &info) == COUCHSTORE_SUCCESS);
     assert(info.last_sequence == (uint64_t)(numdocs + numdocs/2));
     assert(info.doc_count == (uint64_t)numdocs);
@@ -736,6 +749,7 @@ static void test_dropped_handle(void)
    Db* db = NULL;
    Doc d;
    DocInfo i;
+   Doc* rd;
 
    fprintf(stderr, "drop file handle.... ");
    fflush(stderr);
@@ -750,7 +764,6 @@ static void test_dropped_handle(void)
 
    try(couchstore_reopen_file(db, testfilepath, 0));
 
-   Doc* rd;
    try(couchstore_open_document(db, "test", 4, &rd, 0));
    couchstore_free_document(rd);
 cleanup:

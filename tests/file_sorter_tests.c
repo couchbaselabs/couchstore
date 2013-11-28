@@ -24,6 +24,7 @@
 #include <string.h>
 #include "macros.h"
 #include "../src/file_sorter.h"
+#include "file_tests.h"
 
 #define UNSORTED_FILE_PATH "unsorted_file.data"
 #define SORT_TMP_DIR       "."
@@ -136,8 +137,8 @@ static int *sorted_data;
 
 static int read_record(FILE *f, void **buffer, void *ctx)
 {
-    (void) ctx;
     int *rec = (int *) malloc(sizeof(int));
+    (void) ctx;
 
     if (rec == NULL) {
         return FILE_MERGER_ERROR_ALLOC;
@@ -259,7 +260,7 @@ static int int_cmp(const void *a, const void *b)
 }
 
 
-void file_sorter_tests()
+void file_sorter_tests(void)
 {
     const unsigned temp_files[] = {
         2, 3, 4, 5, 6, 7, 8, 9, 10
