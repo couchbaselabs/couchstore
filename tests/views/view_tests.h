@@ -33,6 +33,7 @@
 #include "../src/views/keys.h"
 #include "../src/views/values.h"
 #include "../src/views/reducers.h"
+#include "../src/views/purgers.h"
 
 void view_tests(void);
 void test_bitmaps(void);
@@ -43,5 +44,6 @@ void test_reductions(void);
 void test_keys(void);
 void test_values(void);
 void reducer_tests(void);
+void cleanup_tests(void);
 
 #endif

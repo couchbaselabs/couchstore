@@ -34,6 +34,7 @@ void view_tests()
     test_keys();
     test_values();
     reducer_tests();
+    cleanup_tests();
 
     /* spatial tests */
     test_interleaving();

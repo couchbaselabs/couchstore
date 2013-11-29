@@ -145,6 +145,7 @@ ADD_EXECUTABLE(couchstore_testapp tests/testapp.c
 	tests/views/keys.c
 	tests/views/values.c
 	tests/views/reducers.c
+	tests/views/cleanup.c
 	tests/views/spatial.c
 	tests/btree_purge/purge_tests.h
 	tests/btree_purge/tests.c
