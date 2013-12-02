@@ -88,6 +88,9 @@ TARGET_LINK_LIBRARIES(couch_view_file_merger couchstore)
 ADD_EXECUTABLE(couch_view_index_builder src/views/bin/couch_view_index_builder.c)
 TARGET_LINK_LIBRARIES(couch_view_index_builder couchstore)
 
+ADD_EXECUTABLE(couch_view_group_cleanup src/views/bin/couch_view_group_cleanup.c)
+TARGET_LINK_LIBRARIES(couch_view_group_cleanup couchstore)
+
 INSTALL(FILES
         include/libcouchstore/couch_db.h
         include/libcouchstore/couch_index.h
@@ -108,6 +111,7 @@ INSTALL(TARGETS couch_dbdump
                 couch_view_file_sorter
                 couch_view_file_merger
                 couch_view_index_builder
+                couch_view_group_cleanup
         RUNTIME DESTINATION bin)
 
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/config.cmake.h.in

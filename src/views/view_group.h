@@ -74,6 +74,12 @@ extern "C" {
                                                uint64_t *pos,
                                                const index_header_t *header);
 
+    LIBCOUCHSTORE_API
+    couchstore_error_t couchstore_cleanup_view_group(view_group_info_t *info,
+                                                     uint64_t *header_pos,
+                                                     uint64_t *purge_count,
+                                                     view_error_t *error_info);
+
 #ifdef __cplusplus
 }
 #endif
