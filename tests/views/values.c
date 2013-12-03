@@ -84,6 +84,10 @@ void test_values()
         0,67,0,0,2,0,14,91,49,50,51,44,34,102,111,111,98,97,114,
         34,93,0,4,45,51,50,49,1,0,1,0,7,91,53,44,54,44,55,93
     };
+    view_btree_value_t *v;
+    view_id_btree_value_t *id_btree_v;
+    view_btree_value_t *v2;
+    view_id_btree_value_t *id_btree_v2;
     char *v_bin2 = NULL;
     size_t v_bin2_size = 0;
     char *id_btree_v_bin2 = NULL;
@@ -94,10 +98,9 @@ void test_values()
     size_t id_btree_v_bin3_size = 0;
 
     fprintf(stderr, "Decoding a view btree value ...\n");
-    view_btree_value_t *v = test_view_btree_value_decoding(value_bin, sizeof(value_bin));
+    v = test_view_btree_value_decoding(value_bin, sizeof(value_bin));
 
     fprintf(stderr, "Decoding a view id btree value ...\n");
-    view_id_btree_value_t *id_btree_v;
     id_btree_v = test_view_id_btree_value_decoding(id_btree_value_bin,
                                                    sizeof(id_btree_value_bin));
 
@@ -114,10 +117,9 @@ void test_values()
     assert(memcmp(id_btree_v_bin2, id_btree_value_bin, id_btree_v_bin2_size) == 0);
 
     fprintf(stderr, "Decoding the previously encoded view btree value ...\n");
-    view_btree_value_t *v2 = test_view_btree_value_decoding(v_bin2, v_bin2_size);
+    v2 = test_view_btree_value_decoding(v_bin2, v_bin2_size);
 
     fprintf(stderr, "Decoding the previously encoded view id btree value ...\n");
-    view_id_btree_value_t *id_btree_v2;
     id_btree_v2 = test_view_id_btree_value_decoding(id_btree_v_bin2,
                                                     id_btree_v_bin2_size);
 

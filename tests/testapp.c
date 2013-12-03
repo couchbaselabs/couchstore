@@ -140,10 +140,10 @@ static void test_bitfield_fns(void)
     test_raw_32(12345678);
     test_raw_32(UINT32_MAX);
 
-    test_raw_40(0x1234567890LL, expected1);
-    test_raw_40(0x0987654321LL, expected2);
-    test_raw_48(0x1234567890ABLL, expected3);
-    test_raw_48(0xBA9876543210LL, expected4);
+    test_raw_40(INT64_C(0x1234567890), expected1);
+    test_raw_40(INT64_C(0x0987654321), expected2);
+    test_raw_48(INT64_C(0x1234567890AB), expected3);
+    test_raw_48(INT64_C(0xBA9876543210), expected4);
 }
 
 static void setdoc(Doc *doc, DocInfo *info, char *id, size_t idlen,
