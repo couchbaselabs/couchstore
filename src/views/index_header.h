@@ -34,7 +34,7 @@ extern "C" {
 #endif
 
 
-#define LATEST_INDEX_HEADER_VERSION 1
+#define LATEST_INDEX_HEADER_VERSION 2
 
 typedef struct {
     uint16_t part_id;
@@ -50,6 +50,19 @@ typedef struct {
     /* sorted_list instance, values of type uint16_t */
     void   *unindexable;
 } index_state_transition_t;
+
+
+typedef struct {
+    unsigned char uuid[8];
+    uint64_t      seq;
+} failover_log_t;
+
+
+typedef struct {
+    uint16_t       part_id;
+    uint16_t       num_failover_log;
+    failover_log_t *failover_log;
+} part_version_t;
 
 
 typedef struct {
@@ -72,6 +85,8 @@ typedef struct {
     index_state_transition_t   pending_transition;
     /* sorted_list instance, values of type part_seq_t */
     void                       *unindexable_seqs;
+    /* sorted_list instance, values of type part_ver_t */
+    void                       *part_versions;
 } index_header_t;
 
 

@@ -21,7 +21,8 @@
 #include "view_tests.h"
 
 
-static index_header_t *test_index_header_decoding(const char *header_bin, size_t header_bin_size)
+static index_header_t *test_index_header_decoding_v1(const char *header_bin,
+                                                     size_t header_bin_size)
 {
     uint16_t active[] = { 3,7,19,23,27,31,35,39,43,47,51,55,59,63 };
     uint16_t passive[] = {
@@ -168,6 +169,153 @@ static index_header_t *test_index_header_decoding(const char *header_bin, size_t
     return header;
 }
 
+static index_header_t *test_index_header_decoding_v2(const char *header_bin,
+                                                     size_t header_bin_size)
+{
+    uint16_t active[] = { 3, 4, 21, 24 };
+    uint16_t passive[] = { 1, 5, 14, 28, 31};
+    uint16_t cleanup[] = { 2, 13 };
+    uint16_t unindexable[] = { 3, 31 };
+    uint16_t replicas_on_transfer[] = { 5 };
+    uint16_t pending_active[] = { 14, 28 };
+    uint16_t pending_passive[] = { 1 };
+    uint16_t pending_unindexable[] = { 1, 28 };
+    index_header_t *header = NULL;
+    bitmap_t expected_active, expected_passive, expected_cleanup;
+    unsigned i;
+    int ii;
+    uint16_t jj;
+    int num_unindexable;
+    int num_reps;
+    int num_pending_active;
+    int num_pending_passive;
+    int num_pending_unindexable;
+
+    assert(decode_index_header(header_bin, header_bin_size, &header) == COUCHSTORE_SUCCESS);
+    assert(header != NULL);
+
+    assert(header->version == 2);
+    assert(memcmp(header->signature, header_bin, 16) == 0);
+    assert(header->num_partitions == 32);
+    assert(header->num_views == 2);
+
+    memset(&expected_active, 0, sizeof(expected_active));
+    for (i = 0; i < (sizeof(active) / sizeof(active[0])); ++i) {
+        set_bit(&expected_active, active[i]);
+    }
+    assert(memcmp(&header->active_bitmask, &expected_active, sizeof(expected_active)) == 0);
+
+    memset(&expected_passive, 0, sizeof(expected_passive));
+    for (i = 0; i < (sizeof(passive) / sizeof(passive[0])); ++i) {
+        set_bit(&expected_passive, passive[i]);
+    }
+    assert(memcmp(&header->passive_bitmask, &expected_passive, sizeof(expected_passive)) == 0);
+
+    memset(&expected_cleanup, 0, sizeof(expected_cleanup));
+    for (i = 0; i < (sizeof(cleanup) / sizeof(cleanup[0])); ++i) {
+        set_bit(&expected_cleanup, cleanup[i]);
+    }
+    assert(memcmp(&header->cleanup_bitmask, &expected_cleanup, sizeof(expected_cleanup)) == 0);
+
+    assert(sorted_list_size(header->seqs) == 32);
+    for (jj = 0; jj < 32; ++jj) {
+        part_seq_t rs, *pseq;
+        rs.part_id = jj;
+        pseq = (part_seq_t *) sorted_list_get(header->seqs, &rs);
+        assert(pseq != NULL);
+        assert(pseq->part_id == jj);
+        assert(pseq->seq == jj * jj);
+    }
+
+    num_unindexable = sizeof(unindexable) / sizeof(unindexable[0]);
+    assert(sorted_list_size(header->unindexable_seqs) == num_unindexable);
+    for (ii = 0; ii < num_unindexable; ++ii) {
+        part_seq_t rs, *pseq;
+        rs.part_id = unindexable[ii];
+
+        pseq = (part_seq_t *) sorted_list_get(header->unindexable_seqs, &rs);
+        assert(pseq != NULL);
+        assert(pseq->part_id == unindexable[ii]);
+        assert(pseq->seq == unindexable[ii] * unindexable[ii]);
+    }
+    assert(header->id_btree_state->pointer == 123);
+    assert(header->id_btree_state->subtreesize == 567);
+    assert(header->id_btree_state->reduce_value.size == 6);
+    assert(memcmp(
+        header->id_btree_state->reduce_value.buf, "redval",
+        header->id_btree_state->reduce_value.size) == 0);
+
+    assert(header->view_btree_states[0]->pointer == 2345);
+    assert(header->view_btree_states[0]->subtreesize == 789);
+    assert(header->view_btree_states[0]->reduce_value.size == 7);
+    assert(memcmp(
+        header->view_btree_states[0]->reduce_value.buf, "redval2",
+        header->view_btree_states[0]->reduce_value.size) == 0);
+
+    assert(header->view_btree_states[1]->pointer == 3456);
+    assert(header->view_btree_states[1]->subtreesize == 8901);
+    assert(header->view_btree_states[1]->reduce_value.size == 7);
+    assert(memcmp(
+        header->view_btree_states[1]->reduce_value.buf, "redval3",
+        header->view_btree_states[1]->reduce_value.size) == 0);
+
+    assert(header->has_replica == 0);
+    assert(header->replicas_on_transfer != NULL);
+
+    num_reps = (sizeof(replicas_on_transfer) / sizeof(replicas_on_transfer[0]));
+
+    assert(sorted_list_size(header->replicas_on_transfer) == num_reps);
+    for (ii = 0; ii < num_reps; ++ii) {
+        uint16_t *part_id = sorted_list_get(header->replicas_on_transfer,
+                                            &replicas_on_transfer[ii]);
+        assert(part_id != NULL);
+        assert(*part_id == replicas_on_transfer[ii]);
+    }
+
+    num_pending_active = sizeof(pending_active) / sizeof(pending_active[0]);
+    assert(sorted_list_size(header->pending_transition.active) == num_pending_active);
+    for (ii = 0; ii < num_pending_active; ++ii) {
+        uint16_t *part_id = sorted_list_get(header->pending_transition.active,
+                                            &pending_active[ii]);
+        assert(part_id != NULL);
+        assert(*part_id == pending_active[ii]);
+    }
+
+    num_pending_passive = sizeof(pending_passive) / sizeof(pending_passive[0]);
+    assert(sorted_list_size(header->pending_transition.passive) == num_pending_passive);
+    for (ii = 0; ii < num_pending_passive; ++ii) {
+        uint16_t *part_id = sorted_list_get(header->pending_transition.passive,
+                                            &pending_passive[ii]);
+        assert(part_id != NULL);
+        assert(*part_id == pending_passive[ii]);
+    }
+
+    num_pending_unindexable = sizeof(pending_unindexable) / sizeof(pending_unindexable[0]);
+    assert(sorted_list_size(header->pending_transition.unindexable) == num_pending_unindexable);
+    for (ii = 0; ii < num_pending_unindexable; ++ii) {
+        uint16_t *part_id = sorted_list_get(header->pending_transition.unindexable,
+                                            &pending_unindexable[ii]);
+        assert(part_id != NULL);
+        assert(*part_id == pending_unindexable[ii]);
+    }
+
+    assert(sorted_list_size(header->part_versions) == 32);
+    for (jj = 0; jj < 32; ++jj) {
+        part_version_t rs, *pver;
+        rs.part_id = jj;
+        pver = (part_version_t *) sorted_list_get(header->part_versions, &rs);
+        assert(pver != NULL);
+        assert(pver->part_id == jj);
+        assert(pver->num_failover_log == 2);
+        assert(memcmp(pver->failover_log[0].uuid, "auuid123", 8) == 0);
+        assert(pver->failover_log[0].seq == jj);
+        assert(memcmp(pver->failover_log[1].uuid, "another1", 8) == 0);
+        assert(pver->failover_log[1].seq == jj * jj);
+    }
+
+    return header;
+}
+
 static void test_index_header_encoding(const index_header_t *header,
                                        char **buffer,
                                        size_t *size)
@@ -178,7 +326,7 @@ static void test_index_header_encoding(const index_header_t *header,
     assert(res == COUCHSTORE_SUCCESS);
 }
 
-void test_index_headers(void)
+void test_index_headers_v1(void)
 {
     index_header_t*header;
     index_header_t *header2;
@@ -205,8 +353,8 @@ void test_index_headers(void)
         61,0,2,0,15,0,58,105,173,44,0,0,4,197,0,63,0,0,0,0,4,197
     };
 
-    fprintf(stderr, "Decoding an index header...\n");
-    header = test_index_header_decoding((const char*)header_bin, sizeof(header_bin));
+    fprintf(stderr, "Decoding an index header v1...\n");
+    header = test_index_header_decoding_v1((const char*)header_bin, sizeof(header_bin));
 
     fprintf(stderr, "Encoding the previously decoded header...\n");
     test_index_header_encoding(header, &header_bin2, &header_bin2_size);
@@ -215,7 +363,68 @@ void test_index_headers(void)
     assert(memcmp(header_bin2, header_bin, header_bin2_size) == 0);
 
     fprintf(stderr, "Decoding the previously encoded header...\n");
-    header2 = test_index_header_decoding(header_bin2, header_bin2_size);
+    header2 = test_index_header_decoding_v1(header_bin2, header_bin2_size);
+
+    fprintf(stderr, "Encoding the previously decoded header...\n");
+    test_index_header_encoding(header2, &header_bin3, &header_bin3_size);
+
+    assert(header_bin3_size == sizeof(header_bin));
+    assert(memcmp(header_bin3, header_bin, header_bin3_size) == 0);
+
+    free_index_header(header);
+    free_index_header(header2);
+    free(header_bin2);
+    free(header_bin3);
+}
+
+
+void test_index_headers_v2(void)
+{
+    index_header_t*header;
+    index_header_t *header2;
+    char *header_bin2 = NULL;
+    size_t header_bin2_size = 0;
+    char *header_bin3 = NULL;
+    size_t header_bin3_size = 0;
+
+    unsigned char header_bin[] = {
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,237,14,12,2,0,32,0,254,1,0,234,1,0,12,1,32,0,
+        24,254,127,0,234,127,0,16,0,144,0,64,34,254,128,0,238,128,0,12,0,0,32,4,61,
+        130,0,1,5,140,8,1,0,2,5,8,8,4,0,3,5,8,8,9,0,4,5,8,8,16,0,5,5,8,8,25,0,6,5,8,
+        8,36,0,7,5,8,8,49,0,8,5,8,8,64,0,9,5,8,8,81,0,10,5,8,8,100,0,11,5,8,8,121,0,
+        12,5,8,8,144,0,13,5,8,8,169,0,14,5,8,8,196,0,15,5,8,8,225,0,16,1,8,12,1,0,0,
+        17,5,8,8,33,0,18,5,8,8,68,0,19,5,8,8,105,0,20,5,8,8,144,0,21,5,8,8,185,0,22,
+        5,8,8,228,0,23,1,8,4,2,17,41,196,12,2,64,0,25,5,16,8,113,0,26,5,8,8,164,0,27,
+        5,8,8,217,0,28,1,8,12,3,16,0,29,5,8,8,73,0,30,5,8,8,132,0,31,5,8,0,193,9,112,
+        4,0,123,1,14,32,2,55,114,101,100,118,97,108,2,9,125,4,9,41,1,21,4,3,21,9,21,
+        0,50,9,21,4,13,128,1,21,4,34,197,9,21,52,51,0,0,1,0,5,0,2,0,14,0,28,0,1,37,
+        62,16,1,0,28,0,2,53,62,17,102,65,234,32,2,97,117,117,105,100,49,50,51,1,66,1,
+        1,28,97,110,111,116,104,101,114,49,1,12,5,1,0,1,66,36,0,0,1,58,36,0,33,160,
+        62,72,0,0,2,58,36,0,33,188,62,36,0,0,3,58,36,0,33,216,62,36,0,0,4,58,36,0,33,
+        244,62,36,0,0,5,58,36,0,8,25,0,6,66,36,0,0,6,58,36,0,65,44,62,72,0,0,7,58,36,
+        0,65,72,62,36,0,0,8,58,36,0,8,64,0,9,66,36,0,0,9,58,36,0,65,128,62,72,0,0,10,
+        58,36,0,65,156,62,36,0,0,11,58,36,0,65,184,62,36,0,0,12,58,36,0,65,212,62,36,
+        0,0,13,58,36,0,65,240,62,36,0,0,14,58,36,0,97,12,62,36,0,0,15,58,36,0,97,40,
+        62,36,0,0,16,54,36,0,101,68,62,36,0,0,17,58,36,0,97,96,62,36,0,0,18,58,36,0,
+        97,124,62,36,0,0,19,58,36,0,97,152,62,36,0,0,20,58,36,0,97,180,62,36,0,0,21,
+        58,36,0,97,208,62,36,0,0,22,58,36,0,97,236,62,36,0,0,23,54,36,0,133,8,62,36,
+        0,0,24,58,36,0,129,36,62,36,0,0,25,58,36,0,129,64,62,36,0,0,26,58,36,0,129,
+        92,62,36,0,0,27,58,36,0,129,120,62,36,0,0,28,54,36,0,133,148,62,36,0,0,29,58,
+        36,0,129,176,62,36,0,0,30,58,36,0,129,204,62,36,0,0,31,58,36,0,0,193
+    };
+
+    fprintf(stderr, "Decoding an index header v2...\n");
+    header = test_index_header_decoding_v2(
+        (const char*)header_bin, sizeof(header_bin));
+
+    fprintf(stderr, "Encoding the previously decoded header...\n");
+    test_index_header_encoding(header, &header_bin2, &header_bin2_size);
+
+    assert(header_bin2_size == sizeof(header_bin));
+    assert(memcmp(header_bin2, header_bin, header_bin2_size) == 0);
+
+    fprintf(stderr, "Decoding the previously encoded header...\n");
+    header2 = test_index_header_decoding_v2(header_bin2, header_bin2_size);
 
     fprintf(stderr, "Encoding the previously decoded header...\n");
     test_index_header_encoding(header2, &header_bin3, &header_bin3_size);
