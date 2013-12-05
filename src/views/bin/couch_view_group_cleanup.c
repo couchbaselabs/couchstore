@@ -28,6 +28,15 @@
 
 #define BUF_SIZE 8192
 
+static void die_on_exit_msg(void *args)
+{
+    char buf[4];
+    (void) args;
+
+    if (fread(buf, 1, 4, stdin) == 4 && !strncmp(buf, "exit", 4)) {
+        exit(1);
+    }
+}
 
 int main(int argc, char *argv[])
 {
@@ -36,6 +45,7 @@ int main(int argc, char *argv[])
     int ret = 1;
     uint64_t header_pos;
     view_error_t error_info;
+    cb_thread_t exit_thread;
 
     (void) argc;
     (void) argv;
@@ -43,6 +53,13 @@ int main(int argc, char *argv[])
     group_info = couchstore_read_view_group_info(stdin, stderr);
     if (group_info == NULL) {
         ret = 1;
+        goto out;
+    }
+
+    /* Start a watcher thread to gracefully die on exit message */
+    ret = cb_create_thread(&exit_thread, die_on_exit_msg, NULL, 1);
+    if (ret < 0) {
+        fprintf(stderr, "Error starting stdin exit listener thread\n");
         goto out;
     }
 
