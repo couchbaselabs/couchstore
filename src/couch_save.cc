@@ -157,6 +157,7 @@ static couchstore_error_t update_indexes(Db *db,
     node_pointer *new_id_root;
     node_pointer *new_seq_root;
     couchstore_error_t errcode;
+    couchstore_error_t err;
     couchfile_modify_request seqrq, idrq;
     int ii;
     index_update_ctx fetcharg;
@@ -215,8 +216,8 @@ static couchstore_error_t update_indexes(Db *db,
     idrq.kv_chunk_threshold = DB_CHUNK_THRESHOLD;
     idrq.kp_chunk_threshold = DB_CHUNK_THRESHOLD;
 
-    new_id_root = modify_btree(&idrq, db->header.by_id_root, &errcode);
-    error_pass(errcode);
+    new_id_root = modify_btree(&idrq, db->header.by_id_root, &err);
+    error_pass(err);
 
     while (fetcharg.valpos < numdocs) {
         seqacts[fetcharg.actpos].type = ACTION_INSERT;
