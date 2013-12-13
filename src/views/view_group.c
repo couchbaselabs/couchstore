@@ -35,6 +35,7 @@
 #define VIEW_KV_CHUNK_THRESHOLD (7 * 1024)
 #define VIEW_KP_CHUNK_THRESHOLD (6 * 1024)
 #define MAX_HEADER_SIZE         (64 * 1024)
+#define MAX_ACTIONS_SIZE        (2 * 1024 * 1024)
 
 static couchstore_error_t open_view_group_file(const char *path,
                                                couchstore_open_flags open_flags,
@@ -60,8 +61,43 @@ static couchstore_error_t build_view_btree(const char *source_file,
 
 static void close_view_group_file(view_group_info_t *info);
 
-static int read_record(FILE *f, arena *a, sized_buf *k, sized_buf *v);
+static int read_record(FILE *f, arena *a, sized_buf *k, sized_buf *v,
+                                                        uint8_t *op);
 
+static couchstore_error_t update_btree(const char *source_file,
+                                       tree_file *dest_file,
+                                       const node_pointer *root,
+                                       size_t batch_size,
+                                       compare_info *cmp,
+                                       reduce_fn reduce_fun,
+                                       reduce_fn rereduce_fun,
+                                       purge_kv_fn purge_kv,
+                                       purge_kp_fn purge_kp,
+                                       view_reducer_ctx_t *red_ctx,
+                                       view_purger_ctx_t *purge_ctx,
+                                       uint64_t *inserted,
+                                       uint64_t *removed,
+                                       node_pointer **out_root);
+
+static couchstore_error_t update_id_btree(const char *source_file,
+                                         tree_file *dest_file,
+                                         const node_pointer *root,
+                                         size_t batch_size,
+                                         view_purger_ctx_t *purge_ctx,
+                                         uint64_t *inserted,
+                                         uint64_t *removed,
+                                         node_pointer **out_root);
+
+static couchstore_error_t update_view_btree(const char *source_file,
+                                            const view_btree_info_t *info,
+                                            tree_file *dest_file,
+                                            const node_pointer *root,
+                                            size_t batch_size,
+                                            view_purger_ctx_t *purge_ctx,
+                                            uint64_t *inserted,
+                                            uint64_t *removed,
+                                            node_pointer **out_root,
+                                            view_error_t *error_info);
 
 LIBCOUCHSTORE_API
 view_group_info_t *couchstore_read_view_group_info(FILE *in_stream,
@@ -345,9 +381,11 @@ out:
  * required for the existing semantics/api of btree bottom-up build in
  * src/btree_modify.cc.
  */
-static int read_record(FILE *f, arena *a, sized_buf *k, sized_buf *v)
+static int read_record(FILE *f, arena *a, sized_buf *k, sized_buf *v,
+                                                        uint8_t *op)
 {
     uint16_t klen;
+    uint8_t oplen = 0;
     uint32_t vlen, len;
 
     if (fread(&len, sizeof(len), 1, f) != 1) {
@@ -358,12 +396,21 @@ static int read_record(FILE *f, arena *a, sized_buf *k, sized_buf *v)
         }
     }
 
+    /* For incremental update, read optype */
+    if (op != NULL) {
+        if (fread(op, sizeof(uint8_t), 1, f) != 1) {
+            return COUCHSTORE_ERROR_READ;
+        }
+
+        oplen = 1;
+    }
+
     if (fread(&klen, sizeof(klen), 1, f) != 1) {
         return COUCHSTORE_ERROR_READ;
     }
 
     klen = ntohs(klen);
-    vlen = len - sizeof(klen) - klen;
+    vlen = len - sizeof(klen) - klen - oplen;
 
     k->size = klen;
     k->buf = (char *) arena_alloc(a, k->size);
@@ -372,15 +419,21 @@ static int read_record(FILE *f, arena *a, sized_buf *k, sized_buf *v)
     }
 
     v->size = vlen;
-    v->buf = (char *) arena_alloc(a, v->size);
-    if (v->buf == NULL) {
-        return COUCHSTORE_ERROR_ALLOC_FAIL;
+    /* Handle zero len vals */
+    if (v->size) {
+        v->buf = (char *) arena_alloc(a, v->size);
+        if (v->buf == NULL) {
+            return COUCHSTORE_ERROR_ALLOC_FAIL;
+        }
+    } else {
+        v->buf = NULL;
     }
 
     if (fread(k->buf, k->size, 1, f) != 1) {
         return FILE_MERGER_ERROR_FILE_READ;
     }
-    if (fread(v->buf, v->size, 1, f) != 1) {
+
+    if (v->size && fread(v->buf, v->size, 1, f) != 1) {
         return FILE_MERGER_ERROR_FILE_READ;
     }
 
@@ -443,7 +496,7 @@ static couchstore_error_t build_btree(const char *source_file,
         sized_buf k, v;
         int read_ret;
 
-        read_ret = read_record(f, transient_arena, &k, &v);
+        read_ret = read_record(f, transient_arena, &k, &v, NULL);
         if (read_ret == 0) {
             break;
         } else if (read_ret < 0) {
@@ -886,6 +939,383 @@ couchstore_error_t couchstore_cleanup_view_group(view_group_info_t *info,
     }
 
     *purge_count = purge_ctx.count;
+    ret = COUCHSTORE_SUCCESS;
+
+cleanup:
+    free_index_header(header);
+    close_view_group_file(info);
+    tree_file_close(&index_file);
+    free(id_root);
+    if (view_roots != NULL) {
+        for (i = 0; i < info->num_btrees; ++i) {
+            free(view_roots[i]);
+        }
+        free(view_roots);
+    }
+
+    return ret;
+}
+
+static couchstore_error_t update_btree(const char *source_file,
+                                       tree_file *dest_file,
+                                       const node_pointer *root,
+                                       size_t batch_size,
+                                       compare_info *cmp,
+                                       reduce_fn reduce_fun,
+                                       reduce_fn rereduce_fun,
+                                       purge_kv_fn purge_kv,
+                                       purge_kp_fn purge_kp,
+                                       view_reducer_ctx_t *red_ctx,
+                                       view_purger_ctx_t *purge_ctx,
+                                       uint64_t *inserted,
+                                       uint64_t *removed,
+                                       node_pointer **out_root)
+{
+    couchstore_error_t ret = COUCHSTORE_SUCCESS;
+    couchfile_modify_request rq;
+    node_pointer *newroot = (node_pointer *) root;
+    arena *transient_arena = new_arena(0);
+    FILE *f = NULL;
+    couchfile_modify_action *actions = NULL;
+    sized_buf *keybufs = NULL, *valbufs = NULL;
+    size_t bufsize = 0;
+    int last_record = 0;
+    bitmap_t empty_bm;
+    int max_actions = MAX_ACTIONS_SIZE /
+                (sizeof(couchfile_modify_action) + 2 * sizeof(sized_buf));
+
+    memset(&empty_bm, 0, sizeof(empty_bm));
+
+    if (transient_arena == NULL) {
+        ret = COUCHSTORE_ERROR_ALLOC_FAIL;
+        goto cleanup;
+    }
+
+
+    actions = (couchfile_modify_action *) calloc(
+                                            max_actions,
+                                            sizeof(couchfile_modify_action));
+    if (actions == NULL) {
+        ret = COUCHSTORE_ERROR_ALLOC_FAIL;
+        goto cleanup;
+    }
+
+    keybufs = (sized_buf *) calloc(max_actions, sizeof(sized_buf));
+    if (keybufs == NULL) {
+        ret = COUCHSTORE_ERROR_ALLOC_FAIL;
+        goto cleanup;
+    }
+
+    valbufs = (sized_buf *) calloc(max_actions, sizeof(sized_buf));
+    if (valbufs == NULL) {
+        ret = COUCHSTORE_ERROR_ALLOC_FAIL;
+        goto cleanup;
+    }
+
+    rq.cmp = *cmp;
+    rq.file = dest_file;
+    rq.actions = actions;
+    rq.num_actions = 0;
+    rq.reduce = reduce_fun;
+    rq.rereduce = rereduce_fun;
+    rq.compacting = 0;
+    rq.kv_chunk_threshold = VIEW_KV_CHUNK_THRESHOLD;
+    rq.kp_chunk_threshold = VIEW_KP_CHUNK_THRESHOLD;
+    rq.purge_kp = purge_kp;
+    rq.purge_kv = purge_kv;
+    rq.guided_purge_ctx = purge_ctx;
+    rq.enable_purging = 1;
+    rq.user_reduce_ctx = red_ctx;
+
+    /* If cleanup bitmask is empty, no need to try purging */
+    if (is_equal_bitmap(&empty_bm, &purge_ctx->cbitmask)) {
+        rq.enable_purging = 0;
+    }
+
+    f = fopen(source_file, "rb");
+    if (f == NULL) {
+        ret = COUCHSTORE_ERROR_OPEN_FILE;
+        goto cleanup;
+    }
+
+    while (!last_record) {
+        int read_ret;
+        uint8_t op;
+
+        read_ret = read_record(f, transient_arena, &keybufs[rq.num_actions],
+                                                   &valbufs[rq.num_actions],
+                                                   &op);
+        if (read_ret == 0) {
+            last_record = 1;
+            goto flush;
+        } else if (read_ret < 0) {
+            ret = (couchstore_error_t) read_ret;
+            goto cleanup;
+        }
+
+        /* Add action */
+        actions[rq.num_actions].type = op;
+        actions[rq.num_actions].key = &keybufs[rq.num_actions];
+        actions[rq.num_actions].value.data = &valbufs[rq.num_actions];
+        rq.num_actions++;
+
+        if (inserted && op == ACTION_INSERT) {
+            (*inserted)++;
+        } else if (removed && op == ACTION_REMOVE) {
+            (*removed)++;
+        }
+
+        bufsize += keybufs[rq.num_actions].size +
+                   valbufs[rq.num_actions].size +
+                   sizeof(uint8_t);
+
+flush:
+        if (rq.num_actions && (last_record || bufsize > batch_size ||
+                               rq.num_actions == max_actions)) {
+            newroot = modify_btree(&rq, newroot, &ret);
+            if (ret != COUCHSTORE_SUCCESS) {
+                goto cleanup;
+            }
+
+            rq.num_actions = 0;
+            bufsize = 0;
+            arena_free_all(transient_arena);
+        }
+    }
+
+    *out_root = newroot;
+
+cleanup:
+    free(actions);
+    free(keybufs);
+    free(valbufs);
+
+    if (f != NULL) {
+        fclose(f);
+    }
+
+    if (transient_arena != NULL) {
+        delete_arena(transient_arena);
+    }
+
+    return ret;
+}
+
+static couchstore_error_t update_id_btree(const char *source_file,
+                                         tree_file *dest_file,
+                                         const node_pointer *root,
+                                         size_t batch_size,
+                                         view_purger_ctx_t *purge_ctx,
+                                         uint64_t *inserted,
+                                         uint64_t *removed,
+                                         node_pointer **out_root)
+{
+    couchstore_error_t ret;
+    compare_info cmp;
+
+    cmp.compare = id_btree_cmp;
+
+    ret = update_btree(source_file,
+                      dest_file,
+                      root,
+                      batch_size,
+                      &cmp,
+                      view_id_btree_reduce,
+                      view_id_btree_rereduce,
+                      view_id_btree_purge_kv,
+                      view_id_btree_purge_kp,
+                      NULL,
+                      purge_ctx,
+                      inserted,
+                      removed,
+                      out_root);
+
+    return ret;
+}
+
+
+static couchstore_error_t update_view_btree(const char *source_file,
+                                            const view_btree_info_t *info,
+                                            tree_file *dest_file,
+                                            const node_pointer *root,
+                                            size_t batch_size,
+                                            view_purger_ctx_t *purge_ctx,
+                                            uint64_t *inserted,
+                                            uint64_t *removed,
+                                            node_pointer **out_root,
+                                            view_error_t *error_info)
+{
+    couchstore_error_t ret;
+    compare_info cmp;
+    view_reducer_ctx_t *red_ctx = NULL;
+    char *error_msg = NULL;
+
+    cmp.compare = view_btree_cmp;
+    red_ctx = make_view_reducer_ctx(info->reducers,
+                                    info->num_reducers,
+                                    &error_msg);
+    if (red_ctx == NULL) {
+        error_info->error_msg = (const char *) error_msg;
+        error_info->view_name = (const char *) strdup(info->names[0]);
+        return COUCHSTORE_ERROR_REDUCER_FAILURE;
+    }
+
+    ret = update_btree(source_file,
+                      dest_file,
+                      root,
+                      batch_size,
+                      &cmp,
+                      view_btree_reduce,
+                      view_btree_rereduce,
+                      view_btree_purge_kv,
+                      view_btree_purge_kp,
+                      red_ctx,
+                      purge_ctx,
+                      inserted,
+                      removed,
+                      out_root);
+
+    if (ret != COUCHSTORE_SUCCESS) {
+        char *error_msg = NULL;
+
+        if (red_ctx->error != NULL) {
+            error_msg = strdup(red_ctx->error);
+        } else {
+            /* TODO: add more human friendly messages for other error types */
+            switch (ret) {
+            case COUCHSTORE_ERROR_REDUCTION_TOO_LARGE:
+                /* TODO: add reduction byte size information to error message */
+                error_msg = strdup("reduction too large");
+                break;
+            default:
+                error_msg = (char *) malloc(64);
+                if (error_msg != NULL) {
+                    sprintf(error_msg, "%d", ret);
+                }
+            }
+        }
+        error_info->error_msg = (const char *) error_msg;
+        error_info->view_name = (const char *) strdup(info->names[0]);
+    }
+
+    free_view_reducer_ctx(red_ctx);
+
+    return ret;
+}
+
+LIBCOUCHSTORE_API
+couchstore_error_t couchstore_update_view_group(view_group_info_t *info,
+                                               const char *id_records_file,
+                                               const char *kv_records_files[],
+                                               uint64_t *header_pos,
+                                               size_t batch_size,
+                                               view_group_update_stats_t *stats,
+                                               view_error_t *error_info)
+{
+    couchstore_error_t ret;
+    tree_file index_file;
+    index_header_t *header = NULL;
+    node_pointer *id_root = NULL;
+    node_pointer **view_roots = NULL;
+    view_purger_ctx_t purge_ctx;
+    bitmap_t bm_cleanup;
+    int i;
+
+    memset(&bm_cleanup, 0, sizeof(bm_cleanup));
+
+    error_info->view_name = NULL;
+    error_info->error_msg = NULL;
+    index_file.handle = NULL;
+    index_file.ops = NULL;
+    index_file.path = NULL;
+
+    view_roots = (node_pointer **) calloc(info->num_btrees,
+                                          sizeof(node_pointer *));
+    if (view_roots == NULL) {
+        ret = COUCHSTORE_ERROR_ALLOC_FAIL;
+        goto cleanup;
+    }
+
+    /* Read info from current index viewgroup file */
+    ret = open_view_group_file(info->filepath,
+                               COUCHSTORE_OPEN_FLAG_RDONLY,
+                               &info->file);
+    if (ret != COUCHSTORE_SUCCESS) {
+        goto cleanup;
+    }
+
+    ret = read_view_group_header(info, &header);
+    if (ret != COUCHSTORE_SUCCESS) {
+        goto cleanup;
+    }
+
+    assert(info->num_btrees == header->num_views);
+
+    /* Setup purger context */
+    purge_ctx.count = 0;
+    purge_ctx.cbitmask = header->cleanup_bitmask;
+
+    ret = open_view_group_file(info->filepath,
+                               0,
+                               &index_file);
+    if (ret != COUCHSTORE_SUCCESS) {
+        goto cleanup;
+    }
+
+    /* Move pos to end of file */
+    index_file.pos = index_file.ops->goto_eof(&index_file.lastError,
+                                              index_file.handle);
+
+    ret = update_id_btree(id_records_file, &index_file,
+                                           header->id_btree_state,
+                                           batch_size,
+                                           &purge_ctx,
+                                           &stats->ids_inserted,
+                                           &stats->ids_removed,
+                                           &id_root);
+    if (ret != COUCHSTORE_SUCCESS) {
+        goto cleanup;
+    }
+
+
+    free(header->id_btree_state);
+    header->id_btree_state = id_root;
+    view_id_bitmask(id_root, &bm_cleanup);
+    id_root = NULL;
+
+    for (i = 0; i < info->num_btrees; ++i) {
+        ret = update_view_btree(kv_records_files[i],
+                                &info->btree_infos[i],
+                                &index_file,
+                                header->view_btree_states[i],
+                                batch_size,
+                                &purge_ctx,
+                                &stats->kvs_inserted,
+                                &stats->kvs_removed,
+                                &view_roots[i],
+                                error_info);
+
+        if (ret != COUCHSTORE_SUCCESS) {
+            goto cleanup;
+        }
+
+        free(header->view_btree_states[i]);
+        header->view_btree_states[i] = view_roots[i];
+        view_bitmask(view_roots[i], &bm_cleanup);
+        view_roots[i] = NULL;
+    }
+
+    /* Set resulting cleanup bitmask */
+    intersect_bitmaps(&bm_cleanup, &purge_ctx.cbitmask);
+    header->cleanup_bitmask = bm_cleanup;
+
+    ret = write_view_group_header(&index_file, header_pos, header);
+    if (ret != COUCHSTORE_SUCCESS) {
+        goto cleanup;
+    }
+
+    stats->purged = purge_ctx.count;
+
     ret = COUCHSTORE_SUCCESS;
 
 cleanup:

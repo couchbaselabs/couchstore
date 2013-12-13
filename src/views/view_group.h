@@ -49,6 +49,13 @@ extern "C" {
         tree_file           file;
     } view_group_info_t;
 
+    typedef struct {
+       uint64_t ids_inserted;
+       uint64_t ids_removed;
+       uint64_t kvs_inserted;
+       uint64_t kvs_removed;
+       uint64_t purged;
+    } view_group_update_stats_t;
 
     /* Read a view group definition from an input stream, and write any
        errors to the optional error stream. */
@@ -79,6 +86,16 @@ extern "C" {
                                                      uint64_t *header_pos,
                                                      uint64_t *purge_count,
                                                      view_error_t *error_info);
+
+    LIBCOUCHSTORE_API
+    couchstore_error_t couchstore_update_view_group(
+                                               view_group_info_t *info,
+                                               const char *id_records_file,
+                                               const char *kv_records_files[],
+                                               uint64_t *header_pos,
+                                               size_t batch_size,
+                                               view_group_update_stats_t *stats,
+                                               view_error_t *error_info);
 
 #ifdef __cplusplus
 }
