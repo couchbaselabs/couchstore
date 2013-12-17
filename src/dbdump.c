@@ -145,7 +145,7 @@ static int visit_node(Db *db,
         int *count;
         /* This is a document: */
         printf("%c (%"PRIu64") ", (docinfo->deleted ? 'x' : '*'),
-               docinfo->size);
+               (uint64_t)docinfo->size);
         if (mode == DumpBySequence) {
             printf("#%"PRIu64" ", docinfo->db_seq);
         }
