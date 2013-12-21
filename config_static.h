@@ -67,7 +67,6 @@
 
 #if defined(WIN32) || defined(_WIN32)
 #define WINDOWS
-#define V8_POST_3_19_API
 #endif
 
 #endif
