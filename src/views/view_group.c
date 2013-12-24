@@ -649,7 +649,6 @@ couchstore_error_t read_view_group_header(view_group_info_t *info,
     return ret;
 }
 
-
 couchstore_error_t write_view_group_header(tree_file *file,
                                            uint64_t *pos,
                                            const index_header_t *header)
@@ -1207,9 +1206,10 @@ LIBCOUCHSTORE_API
 couchstore_error_t couchstore_update_view_group(view_group_info_t *info,
                                                const char *id_records_file,
                                                const char *kv_records_files[],
-                                               uint64_t *header_pos,
                                                size_t batch_size,
+                                               const sized_buf *header_buf,
                                                view_group_update_stats_t *stats,
+                                               sized_buf *header_outbuf,
                                                view_error_t *error_info)
 {
     couchstore_error_t ret;
@@ -1220,6 +1220,11 @@ couchstore_error_t couchstore_update_view_group(view_group_info_t *info,
     view_purger_ctx_t purge_ctx;
     bitmap_t bm_cleanup;
     int i;
+
+    ret = decode_index_header(header_buf->buf, header_buf->size, &header);
+    if (ret < 0) {
+        goto cleanup;
+    }
 
     memset(&bm_cleanup, 0, sizeof(bm_cleanup));
 
@@ -1233,19 +1238,6 @@ couchstore_error_t couchstore_update_view_group(view_group_info_t *info,
                                           sizeof(node_pointer *));
     if (view_roots == NULL) {
         ret = COUCHSTORE_ERROR_ALLOC_FAIL;
-        goto cleanup;
-    }
-
-    /* Read info from current index viewgroup file */
-    ret = open_view_group_file(info->filepath,
-                               COUCHSTORE_OPEN_FLAG_RDONLY,
-                               &info->file);
-    if (ret != COUCHSTORE_SUCCESS) {
-        goto cleanup;
-    }
-
-    ret = read_view_group_header(info, &header);
-    if (ret != COUCHSTORE_SUCCESS) {
         goto cleanup;
     }
 
@@ -1308,13 +1300,12 @@ couchstore_error_t couchstore_update_view_group(view_group_info_t *info,
     /* Set resulting cleanup bitmask */
     intersect_bitmaps(&bm_cleanup, &purge_ctx.cbitmask);
     header->cleanup_bitmask = bm_cleanup;
+    stats->purged = purge_ctx.count;
 
-    ret = write_view_group_header(&index_file, header_pos, header);
+    ret = encode_index_header(header, &header_outbuf->buf, &header_outbuf->size);
     if (ret != COUCHSTORE_SUCCESS) {
         goto cleanup;
     }
-
-    stats->purged = purge_ctx.count;
 
     ret = COUCHSTORE_SUCCESS;
 

@@ -46,8 +46,9 @@ int main(int argc, char *argv[])
     size_t len;
     int batch_size;
     int ret = 2;
-    uint64_t header_pos;
     view_group_update_stats_t stats;
+    sized_buf header_buf = {NULL, 0};
+    sized_buf header_outbuf = {NULL, 0};
     view_error_t error_info;
     cb_thread_t exit_thread;
 
@@ -99,6 +100,24 @@ int main(int argc, char *argv[])
         goto out;
     }
 
+    if (fscanf(stdin, "%lu\n", &header_buf.size) != 1) {
+        fprintf(stderr, "Error reading viewgroup header size\n");
+        goto out;
+    }
+
+    header_buf.buf = malloc(header_buf.size);
+    if (header_buf.buf == NULL) {
+            fprintf(stderr, "Memory allocation failure\n");
+            ret = COUCHSTORE_ERROR_ALLOC_FAIL;
+            goto out;
+    }
+
+    if (fread(header_buf.buf, header_buf.size, 1, stdin) != 1) {
+        fprintf(stderr,
+                "Error reading viewgroup header from stdin\n");
+        goto out;
+    }
+
     /* Start a watcher thread to gracefully die on exit message */
     ret = cb_create_thread(&exit_thread, die_on_exit_msg, NULL, 1);
     if (ret < 0) {
@@ -111,9 +130,10 @@ int main(int argc, char *argv[])
     ret = couchstore_update_view_group(group_info,
                                       source_files[0],
                                       (const char **) &source_files[1],
-                                      &header_pos,
                                       batch_size,
+                                      &header_buf,
                                       &stats,
+                                      &header_outbuf,
                                       &error_info);
 
 
@@ -126,6 +146,10 @@ int main(int argc, char *argv[])
         }
         goto out;
     }
+
+    fprintf(stdout, "Header Len : %lu\n", header_outbuf.size);
+    fwrite(header_outbuf.buf, header_outbuf.size, 1, stdout);
+    fprintf(stdout, "\n");
 
     fprintf(stdout,"Results ="
                    " id_inserts : %"PRIu64
@@ -146,9 +170,12 @@ out:
         }
         free(source_files);
     }
+
     couchstore_free_view_group_info(group_info);
     free((void *) error_info.error_msg);
     free((void *) error_info.view_name);
+    free((void *) header_buf.buf);
+    free((void *) header_outbuf.buf);
 
     return (ret < 0) ? (100 + ret) : ret;
 }

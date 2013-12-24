@@ -92,9 +92,10 @@ extern "C" {
                                                view_group_info_t *info,
                                                const char *id_records_file,
                                                const char *kv_records_files[],
-                                               uint64_t *header_pos,
                                                size_t batch_size,
+                                               const sized_buf *header_buf,
                                                view_group_update_stats_t *stats,
+                                               sized_buf *header_outbuf,
                                                view_error_t *error_info);
 
 #ifdef __cplusplus
