@@ -24,6 +24,7 @@
 #include <string.h>
 #include "../view_group.h"
 #include "../util.h"
+#include "../file_sorter.h"
 
 #define BUF_SIZE 8192
 
@@ -42,6 +43,7 @@ int main(int argc, char *argv[])
     view_group_info_t *group_info = NULL;
     char buf[BUF_SIZE];
     char **source_files = NULL;
+    char *tmp_dir = NULL;
     int i;
     size_t len;
     int batch_size;
@@ -57,6 +59,21 @@ int main(int argc, char *argv[])
 
     /* Set all stats counters to zero */
     memset((char *) &stats, 0, sizeof(view_group_update_stats_t));
+
+    if (couchstore_read_line(stdin, buf, BUF_SIZE) != buf) {
+        fprintf(stderr, "Error reading temporary directory path\n");
+        goto out;
+    }
+
+    len = strlen(buf);
+    tmp_dir = (char *) malloc(len + 1);
+    if (tmp_dir == NULL) {
+        fprintf(stderr, "Memory allocation failure\n");
+        goto out;
+    }
+
+    memcpy(tmp_dir, buf, len);
+    tmp_dir[len] = '\0';
 
     group_info = couchstore_read_view_group_info(stdin, stderr);
     if (group_info == NULL) {
@@ -127,6 +144,21 @@ int main(int argc, char *argv[])
         goto out;
     }
 
+    /* Sort all operation list files for id and view btrees */
+    ret = sort_view_ids_ops_file(source_files[0], tmp_dir);
+    if (ret != FILE_SORTER_SUCCESS) {
+        fprintf(stderr, "Error sorting id file: %d\n", ret);
+        goto out;
+    }
+
+    for (i = 1; i <= group_info->num_btrees; ++i) {
+        ret = sort_view_kvs_ops_file(source_files[i], tmp_dir);
+        if (ret != FILE_SORTER_SUCCESS) {
+            fprintf(stderr, "Error sorting view %d file: %d\n",i-1, ret);
+            goto out;
+        }
+    }
+
     ret = couchstore_update_view_group(group_info,
                                       source_files[0],
                                       (const char **) &source_files[1],
@@ -176,6 +208,7 @@ out:
     free((void *) error_info.view_name);
     free((void *) header_buf.buf);
     free((void *) header_outbuf.buf);
+    free(tmp_dir);
 
     return (ret < 0) ? (100 + ret) : ret;
 }
