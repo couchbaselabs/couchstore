@@ -18,8 +18,8 @@
  * the License.
  **/
 
+#include "config.h"
 #include <libcouchstore/couch_db.h>
-#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include "../macros.h"
