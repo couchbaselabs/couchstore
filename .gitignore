@@ -78,3 +78,4 @@ xcuserdata/
 /*.pdb
 /*.exp
 /*.lib
+/couch_view_group_cleanup
