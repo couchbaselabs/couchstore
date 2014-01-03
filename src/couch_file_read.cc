@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <snappy-c.h>
+#include <snappy.h>
 
 #include "internal.h"
 #include "iobuffer.h"
@@ -161,26 +161,28 @@ int pread_compressed(tree_file *file, cs_off_t pos, char **ret_ptr)
         return len;
     }
     size_t uncompressed_len;
-    if (snappy_uncompressed_length(compressed_buf, len, &uncompressed_len) != SNAPPY_OK) {
+
+    if (!snappy::GetUncompressedLength(compressed_buf, len, &uncompressed_len)) {
         //should be compressed but snappy doesn't see it as valid.
         free(compressed_buf);
         return COUCHSTORE_ERROR_CORRUPT;
     }
 
-    new_buf = (char *) malloc(uncompressed_len);
+    new_buf = static_cast<char *>(malloc(uncompressed_len));
     if (!new_buf) {
         free(compressed_buf);
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
-    snappy_status ss = (snappy_uncompress(compressed_buf, len, new_buf, &uncompressed_len));
-    free(compressed_buf);
-    if (ss != SNAPPY_OK) {
+
+    if (!snappy::RawUncompress(compressed_buf, len, new_buf)) {
+        free(compressed_buf);
         free(new_buf);
         return COUCHSTORE_ERROR_CORRUPT;
     }
 
+    free(compressed_buf);
     *ret_ptr = new_buf;
-    return (int) uncompressed_len;
+    return static_cast<int>(uncompressed_len);
 }
 
 int pread_bin(tree_file *file, cs_off_t pos, char **ret_ptr)

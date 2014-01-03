@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <sys/types.h>
-#include <snappy-c.h>
+#include <snappy.h>
 #include <libcouchstore/couch_db.h>
 
 #include "rfc1321/global.h"
@@ -127,15 +127,14 @@ couchstore_error_t db_write_buf_compressed(tree_file *file, const sized_buf *buf
 {
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     sized_buf to_write;
-    size_t max_size = snappy_max_compressed_length(buf->size);
+    size_t max_size = snappy::MaxCompressedLength(buf->size);
 
-    char* compressbuf = (char *) malloc(max_size);
+    char* compressbuf = static_cast<char *>(malloc(max_size));
     to_write.buf = compressbuf;
     to_write.size = max_size;
     error_unless(to_write.buf, COUCHSTORE_ERROR_ALLOC_FAIL);
-    error_unless(snappy_compress(buf->buf, buf->size, to_write.buf,
-                                 &to_write.size) == SNAPPY_OK,
-                 COUCHSTORE_ERROR_WRITE);
+
+    snappy::RawCompress(buf->buf, buf->size, to_write.buf, &to_write.size);
 
     error_pass(static_cast<couchstore_error_t>(db_write_buf(file, &to_write, pos, disk_size)));
 cleanup:
