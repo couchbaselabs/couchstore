@@ -73,7 +73,10 @@ typedef struct {
 } raw_seq_index_value;
 
 /* Mask for the 'deleted' bit in .bp fields */
-#define BP_DELETED_FLAG 0x800000000000
+#ifndef UINT64_C
+#define UINT64_C(x) (x ## ULL)
+#endif
+#define BP_DELETED_FLAG UINT64_C(0x800000000000)
 
 
 node_pointer *read_root(void *buf, int size);
