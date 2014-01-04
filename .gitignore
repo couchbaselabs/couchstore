@@ -79,3 +79,4 @@ xcuserdata/
 /*.exp
 /*.lib
 /couch_view_group_cleanup
+/purge.couch
