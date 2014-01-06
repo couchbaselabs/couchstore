@@ -592,18 +592,7 @@ static couchstore_error_t build_view_btree(const char *source_file,
         if (red_ctx->error != NULL) {
             error_msg = strdup(red_ctx->error);
         } else {
-            /* TODO: add more human friendly messages for other error types */
-            switch (ret) {
-            case COUCHSTORE_ERROR_REDUCTION_TOO_LARGE:
-                /* TODO: add reduction byte size information to error message */
-                error_msg = strdup("reduction too large");
-                break;
-            default:
-                error_msg = (char *) malloc(64);
-                if (error_msg != NULL) {
-                    sprintf(error_msg, "%d", ret);
-                }
-            }
+            error_msg = view_error_msg(ret);
         }
         error_info->error_msg = (const char *) error_msg;
         error_info->view_name = (const char *) strdup(info->names[0]);
@@ -1180,18 +1169,7 @@ static couchstore_error_t update_view_btree(const char *source_file,
         if (red_ctx->error != NULL) {
             error_msg = strdup(red_ctx->error);
         } else {
-            /* TODO: add more human friendly messages for other error types */
-            switch (ret) {
-            case COUCHSTORE_ERROR_REDUCTION_TOO_LARGE:
-                /* TODO: add reduction byte size information to error message */
-                error_msg = strdup("reduction too large");
-                break;
-            default:
-                error_msg = (char *) malloc(64);
-                if (error_msg != NULL) {
-                    sprintf(error_msg, "%d", ret);
-                }
-            }
+            error_msg = view_error_msg(ret);
         }
         error_info->error_msg = (const char *) error_msg;
         error_info->view_name = (const char *) strdup(info->names[0]);

@@ -193,3 +193,25 @@ char *couchstore_read_line(FILE *in, char *buf, int size)
 
     return buf;
 }
+
+char *view_error_msg(couchstore_error_t ret)
+{
+    char *error_msg = NULL;
+    if (ret == COUCHSTORE_SUCCESS) {
+        return NULL;
+    }
+
+    /* TODO: add more human friendly messages for other error types */
+    switch (ret) {
+    case COUCHSTORE_ERROR_REDUCTION_TOO_LARGE:
+        /* TODO: add reduction byte size information to error message */
+        error_msg =  strdup("reduction too large");
+    default:
+        error_msg = (char *) malloc(64);
+        if (error_msg != NULL) {
+            sprintf(error_msg, "%d", ret);
+        }
+    }
+
+    return error_msg;
+}
