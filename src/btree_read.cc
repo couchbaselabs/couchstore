@@ -5,6 +5,25 @@
 #include "util.h"
 #include "node_types.h"
 
+/* Helper function to handle lookup specific special cases */
+static int lookup_compare(couchfile_lookup_request *rq,
+                          const sized_buf *key1,
+                          const sized_buf *key2)
+{
+        /* For handling low key = NULL for full btree iteration */
+        if (!key1->size || !key2->size) {
+            if (!key1->size) {
+                return -1;
+            } else if (!key2->size) {
+                return 1;
+            }
+
+            return 0;
+        }
+
+        return rq->cmp.compare(key1, key2);
+}
+
 static couchstore_error_t btree_lookup_inner(couchfile_lookup_request *rq,
                                              uint64_t diskpos,
                                              int current,
@@ -27,7 +46,7 @@ static couchstore_error_t btree_lookup_inner(couchfile_lookup_request *rq,
             sized_buf cmp_key, val_buf;
             bufpos += read_kv(nodebuf + bufpos, &cmp_key, &val_buf);
 
-            if (rq->cmp.compare(&cmp_key, rq->keys[current]) >= 0) {
+            if (lookup_compare(rq, &cmp_key, rq->keys[current]) >= 0) {
                 if (rq->fold) {
                     rq->in_fold = 1;
                 }
@@ -38,7 +57,7 @@ static couchstore_error_t btree_lookup_inner(couchfile_lookup_request *rq,
                 //with all keys < item key.
                 do {
                     last_item++;
-                } while (last_item < end && rq->cmp.compare(&cmp_key, rq->keys[last_item]) >= 0);
+                } while (last_item < end && lookup_compare(rq, &cmp_key, rq->keys[last_item]) >= 0);
 
                 const raw_node_pointer *raw = (const raw_node_pointer*)val_buf.buf;
                 if(rq->node_callback) {
@@ -62,11 +81,11 @@ static couchstore_error_t btree_lookup_inner(couchfile_lookup_request *rq,
         while (bufpos < nodebuflen && current < end) {
             sized_buf cmp_key, val_buf;
             bufpos += read_kv(nodebuf + bufpos, &cmp_key, &val_buf);
-            int cmp_val = rq->cmp.compare(&cmp_key, rq->keys[current]);
+            int cmp_val = lookup_compare(rq, &cmp_key, rq->keys[current]);
             if (cmp_val >= 0 && rq->fold && !rq->in_fold) {
                 rq->in_fold = 1;
             } else if (rq->in_fold && (current + 1) < end &&
-                       (rq->cmp.compare(&cmp_key, rq->keys[current + 1])) > 0) {
+                       (lookup_compare(rq, &cmp_key, rq->keys[current + 1])) > 0) {
                 //We've hit a key past the end of our range.
                 rq->in_fold = 0;
                 rq->fold = 0;
