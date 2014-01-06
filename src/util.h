@@ -7,6 +7,7 @@
 
 #include "internal.h"
 #include "fatbuf.h"
+#include "arena.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,6 +18,9 @@ int ebin_cmp(const sized_buf *e1, const sized_buf *e2);
 
 /** Compares sequence numbers (48-bit big-endian unsigned ints) stored in sized_bufs. */
 int seq_cmp(const sized_buf *k1, const sized_buf *k2);
+
+/* Copy buffer to arena */
+sized_buf* arena_copy_buf(arena* a, const sized_buf *src);
 
 /** Offsets the pointer PTR by BYTES bytes. Result is of the same type as PTR. */
 #define offsetby(PTR, BYTES)    ((__typeof(PTR))((uint8_t*)(PTR) + (BYTES)))

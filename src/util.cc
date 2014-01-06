@@ -79,3 +79,18 @@ void report_error(couchstore_error_t errcode, const char* file, int line) {
             couchstore_strerror(errcode), file, line);
 }
 #endif
+
+sized_buf* arena_copy_buf(arena* a, const sized_buf *src)
+{
+    sized_buf *nbuf = static_cast<sized_buf*>(arena_alloc(a, sizeof(sized_buf)));
+    if (nbuf == NULL) {
+        return NULL;
+    }
+    nbuf->buf = static_cast<char*>(arena_alloc(a, src->size));
+    if (nbuf->buf == NULL) {
+        return NULL;
+    }
+    nbuf->size = src->size;
+    memcpy(nbuf->buf, src->buf, src->size);
+    return nbuf;
+}

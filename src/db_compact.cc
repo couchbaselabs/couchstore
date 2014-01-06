@@ -87,22 +87,6 @@ couchstore_error_t couchstore_compact_db(Db* source, const char* target_filename
     return couchstore_compact_db_ex(source, target_filename, 0, NULL, NULL, couchstore_get_default_file_ops());
 }
 
-//Copy buffer to arena
-static sized_buf* arena_copy_buf(arena* a, const sized_buf *src)
-{
-    sized_buf *nbuf = static_cast<sized_buf*>(arena_alloc(a, sizeof(sized_buf)));
-    if (nbuf == NULL) {
-        return NULL;
-    }
-    nbuf->buf = static_cast<char*>(arena_alloc(a, src->size));
-    if (nbuf->buf == NULL) {
-        return NULL;
-    }
-    nbuf->size = src->size;
-    memcpy(nbuf->buf, src->buf, src->size);
-    return nbuf;
-}
-
 static couchstore_error_t output_seqtree_item(const sized_buf *k,
                                               const sized_buf *v,
                                               compact_ctx *ctx)
