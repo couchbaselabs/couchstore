@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
 {
     view_group_info_t *group_info = NULL;
     uint64_t purge_count;
-    int ret = 1;
+    int ret = 2;
     uint64_t header_pos;
     view_error_t error_info;
     cb_thread_t exit_thread;
@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
 
     group_info = couchstore_read_view_group_info(stdin, stderr);
     if (group_info == NULL) {
-        ret = 1;
+        ret = COUCHSTORE_ERROR_ALLOC_FAIL;
         goto out;
     }
 
@@ -60,6 +60,7 @@ int main(int argc, char *argv[])
     ret = cb_create_thread(&exit_thread, die_on_exit_msg, NULL, 1);
     if (ret < 0) {
         fprintf(stderr, "Error starting stdin exit listener thread\n");
+        ret = -ret;
         goto out;
     }
 

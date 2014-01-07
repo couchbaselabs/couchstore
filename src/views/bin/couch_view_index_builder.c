@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
     char *dest_file = NULL;
     int i;
     size_t len;
-    int ret = 1;
+    int ret = 2;
     uint64_t header_pos;
     view_error_t error_info;
 
@@ -45,24 +45,27 @@ int main(int argc, char *argv[])
 
     group_info = couchstore_read_view_group_info(stdin, stderr);
     if (group_info == NULL) {
-        ret = 1;
+        ret = COUCHSTORE_ERROR_ALLOC_FAIL;
         goto out;
     }
 
     source_files = (char **) calloc(group_info->num_btrees + 1, sizeof(char *));
     if (source_files == NULL) {
         fprintf(stderr, "Memory allocation failure\n");
+        ret = COUCHSTORE_ERROR_ALLOC_FAIL;
         goto out;
     }
 
     if (couchstore_read_line(stdin, buf, BUF_SIZE) != buf) {
         fprintf(stderr, "Error reading destination file\n");
+        ret = COUCHSTORE_ERROR_INVALID_ARGUMENTS;
         goto out;
     }
     len = strlen(buf);
     dest_file = (char *) malloc(len + 1);
     if (dest_file == NULL) {
         fprintf(stderr, "Memory allocation failure\n");
+        ret = COUCHSTORE_ERROR_ALLOC_FAIL;
         goto out;
     }
     memcpy(dest_file, buf, len);
@@ -76,6 +79,7 @@ int main(int argc, char *argv[])
                 fprintf(stderr,
                         "Error reading source file for btree %d\n", i - 1);
             }
+            ret = COUCHSTORE_ERROR_INVALID_ARGUMENTS;
             goto out;
         }
 
@@ -83,6 +87,7 @@ int main(int argc, char *argv[])
         source_files[i] = (char *) malloc(len + 1);
         if (source_files[i] == NULL) {
             fprintf(stderr, "Memory allocation failure\n");
+            ret = COUCHSTORE_ERROR_ALLOC_FAIL;
             goto out;
         }
         memcpy(source_files[i], buf, len);
