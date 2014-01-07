@@ -81,3 +81,4 @@ xcuserdata/
 /couch_view_group_cleanup
 /couch_view_index_updater
 /purge.couch
+/couch_view_group_compactor

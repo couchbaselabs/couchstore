@@ -99,6 +99,34 @@ static couchstore_error_t update_view_btree(const char *source_file,
                                             node_pointer **out_root,
                                             view_error_t *error_info);
 
+static couchstore_error_t compact_view_fetchcb(couchfile_lookup_request *rq,
+                                        const sized_buf *k,
+                                        const sized_buf *v);
+
+static couchstore_error_t compact_btree(tree_file *source,
+                                 tree_file *target,
+                                 const node_pointer *root,
+                                 compare_info *cmp,
+                                 reduce_fn reduce_fun,
+                                 reduce_fn rereduce_fun,
+                                 view_reducer_ctx_t *red_ctx,
+                                 uint64_t *inserted,
+                                 node_pointer **out_root);
+
+static couchstore_error_t compact_id_btree(tree_file *source,
+                                    tree_file *target,
+                                    const node_pointer *root,
+                                    uint64_t *inserted,
+                                    node_pointer **out_root);
+
+static couchstore_error_t compact_view_btree(tree_file *source,
+                                      tree_file *target,
+                                      const view_btree_info_t *info,
+                                      const node_pointer *root,
+                                      uint64_t *inserted,
+                                      node_pointer **out_root,
+                                      view_error_t *error_info);
+
 LIBCOUCHSTORE_API
 view_group_info_t *couchstore_read_view_group_info(FILE *in_stream,
                                                    FILE *error_stream)
@@ -1291,6 +1319,304 @@ cleanup:
     free_index_header(header);
     close_view_group_file(info);
     tree_file_close(&index_file);
+    free(id_root);
+    if (view_roots != NULL) {
+        for (i = 0; i < info->num_btrees; ++i) {
+            free(view_roots[i]);
+        }
+        free(view_roots);
+    }
+
+    return ret;
+}
+
+/* Add the kv pair to modify result */
+static couchstore_error_t compact_view_fetchcb(couchfile_lookup_request *rq,
+                                        const sized_buf *k,
+                                        const sized_buf *v)
+{
+    couchstore_error_t ret;
+    sized_buf *k_c, *v_c;
+    view_compact_ctx_t *ctx = (view_compact_ctx_t *) rq->callback_ctx;
+
+    if (k == NULL || v == NULL) {
+        return COUCHSTORE_ERROR_READ;
+    }
+
+    k_c = arena_copy_buf(ctx->transient_arena, k);
+    v_c = arena_copy_buf(ctx->transient_arena, v);
+    ret = mr_push_item(k_c, v_c, ctx->mr);
+    if (ret != COUCHSTORE_SUCCESS) {
+        return ret;
+    }
+
+    if (ctx->inserted) {
+        (*ctx->inserted)++;
+    }
+
+    if (ctx->mr->count == 0) {
+        arena_free_all(ctx->transient_arena);
+    }
+
+    return ret;
+}
+
+static couchstore_error_t compact_btree(tree_file *source,
+                                 tree_file *target,
+                                 const node_pointer *root,
+                                 compare_info *cmp,
+                                 reduce_fn reduce_fun,
+                                 reduce_fn rereduce_fun,
+                                 view_reducer_ctx_t *red_ctx,
+                                 uint64_t *inserted,
+                                 node_pointer **out_root)
+{
+    couchstore_error_t ret = COUCHSTORE_SUCCESS;
+    arena *transient_arena;
+    arena *persistent_arena;
+    couchfile_modify_result *modify_result;
+    couchfile_lookup_request lookup_rq;
+    view_compact_ctx_t compact_ctx;
+    sized_buf nullkey = {NULL, 0};
+    sized_buf *lowkeys = &nullkey;
+
+    if (!root) {
+        return COUCHSTORE_SUCCESS;
+    }
+
+    transient_arena = new_arena(0);
+    persistent_arena = new_arena(0);
+
+    if (transient_arena == NULL || persistent_arena == NULL) {
+        ret = COUCHSTORE_ERROR_ALLOC_FAIL;
+        goto cleanup;
+    }
+
+    /* Create new btree on new file */
+    modify_result = new_btree_modres(persistent_arena,
+                          transient_arena,
+                          target,
+                          cmp,
+                          reduce_fun,
+                          rereduce_fun,
+                          red_ctx,
+                          VIEW_KV_CHUNK_THRESHOLD + (VIEW_KV_CHUNK_THRESHOLD / 3),
+                          VIEW_KP_CHUNK_THRESHOLD + (VIEW_KP_CHUNK_THRESHOLD / 3));
+    if (modify_result == NULL) {
+        ret = COUCHSTORE_ERROR_ALLOC_FAIL;
+        goto cleanup;
+    }
+
+    compact_ctx.mr = modify_result;
+    compact_ctx.transient_arena = transient_arena;
+    compact_ctx.inserted = inserted;
+
+    lookup_rq.cmp.compare = cmp->compare;
+    lookup_rq.file = source;
+    lookup_rq.num_keys = 1;
+    lookup_rq.keys = &lowkeys;
+    lookup_rq.callback_ctx = &compact_ctx;
+    lookup_rq.fetch_callback = compact_view_fetchcb;
+    lookup_rq.node_callback = NULL;
+    lookup_rq.fold = 1;
+
+    ret = btree_lookup(&lookup_rq, root->pointer);
+    if (ret != COUCHSTORE_SUCCESS) {
+        goto cleanup;
+    }
+
+    *out_root = complete_new_btree(modify_result, &ret);
+
+cleanup:
+    if (transient_arena != NULL) {
+        delete_arena(transient_arena);
+    }
+
+    if (persistent_arena != NULL) {
+        delete_arena(persistent_arena);
+    }
+
+    return ret;
+}
+
+static couchstore_error_t compact_id_btree(tree_file *source,
+                                    tree_file *target,
+                                    const node_pointer *root,
+                                    uint64_t *inserted,
+                                    node_pointer **out_root)
+{
+    couchstore_error_t ret;
+    compare_info cmp;
+
+    cmp.compare = id_btree_cmp;
+
+    ret = compact_btree(source,
+                        target,
+                        root,
+                        &cmp,
+                        view_id_btree_reduce,
+                        view_id_btree_rereduce,
+                        NULL,
+                        inserted,
+                        out_root);
+
+    return ret;
+}
+
+static couchstore_error_t compact_view_btree(tree_file *source,
+                                      tree_file *target,
+                                      const view_btree_info_t *info,
+                                      const node_pointer *root,
+                                      uint64_t *inserted,
+                                      node_pointer **out_root,
+                                      view_error_t *error_info)
+{
+    couchstore_error_t ret;
+    compare_info cmp;
+    view_reducer_ctx_t *red_ctx = NULL;
+    char *error_msg = NULL;
+
+    cmp.compare = view_btree_cmp;
+    red_ctx = make_view_reducer_ctx(info->reducers,
+                                    info->num_reducers,
+                                    &error_msg);
+    if (red_ctx == NULL) {
+        error_info->error_msg = (const char *) error_msg;
+        error_info->view_name = (const char *) strdup(info->names[0]);
+        return COUCHSTORE_ERROR_REDUCER_FAILURE;
+    }
+
+    ret = compact_btree(source,
+                        target,
+                        root,
+                        &cmp,
+                        view_btree_reduce,
+                        view_btree_rereduce,
+                        red_ctx,
+                        inserted,
+                        out_root);
+
+    if (ret != COUCHSTORE_SUCCESS) {
+        char *error_msg = NULL;
+
+        if (red_ctx->error != NULL) {
+            error_msg = strdup(red_ctx->error);
+        } else {
+            error_msg = view_error_msg(ret);
+        }
+        error_info->error_msg = (const char *) error_msg;
+        error_info->view_name = (const char *) strdup(info->names[0]);
+    }
+
+    free_view_reducer_ctx(red_ctx);
+
+    return ret;
+}
+
+LIBCOUCHSTORE_API
+couchstore_error_t couchstore_compact_view_group(view_group_info_t *info,
+                                                 const char *target_file,
+                                                 const sized_buf *header_buf,
+                                                 uint64_t *inserted,
+                                                 sized_buf *header_outbuf,
+                                                 view_error_t *error_info)
+{
+    couchstore_error_t ret;
+    tree_file index_file;
+    tree_file compact_file;
+    index_header_t *header = NULL;
+    node_pointer *id_root = NULL;
+    node_pointer **view_roots = NULL;
+    int i;
+
+    error_info->view_name = NULL;
+    error_info->error_msg = NULL;
+    index_file.handle = NULL;
+    index_file.ops = NULL;
+    index_file.path = NULL;
+    compact_file.handle = NULL;
+    compact_file.ops = NULL;
+    compact_file.path = NULL;
+
+    /*
+     * TODO(sarath): Add filter function to avoid iterating vbs in cleanup
+     * bitmask.
+     * */
+
+    ret = decode_index_header(header_buf->buf, header_buf->size, &header);
+    if (ret < 0) {
+        goto cleanup;
+    }
+
+    view_roots = (node_pointer **) calloc(info->num_btrees,
+                                          sizeof(node_pointer *));
+    if (view_roots == NULL) {
+        ret = COUCHSTORE_ERROR_ALLOC_FAIL;
+        goto cleanup;
+    }
+
+    assert(info->num_btrees == header->num_views);
+
+    ret = open_view_group_file(info->filepath,
+                               COUCHSTORE_OPEN_FLAG_RDONLY,
+                               &index_file);
+    if (ret != COUCHSTORE_SUCCESS) {
+        goto cleanup;
+    }
+
+    /*
+     * Open target file for compaction
+     * Expects that caller created the target file
+     */
+    ret = open_view_group_file(target_file, 0, &compact_file);
+    if (ret != COUCHSTORE_SUCCESS) {
+        goto cleanup;
+    }
+
+    compact_file.pos = compact_file.ops->goto_eof(&compact_file.lastError,
+                                                  compact_file.handle);
+    ret = compact_id_btree(&index_file, &compact_file,
+                                        header->id_btree_state,
+                                        inserted,
+                                        &id_root);
+    if (ret != COUCHSTORE_SUCCESS) {
+        goto cleanup;
+    }
+
+    free(header->id_btree_state);
+    header->id_btree_state = id_root;
+    id_root = NULL;
+
+    for (i = 0; i < info->num_btrees; ++i) {
+        ret = compact_view_btree(&index_file,
+                                 &compact_file,
+                                 &info->btree_infos[i],
+                                 header->view_btree_states[i],
+                                 inserted,
+                                 &view_roots[i],
+                                 error_info);
+
+        if (ret != COUCHSTORE_SUCCESS) {
+            goto cleanup;
+        }
+
+        free(header->view_btree_states[i]);
+        header->view_btree_states[i] = view_roots[i];
+        view_roots[i] = NULL;
+    }
+
+    ret = encode_index_header(header, &header_outbuf->buf, &header_outbuf->size);
+    if (ret != COUCHSTORE_SUCCESS) {
+        goto cleanup;
+    }
+
+    ret = COUCHSTORE_SUCCESS;
+
+cleanup:
+    free_index_header(header);
+    close_view_group_file(info);
+    tree_file_close(&index_file);
+    tree_file_close(&compact_file);
     free(id_root);
     if (view_roots != NULL) {
         for (i = 0; i < info->num_btrees; ++i) {

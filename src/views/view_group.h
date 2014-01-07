@@ -25,6 +25,8 @@
 #include <stdio.h>
 #include <libcouchstore/couch_db.h>
 #include "index_header.h"
+#include "../arena.h"
+#include "../couch_btree.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,6 +58,13 @@ extern "C" {
        uint64_t kvs_removed;
        uint64_t purged;
     } view_group_update_stats_t;
+
+    /* Compaction context definition */
+    typedef struct _view_compact_ctx {
+        couchfile_modify_result *mr;
+        arena *transient_arena;
+        uint64_t *inserted;
+    } view_compact_ctx_t;
 
     /* Read a view group definition from an input stream, and write any
        errors to the optional error stream. */
@@ -97,6 +106,15 @@ extern "C" {
                                                view_group_update_stats_t *stats,
                                                sized_buf *header_outbuf,
                                                view_error_t *error_info);
+
+    LIBCOUCHSTORE_API
+    couchstore_error_t couchstore_compact_view_group(
+                                                 view_group_info_t *info,
+                                                 const char *target_file,
+                                                 const sized_buf *header_buf,
+                                                 uint64_t *inserted,
+                                                 sized_buf *header_outbuf,
+                                                 view_error_t *error_info);
 
 #ifdef __cplusplus
 }

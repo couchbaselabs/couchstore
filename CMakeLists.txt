@@ -94,6 +94,9 @@ TARGET_LINK_LIBRARIES(couch_view_group_cleanup couchstore)
 ADD_EXECUTABLE(couch_view_index_updater src/views/bin/couch_view_index_updater.c)
 TARGET_LINK_LIBRARIES(couch_view_index_updater couchstore)
 
+ADD_EXECUTABLE(couch_view_group_compactor src/views/bin/couch_view_group_compactor.c)
+TARGET_LINK_LIBRARIES(couch_view_group_compactor couchstore)
+
 IF (INSTALL_HEADER_FILES)
 INSTALL(FILES
         include/libcouchstore/couch_db.h
@@ -118,6 +121,7 @@ INSTALL(TARGETS couch_dbdump
                 couch_view_index_builder
                 couch_view_group_cleanup
                 couch_view_index_updater
+                couch_view_group_compactor
         RUNTIME DESTINATION bin)
 
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/config.cmake.h.in
