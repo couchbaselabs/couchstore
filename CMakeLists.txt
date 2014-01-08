@@ -63,7 +63,8 @@ SET(COUCHSTORE_SOURCES src/arena.cc src/bitfield.c src/btree_modify.cc
             src/views/mapreduce/mapreduce_c.cc src/views/reducers.c
             src/views/reductions.c src/views/sorted_list.c
             src/views/spatial.c src/views/util.c src/views/values.c
-            src/views/view_group.c src/views/purgers.c ${COUCHSTORE_FILE_OPS})
+            src/views/view_group.c src/views/purgers.c
+            src/views/compaction.c ${COUCHSTORE_FILE_OPS})
 SET(COUCHSTORE_LIBRARIES ${V8_LIBRARIES} ${ICU_LIBRARIES} ${SNAPPY_LIBRARIES} platform)
 
 ADD_LIBRARY(couchstore SHARED ${COUCHSTORE_SOURCES})

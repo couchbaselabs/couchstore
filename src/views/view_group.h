@@ -59,13 +59,6 @@ extern "C" {
        uint64_t purged;
     } view_group_update_stats_t;
 
-    /* Compaction context definition */
-    typedef struct _view_compact_ctx {
-        couchfile_modify_result *mr;
-        arena *transient_arena;
-        uint64_t *inserted;
-    } view_compact_ctx_t;
-
     /* Read a view group definition from an input stream, and write any
        errors to the optional error stream. */
     LIBCOUCHSTORE_API

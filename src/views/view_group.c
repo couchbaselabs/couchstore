@@ -27,6 +27,7 @@
 #include "values.h"
 #include "purgers.h"
 #include "util.h"
+#include "compaction.h"
 #include "../arena.h"
 #include "../couch_btree.h"
 #include "../internal.h"
@@ -109,13 +110,16 @@ static couchstore_error_t compact_btree(tree_file *source,
                                  compare_info *cmp,
                                  reduce_fn reduce_fun,
                                  reduce_fn rereduce_fun,
+                                 compact_filter_fn filter_fun,
                                  view_reducer_ctx_t *red_ctx,
+                                 const bitmap_t *filterbm,
                                  uint64_t *inserted,
                                  node_pointer **out_root);
 
 static couchstore_error_t compact_id_btree(tree_file *source,
                                     tree_file *target,
                                     const node_pointer *root,
+                                    const bitmap_t *filterbm,
                                     uint64_t *inserted,
                                     node_pointer **out_root);
 
@@ -123,6 +127,7 @@ static couchstore_error_t compact_view_btree(tree_file *source,
                                       tree_file *target,
                                       const view_btree_info_t *info,
                                       const node_pointer *root,
+                                      const bitmap_t *filterbm,
                                       uint64_t *inserted,
                                       node_pointer **out_root,
                                       view_error_t *error_info);
@@ -1335,12 +1340,21 @@ static couchstore_error_t compact_view_fetchcb(couchfile_lookup_request *rq,
                                         const sized_buf *k,
                                         const sized_buf *v)
 {
-    couchstore_error_t ret;
+    int ret;
     sized_buf *k_c, *v_c;
     view_compact_ctx_t *ctx = (view_compact_ctx_t *) rq->callback_ctx;
 
     if (k == NULL || v == NULL) {
         return COUCHSTORE_ERROR_READ;
+    }
+
+    if (ctx->filter_fun) {
+        ret = ctx->filter_fun(k, v, ctx->filterbm);
+        if (ret < 0) {
+            return (couchstore_error_t) ret;
+        } else if (ret) {
+            return COUCHSTORE_SUCCESS;
+        }
     }
 
     k_c = arena_copy_buf(ctx->transient_arena, k);
@@ -1358,7 +1372,7 @@ static couchstore_error_t compact_view_fetchcb(couchfile_lookup_request *rq,
         arena_free_all(ctx->transient_arena);
     }
 
-    return ret;
+    return (couchstore_error_t) ret;
 }
 
 static couchstore_error_t compact_btree(tree_file *source,
@@ -1367,7 +1381,9 @@ static couchstore_error_t compact_btree(tree_file *source,
                                  compare_info *cmp,
                                  reduce_fn reduce_fun,
                                  reduce_fn rereduce_fun,
+                                 compact_filter_fn filter_fun,
                                  view_reducer_ctx_t *red_ctx,
+                                 const bitmap_t *filterbm,
                                  uint64_t *inserted,
                                  node_pointer **out_root)
 {
@@ -1407,9 +1423,15 @@ static couchstore_error_t compact_btree(tree_file *source,
         goto cleanup;
     }
 
+    compact_ctx.filter_fun = NULL;
     compact_ctx.mr = modify_result;
     compact_ctx.transient_arena = transient_arena;
     compact_ctx.inserted = inserted;
+
+    if (filterbm) {
+        compact_ctx.filterbm = filterbm;
+        compact_ctx.filter_fun = filter_fun;
+    }
 
     lookup_rq.cmp.compare = cmp->compare;
     lookup_rq.file = source;
@@ -1442,6 +1464,7 @@ cleanup:
 static couchstore_error_t compact_id_btree(tree_file *source,
                                     tree_file *target,
                                     const node_pointer *root,
+                                    const bitmap_t *filterbm,
                                     uint64_t *inserted,
                                     node_pointer **out_root)
 {
@@ -1456,7 +1479,9 @@ static couchstore_error_t compact_id_btree(tree_file *source,
                         &cmp,
                         view_id_btree_reduce,
                         view_id_btree_rereduce,
+                        view_id_btree_filter,
                         NULL,
+                        filterbm,
                         inserted,
                         out_root);
 
@@ -1467,6 +1492,7 @@ static couchstore_error_t compact_view_btree(tree_file *source,
                                       tree_file *target,
                                       const view_btree_info_t *info,
                                       const node_pointer *root,
+                                      const bitmap_t *filterbm,
                                       uint64_t *inserted,
                                       node_pointer **out_root,
                                       view_error_t *error_info)
@@ -1492,7 +1518,9 @@ static couchstore_error_t compact_view_btree(tree_file *source,
                         &cmp,
                         view_btree_reduce,
                         view_btree_rereduce,
+                        view_btree_filter,
                         red_ctx,
+                        filterbm,
                         inserted,
                         out_root);
 
@@ -1527,8 +1555,11 @@ couchstore_error_t couchstore_compact_view_group(view_group_info_t *info,
     index_header_t *header = NULL;
     node_pointer *id_root = NULL;
     node_pointer **view_roots = NULL;
+    bitmap_t *filterbm = NULL;
+    bitmap_t emptybm;
     int i;
 
+    memset(&emptybm, 0, sizeof(bitmap_t));
     error_info->view_name = NULL;
     error_info->error_msg = NULL;
     index_file.handle = NULL;
@@ -1538,14 +1569,14 @@ couchstore_error_t couchstore_compact_view_group(view_group_info_t *info,
     compact_file.ops = NULL;
     compact_file.path = NULL;
 
-    /*
-     * TODO(sarath): Add filter function to avoid iterating vbs in cleanup
-     * bitmask.
-     * */
-
     ret = decode_index_header(header_buf->buf, header_buf->size, &header);
     if (ret < 0) {
         goto cleanup;
+    }
+
+    /* Set filter bitmask if required */
+    if (!is_equal_bitmap(&emptybm, &header->cleanup_bitmask)) {
+        filterbm = &header->cleanup_bitmask;
     }
 
     view_roots = (node_pointer **) calloc(info->num_btrees,
@@ -1577,6 +1608,7 @@ couchstore_error_t couchstore_compact_view_group(view_group_info_t *info,
                                                   compact_file.handle);
     ret = compact_id_btree(&index_file, &compact_file,
                                         header->id_btree_state,
+                                        filterbm,
                                         inserted,
                                         &id_root);
     if (ret != COUCHSTORE_SUCCESS) {
@@ -1592,6 +1624,7 @@ couchstore_error_t couchstore_compact_view_group(view_group_info_t *info,
                                  &compact_file,
                                  &info->btree_infos[i],
                                  header->view_btree_states[i],
+                                 filterbm,
                                  inserted,
                                  &view_roots[i],
                                  error_info);
@@ -1605,6 +1638,7 @@ couchstore_error_t couchstore_compact_view_group(view_group_info_t *info,
         view_roots[i] = NULL;
     }
 
+    header->cleanup_bitmask = emptybm;
     ret = encode_index_header(header, &header_outbuf->buf, &header_outbuf->size);
     if (ret != COUCHSTORE_SUCCESS) {
         goto cleanup;
