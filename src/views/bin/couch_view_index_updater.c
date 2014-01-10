@@ -48,6 +48,7 @@ int main(int argc, char *argv[])
     size_t len;
     int batch_size;
     int ret = 2;
+    int is_sorted = 0;
     view_group_update_stats_t stats;
     sized_buf header_buf = {NULL, 0};
     sized_buf header_outbuf = {NULL, 0};
@@ -62,6 +63,7 @@ int main(int argc, char *argv[])
 
     if (couchstore_read_line(stdin, buf, BUF_SIZE) != buf) {
         fprintf(stderr, "Error reading temporary directory path\n");
+        ret = COUCHSTORE_ERROR_INVALID_ARGUMENTS;
         goto out;
     }
 
@@ -69,6 +71,7 @@ int main(int argc, char *argv[])
     tmp_dir = (char *) malloc(len + 1);
     if (tmp_dir == NULL) {
         fprintf(stderr, "Memory allocation failure\n");
+        ret = COUCHSTORE_ERROR_ALLOC_FAIL;
         goto out;
     }
 
@@ -79,6 +82,16 @@ int main(int argc, char *argv[])
     if (group_info == NULL) {
         ret = COUCHSTORE_ERROR_ALLOC_FAIL;
         goto out;
+    }
+
+    if (couchstore_read_line(stdin, buf, BUF_SIZE) != buf) {
+        fprintf(stderr, "Error reading is_sorted flag\n");
+        ret = COUCHSTORE_ERROR_INVALID_ARGUMENTS;
+        goto out;
+    }
+
+    if (!strncmp(buf, "s", 1)) {
+        is_sorted = 1;
     }
 
     source_files = (char **) calloc(group_info->num_btrees + 1, sizeof(char *));
@@ -144,18 +157,20 @@ int main(int argc, char *argv[])
         goto out;
     }
 
-    /* Sort all operation list files for id and view btrees */
-    ret = sort_view_ids_ops_file(source_files[0], tmp_dir);
-    if (ret != FILE_SORTER_SUCCESS) {
-        fprintf(stderr, "Error sorting id file: %d\n", ret);
-        goto out;
-    }
-
-    for (i = 1; i <= group_info->num_btrees; ++i) {
-        ret = sort_view_kvs_ops_file(source_files[i], tmp_dir);
+    if (!is_sorted) {
+        /* Sort all operation list files for id and view btrees */
+        ret = sort_view_ids_ops_file(source_files[0], tmp_dir);
         if (ret != FILE_SORTER_SUCCESS) {
-            fprintf(stderr, "Error sorting view %d file: %d\n",i-1, ret);
+            fprintf(stderr, "Error sorting id file: %d\n", ret);
             goto out;
+        }
+
+        for (i = 1; i <= group_info->num_btrees; ++i) {
+            ret = sort_view_kvs_ops_file(source_files[i], tmp_dir);
+            if (ret != FILE_SORTER_SUCCESS) {
+                fprintf(stderr, "Error sorting view %d file: %d\n",i-1, ret);
+                goto out;
+            }
         }
     }
 
