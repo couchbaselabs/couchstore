@@ -27,6 +27,14 @@
 #include "util.h"
 
 #define BUF_SIZE 8192
+#define MAX(a,b) ((a) > (b) ? a : b)
+
+static void stats_updater(uint64_t freq, uint64_t inserted)
+{
+    if (inserted % freq == 0) {
+        fprintf(stdout, "Stats = inserted : %"PRIu64"\n", freq);
+    }
+}
 
 int main(int argc, char *argv[])
 {
@@ -37,12 +45,19 @@ int main(int argc, char *argv[])
     int ret = COUCHSTORE_SUCCESS;
     sized_buf header_buf = {NULL, 0};
     sized_buf header_outbuf = {NULL, 0};
-    uint64_t inserted = 0;
+    uint64_t total_changes = 0;
     view_error_t error_info;
     cb_thread_t exit_thread;
+    compactor_stats_t stats;
 
     (void) argc;
     (void) argv;
+
+    /*
+     * Disable buffering for stdout since progress stats needs to be
+     * immediately available at erlang side
+     */
+    setvbuf(stdout, (char *) NULL, _IONBF, 0);
 
     /* Read target filepath */
     if (couchstore_read_line(stdin, buf, BUF_SIZE) != buf) {
@@ -61,6 +76,13 @@ int main(int argc, char *argv[])
 
     memcpy(target_file, buf, len);
     target_file[len] = '\0';
+
+    total_changes = couchstore_read_int(stdin, buf, sizeof(buf), &ret);
+    if (ret != COUCHSTORE_SUCCESS) {
+        fprintf(stderr, "Error reading total changes\n");
+        ret = COUCHSTORE_ERROR_INVALID_ARGUMENTS;
+        goto out;
+    }
 
     group_info = couchstore_read_view_group_info(stdin, stderr);
     if (group_info == NULL) {
@@ -90,6 +112,11 @@ int main(int argc, char *argv[])
         goto out;
     }
 
+    /* Setup stats update frequency to be percentage increment */
+    stats.inserted = 0;
+    stats.update_fun = stats_updater;
+    stats.freq = MAX(total_changes / 100, 1);
+
     ret = start_exit_listener(&exit_thread);
     if (ret) {
         fprintf(stderr, "Error starting stdin exit listener thread\n");
@@ -99,7 +126,7 @@ int main(int argc, char *argv[])
     ret = couchstore_compact_view_group(group_info,
                                         target_file,
                                         &header_buf,
-                                        &inserted,
+                                        &stats,
                                         &header_outbuf,
                                         &error_info);
 
@@ -117,7 +144,7 @@ int main(int argc, char *argv[])
     fwrite(header_outbuf.buf, header_outbuf.size, 1, stdout);
     fprintf(stdout, "\n");
 
-    fprintf(stdout, "Results = inserts : %"PRIu64"\n", inserted);
+    fprintf(stdout, "Results = inserts : %"PRIu64"\n", stats.inserted);
 
 out:
     couchstore_free_view_group_info(group_info);

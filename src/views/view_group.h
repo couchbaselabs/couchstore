@@ -25,8 +25,7 @@
 #include <stdio.h>
 #include <libcouchstore/couch_db.h>
 #include "index_header.h"
-#include "../arena.h"
-#include "../couch_btree.h"
+#include "compaction.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -105,7 +104,7 @@ extern "C" {
                                                  view_group_info_t *info,
                                                  const char *target_file,
                                                  const sized_buf *header_buf,
-                                                 uint64_t *inserted,
+                                                 compactor_stats_t *stats,
                                                  sized_buf *header_outbuf,
                                                  view_error_t *error_info);
 

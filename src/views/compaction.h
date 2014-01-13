@@ -37,13 +37,22 @@ extern "C" {
     typedef int (*compact_filter_fn)(const sized_buf *k, const sized_buf *v,
                                                          const bitmap_t *bm);
 
+    /* Function spec for updating compactor progress */
+    typedef void (*stats_update_fn)(uint64_t freq, uint64_t inserted);
+
+    typedef struct {
+        uint64_t freq;
+        uint64_t inserted;
+        stats_update_fn update_fun;
+    } compactor_stats_t;
+
     /* Compaction context definition */
     typedef struct {
         couchfile_modify_result *mr;
         arena *transient_arena;
-        uint64_t *inserted;
         const bitmap_t *filterbm;
         compact_filter_fn filter_fun;
+        compactor_stats_t *stats;
     } view_compact_ctx_t;
 
     int view_id_btree_filter(const sized_buf *k, const sized_buf *v,

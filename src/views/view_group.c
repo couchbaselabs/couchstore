@@ -27,7 +27,6 @@
 #include "values.h"
 #include "purgers.h"
 #include "util.h"
-#include "compaction.h"
 #include "../arena.h"
 #include "../couch_btree.h"
 #include "../internal.h"
@@ -113,14 +112,14 @@ static couchstore_error_t compact_btree(tree_file *source,
                                  compact_filter_fn filter_fun,
                                  view_reducer_ctx_t *red_ctx,
                                  const bitmap_t *filterbm,
-                                 uint64_t *inserted,
+                                 compactor_stats_t *stats,
                                  node_pointer **out_root);
 
 static couchstore_error_t compact_id_btree(tree_file *source,
                                     tree_file *target,
                                     const node_pointer *root,
                                     const bitmap_t *filterbm,
-                                    uint64_t *inserted,
+                                    compactor_stats_t *stats,
                                     node_pointer **out_root);
 
 static couchstore_error_t compact_view_btree(tree_file *source,
@@ -128,7 +127,7 @@ static couchstore_error_t compact_view_btree(tree_file *source,
                                       const view_btree_info_t *info,
                                       const node_pointer *root,
                                       const bitmap_t *filterbm,
-                                      uint64_t *inserted,
+                                      compactor_stats_t *stats,
                                       node_pointer **out_root,
                                       view_error_t *error_info);
 
@@ -1371,6 +1370,7 @@ static couchstore_error_t compact_view_fetchcb(couchfile_lookup_request *rq,
     int ret;
     sized_buf *k_c, *v_c;
     view_compact_ctx_t *ctx = (view_compact_ctx_t *) rq->callback_ctx;
+    compactor_stats_t *stats = ctx->stats;
 
     if (k == NULL || v == NULL) {
         return COUCHSTORE_ERROR_READ;
@@ -1392,8 +1392,11 @@ static couchstore_error_t compact_view_fetchcb(couchfile_lookup_request *rq,
         return ret;
     }
 
-    if (ctx->inserted) {
-        (*ctx->inserted)++;
+    if (stats) {
+        stats->inserted++;
+        if (stats->update_fun) {
+            stats->update_fun(stats->freq, stats->inserted);
+        }
     }
 
     if (ctx->mr->count == 0) {
@@ -1412,7 +1415,7 @@ static couchstore_error_t compact_btree(tree_file *source,
                                  compact_filter_fn filter_fun,
                                  view_reducer_ctx_t *red_ctx,
                                  const bitmap_t *filterbm,
-                                 uint64_t *inserted,
+                                 compactor_stats_t *stats,
                                  node_pointer **out_root)
 {
     couchstore_error_t ret = COUCHSTORE_SUCCESS;
@@ -1454,7 +1457,7 @@ static couchstore_error_t compact_btree(tree_file *source,
     compact_ctx.filter_fun = NULL;
     compact_ctx.mr = modify_result;
     compact_ctx.transient_arena = transient_arena;
-    compact_ctx.inserted = inserted;
+    compact_ctx.stats = stats;
 
     if (filterbm) {
         compact_ctx.filterbm = filterbm;
@@ -1493,7 +1496,7 @@ static couchstore_error_t compact_id_btree(tree_file *source,
                                     tree_file *target,
                                     const node_pointer *root,
                                     const bitmap_t *filterbm,
-                                    uint64_t *inserted,
+                                    compactor_stats_t *stats,
                                     node_pointer **out_root)
 {
     couchstore_error_t ret;
@@ -1510,7 +1513,7 @@ static couchstore_error_t compact_id_btree(tree_file *source,
                         view_id_btree_filter,
                         NULL,
                         filterbm,
-                        inserted,
+                        stats,
                         out_root);
 
     return ret;
@@ -1521,7 +1524,7 @@ static couchstore_error_t compact_view_btree(tree_file *source,
                                       const view_btree_info_t *info,
                                       const node_pointer *root,
                                       const bitmap_t *filterbm,
-                                      uint64_t *inserted,
+                                      compactor_stats_t *stats,
                                       node_pointer **out_root,
                                       view_error_t *error_info)
 {
@@ -1549,7 +1552,7 @@ static couchstore_error_t compact_view_btree(tree_file *source,
                         view_btree_filter,
                         red_ctx,
                         filterbm,
-                        inserted,
+                        stats,
                         out_root);
 
     if (ret != COUCHSTORE_SUCCESS) {
@@ -1573,7 +1576,7 @@ LIBCOUCHSTORE_API
 couchstore_error_t couchstore_compact_view_group(view_group_info_t *info,
                                                  const char *target_file,
                                                  const sized_buf *header_buf,
-                                                 uint64_t *inserted,
+                                                 compactor_stats_t *stats,
                                                  sized_buf *header_outbuf,
                                                  view_error_t *error_info)
 {
@@ -1637,7 +1640,7 @@ couchstore_error_t couchstore_compact_view_group(view_group_info_t *info,
     ret = compact_id_btree(&index_file, &compact_file,
                                         header->id_btree_state,
                                         filterbm,
-                                        inserted,
+                                        stats,
                                         &id_root);
     if (ret != COUCHSTORE_SUCCESS) {
         goto cleanup;
@@ -1653,7 +1656,7 @@ couchstore_error_t couchstore_compact_view_group(view_group_info_t *info,
                                  &info->btree_infos[i],
                                  header->view_btree_states[i],
                                  filterbm,
-                                 inserted,
+                                 stats,
                                  &view_roots[i],
                                  error_info);
 
