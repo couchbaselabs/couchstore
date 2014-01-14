@@ -46,6 +46,7 @@ static int process_file(const char *file)
     Db *db;
     couchstore_error_t errcode;
     uint64_t btreesize = 0;
+    int iterate_headers = getenv("ITERATE_HEADERS") != NULL;
 
     errcode = couchstore_open_db(file, COUCHSTORE_OPEN_FLAG_RDONLY, &db);
     if (errcode != COUCHSTORE_SUCCESS) {
@@ -54,7 +55,8 @@ static int process_file(const char *file)
         return -1;
     }
 
-    printf("DB Info (%s)\n", file);
+next_header:
+    printf("DB Info (%s) - header at %"PRIu64"\n", file, db->header.position);
     printf("   file format version: %"PRIu64"\n", db->header.disk_version);
     printf("   update_seq: %"PRIu64"\n", db->header.update_seq);
     print_db_info(db);
@@ -66,8 +68,14 @@ static int process_file(const char *file)
     }
     printf("   B-tree size: %s\n", size_str(btreesize));
     printf("   total disk size: %s\n", size_str(db->file.pos));
-
-    couchstore_close_db(db);
+    if (iterate_headers) {
+        if (couchstore_rewind_db_header(db) == COUCHSTORE_SUCCESS) {
+            printf("\n");
+            goto next_header;
+        }
+    } else {
+        couchstore_close_db(db);
+    }
 
     return 0;
 }

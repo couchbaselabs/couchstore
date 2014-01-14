@@ -122,6 +122,7 @@ CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/config.cmake.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
 # Tests:
+
 IF (LUA_FOUND)
 ADD_EXECUTABLE(couchscript src/couchscript.cc)
 SET_TARGET_PROPERTIES(couchscript PROPERTIES COMPILE_FLAGS -I${LUA_INCLUDE_DIR})
@@ -136,6 +137,17 @@ ADD_TEST(couchstore-dropdel couchscript tests/dropdel.lua)
 ADD_TEST(couchstore-largefile couchscript tests/largefile.lua)
 ADD_TEST(couchstore-large couchscript tests/large.lua)
 ENDIF(LUA_FOUND)
+
+MACRO (M_ADD_PYTHON_TEST name pyfile)
+  ADD_TEST(${name} python ${pyfile})
+  SET_PROPERTY(TEST ${name} PROPERTY ENVIRONMENT
+    "PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/python"
+    "LD_LIBRARY_PATH=${CMAKE_CURRENT_BINARY_DIR}")
+ENDMACRO()
+
+M_ADD_PYTHON_TEST(couchstore-purge tests/purge.py)
+M_ADD_PYTHON_TEST(couchstore-rewind tests/rewind.py)
+
 
 ADD_EXECUTABLE(couchstore_testapp tests/testapp.c
 	tests/file_merger_tests.c

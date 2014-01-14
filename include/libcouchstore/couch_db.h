@@ -111,6 +111,19 @@ extern "C" {
     LIBCOUCHSTORE_API
     couchstore_error_t couchstore_reopen_file(Db* db, char* filename, couchstore_open_flags flags);
 
+
+    /**
+     * Rewind a db handle to the next-oldest header still present in the file.
+     * If there is no next-oldest header, the db handle will be *closed*, and
+     * COUCHSTORE_DB_NO_LONGER_VALID will be returned.
+     *
+     * @param db The database handle to rewind
+     * @return COUCHSTORE_SUCCESS upon success, COUCHSTORE_DB_NO_LONGER_VALID if
+     * no next-oldest header was found.
+     */
+    LIBCOUCHSTORE_API
+    couchstore_error_t couchstore_rewind_db_header(Db *db);
+
     /**
      * Get the default couch_file_ops object
      */

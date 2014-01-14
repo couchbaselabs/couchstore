@@ -246,6 +246,14 @@ class CouchStore (object):
         _check(_lib.couchstore_db_info(self, byref(info)))
         return info
 
+    def rewindHeader(self):
+        """Rewinds the database handle to the next-oldest committed header. Closes the handle if none can be found"""
+        if hasattr(self, "_as_parameter_"):
+            err = _lib.couchstore_rewind_db_header(self)
+            if err != 0:
+                del self._as_parameter_
+            _check(err)
+
     COMPRESS = 1
 
     def save (self, id, data, options =0):

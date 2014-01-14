@@ -88,10 +88,10 @@ cleanup:
 }
 
 // Finds the database header by scanning back from the end of the file at 4k boundaries
-static couchstore_error_t find_header(Db *db)
+static couchstore_error_t find_header(Db *db, int64_t start_pos)
 {
     couchstore_error_t last_header_errcode = COUCHSTORE_ERROR_NO_HEADER;
-    int64_t pos = db->file.pos - 2;
+    int64_t pos = start_pos;
     pos -= pos % COUCH_BLOCK_SIZE;
     for (; pos >= 0; pos -= COUCH_BLOCK_SIZE) {
         couchstore_error_t errcode = find_header_at_pos(db, pos);
@@ -257,7 +257,7 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
             error_pass(create_header(db));
         }
     } else {
-        error_pass(find_header(db));
+        error_pass(find_header(db, db->file.pos - 2));
     }
 
     *pDb = db;
@@ -308,6 +308,29 @@ couchstore_error_t couchstore_reopen_file(Db* db, char* filename, couchstore_ope
     error_unless(previous.update_seq == db->header.update_seq, COUCHSTORE_ERROR_DB_NO_LONGER_VALID);
     db->dropped = 0;
 cleanup:
+    return errcode;
+}
+
+LIBCOUCHSTORE_API
+couchstore_error_t couchstore_rewind_db_header(Db *db)
+{
+    couchstore_error_t errcode;
+    error_unless(!db->dropped, COUCHSTORE_ERROR_FILE_CLOSED);
+    // free current header guts
+    free(db->header.by_id_root);
+    free(db->header.by_seq_root);
+    free(db->header.local_docs_root);
+
+    error_unless(db->header.position != 0, COUCHSTORE_ERROR_DB_NO_LONGER_VALID);
+    // find older header
+    error_pass(find_header(db, db->header.position - 2));
+
+cleanup:
+    // if we failed, free the handle and return an error
+    if(errcode != COUCHSTORE_SUCCESS) {
+        couchstore_close_db(db);
+        errcode = COUCHSTORE_ERROR_DB_NO_LONGER_VALID;
+    }
     return errcode;
 }
 
