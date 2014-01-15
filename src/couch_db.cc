@@ -1192,3 +1192,77 @@ couchstore_error_t couchstore_last_os_error(const Db *db,
 
     return COUCHSTORE_SUCCESS;
 }
+
+static couchstore_error_t btree_eval_seq_reduce(Db *db,
+                                                uint64_t *accum,
+                                                sized_buf *left,
+                                                sized_buf *right,
+                                                bool past_left_edge,
+                                                uint64_t diskpos) {
+    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
+    int bufpos = 1, nodebuflen = 0;
+    int node_type;
+    char *nodebuf = NULL;
+    nodebuflen = pread_compressed(&db->file, diskpos, &nodebuf);
+    error_unless(nodebuflen >= 0, (static_cast<couchstore_error_t>(nodebuflen)));  // if negative, it's an error code
+
+    node_type = nodebuf[0];
+    while(bufpos < nodebuflen) {
+        sized_buf k, v;
+        bufpos += read_kv(nodebuf + bufpos, &k, &v);
+        int left_cmp = seq_cmp(&k, left);
+        int right_cmp = seq_cmp(&k, right);
+        if(left_cmp < 0) {
+            continue;
+        }
+        if(node_type == KP_NODE) {
+            // In-range Item in a KP Node
+            const raw_node_pointer *raw = (const raw_node_pointer*)v.buf;
+            const raw_by_seq_reduce *rawreduce = (const raw_by_seq_reduce*) (v.buf + sizeof(raw_node_pointer));
+            uint64_t subcount = decode_raw40(rawreduce->count);
+            uint64_t pointer = decode_raw48(raw->pointer);
+            if((left_cmp >= 0 && !past_left_edge) || right_cmp >= 0) {
+                error_pass(btree_eval_seq_reduce(db, accum, left, right, past_left_edge, pointer));
+                if(right_cmp >= 0) {
+                    break;
+                } else {
+                    past_left_edge = true;
+                }
+            } else {
+                *accum += subcount;
+            }
+        } else {
+            if(right_cmp > 0) {
+                break;
+            }
+            // In-range Item in a KV Node
+            *accum += 1;
+        }
+    }
+cleanup:
+    return errcode;
+}
+
+LIBCOUCHSTORE_API
+couchstore_error_t couchstore_changes_count(Db* db,
+                                            uint64_t min_seq,
+                                            uint64_t max_seq,
+                                            uint64_t *count) {
+    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
+    raw_48 leftkr, rightkr;
+    sized_buf leftk, rightk;
+    leftk.buf = (char*) &leftkr;
+    rightk.buf = (char*) &rightkr;
+    leftk.size = 6;
+    rightk.size = 6;
+    leftkr = encode_raw48(min_seq);
+    rightkr = encode_raw48(max_seq);
+
+    *count = 0;
+    if(db->header.by_seq_root) {
+        error_pass(btree_eval_seq_reduce(db, count, &leftk, &rightk, false,
+                                         db->header.by_seq_root->pointer));
+    }
+cleanup:
+    return errcode;
+}

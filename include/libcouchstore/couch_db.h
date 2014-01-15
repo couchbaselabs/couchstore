@@ -705,6 +705,21 @@ extern "C" {
                                                  char* buf,
                                                  size_t size);
 
+     /**
+      * Counts the number of changes between two sequence numbers, inclusive.
+      *
+      * @param db The db to count changes in
+      * @param min_seq The minimum sequence to count
+      * @param max_seq The maximum sequence to count
+      * @param count Pointer to uint64_t to store count in
+      * @return COUCHSTORE_SUCCESS on success
+      */
+     LIBCOUCHSTORE_API
+     couchstore_error_t couchstore_changes_count(Db* db,
+                                                 uint64_t min_seq,
+                                                 uint64_t max_seq,
+                                                 uint64_t *count);
+
 #ifdef __cplusplus
 }
 #endif

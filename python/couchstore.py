@@ -108,6 +108,8 @@ class DbInfoStruct (Structure):
                 ("space_used", c_ulonglong),
                 ("header_position", c_ulonglong) ]
 
+class CounterStruct (Structure):
+    _fields_ = [("count", c_ulonglong)]
 
 ### DOCUMENT INFO CLASS:
 
@@ -392,6 +394,13 @@ class CouchStore (object):
             numIDs = 2
         _check(_lib.couchstore_docinfos_by_id(self, ids, c_uint(numIDs), c_uint64(1), \
                CouchStore.ITERATORFUNC(callback), c_void_p(0)))
+
+    def changesCount(self, minimum, maximum):
+        cstruct = CounterStruct()
+        err = _lib.couchstore_changes_count(self, c_uint64(minimum), \
+                                            c_uint64(maximum), pointer(cstruct))
+        _check(err)
+        return cstruct.count
 
     @property
     def localDocs(self):

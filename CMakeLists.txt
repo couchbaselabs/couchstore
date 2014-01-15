@@ -149,6 +149,7 @@ ENDMACRO()
 
 M_ADD_PYTHON_TEST(couchstore-purge tests/purge.py)
 M_ADD_PYTHON_TEST(couchstore-rewind tests/rewind.py)
+M_ADD_PYTHON_TEST(couchstore-changecount tests/changecount.py)
 
 
 ADD_EXECUTABLE(couchstore_testapp tests/testapp.c
