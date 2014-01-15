@@ -36,7 +36,6 @@ int main(int argc, char *argv[])
     char **source_files = NULL;
     char *tmp_dir = NULL;
     int i;
-    size_t len;
     int batch_size;
     int ret = 2;
     int is_sorted = 0;
@@ -58,16 +57,12 @@ int main(int argc, char *argv[])
         goto out;
     }
 
-    len = strlen(buf);
-    tmp_dir = (char *) malloc(len + 1);
+    tmp_dir = strdup(buf);
     if (tmp_dir == NULL) {
         fprintf(stderr, "Memory allocation failure\n");
         ret = COUCHSTORE_ERROR_ALLOC_FAIL;
         goto out;
     }
-
-    memcpy(tmp_dir, buf, len);
-    tmp_dir[len] = '\0';
 
     group_info = couchstore_read_view_group_info(stdin, stderr);
     if (group_info == NULL) {
@@ -104,15 +99,12 @@ int main(int argc, char *argv[])
             goto out;
         }
 
-        len = strlen(buf);
-        source_files[i] = (char *) malloc(len + 1);
+        source_files[i] = strdup(buf);
         if (source_files[i] == NULL) {
             fprintf(stderr, "Memory allocation failure\n");
             ret = COUCHSTORE_ERROR_ALLOC_FAIL;
             goto out;
         }
-        memcpy(source_files[i], buf, len);
-        source_files[i][len] = '\0';
     }
 
     batch_size = couchstore_read_int(stdin, buf, sizeof(buf), &ret);

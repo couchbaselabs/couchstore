@@ -41,7 +41,6 @@ int main(int argc, char *argv[])
     view_group_info_t *group_info = NULL;
     char buf[BUF_SIZE];
     char *target_file = NULL;
-    size_t len;
     int ret = COUCHSTORE_SUCCESS;
     sized_buf header_buf = {NULL, 0};
     sized_buf header_outbuf = {NULL, 0};
@@ -66,16 +65,12 @@ int main(int argc, char *argv[])
         goto out;
     }
 
-    len = strlen(buf);
-    target_file = (char *) malloc(len + 1);
+    target_file = strdup(buf);
     if (target_file == NULL) {
         fprintf(stderr, "Memory allocation failure\n");
         ret = COUCHSTORE_ERROR_ALLOC_FAIL;
         goto out;
     }
-
-    memcpy(target_file, buf, len);
-    target_file[len] = '\0';
 
     total_changes = couchstore_read_int(stdin, buf, sizeof(buf), &ret);
     if (ret != COUCHSTORE_SUCCESS) {
