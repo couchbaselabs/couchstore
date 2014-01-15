@@ -1030,6 +1030,7 @@ couchstore_error_t couchstore_db_info(Db *db, DbInfo* dbinfo) {
     dbinfo->header_position = db->header.position;
     dbinfo->last_sequence = db->header.update_seq;
     dbinfo->deleted_count = dbinfo->doc_count = dbinfo->space_used = 0;
+    dbinfo->file_size = db->file.pos;
     if (id_root) {
         raw_by_id_reduce* id_reduce = (raw_by_id_reduce*) id_root->reduce_value.buf;
         dbinfo->doc_count = decode_raw40(id_reduce->notdeleted);

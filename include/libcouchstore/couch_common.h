@@ -94,6 +94,7 @@ extern "C" {
         uint64_t doc_count;         /**< Total number of (non-deleted) documents */
         uint64_t deleted_count;     /**< Total number of deleted documents */
         uint64_t space_used;        /**< Disk space actively used by docs */
+        uint64_t file_size;         /**< Total disk space used by database */
         cs_off_t header_position;   /**< File offset of current header */
     } DbInfo;
 
