@@ -94,6 +94,7 @@ TARGET_LINK_LIBRARIES(couch_view_group_cleanup couchstore)
 ADD_EXECUTABLE(couch_view_index_updater src/views/bin/couch_view_index_updater.c)
 TARGET_LINK_LIBRARIES(couch_view_index_updater couchstore)
 
+IF (INSTALL_HEADER_FILES)
 INSTALL(FILES
         include/libcouchstore/couch_db.h
         include/libcouchstore/couch_index.h
@@ -102,6 +103,7 @@ INSTALL(FILES
         include/libcouchstore/file_ops.h
         include/libcouchstore/visibility.h
         DESTINATION include/libcouchstore)
+ENDIF(INSTALL_HEADER_FILES)
 
 INSTALL(TARGETS couchstore
         RUNTIME DESTINATION bin
