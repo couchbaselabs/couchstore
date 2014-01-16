@@ -24,6 +24,7 @@
 #include <string.h>
 #include "../view_group.h"
 #include "../util.h"
+#include "util.h"
 
 #define BUF_SIZE 8192
 
@@ -39,6 +40,7 @@ int main(int argc, char *argv[])
     int ret = 2;
     uint64_t header_pos;
     view_error_t error_info;
+    cb_thread_t exit_thread;
 
     (void) argc;
     (void) argv;
@@ -92,6 +94,12 @@ int main(int argc, char *argv[])
         }
         memcpy(source_files[i], buf, len);
         source_files[i][len] = '\0';
+    }
+
+    ret = start_exit_listener(&exit_thread);
+    if (ret) {
+        fprintf(stderr, "Error starting stdin exit listener thread\n");
+        goto out;
     }
 
     ret = couchstore_build_view_group(group_info,

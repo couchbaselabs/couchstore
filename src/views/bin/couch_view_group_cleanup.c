@@ -25,18 +25,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
+#include "util.h"
 
 #define BUF_SIZE 8192
-
-static void die_on_exit_msg(void *args)
-{
-    char buf[4];
-    (void) args;
-
-    if (fread(buf, 1, 4, stdin) == 4 && !strncmp(buf, "exit", 4)) {
-        exit(1);
-    }
-}
 
 int main(int argc, char *argv[])
 {
@@ -56,11 +47,9 @@ int main(int argc, char *argv[])
         goto out;
     }
 
-    /* Start a watcher thread to gracefully die on exit message */
-    ret = cb_create_thread(&exit_thread, die_on_exit_msg, NULL, 1);
-    if (ret < 0) {
+    ret = start_exit_listener(&exit_thread);
+    if (ret) {
         fprintf(stderr, "Error starting stdin exit listener thread\n");
-        ret = -ret;
         goto out;
     }
 
