@@ -25,11 +25,14 @@ except OSError:
     try:
         _lib = CDLL("libcouchstore.dylib")  # Mac OS
     except OSError:
-        try:                                # Windows
-            _lib = CDLL("libcouchstore-1.dll")
-        except Exception, err:
-            traceback.print_exc()
-            exit(1)
+        try:
+            _lib = CDLL("couchstore.dll")   # Windows
+        except OSError:
+            try:                            # Windows (pre-CMake)
+                _lib = CDLL("libcouchstore-1.dll")
+            except Exception, err:
+                traceback.print_exc()
+                exit(1)
 
 _lib.couchstore_strerror.restype = c_char_p
 
