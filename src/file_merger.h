@@ -68,14 +68,19 @@ extern "C" {
     typedef void  (*file_merger_record_free_t)(void *record,
                                                void *user_ctx);
 
+    /* Callback which gets called for resulting merge records */
+    typedef file_merger_error_t (*file_merger_feed_record_t)(void *record_buffer,
+                                                             void *user_ctx);
 
     file_merger_error_t merge_files(const char *source_files[],
                                     unsigned num_files,
                                     const char *dest_file,
                                     file_merger_read_record_t read_record,
                                     file_merger_write_record_t write_record,
+                                    file_merger_feed_record_t feed_record,
                                     file_merger_compare_records_t compare_records,
                                     file_merger_record_free_t free_record,
+                                    int skip_writeback,
                                     void *user_ctx);
 
 

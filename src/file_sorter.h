@@ -41,7 +41,8 @@ extern "C" {
         FILE_SORTER_ERROR_DELETE_FILE        = -11,
         FILE_SORTER_ERROR_MK_TMP_FILE        = -12,
         FILE_SORTER_ERROR_NOT_EMPTY_TMP_FILE = -13,
-        FILE_SORTER_ERROR_TMP_FILE_BASENAME  = -14
+        FILE_SORTER_ERROR_TMP_FILE_BASENAME  = -14,
+        FILE_SORTER_ERROR_MISSING_CALLBACK   = -15
     } file_sorter_error_t;
 
 
@@ -51,8 +52,10 @@ extern "C" {
                                   unsigned max_buffer_size,
                                   file_merger_read_record_t read_record,
                                   file_merger_write_record_t write_record,
+                                  file_merger_feed_record_t feed_record,
                                   file_merger_compare_records_t compare_records,
                                   file_merger_record_free_t free_record,
+                                  int skip_writeback,
                                   void *user_ctx);
 
 

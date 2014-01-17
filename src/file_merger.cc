@@ -52,6 +52,7 @@ typedef struct file_merger_ctx_t {
     file_merger_write_record_t     write_record;
     file_merger_record_free_t      free_record;
     file_merger_compare_records_t  compare_records;
+    file_merger_feed_record_t      feed_record;
     void                           *user_ctx;
     sorted_vector_t                sorted_vector;
 } file_merger_ctx_t;
@@ -70,8 +71,10 @@ file_merger_error_t merge_files(const char *source_files[],
                                 const char *dest_file,
                                 file_merger_read_record_t read_record,
                                 file_merger_write_record_t write_record,
+                                file_merger_feed_record_t feed_record,
                                 file_merger_compare_records_t compare_records,
                                 file_merger_record_free_t free_record,
+                                int skip_writeback,
                                 void *user_ctx)
 {
     file_merger_ctx_t ctx;
@@ -88,14 +91,19 @@ file_merger_error_t merge_files(const char *source_files[],
     ctx.free_record = free_record;
     ctx.compare_records = compare_records;
     ctx.user_ctx = user_ctx;
+    ctx.feed_record = feed_record;
+
+    if (feed_record && skip_writeback) {
+        ctx.dest_file = NULL;
+    } else {
+        ctx.dest_file = fopen(dest_file, "ab");
+    }
 
     if (!init_sorted_vector(&ctx.sorted_vector, num_files, &ctx)) {
         return FILE_MERGER_ERROR_ALLOC;
     }
 
-    ctx.dest_file = fopen(dest_file, "ab");
-
-    if (ctx.dest_file == NULL) {
+    if (feed_record == NULL && ctx.dest_file == NULL) {
         sorted_vector_destroy(&ctx.sorted_vector);
         return FILE_MERGER_ERROR_OPEN_FILE;
     }
@@ -132,7 +140,9 @@ file_merger_error_t merge_files(const char *source_files[],
     }
     free(ctx.files);
     sorted_vector_destroy(&ctx.sorted_vector);
-    fclose(ctx.dest_file);
+    if (ctx.dest_file) {
+        fclose(ctx.dest_file);
+    }
 
     return ret;
 }
@@ -178,10 +188,22 @@ static file_merger_error_t do_merge_files(file_merger_ctx_t *ctx)
         assert(record != NULL);
         assert(ctx->files[record->file] != NULL);
 
-        ret = (*ctx->write_record)(ctx->dest_file, record->data, ctx->user_ctx);
-        if (ret != FILE_MERGER_SUCCESS) {
-            FREE_RECORD(ctx, record);
-            return ret;
+        if (ctx->feed_record) {
+            ret = (*ctx->feed_record)(record->data, ctx->user_ctx);
+            if (ret != FILE_MERGER_SUCCESS) {
+                FREE_RECORD(ctx, record);
+                return ret;
+            }
+        } else {
+            assert(ctx->dest_file != NULL);
+        }
+
+        if (ctx->dest_file) {
+            ret = (*ctx->write_record)(ctx->dest_file, record->data, ctx->user_ctx);
+            if (ret != FILE_MERGER_SUCCESS) {
+                FREE_RECORD(ctx, record);
+                return ret;
+            }
         }
 
         record_len = (*ctx->read_record)(ctx->files[record->file],

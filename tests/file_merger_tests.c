@@ -159,8 +159,8 @@ void file_merger_tests(void)
     remove(dest_file);
     ret = merge_files(source_files, N_FILES,
                       dest_file,
-                      read_record, write_record, compare_records,
-                      free_record, NULL);
+                      read_record, write_record, NULL, compare_records,
+                      free_record, 0, NULL);
 
     assert(ret == FILE_MERGER_SUCCESS);
     assert(check_file_sorted(dest_file) == num_records);

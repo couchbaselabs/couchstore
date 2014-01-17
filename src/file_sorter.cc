@@ -44,12 +44,14 @@ typedef struct {
     unsigned                      max_buffer_size;
     file_merger_read_record_t     read_record;
     file_merger_write_record_t    write_record;
+    file_merger_feed_record_t     feed_record;
     file_merger_compare_records_t compare_records;
     file_merger_record_free_t     free_record;
     void                         *user_ctx;
     FILE                         *f;
     tmp_file_t                   *tmp_files;
     unsigned                      active_tmp_files;
+    int                           skip_writeback;
 } file_sort_ctx_t;
 
 
@@ -73,6 +75,8 @@ static file_sorter_error_t merge_tmp_files(file_sort_ctx_t *ctx,
                                            unsigned end,
                                            unsigned next_level);
 
+static file_sorter_error_t iterate_records_file(file_sort_ctx_t *ctx, const char *file);
+
 
 file_sorter_error_t sort_file(const char *source_file,
                               const char *tmp_dir,
@@ -80,8 +84,10 @@ file_sorter_error_t sort_file(const char *source_file,
                               unsigned max_buffer_size,
                               file_merger_read_record_t read_record,
                               file_merger_write_record_t write_record,
+                              file_merger_feed_record_t feed_record,
                               file_merger_compare_records_t compare_records,
                               file_merger_record_free_t free_record,
+                              int skip_writeback,
                               void *user_ctx)
 {
     file_sort_ctx_t ctx;
@@ -103,10 +109,16 @@ file_sorter_error_t sort_file(const char *source_file,
     ctx.max_buffer_size = max_buffer_size;
     ctx.read_record = read_record;
     ctx.write_record = write_record;
+    ctx.feed_record = feed_record;
     ctx.compare_records = compare_records;
     ctx.free_record = free_record;
     ctx.user_ctx = user_ctx;
     ctx.active_tmp_files = 0;
+    ctx.skip_writeback = skip_writeback;
+
+    if (skip_writeback && !feed_record) {
+        return FILE_SORTER_ERROR_MISSING_CALLBACK;
+    }
 
     ctx.f = fopen(source_file, "rb");
     if (ctx.f == NULL) {
@@ -152,10 +164,12 @@ static file_sorter_error_t do_sort_file(file_sort_ctx_t *ctx)
     int record_size;
     struct record_node *buffer, buffer_head;
     file_sorter_error_t ret;
+    file_merger_feed_record_t feed_record = ctx->feed_record;
 
     buffer_head.record = NULL;
     buffer_head.next = NULL;
     buffer = &buffer_head;
+    ctx->feed_record = NULL;
 
     while (1) {
         record_size = (*ctx->read_record)(ctx->f, &record, ctx->user_ctx);
@@ -208,11 +222,6 @@ static file_sorter_error_t do_sort_file(file_sort_ctx_t *ctx)
         return FILE_SORTER_SUCCESS;
     }
 
-    if (remove(ctx->source_file) != 0) {
-        ret = FILE_SORTER_ERROR_DELETE_FILE;
-        goto failure;
-    }
-
     if (buffer_size > 0) {
         ret = write_record_list(&buffer_head, ctx);
         if (ret != FILE_SORTER_SUCCESS) {
@@ -222,8 +231,28 @@ static file_sorter_error_t do_sort_file(file_sort_ctx_t *ctx)
 
     assert(ctx->active_tmp_files > 0);
 
+    if (!ctx->skip_writeback && remove(ctx->source_file) != 0) {
+        ret = FILE_SORTER_ERROR_DELETE_FILE;
+        goto failure;
+    }
+
+    // Restore feed_record callback for final merge */
+    ctx->feed_record = feed_record;
     if (ctx->active_tmp_files == 1) {
-        if (rename(ctx->tmp_files[0].name, ctx->source_file) != 0) {
+        if (ctx->feed_record) {
+            ret = iterate_records_file(ctx, ctx->tmp_files[0].name);
+            if (ret != FILE_SORTER_SUCCESS) {
+                goto failure;
+            }
+
+            if (ctx->skip_writeback && remove(ctx->tmp_files[0].name) != 0) {
+                ret = FILE_SORTER_ERROR_DELETE_FILE;
+                goto failure;
+            }
+        }
+
+        if (!ctx->skip_writeback &&
+                rename(ctx->tmp_files[0].name, ctx->source_file) != 0) {
             ret = FILE_SORTER_ERROR_RENAME_FILE;
             goto failure;
         }
@@ -473,6 +502,7 @@ static file_sorter_error_t merge_tmp_files(file_sort_ctx_t *ctx,
     const char **files;
     unsigned nfiles, i;
     file_sorter_error_t ret;
+    file_merger_feed_record_t feed_record = NULL;
 
     nfiles = end - start;
     files = (const char **) malloc(sizeof(char *) * nfiles);
@@ -486,7 +516,13 @@ static file_sorter_error_t merge_tmp_files(file_sort_ctx_t *ctx,
 
     if (next_level == 0) {
         /* Final merge iteration. */
-        dest_tmp_file = (char *) ctx->source_file;
+        if (ctx->skip_writeback) {
+            dest_tmp_file = NULL;
+        } else {
+            dest_tmp_file = (char *) ctx->source_file;
+        }
+
+        feed_record = ctx->feed_record;
     } else {
         dest_tmp_file = tmp_file_path(ctx->tmp_dir, ctx->tmp_file_prefix);
         if (dest_tmp_file == NULL) {
@@ -500,8 +536,10 @@ static file_sorter_error_t merge_tmp_files(file_sort_ctx_t *ctx,
                                             dest_tmp_file,
                                             ctx->read_record,
                                             ctx->write_record,
+                                            feed_record,
                                             ctx->compare_records,
                                             ctx->free_record,
+                                            ctx->skip_writeback,
                                             ctx->user_ctx);
 
     free(files);
@@ -538,4 +576,43 @@ static file_sorter_error_t merge_tmp_files(file_sort_ctx_t *ctx,
     }
 
     return FILE_SORTER_SUCCESS;
+}
+
+static file_sorter_error_t iterate_records_file(file_sort_ctx_t *ctx,
+                                               const char *file)
+{
+    void *record_data = NULL;
+    int record_len;
+    FILE *f = fopen(file, "rb");
+    int ret = FILE_SORTER_SUCCESS;
+
+    if (f == NULL) {
+        return FILE_SORTER_ERROR_OPEN_FILE;
+    }
+
+    while (1) {
+        record_len = (*ctx->read_record)(f, &record_data, ctx->user_ctx);
+        if (record_len == 0) {
+            record_data = NULL;
+            break;
+        } else if (record_len < 0) {
+            ret = record_len;
+            goto cleanup;
+        } else {
+            ret = (*ctx->feed_record)(record_data, ctx->user_ctx);
+            if (ret != FILE_SORTER_SUCCESS) {
+                goto cleanup;
+            }
+
+            free(record_data);
+        }
+    }
+
+cleanup:
+    free(record_data);
+    if (f != NULL) {
+        fclose(f);
+    }
+
+    return (file_sorter_error_t) ret;
 }

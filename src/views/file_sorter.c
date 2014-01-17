@@ -114,7 +114,9 @@ static file_sorter_error_t do_sort_file(const char *file_path,
                      SORT_MAX_BUFFER_SIZE,
                      read_view_record,
                      write_view_record,
+                     NULL,
                      compare_view_records,
                      free_view_record,
+                     0,
                      ctx);
 }
