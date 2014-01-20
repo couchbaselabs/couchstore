@@ -168,7 +168,7 @@ int main(int argc, char *argv[])
         switch (type) {
         case INITIAL_VIEW_FILE:
         case INITIAL_SPATIAL_FILE:
-            error = sort_view_ids_file(id_file, tmp_dir);
+            error = sort_view_ids_file(id_file, tmp_dir, NULL, NULL);
             break;
         case INCREMENTAL_VIEW_FILE:
             error = sort_view_ids_ops_file(id_file, tmp_dir);
@@ -185,7 +185,7 @@ int main(int argc, char *argv[])
         if (strcmp(view_files[i], NIL_FILE) != 0) {
             switch (type) {
             case INITIAL_VIEW_FILE:
-                error = sort_view_kvs_file(view_files[i], tmp_dir);
+                error = sort_view_kvs_file(view_files[i], tmp_dir, NULL, NULL);
                 break;
             case INCREMENTAL_VIEW_FILE:
                 error = sort_view_kvs_ops_file(view_files[i], tmp_dir);

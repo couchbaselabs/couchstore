@@ -42,7 +42,9 @@ extern "C" {
      */
     LIBCOUCHSTORE_API
     file_sorter_error_t sort_view_kvs_file(const char *file_path,
-                                           const char *tmp_dir);
+                                           const char *tmp_dir,
+                                           file_merger_feed_record_t callback,
+                                           void *user_ctx);
 
     /*
      * Sort a file containing records of btree operations for a view id
@@ -57,7 +59,9 @@ extern "C" {
      */
     LIBCOUCHSTORE_API
     file_sorter_error_t sort_view_ids_file(const char *file_path,
-                                           const char *tmp_dir);
+                                           const char *tmp_dir,
+                                           file_merger_feed_record_t callback,
+                                           void *user_ctx);
 
     /*
      * Sort a file containing records for a spatial index.
@@ -67,6 +71,12 @@ extern "C" {
                                               const char *tmp_dir,
                                               const double *mbb,
                                               const uint16_t mbb_num);
+
+    /* Record file sorter */
+    typedef file_sorter_error_t (*sort_record_fn)(const char *file_path,
+                                                  const char *tmp_dir,
+                                                  file_merger_feed_record_t callback,
+                                                  void *user_ctx);
 
 #ifdef __cplusplus
 }

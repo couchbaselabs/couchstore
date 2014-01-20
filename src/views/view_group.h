@@ -58,6 +58,11 @@ extern "C" {
        uint64_t purged;
     } view_group_update_stats_t;
 
+    typedef struct {
+        arena *transient_arena;
+        couchfile_modify_result *modify_result;
+    } view_btree_builder_ctx_t;
+
     /* Read a view group definition from an input stream, and write any
        errors to the optional error stream. */
     LIBCOUCHSTORE_API
@@ -72,6 +77,7 @@ extern "C" {
                                                    const char *id_records_file,
                                                    const char *kv_records_files[],
                                                    const char *dst_file,
+                                                   const char *tmpdir,
                                                    uint64_t *header_pos,
                                                    view_error_t *error_info);
 

@@ -28,6 +28,8 @@
 
 static file_sorter_error_t do_sort_file(const char *file_path,
                                         const char *tmp_dir,
+                                        file_merger_feed_record_t callback,
+                                        int skip_writeback,
                                         view_file_merge_ctx_t *ctx);
 
 LIBCOUCHSTORE_API
@@ -39,20 +41,23 @@ file_sorter_error_t sort_view_kvs_ops_file(const char *file_path,
     ctx.key_cmp_fun = view_key_cmp;
     ctx.type = INCREMENTAL_UPDATE_VIEW_RECORD;
 
-    return do_sort_file(file_path, tmp_dir, &ctx);
+    return do_sort_file(file_path, tmp_dir, NULL, 0, &ctx);
 }
 
 
 LIBCOUCHSTORE_API
 file_sorter_error_t sort_view_kvs_file(const char *file_path,
-                                       const char *tmp_dir)
+                                       const char *tmp_dir,
+                                       file_merger_feed_record_t callback,
+                                       void *user_ctx)
 {
     view_file_merge_ctx_t ctx;
 
     ctx.key_cmp_fun = view_key_cmp;
     ctx.type = INITIAL_BUILD_VIEW_RECORD;
+    ctx.user_ctx = user_ctx;
 
-    return do_sort_file(file_path, tmp_dir, &ctx);
+    return do_sort_file(file_path, tmp_dir, callback, 1, &ctx);
 }
 
 
@@ -65,20 +70,23 @@ file_sorter_error_t sort_view_ids_ops_file(const char *file_path,
     ctx.key_cmp_fun = view_id_cmp;
     ctx.type = INCREMENTAL_UPDATE_VIEW_RECORD;
 
-    return do_sort_file(file_path, tmp_dir, &ctx);
+    return do_sort_file(file_path, tmp_dir, NULL, 0, &ctx);
 }
 
 
 LIBCOUCHSTORE_API
 file_sorter_error_t sort_view_ids_file(const char *file_path,
-                                       const char *tmp_dir)
+                                       const char *tmp_dir,
+                                       file_merger_feed_record_t callback,
+                                       void *user_ctx)
 {
     view_file_merge_ctx_t ctx;
 
     ctx.key_cmp_fun = view_id_cmp;
     ctx.type = INITIAL_BUILD_VIEW_RECORD;
+    ctx.user_ctx = user_ctx;
 
-    return do_sort_file(file_path, tmp_dir, &ctx);
+    return do_sort_file(file_path, tmp_dir, callback, 1, &ctx);
 }
 
 
@@ -97,7 +105,7 @@ file_sorter_error_t sort_spatial_kvs_file(const char *file_path,
     ctx.type = INITIAL_BUILD_SPATIAL_RECORD;
     ctx.user_ctx = (void *)user_ctx;
 
-    ret = do_sort_file(file_path, tmp_dir, &ctx);
+    ret = do_sort_file(file_path, tmp_dir, NULL, 0, &ctx);
 
     free_spatial_scale_factor(user_ctx);
     return ret;
@@ -106,6 +114,8 @@ file_sorter_error_t sort_spatial_kvs_file(const char *file_path,
 
 static file_sorter_error_t do_sort_file(const char *file_path,
                                         const char *tmp_dir,
+                                        file_merger_feed_record_t callback,
+                                        int skip_writeback,
                                         view_file_merge_ctx_t *ctx)
 {
     return sort_file(file_path,
@@ -114,9 +124,9 @@ static file_sorter_error_t do_sort_file(const char *file_path,
                      SORT_MAX_BUFFER_SIZE,
                      read_view_record,
                      write_view_record,
-                     NULL,
+                     callback,
                      compare_view_records,
                      free_view_record,
-                     0,
+                     skip_writeback,
                      ctx);
 }

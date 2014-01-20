@@ -27,6 +27,7 @@
 #include "values.h"
 #include "purgers.h"
 #include "util.h"
+#include "file_sorter.h"
 #include "../arena.h"
 #include "../couch_btree.h"
 #include "../internal.h"
@@ -46,16 +47,20 @@ static couchstore_error_t build_btree(const char *source_file,
                                       compare_info *cmp,
                                       reduce_fn reduce_fun,
                                       reduce_fn rereduce_fun,
+                                      const char *tmpdir,
+                                      sort_record_fn sort_fun,
                                       void *reduce_ctx,
                                       node_pointer **out_root);
 
 static couchstore_error_t build_id_btree(const char *source_file,
                                          tree_file *dest_file,
+                                         const char *tmpdir,
                                          node_pointer **out_root);
 
 static couchstore_error_t build_view_btree(const char *source_file,
                                            const view_btree_info_t *info,
                                            tree_file *dest_file,
+                                           const char *tmpdir,
                                            node_pointer **out_root,
                                            view_error_t *error_info);
 
@@ -335,6 +340,7 @@ couchstore_error_t couchstore_build_view_group(view_group_info_t *info,
                                                const char *id_records_file,
                                                const char *kv_records_files[],
                                                const char *dst_file,
+                                               const char *tmpdir,
                                                uint64_t *header_pos,
                                                view_error_t *error_info)
 {
@@ -377,7 +383,7 @@ couchstore_error_t couchstore_build_view_group(view_group_info_t *info,
         goto out;
     }
 
-    ret = build_id_btree(id_records_file, &index_file, &id_root);
+    ret = build_id_btree(id_records_file, &index_file, tmpdir, &id_root);
     if (ret != COUCHSTORE_SUCCESS) {
         goto out;
     }
@@ -390,6 +396,7 @@ couchstore_error_t couchstore_build_view_group(view_group_info_t *info,
         ret = build_view_btree(kv_records_files[i],
                                &info->btree_infos[i],
                                &index_file,
+                               tmpdir,
                                &view_roots[i],
                                error_info);
         if (ret != COUCHSTORE_SUCCESS) {
@@ -501,11 +508,43 @@ static int view_btree_cmp(const sized_buf *key1, const sized_buf *key2)
 }
 
 
+/*
+ * For initial btree build, feed the btree builder as soon as
+ * sorted records are available.
+ */
+static file_merger_error_t build_btree_record_callback(void *buf, void *ctx)
+{
+    int ret;
+    sized_buf *k, *v;
+    view_file_merge_record_t *rec = (view_file_merge_record_t *) buf;
+    view_file_merge_ctx_t *merge_ctx = (view_file_merge_ctx_t *) ctx;
+    view_btree_builder_ctx_t *build_ctx =
+                    (view_btree_builder_ctx_t *) merge_ctx->user_ctx;
+
+
+    k = arena_copy_buf(build_ctx->transient_arena, &rec->k);
+    v = arena_copy_buf(build_ctx->transient_arena, &rec->v);
+    ret = mr_push_item(k, v, build_ctx->modify_result);
+
+    if (ret != COUCHSTORE_SUCCESS) {
+        return ret;
+    }
+
+    if (build_ctx->modify_result->count == 0) {
+        arena_free_all(build_ctx->transient_arena);
+    }
+
+    return ret;
+}
+
+
 static couchstore_error_t build_btree(const char *source_file,
                                       tree_file *dest_file,
                                       compare_info *cmp,
                                       reduce_fn reduce_fun,
                                       reduce_fn rereduce_fun,
+                                      const char *tmpdir,
+                                      sort_record_fn sort_fun,
                                       void *reduce_ctx,
                                       node_pointer **out_root)
 {
@@ -513,7 +552,7 @@ static couchstore_error_t build_btree(const char *source_file,
     arena *transient_arena = new_arena(0);
     arena *persistent_arena = new_arena(0);
     couchfile_modify_result *mr;
-    FILE *f = NULL;
+    view_btree_builder_ctx_t build_ctx;
 
     if (transient_arena == NULL || persistent_arena == NULL) {
         ret = COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -534,31 +573,14 @@ static couchstore_error_t build_btree(const char *source_file,
         goto out;
     }
 
-    f = fopen(source_file, "rb");
-    if (f == NULL) {
-        ret = COUCHSTORE_ERROR_OPEN_FILE;
+    build_ctx.transient_arena = transient_arena;
+    build_ctx.modify_result = mr;
+
+    ret = (couchstore_error_t) sort_fun(source_file,
+                                        tmpdir,
+                                        build_btree_record_callback, &build_ctx);
+    if (ret != COUCHSTORE_SUCCESS) {
         goto out;
-    }
-
-    while (1) {
-        sized_buf k, v;
-        int read_ret;
-
-        read_ret = read_record(f, transient_arena, &k, &v, NULL);
-        if (read_ret == 0) {
-            break;
-        } else if (read_ret < 0) {
-            ret = (couchstore_error_t) read_ret;
-            goto out;
-        }
-
-        ret = mr_push_item(&k, &v, mr);
-        if (ret != COUCHSTORE_SUCCESS) {
-            goto out;
-        }
-        if (mr->count == 0) {
-            arena_free_all(transient_arena);
-        }
     }
 
     *out_root = complete_new_btree(mr, &ret);
@@ -570,9 +592,6 @@ static couchstore_error_t build_btree(const char *source_file,
     remove(source_file);
 
 out:
-    if (f != NULL) {
-        fclose(f);
-    }
     if (transient_arena != NULL) {
         delete_arena(transient_arena);
     }
@@ -586,6 +605,7 @@ out:
 
 static couchstore_error_t build_id_btree(const char *source_file,
                                          tree_file *dest_file,
+                                         const char *tmpdir,
                                          node_pointer **out_root)
 {
     couchstore_error_t ret;
@@ -598,6 +618,8 @@ static couchstore_error_t build_id_btree(const char *source_file,
                       &cmp,
                       view_id_btree_reduce,
                       view_id_btree_rereduce,
+                      tmpdir,
+                      sort_view_ids_file,
                       NULL,
                       out_root);
 
@@ -608,6 +630,7 @@ static couchstore_error_t build_id_btree(const char *source_file,
 static couchstore_error_t build_view_btree(const char *source_file,
                                            const view_btree_info_t *info,
                                            tree_file *dest_file,
+                                           const char *tmpdir,
                                            node_pointer **out_root,
                                            view_error_t *error_info)
 {
@@ -631,6 +654,8 @@ static couchstore_error_t build_view_btree(const char *source_file,
                       &cmp,
                       view_btree_reduce,
                       view_btree_rereduce,
+                      tmpdir,
+                      sort_view_kvs_file,
                       red_ctx,
                       out_root);
 
