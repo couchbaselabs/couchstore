@@ -183,7 +183,7 @@ static void free_record(void *rec, void *ctx)
    free(rec);
 }
 
-static void check_file_sorted(const char *file_path)
+static int check_file_sorted(const char *file_path)
 {
     FILE *f;
     void *record;
@@ -197,7 +197,11 @@ static void check_file_sorted(const char *file_path)
     for (i = 0; i < nrecords; ++i) {
         record_size = read_record(f, &record, NULL);
         assert(record_size == sizeof(int));
-        assert(*((int *) record) == sorted_data[i]);
+        if (*((int *) record) != sorted_data[i]) {
+            fclose(f);
+            free_record(record, NULL);
+            return 0;
+        }
         free_record(record, NULL);
     }
 
@@ -205,6 +209,8 @@ static void check_file_sorted(const char *file_path)
     assert(read_record(f, &record, NULL) == 0);
 
     fclose(f);
+
+    return 1;
 }
 
 
@@ -224,17 +230,22 @@ static void create_file()
     fclose(f);
 }
 
+static file_merger_error_t check_sorted_callback(void *buf, void *ctx)
+{
+    int *rec = (int *) buf, *i = (int *) ctx;
+    assert(sorted_data[*i] == *rec);
+    (*i)++;
 
-static void test_file_sort(unsigned buffer_size, unsigned temp_files)
+    return FILE_MERGER_SUCCESS;
+}
+
+static void test_file_sort(unsigned buffer_size,
+                           unsigned temp_files,
+                           file_merger_feed_record_t callback,
+                           int skip_writeback)
 {
     file_sorter_error_t ret;
-    unsigned long nrecords = (unsigned long) (sizeof(data) / sizeof(int));
-
-    fprintf(stderr,
-            "Testing file sort (%lu records) with buffer size of %u bytes"
-            " and %u temporary files\n",
-            nrecords, buffer_size, temp_files);
-
+    int i = 0;
     create_file();
 
     ret = sort_file(UNSORTED_FILE_PATH,
@@ -243,14 +254,19 @@ static void test_file_sort(unsigned buffer_size, unsigned temp_files)
                     buffer_size,
                     read_record,
                     write_record,
-                    NULL,
+                    callback,
                     compare_records,
                     free_record,
-                    0,
-                    NULL);
+                    skip_writeback,
+                    &i);
 
     assert(ret == FILE_SORTER_SUCCESS);
-    check_file_sorted(UNSORTED_FILE_PATH);
+
+    if (!skip_writeback) {
+        assert(check_file_sorted(UNSORTED_FILE_PATH));
+    } else {
+        assert(check_file_sorted(UNSORTED_FILE_PATH) == 0);
+    }
 
     remove(UNSORTED_FILE_PATH);
 }
@@ -277,20 +293,51 @@ void file_sorter_tests(void)
         (sizeof(int) - 1) * 99,
         sizeof(int) * 1000000
     };
+
     unsigned i, j;
+    unsigned long nrecords = (unsigned long) (sizeof(data) / sizeof(int));
 
     fprintf(stderr, "Running file sorter tests...\n");
 
     sorted_data = (int *) malloc(sizeof(data));
     assert(sorted_data != NULL);
     memcpy(sorted_data, data, sizeof(data));
-    qsort(sorted_data, (sizeof(data) / sizeof(int)), sizeof(int), int_cmp);
+    qsort(sorted_data, nrecords, sizeof(int), int_cmp);
 
     for (i = 0; i < (sizeof(buffer_sizes) / sizeof(unsigned)); ++i) {
         for (j = 0; j < (sizeof(temp_files) / sizeof(unsigned)); ++j) {
-            test_file_sort(buffer_sizes[i], temp_files[j]);
+            fprintf(stderr,
+            "Testing file sort (%lu records) with buffer size of %u bytes"
+            " and %u temporary files\n",
+            nrecords, buffer_sizes[i], temp_files[j]);
+            test_file_sort(buffer_sizes[i], temp_files[j], NULL, 0);
         }
     }
+
+    fprintf(stderr,
+            "Testing file sort callback (%lu records) with buffer size of %lu bytes"
+            " and %u temporary files\n",
+            nrecords, sizeof(int) * 501, 3);
+    test_file_sort(sizeof(int) * 501, 3, check_sorted_callback, 0);
+
+    fprintf(stderr,
+            "Testing file sort callback (%lu records) with buffer size of %lu bytes"
+            " and %u temporary files\n",
+            nrecords, sizeof(int) * 50, 10);
+    test_file_sort(sizeof(int) * 50, 10, check_sorted_callback, 0);
+
+
+    fprintf(stderr,
+            "Testing file sort callback with skip writeback (%lu records)"
+            "with buffer size of %lu bytes and %u temporary files\n",
+            nrecords, sizeof(int) * 501, 3);
+    test_file_sort(sizeof(int) * 501, 3, check_sorted_callback, 1);
+
+    fprintf(stderr,
+            "Testing file sort callback with skip writeback (%lu records)"
+            "with buffer size of %lu bytes and %u temporary files\n",
+            nrecords, sizeof(int) * 50, 10);
+    test_file_sort(sizeof(int) * 50, 10, check_sorted_callback, 1);
 
     fprintf(stderr, "File sorter tests passed\n\n");
 }
