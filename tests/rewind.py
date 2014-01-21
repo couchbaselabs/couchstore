@@ -1,13 +1,14 @@
 from couchstore import CouchStore, DocumentInfo
 from tempfile import mkdtemp
 import os
+import os.path as path
 import struct
 import unittest
 
 class RewindTest(unittest.TestCase):
     def setUp(self):
         self.tmpdir = mkdtemp()
-        self.dbname = self.tmpdir + "testing.couch"
+        self.dbname = path.join(self.tmpdir, "testing.couch")
         self.db = CouchStore(self.dbname, 'c');
 
     def tearDown(self):

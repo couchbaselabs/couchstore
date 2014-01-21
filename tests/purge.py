@@ -1,6 +1,7 @@
 from couchstore import CouchStore, DocumentInfo
 from tempfile import mkdtemp
 import os
+import os.path as path
 import struct
 import unittest
 
@@ -16,8 +17,8 @@ def deleteAt(db, key, time):
 class PurgeTest(unittest.TestCase):
     def setUp(self):
         self.tmpdir = mkdtemp()
-        self.origname = self.tmpdir + "orig.couch"
-        self.purgedname = self.tmpdir + "purged.couch"
+        self.origname = path.join(self.tmpdir, "orig.couch")
+        self.purgedname = path.join(self.tmpdir, "purged.couch")
         self.origdb = CouchStore(self.origname, 'c');
 
     def tearDown(self):
@@ -55,7 +56,8 @@ class PurgeTest(unittest.TestCase):
         seqLateDelete = deleteAt(self.origdb, "foo4", 11)
         self.origdb.commit()
 
-        os.system("./couch_compact --purge-before 15 " + self.origname + " " + self.purgedname)
+        os.system(path.join(os.getcwd(), "couch_compact") + " --purge-before 15 " +
+                  self.origname + " " + self.purgedname)
         self.newdb = CouchStore(self.purgedname)
 
         # Check purged item is not present in key tree and kept item is
@@ -65,7 +67,9 @@ class PurgeTest(unittest.TestCase):
 
         self.newdb.close()
 
-        os.system("./couch_compact --purge-before 15 --purge-only-upto-seq " + str(seqKept) + " " + self.origname + " " + self.purgedname)
+        os.system(path.join(os.getcwd(), "couch_compact") +
+                  " --purge-before 15 --purge-only-upto-seq " + str(seqKept) +
+                  " " + self.origname + " " + self.purgedname)
         self.newdb = CouchStore(self.purgedname)
 
         # Check purged item is not present in key tree and kept item is
@@ -77,7 +81,9 @@ class PurgeTest(unittest.TestCase):
 
         self.newdb.close()
 
-        os.system("./couch_compact --purge-before 15 --purge-only-upto-seq " + str(seqLateDelete) + " " + self.origname + " " + self.purgedname)
+        os.system(path.join(os.getcwd(), "couch_compact") +
+                  " --purge-before 15 --purge-only-upto-seq " + str(seqLateDelete) +
+                  " " + self.origname + " " + self.purgedname)
         self.newdb = CouchStore(self.purgedname)
 
         # Check purged item is not present in key tree and kept item is
