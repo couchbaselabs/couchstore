@@ -77,7 +77,7 @@ cleanup:
     delete_arena(ctx.persistent_arena);
     couchstore_close_db(target);
     if (errcode != COUCHSTORE_SUCCESS && target != NULL) {
-        unlink(target_filename);
+        remove(target_filename);
     }
     return errcode;
 }

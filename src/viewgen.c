@@ -80,7 +80,7 @@ cleanup:
     if (index) {
         couchstore_close_index(index);
         if (errcode < 0) {
-            unlink(indexPath);
+            remove(indexPath);
         }
     }
     return errcode ? EXIT_FAILURE : EXIT_SUCCESS;
