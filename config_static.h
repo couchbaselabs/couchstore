@@ -67,6 +67,10 @@
 
 #if defined(WIN32) || defined(_WIN32)
 #define WINDOWS
+/* Mute:
+"The POSIX name for this item is deprecated. Instead, use the ISO C++ conformant name: _strdup."
+*/
+#pragma warning(disable: 4996)
 #endif
 
 #endif
