@@ -25,11 +25,8 @@
 #include "file_sorter.h"
 #include "file_name_utils.h"
 
-
-struct record_node {
-    void               *record;
-    struct record_node *next;
-};
+#define NSORT_RECORDS_INIT 500000
+#define NSORT_RECORD_INCR  100000
 
 typedef struct {
     char     *name;
@@ -57,12 +54,13 @@ typedef struct {
 
 static file_sorter_error_t do_sort_file(file_sort_ctx_t *ctx);
 
-static struct record_node *sort_records(struct record_node *list,
-                                        file_sort_ctx_t *ctx);
+static void sort_records(void **records, size_t n,
+                                          file_sort_ctx_t *ctx);
 
 static tmp_file_t *create_tmp_file(file_sort_ctx_t *ctx);
 
-static file_sorter_error_t write_record_list(struct record_node *list,
+static file_sorter_error_t write_record_list(void **records,
+                                             size_t n,
                                              file_sort_ctx_t *ctx);
 
 static void pick_merge_files(file_sort_ctx_t *ctx,
@@ -160,20 +158,21 @@ file_sorter_error_t sort_file(const char *source_file,
 static file_sorter_error_t do_sort_file(file_sort_ctx_t *ctx)
 {
     unsigned buffer_size = 0;
+    size_t i = 0;
+    size_t record_count = NSORT_RECORDS_INIT;
     void *record;
     int record_size;
-    struct record_node *buffer, buffer_head;
     file_sorter_error_t ret;
     file_merger_feed_record_t feed_record = ctx->feed_record;
+    void **records = (void **) calloc(record_count, sizeof(void *));
+    if (records == NULL) {
+        return FILE_SORTER_ERROR_ALLOC;
+    }
 
-    buffer_head.record = NULL;
-    buffer_head.next = NULL;
-    buffer = &buffer_head;
     ctx->feed_record = NULL;
 
     while (1) {
         record_size = (*ctx->read_record)(ctx->f, &record, ctx->user_ctx);
-
         if (record_size < 0) {
            ret = (file_sorter_error_t) record_size;
            goto failure;
@@ -181,25 +180,26 @@ static file_sorter_error_t do_sort_file(file_sort_ctx_t *ctx)
             break;
         }
 
-        buffer->next = (struct record_node *) malloc(sizeof(struct record_node));
-        if (buffer->next == NULL) {
-            (*ctx->free_record)(record, ctx->user_ctx);
-            ret = FILE_SORTER_ERROR_ALLOC;
-            goto failure;
+        records[i++] = record;
+        if (i == record_count) {
+            record_count += NSORT_RECORD_INCR;
+            records = (void **) realloc(records, record_count * sizeof(void *));
+            if (records == NULL) {
+                ret =  FILE_SORTER_ERROR_ALLOC;
+                goto failure;
+            }
         }
 
-        buffer = buffer->next;
-        buffer->record = record;
-        buffer->next = NULL;
         buffer_size += (unsigned) record_size;
 
         if (buffer_size >= ctx->max_buffer_size) {
-            ret = write_record_list(&buffer_head, ctx);
+            ret = write_record_list(records, i, ctx);
             if (ret != FILE_SORTER_SUCCESS) {
                 goto failure;
             }
+
             buffer_size = 0;
-            buffer = &buffer_head;
+            i = 0;
         }
 
         if (ctx->active_tmp_files >= ctx->num_tmp_files) {
@@ -223,11 +223,14 @@ static file_sorter_error_t do_sort_file(file_sort_ctx_t *ctx)
     }
 
     if (buffer_size > 0) {
-        ret = write_record_list(&buffer_head, ctx);
+        ret = write_record_list(records, i, ctx);
         if (ret != FILE_SORTER_SUCCESS) {
             goto failure;
         }
     }
+
+    free(records);
+    records = NULL;
 
     assert(ctx->active_tmp_files > 0);
 
@@ -266,27 +269,27 @@ static file_sorter_error_t do_sort_file(file_sort_ctx_t *ctx)
     return FILE_SORTER_SUCCESS;
 
  failure:
-    buffer = buffer_head.next;
+    if (records) {
+        for (--i; i >= 0; --i) {
+            (*ctx->free_record)(records[i], ctx->user_ctx);
+        }
 
-    while (buffer != NULL) {
-        struct record_node *next = buffer->next;
-        (*ctx->free_record)(buffer->record, ctx->user_ctx);
-        free(buffer);
-        buffer = next;
+        free(records);
     }
 
     return ret;
 }
 
 
-static file_sorter_error_t write_record_list(struct record_node *list,
+static file_sorter_error_t write_record_list(void **records,
+                                             size_t n,
                                              file_sort_ctx_t *ctx)
 {
-    struct record_node *node;
+    size_t i;
     FILE *f;
     tmp_file_t *tmp_file;
 
-    list->next = sort_records(list->next, ctx);
+    sort_records(records, n, ctx);
 
     tmp_file = create_tmp_file(ctx);
     if (tmp_file == NULL) {
@@ -307,26 +310,20 @@ static file_sorter_error_t write_record_list(struct record_node *list,
         return FILE_SORTER_ERROR_NOT_EMPTY_TMP_FILE;
     }
 
-    node = list->next;
-    while (node != NULL) {
-        struct record_node *next = node->next;
-        file_sorter_error_t err;
 
-        err = static_cast<file_sorter_error_t>((*ctx->write_record)(f, node->record, ctx->user_ctx));
-        (*ctx->free_record)(node->record, ctx->user_ctx);
-        free(node);
+    for (i = 0; i < n; i++) {
+        file_sorter_error_t err;
+        err = static_cast<file_sorter_error_t>((*ctx->write_record)(f, records[i], ctx->user_ctx));
+        (*ctx->free_record)(records[i], ctx->user_ctx);
+        records[i] = NULL;
 
         if (err != FILE_SORTER_SUCCESS) {
-            list->next = next;
             fclose(f);
             return err;
         }
-
-        node = next;
     }
 
     fclose(f);
-    list->next = NULL;
 
     return FILE_SORTER_SUCCESS;
 }
@@ -351,90 +348,28 @@ static tmp_file_t *create_tmp_file(file_sort_ctx_t *ctx)
     return &ctx->tmp_files[i];
 }
 
-
-/*
- * Based on sample and free code from Simon Tatham (of Putty fame).
- * Original code at:
- *
- * http://www.chiark.greenend.org.uk/~sgtatham/algorithms/listsort.c
- */
-static struct record_node *sort_records(struct record_node *list,
-                                        file_sort_ctx_t *ctx)
+#if(defined __APPLE__ || _WIN32)
+static int qsort_cmp(void *ctx, const void *a, const void *b)
+#elif (defined __linux__)
+static int qsort_cmp(const void *a, const void *b, void *ctx)
+#endif
 {
-#define CMP_LTE(a, b) \
-    ((*ctx->compare_records)((a)->record, (b)->record, ctx->user_ctx) <= 0)
+    file_sort_ctx_t *sort_ctx = (file_sort_ctx_t *) ctx;
+    const void **k1 = (const void **) a, **k2 = (const void **) b;
+    return (*sort_ctx->compare_records)(*k1, *k2, sort_ctx->user_ctx);
+}
 
-    struct record_node *p, *q, *e, *tail;
-    int insize, nmerges, psize, qsize, i;
 
-    insize = 1;
-    while (1) {
-        p = list;
-        list = NULL;
-        tail = NULL;
-        nmerges = 0;  /* count number of merges we do in this pass */
-
-        while (p != NULL) {
-            nmerges++;  /* there exists a merge to be done */
-            /* step `insize' places along from p */
-            q = p;
-            psize = 0;
-            for (i = 0; i < insize; i++) {
-                psize++;
-                q = q->next;
-                if (q == NULL) {
-                    break;
-                }
-            }
-            /* if q hasn't fallen off end, we have two lists to merge */
-            qsize = insize;
-            /* now we have two lists; merge them */
-            while (psize > 0 || (qsize > 0 && q != NULL)) {
-
-                /* decide whether next element of merge comes from p or q */
-                if (psize == 0) {
-                    /* p is empty; e must come from q. */
-                    e = q;
-                    q = q->next;
-                    qsize--;
-                } else if (qsize == 0 || q == NULL) {
-                    /* q is empty; e must come from p. */
-                    e = p;
-                    p = p->next;
-                    psize--;
-                } else if (CMP_LTE(p, q)) {
-                    /* First element of p is lower (or same);
-                     * e must come from p. */
-                    e = p;
-                    p = p->next;
-                    psize--;
-                } else {
-                    /* First element of q is lower; e must come from q. */
-                    e = q;
-                    q = q->next;
-                    qsize--;
-                }
-
-                /* add the next element to the merged list */
-                if (tail != NULL) {
-                    tail->next = e;
-                } else {
-                    list = e;
-                }
-                tail = e;
-            }
-            /* now p has stepped `insize' places along, and q has too */
-            p = q;
-        }
-        tail->next = NULL;
-        /* If we have done only one merge, we're finished. */
-        if (nmerges <= 1) {
-            /* allow for nmerges==0, the empty list case */
-            return list;
-        }
-        /* Otherwise repeat, merging lists twice the size */
-        insize *= 2;
-    }
+static void sort_records(void **records, size_t n,
+                                         file_sort_ctx_t *ctx)
+{
+#if(defined __APPLE__)
+    qsort_r(records, n, sizeof(void *), ctx, &qsort_cmp);
+#elif (defined __linux__)
+    qsort_r(records, n, sizeof(void *), &qsort_cmp, ctx);
+#elif (defined _WIN32)
+    qsort_s(records, n, sizeof(void *), &qsort_cmp, ctx);
+#endif
 }
 
 
@@ -604,12 +539,12 @@ static file_sorter_error_t iterate_records_file(file_sort_ctx_t *ctx,
                 goto cleanup;
             }
 
-            free(record_data);
+            (*ctx->free_record)(record_data, ctx->user_ctx);
         }
     }
 
 cleanup:
-    free(record_data);
+    (*ctx->free_record)(record_data, ctx->user_ctx);
     if (f != NULL) {
         fclose(f);
     }
