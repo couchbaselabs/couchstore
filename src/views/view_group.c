@@ -924,7 +924,10 @@ couchstore_error_t couchstore_cleanup_view_group(view_group_info_t *info,
         goto cleanup;
     }
 
-    free(header->id_btree_state);
+    if (header->id_btree_state != id_root) {
+        free(header->id_btree_state);
+    }
+
     header->id_btree_state = id_root;
     view_id_bitmask(id_root, &bm_cleanup);
     id_root = NULL;
@@ -942,7 +945,10 @@ couchstore_error_t couchstore_cleanup_view_group(view_group_info_t *info,
             goto cleanup;
         }
 
-        free(header->view_btree_states[i]);
+        if (header->view_btree_states[i] != view_roots[i]) {
+            free(header->view_btree_states[i]);
+        }
+
         header->view_btree_states[i] = view_roots[i];
         view_bitmask(view_roots[i], &bm_cleanup);
         view_roots[i] = NULL;
@@ -1281,7 +1287,10 @@ couchstore_error_t couchstore_update_view_group(view_group_info_t *info,
     }
 
 
-    free(header->id_btree_state);
+    if (header->id_btree_state != id_root) {
+        free(header->id_btree_state);
+    }
+
     header->id_btree_state = id_root;
     view_id_bitmask(id_root, &bm_cleanup);
     id_root = NULL;
@@ -1302,7 +1311,10 @@ couchstore_error_t couchstore_update_view_group(view_group_info_t *info,
             goto cleanup;
         }
 
-        free(header->view_btree_states[i]);
+        if (header->view_btree_states[i] != view_roots[i]) {
+            free(header->view_btree_states[i]);
+        }
+
         header->view_btree_states[i] = view_roots[i];
         view_bitmask(view_roots[i], &bm_cleanup);
         view_roots[i] = NULL;
