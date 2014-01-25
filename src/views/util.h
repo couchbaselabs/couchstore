@@ -78,6 +78,10 @@ extern "C" {
     LIBCOUCHSTORE_API
     char *couchstore_read_line(FILE *in, char *buf, int size);
 
+    LIBCOUCHSTORE_API
+    uint64_t couchstore_read_int(FILE *in, char *buf, size_t size,
+                                                      couchstore_error_t *ret);
+
     /* Generate appropriate view error message from error code */
     char *view_error_msg(couchstore_error_t ret);
 

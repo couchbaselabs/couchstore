@@ -141,6 +141,7 @@ view_group_info_t *couchstore_read_view_group_info(FILE *in_stream,
     char *dup;
     int i, j;
     int reduce_len;
+    couchstore_error_t ret;
 
     info = (view_group_info_t *) calloc(1, sizeof(*info));
     if (info == NULL) {
@@ -159,12 +160,18 @@ view_group_info_t *couchstore_read_view_group_info(FILE *in_stream,
     }
     info->filepath = (const char *) dup;
 
-    if (fscanf(in_stream, "%" SCNu64 "\n", &info->header_pos) != 1) {
+    info->header_pos = couchstore_read_int(in_stream, buf,
+                                                      sizeof(buf),
+                                                      &ret);
+    if (ret != COUCHSTORE_SUCCESS) {
         fprintf(error_stream, "Error reading header position\n");
         goto out_error;
     }
 
-    if (fscanf(in_stream, "%d\n", &info->num_btrees) != 1) {
+    info->num_btrees = couchstore_read_int(in_stream, buf,
+                                                      sizeof(buf),
+                                                      &ret);
+    if (ret != COUCHSTORE_SUCCESS) {
         fprintf(error_stream, "Error reading number of btrees\n");
         goto out_error;
     }
@@ -180,7 +187,12 @@ view_group_info_t *couchstore_read_view_group_info(FILE *in_stream,
     for (i = 0; i < info->num_btrees; ++i) {
         view_btree_info_t *bti = &info->btree_infos[i];
 
-        if (fscanf(in_stream, "%d\n", &bti->num_reducers) != 1) {
+        bti->num_reducers = couchstore_read_int(in_stream,
+                                                buf,
+                                                sizeof(buf),
+                                                &ret);
+
+        if (ret != COUCHSTORE_SUCCESS) {
             fprintf(error_stream,
                     "Error reading number of reducers for btree %d\n", i);
             goto out_error;
@@ -214,7 +226,11 @@ view_group_info_t *couchstore_read_view_group_info(FILE *in_stream,
             }
             bti->names[j] = (const char *) dup;
 
-            if (fscanf(in_stream, "%d\n", &reduce_len) != 1) {
+            reduce_len = couchstore_read_int(in_stream,
+                                             buf,
+                                             sizeof(buf),
+                                             &ret);
+            if (ret != COUCHSTORE_SUCCESS) {
                 fprintf(error_stream,
                         "Error reading btree %d view %d "
                         "reduce function size\n", i, j);

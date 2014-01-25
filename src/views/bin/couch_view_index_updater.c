@@ -124,13 +124,15 @@ int main(int argc, char *argv[])
         source_files[i][len] = '\0';
     }
 
-    if (fscanf(stdin, "%d\n", &batch_size) != 1) {
+    batch_size = couchstore_read_int(stdin, buf, sizeof(buf), &ret);
+    if (ret != COUCHSTORE_SUCCESS) {
         fprintf(stderr, "Error reading batch size\n");
         ret = COUCHSTORE_ERROR_INVALID_ARGUMENTS;
         goto out;
     }
 
-    if (fscanf(stdin, "%lu\n", &header_buf.size) != 1) {
+    header_buf.size = couchstore_read_int(stdin, buf, sizeof(buf), &ret);
+    if (ret != COUCHSTORE_SUCCESS) {
         fprintf(stderr, "Error reading viewgroup header size\n");
         goto out;
     }

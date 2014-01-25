@@ -194,6 +194,28 @@ char *couchstore_read_line(FILE *in, char *buf, int size)
     return buf;
 }
 
+
+LIBCOUCHSTORE_API
+uint64_t couchstore_read_int(FILE *in, char *buf, size_t size,
+                                                  couchstore_error_t *ret)
+{
+    uint64_t val;
+    *ret = COUCHSTORE_SUCCESS;
+
+    if (couchstore_read_line(in, buf, size) != buf) {
+        *ret = COUCHSTORE_ERROR_READ;
+        return 0;
+    }
+
+    if (sscanf(buf, "%"SCNu64, &val) != 1) {
+        *ret = COUCHSTORE_ERROR_READ;
+        return 0;
+    }
+
+    return val;
+}
+
+
 char *view_error_msg(couchstore_error_t ret)
 {
     char *error_msg = NULL;

@@ -78,7 +78,8 @@ int main(int argc, char *argv[])
     }
 
     /* Read group header bin */
-    if (fscanf(stdin, "%lu\n", &header_buf.size) != 1) {
+    header_buf.size = couchstore_read_int(stdin, buf, sizeof(buf), &ret);
+    if (ret != COUCHSTORE_SUCCESS) {
         fprintf(stderr, "Error reading viewgroup header size\n");
         ret = COUCHSTORE_ERROR_INVALID_ARGUMENTS;
         goto out;
