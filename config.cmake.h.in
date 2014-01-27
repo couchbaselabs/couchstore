@@ -7,6 +7,4 @@
 
 #cmakedefine HAVE_FDATASYNC ${HAVE_FDATASYNC}
 
-#define ${V8C_VERSION}
-
 #include "config_static.h"

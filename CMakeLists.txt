@@ -20,30 +20,6 @@ CHECK_INCLUDE_FILES("unistd.h" HAVE_UNISTD_H)
 CHECK_SYMBOL_EXISTS(fdatasync "unistd.h" HAVE_FDATASYNC)
 
 IF (WIN32)
-   SET(V8C_VERSION "V8_POST_3_19_API")
-ELSE (WIN32)
-   TRY_RUN(V8C_EXITCODE V8C_COMPILED
-           ${CMAKE_CURRENT_BINARY_DIR}
-           ${CMAKE_CURRENT_SOURCE_DIR}/tests/v8ver.cc
-           CMAKE_FLAGS -DLINK_LIBRARIES:STRING=-lv8
-           RUN_OUTPUT_VARIABLE V8C_OUTPUT)
-
-   IF (V8C_COMPILED)
-      SET(V8C_VERSION "${V8C_OUTPUT}")
-   ELSE(V8C_COMPILED)
-      SET(V8C_VERSION "V8_PRE_3_19_API")
-   ENDIF(V8C_COMPILED)
-ENDIF (WIN32)
-
-MESSAGE(STATUS "Using v8 version: [${V8C_VERSION}]")
-# Unfortunately it seems like our mac builder have a old
-# version from homebrew..
-#IF (EXISTS /usr/local/Cellar/v8/)
-  # Homebrew provides at least version 3.21.17
-#  ADD_DEFINITIONS(-DV8_POST_3_19_API=1)
-#ENDIF(EXISTS /usr/local/Cellar/v8/)
-
-IF (WIN32)
   SET(COUCHSTORE_FILE_OPS "src/os_win.c")
 ELSE(WIN32)
   SET(COUCHSTORE_FILE_OPS "src/os.c")
@@ -155,7 +131,6 @@ ENDMACRO()
 M_ADD_PYTHON_TEST(couchstore-purge tests/purge.py)
 M_ADD_PYTHON_TEST(couchstore-rewind tests/rewind.py)
 M_ADD_PYTHON_TEST(couchstore-changecount tests/changecount.py)
-
 
 ADD_EXECUTABLE(couchstore_testapp tests/testapp.c
 	tests/file_merger_tests.c
