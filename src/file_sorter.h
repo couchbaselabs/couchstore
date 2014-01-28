@@ -58,7 +58,6 @@ extern "C" {
                                   int skip_writeback,
                                   void *user_ctx);
 
-
 #ifdef __cplusplus
 }
 #endif
