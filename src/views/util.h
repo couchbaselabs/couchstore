@@ -30,11 +30,16 @@
 extern "C" {
 #endif
 
+#pragma pack(push, 1)
     typedef struct {
         uint8_t   op;
-        sized_buf k;
-        sized_buf v;
+        uint16_t  ksize;
+        uint32_t  vsize;
     } view_file_merge_record_t;
+#pragma pack(pop)
+
+#define VIEW_RECORD_KEY(rec) (((char *) rec) + sizeof(view_file_merge_record_t))
+#define VIEW_RECORD_VAL(rec) (VIEW_RECORD_KEY(rec) + rec->ksize)
 
     enum view_record_type {
         INITIAL_BUILD_VIEW_RECORD,

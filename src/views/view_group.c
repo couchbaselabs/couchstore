@@ -520,10 +520,15 @@ static file_merger_error_t build_btree_record_callback(void *buf, void *ctx)
     view_file_merge_ctx_t *merge_ctx = (view_file_merge_ctx_t *) ctx;
     view_btree_builder_ctx_t *build_ctx =
                     (view_btree_builder_ctx_t *) merge_ctx->user_ctx;
+    sized_buf src_k, src_v;
 
+    src_k.size = rec->ksize;
+    src_k.buf = VIEW_RECORD_KEY(rec);
+    src_v.size = rec->vsize;
+    src_v.buf = VIEW_RECORD_VAL(rec);
 
-    k = arena_copy_buf(build_ctx->transient_arena, &rec->k);
-    v = arena_copy_buf(build_ctx->transient_arena, &rec->v);
+    k = arena_copy_buf(build_ctx->transient_arena, &src_k);
+    v = arena_copy_buf(build_ctx->transient_arena, &src_v);
     ret = mr_push_item(k, v, build_ctx->modify_result);
 
     if (ret != COUCHSTORE_SUCCESS) {

@@ -106,12 +106,10 @@ int read_view_record(FILE *in, void **buf, void *ctx)
     }
 
     rec->op = op;
-    rec->k.size = klen;
-    rec->k.buf = ((char *) rec) + sizeof(view_file_merge_record_t);
-    rec->v.size = vlen;
-    rec->v.buf = ((char *) rec) + sizeof(view_file_merge_record_t) + klen;
+    rec->ksize = klen;
+    rec->vsize = vlen;
 
-    if (fread(rec->k.buf, klen + vlen, 1, in) != 1) {
+    if (fread(VIEW_RECORD_KEY(rec), klen + vlen, 1, in) != 1) {
         free(rec);
         return FILE_MERGER_ERROR_FILE_READ;
     }
@@ -125,11 +123,11 @@ int read_view_record(FILE *in, void **buf, void *ctx)
 file_merger_error_t write_view_record(FILE *out, void *buf, void *ctx)
 {
     view_file_merge_record_t *rec = (view_file_merge_record_t *) buf;
-    uint16_t klen = htons((uint16_t) rec->k.size);
+    uint16_t klen = htons((uint16_t) rec->ksize);
     uint32_t len;
     view_file_merge_ctx_t *merge_ctx = (view_file_merge_ctx_t *) ctx;
 
-    len = (uint32_t)  sizeof(klen) + rec->k.size + rec->v.size;
+    len = (uint32_t)  sizeof(klen) + rec->ksize + rec->vsize;
     if (merge_ctx->type == INCREMENTAL_UPDATE_VIEW_RECORD) {
         len += (uint32_t) sizeof(rec->op);
     }
@@ -145,7 +143,7 @@ file_merger_error_t write_view_record(FILE *out, void *buf, void *ctx)
     if (fwrite(&klen, sizeof(klen), 1, out) != 1) {
         return FILE_MERGER_ERROR_FILE_WRITE;
     }
-    if (fwrite(rec->k.buf, rec->k.size + rec->v.size, 1, out) != 1) {
+    if (fwrite(VIEW_RECORD_KEY(rec), rec->ksize + rec->vsize, 1, out) != 1) {
         return FILE_MERGER_ERROR_FILE_WRITE;
     }
 
@@ -158,9 +156,16 @@ int compare_view_records(const void *r1, const void *r2, void *ctx)
     view_file_merge_ctx_t *merge_ctx = (view_file_merge_ctx_t *) ctx;
     view_file_merge_record_t *rec1 = (view_file_merge_record_t *) r1;
     view_file_merge_record_t *rec2 = (view_file_merge_record_t *) r2;
+    sized_buf k1, k2;
     int res;
 
-    res = merge_ctx->key_cmp_fun(&rec1->k, &rec2->k, merge_ctx->user_ctx);
+    k1.size = rec1->ksize;
+    k1.buf = VIEW_RECORD_KEY(rec1);
+
+    k2.size = rec2->ksize;
+    k2.buf = VIEW_RECORD_KEY(rec2);
+
+    res = merge_ctx->key_cmp_fun(&k1, &k2, merge_ctx->user_ctx);
 
     if (res == 0 && merge_ctx->type == INCREMENTAL_UPDATE_VIEW_RECORD) {
         return ((int) rec1->op) - ((int) rec2->op);
