@@ -26,10 +26,18 @@
 static void exit_thread_helper(void *args)
 {
     char buf[4];
+    int len = fread(buf, 1, 4, stdin);
+
     (void) args;
 
-    if (fread(buf, 1, 4, stdin) == 4 && !strncmp(buf, "exit", 4)) {
+    /* If the other end closed the pipe */
+    if (len == 0) {
         exit(1);
+    } else if (len == 4 && !strncmp(buf, "exit", 4)) {
+        exit(1);
+    } else {
+        fprintf(stderr, "Error occured waiting for exit message (%d)\n", len);
+        exit(2);
     }
 }
 
