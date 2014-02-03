@@ -1129,7 +1129,6 @@ static couchstore_error_t update_btree(const char *source_file,
         actions[rq.num_actions].type = op;
         actions[rq.num_actions].key = &keybufs[rq.num_actions];
         actions[rq.num_actions].value.data = &valbufs[rq.num_actions];
-        rq.num_actions++;
 
         if (inserted && op == ACTION_INSERT) {
             (*inserted)++;
@@ -1140,6 +1139,7 @@ static couchstore_error_t update_btree(const char *source_file,
         bufsize += keybufs[rq.num_actions].size +
                    valbufs[rq.num_actions].size +
                    sizeof(uint8_t);
+        rq.num_actions++;
 
 flush:
         if (rq.num_actions && (last_record || bufsize > batch_size ||
@@ -1270,6 +1270,8 @@ couchstore_error_t couchstore_update_view_group(view_group_info_t *info,
                                                const char *kv_records_files[],
                                                size_t batch_size,
                                                const sized_buf *header_buf,
+                                               int is_sorted,
+                                               const char *tmp_dir,
                                                view_group_update_stats_t *stats,
                                                sized_buf *header_outbuf,
                                                view_error_t *error_info)
@@ -1320,6 +1322,18 @@ couchstore_error_t couchstore_update_view_group(view_group_info_t *info,
     index_file.pos = index_file.ops->goto_eof(&index_file.lastError,
                                               index_file.handle);
 
+    if (!is_sorted) {
+        ret = (couchstore_error_t) sort_view_ids_ops_file(id_records_file, tmp_dir);
+        if (ret != COUCHSTORE_SUCCESS) {
+            char buf[1024];
+            snprintf(buf, sizeof(buf),
+                    "Error sorting records file: %s", id_records_file);
+            error_info->error_msg = strdup(buf);
+            error_info->view_name = (const char *) strdup("id_btree");
+            goto cleanup;
+        }
+    }
+
     ret = update_id_btree(id_records_file, &index_file,
                                            header->id_btree_state,
                                            batch_size,
@@ -1341,6 +1355,18 @@ couchstore_error_t couchstore_update_view_group(view_group_info_t *info,
     id_root = NULL;
 
     for (i = 0; i < info->num_btrees; ++i) {
+        if (!is_sorted) {
+            ret = (couchstore_error_t) sort_view_kvs_ops_file(kv_records_files[i], tmp_dir);
+            if (ret != COUCHSTORE_SUCCESS) {
+                char buf[1024];
+                snprintf(buf, sizeof(buf),
+                        "Error sorting records file: %s", kv_records_files[i]);
+                error_info->error_msg = strdup(buf);
+                error_info->view_name = (const char *) strdup(info->btree_infos[i].names[0]);
+                goto cleanup;
+            }
+        }
+
         ret = update_view_btree(kv_records_files[i],
                                 &info->btree_infos[i],
                                 &index_file,

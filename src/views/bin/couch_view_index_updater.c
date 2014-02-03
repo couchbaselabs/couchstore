@@ -139,28 +139,13 @@ int main(int argc, char *argv[])
         goto out;
     }
 
-    if (!is_sorted) {
-        /* Sort all operation list files for id and view btrees */
-        ret = sort_view_ids_ops_file(source_files[0], tmp_dir);
-        if (ret != FILE_SORTER_SUCCESS) {
-            fprintf(stderr, "Error sorting id file: %d\n", ret);
-            goto out;
-        }
-
-        for (i = 1; i <= group_info->num_btrees; ++i) {
-            ret = sort_view_kvs_ops_file(source_files[i], tmp_dir);
-            if (ret != FILE_SORTER_SUCCESS) {
-                fprintf(stderr, "Error sorting view %d file: %d\n",i-1, ret);
-                goto out;
-            }
-        }
-    }
-
     ret = couchstore_update_view_group(group_info,
                                       source_files[0],
                                       (const char **) &source_files[1],
                                       batch_size,
                                       &header_buf,
+                                      is_sorted,
+                                      tmp_dir,
                                       &stats,
                                       &header_outbuf,
                                       &error_info);

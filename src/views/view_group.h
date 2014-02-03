@@ -101,6 +101,8 @@ extern "C" {
                                                const char *kv_records_files[],
                                                size_t batch_size,
                                                const sized_buf *header_buf,
+                                               int is_sorted,
+                                               const char *tmp_dir,
                                                view_group_update_stats_t *stats,
                                                sized_buf *header_outbuf,
                                                view_error_t *error_info);
