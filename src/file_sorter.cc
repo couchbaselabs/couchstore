@@ -545,7 +545,7 @@ static file_sorter_error_t merge_tmp_files(file_sort_ctx_t *ctx,
     free(files);
 
     if (ret != FILE_SORTER_SUCCESS) {
-        if (dest_tmp_file != ctx->source_file) {
+        if (dest_tmp_file != NULL && dest_tmp_file != ctx->source_file) {
             remove(dest_tmp_file);
             free(dest_tmp_file);
         }
