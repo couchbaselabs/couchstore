@@ -337,6 +337,10 @@ cleanup:
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_close_db(Db *db)
 {
+    if(!db) {
+        return COUCHSTORE_SUCCESS;
+    }
+
     if(!db->dropped) {
         tree_file_close(&db->file);
     }
