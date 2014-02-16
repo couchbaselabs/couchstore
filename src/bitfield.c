@@ -10,6 +10,11 @@
     memcpy((char*)&value + sizeof(value) - sizeof(raw), &(raw), sizeof(raw)); \
     return FLIP_FN(value)
 
+#define DECODE_RAW_POINTER(DST_TYPE, FLIP_FN)                                   \
+    DST_TYPE value = 0;                                                         \
+    memcpy((char*)&value + sizeof(value) - sizeof(*rawp), rawp, sizeof(*rawp)); \
+    return FLIP_FN(value)
+
 LIBCOUCHSTORE_API
 uint8_t couchstore_decode_raw08(raw_08 raw)
 {
@@ -23,9 +28,9 @@ uint16_t couchstore_decode_raw16(raw_16 raw)
 }
 
 LIBCOUCHSTORE_API
-uint32_t couchstore_decode_raw24(raw_24 raw)
+uint32_t couchstore_decode_raw24p(const raw_24 *rawp)
 {
-    DECODE_RAW(uint32_t, ntohl);
+    DECODE_RAW_POINTER(uint32_t, ntohl);
 }
 
 LIBCOUCHSTORE_API
@@ -35,15 +40,15 @@ uint32_t couchstore_decode_raw32(raw_32 raw)
 }
 
 LIBCOUCHSTORE_API
-uint64_t couchstore_decode_raw40(raw_40 raw)
+uint64_t couchstore_decode_raw40p(const raw_40 *rawp)
 {
-    DECODE_RAW(uint64_t, ntohll);
+    DECODE_RAW_POINTER(uint64_t, ntohll);
 }
 
 LIBCOUCHSTORE_API
-uint64_t couchstore_decode_raw48(raw_48 raw)
+uint64_t couchstore_decode_raw48p(const raw_48 *rawp)
 {
-    DECODE_RAW(uint64_t, ntohll);
+    DECODE_RAW_POINTER(uint64_t, ntohll);
 }
 
 LIBCOUCHSTORE_API

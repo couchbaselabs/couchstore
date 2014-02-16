@@ -55,10 +55,10 @@ typedef struct {
 
 #define decode_raw08(a) couchstore_decode_raw08(a)
 #define decode_raw16(a) couchstore_decode_raw16(a)
-#define decode_raw24(a) couchstore_decode_raw24(a)
+#define decode_raw24(a) couchstore_decode_raw24p(&(a))
 #define decode_raw32(a) couchstore_decode_raw32(a)
-#define decode_raw40(a) couchstore_decode_raw40(a)
-#define decode_raw48(a) couchstore_decode_raw48(a)
+#define decode_raw40(a) couchstore_decode_raw40p(&(a))
+#define decode_raw48(a) couchstore_decode_raw48p(&(a))
 #define decode_raw64(a) couchstore_decode_raw64(a)
 
     LIBCOUCHSTORE_API
@@ -66,13 +66,13 @@ typedef struct {
     LIBCOUCHSTORE_API
     uint16_t couchstore_decode_raw16(raw_16 raw);
     LIBCOUCHSTORE_API
-    uint32_t couchstore_decode_raw24(raw_24 raw);
+    uint32_t couchstore_decode_raw24p(const raw_24 *raw);
     LIBCOUCHSTORE_API
     uint32_t couchstore_decode_raw32(raw_32 raw);
     LIBCOUCHSTORE_API
-    uint64_t couchstore_decode_raw40(raw_40 raw);
+    uint64_t couchstore_decode_raw40p(const raw_40 *raw);
     LIBCOUCHSTORE_API
-    uint64_t couchstore_decode_raw48(raw_48 raw);
+    uint64_t couchstore_decode_raw48p(const raw_48 *raw);
     LIBCOUCHSTORE_API
     uint64_t couchstore_decode_raw64(raw_64 raw);
 
