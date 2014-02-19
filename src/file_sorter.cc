@@ -24,6 +24,7 @@
 #include <string.h>
 #include "file_sorter.h"
 #include "file_name_utils.h"
+#include "quicksort.h"
 
 #define NSORT_RECORDS_INIT 500000
 #define NSORT_RECORD_INCR  100000
@@ -270,7 +271,8 @@ static file_sorter_error_t do_sort_file(file_sort_ctx_t *ctx)
 
  failure:
     if (records) {
-        for (--i; i >= 0; --i) {
+        while (i) {
+            i--;
             (*ctx->free_record)(records[i], ctx->user_ctx);
         }
 
@@ -348,11 +350,8 @@ static tmp_file_t *create_tmp_file(file_sort_ctx_t *ctx)
     return &ctx->tmp_files[i];
 }
 
-#if(defined __APPLE__ || _WIN32)
-static int qsort_cmp(void *ctx, const void *a, const void *b)
-#elif (defined __linux__)
+
 static int qsort_cmp(const void *a, const void *b, void *ctx)
-#endif
 {
     file_sort_ctx_t *sort_ctx = (file_sort_ctx_t *) ctx;
     const void **k1 = (const void **) a, **k2 = (const void **) b;
@@ -363,13 +362,7 @@ static int qsort_cmp(const void *a, const void *b, void *ctx)
 static void sort_records(void **records, size_t n,
                                          file_sort_ctx_t *ctx)
 {
-#if(defined __APPLE__)
-    qsort_r(records, n, sizeof(void *), ctx, &qsort_cmp);
-#elif (defined __linux__)
-    qsort_r(records, n, sizeof(void *), &qsort_cmp, ctx);
-#elif (defined _WIN32)
-    qsort_s(records, n, sizeof(void *), &qsort_cmp, ctx);
-#endif
+    quicksort(records, n, sizeof(void *), &qsort_cmp, ctx);
 }
 
 

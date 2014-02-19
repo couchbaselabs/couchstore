@@ -18,6 +18,7 @@ CHECK_INCLUDE_FILES("netinet/in.h" HAVE_NETINET_IN_H)
 CHECK_INCLUDE_FILES("inttypes.h" HAVE_INTTYPES_H)
 CHECK_INCLUDE_FILES("unistd.h" HAVE_UNISTD_H)
 CHECK_SYMBOL_EXISTS(fdatasync "unistd.h" HAVE_FDATASYNC)
+CHECK_SYMBOL_EXISTS(qsort_r "stdlib.h" HAVE_QSORT_R)
 
 IF (WIN32)
   SET(COUCHSTORE_FILE_OPS "src/os_win.c")
@@ -40,7 +41,7 @@ SET(COUCHSTORE_SOURCES src/arena.cc src/bitfield.c src/btree_modify.cc
             src/views/reductions.c src/views/sorted_list.c
             src/views/spatial.c src/views/util.c src/views/values.c
             src/views/view_group.c src/views/purgers.c
-            src/views/compaction.c ${COUCHSTORE_FILE_OPS})
+            src/views/compaction.c src/quicksort.c ${COUCHSTORE_FILE_OPS})
 SET(COUCHSTORE_LIBRARIES ${V8_LIBRARIES} ${ICU_LIBRARIES} ${SNAPPY_LIBRARIES} platform)
 
 ADD_LIBRARY(couchstore SHARED ${COUCHSTORE_SOURCES})

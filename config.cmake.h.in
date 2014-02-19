@@ -6,5 +6,6 @@
 #cmakedefine HAVE_UNISTD_H ${HAVE_UNISTD_H}
 
 #cmakedefine HAVE_FDATASYNC ${HAVE_FDATASYNC}
+#cmakedefine HAVE_QSORT_R ${HAVE_QSORT_R}
 
 #include "config_static.h"
