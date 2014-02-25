@@ -11,10 +11,6 @@
 #include "util.h"
 #include "bitfield.h"
 
-#ifdef WIN32
-#define snprintf _snprintf
-#endif
-
 static char *size_str(double size)
 {
     static char rfs[256];
