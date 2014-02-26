@@ -97,10 +97,10 @@ endif
 libcouchstore_la_CFLAGS = $(AM_CFLAGS) $(ICU_LOCAL_CFLAGS) -DLIBCOUCHSTORE_INTERNAL=1 -Wstrict-aliasing=2 -Werror=strict-aliasing -pedantic
 libcouchstore_la_LIBADD = librfc1321.la libbyteswap.la $(ICU_LOCAL_LIBS)
 
-couch_dbdump_SOURCES = src/dbdump.c
-couch_dbdump_DEPENDENCIES = libcouchstore.la
-couch_dbdump_CFLAGS = $(AM_CFLAGS) -D__STDC_FORMAT_MACROS
-couch_dbdump_LDADD = libcouchstore.la libbyteswap.la -lsnappy
+couch_dbdump_SOURCES = src/dbdump.c $(libcouchstore_la_SOURCES)
+couch_dbdump_LDFLAGS = $(ICU_LOCAL_LDFLAGS) -lsnappy -lpthread
+couch_dbdump_CFLAGS = $(libcouchstore_la_CFLAGS)
+couch_dbdump_LDADD = $(libcouchstore_la_LIBADD)
 
 if WINDOWS
 couch_dbdump_LDADD += -lws2_32
