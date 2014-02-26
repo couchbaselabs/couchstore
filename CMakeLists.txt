@@ -8,6 +8,7 @@ INCLUDE(CheckTypeSize)
 INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/include
                            ${CMAKE_CURRENT_SOURCE_DIR}/src
                            ${CMAKE_CURRENT_BINARY_DIR}
+                           ${CMAKE_CURRENT_SOURCE_DIR}
                            ${CMAKE_CURRENT_SOURCE_DIR}/../platform/include
                            ${CMAKE_INSTALL_PREFIX}/include)
 INCLUDE_DIRECTORIES(AFTER ${ICU_INCLUDE_DIR}
@@ -112,14 +113,14 @@ ADD_EXECUTABLE(couchscript src/couchscript.cc)
 SET_TARGET_PROPERTIES(couchscript PROPERTIES COMPILE_FLAGS -I${LUA_INCLUDE_DIR})
 TARGET_LINK_LIBRARIES(couchscript couchstore ${LUA_LIBRARIES})
 
-ADD_TEST(couchstore-localdoc couchscript tests/localdoc.lua)
-ADD_TEST(couchstore-corrupt couchscript tests/corrupt.lua)
-ADD_TEST(couchstore-bulk couchscript tests/bulk.lua)
-ADD_TEST(couchstore-changes-since-filter couchscript tests/changessincefilter.lua)
-ADD_TEST(couchstore-compact couchscript tests/compact.lua)
-ADD_TEST(couchstore-dropdel couchscript tests/dropdel.lua)
-ADD_TEST(couchstore-largefile couchscript tests/largefile.lua)
-ADD_TEST(couchstore-large couchscript tests/large.lua)
+ADD_TEST(couchstore-localdoc couchscript ${CMAKE_CURRENT_SOURCE_DIR}/tests/localdoc.lua)
+ADD_TEST(couchstore-corrupt couchscript ${CMAKE_CURRENT_SOURCE_DIR}/tests/corrupt.lua)
+ADD_TEST(couchstore-bulk couchscript ${CMAKE_CURRENT_SOURCE_DIR}/tests/bulk.lua)
+ADD_TEST(couchstore-changes-since-filter couchscript ${CMAKE_CURRENT_SOURCE_DIR}/tests/changessincefilter.lua)
+ADD_TEST(couchstore-compact couchscript ${CMAKE_CURRENT_SOURCE_DIR}/tests/compact.lua)
+ADD_TEST(couchstore-dropdel couchscript ${CMAKE_CURRENT_SOURCE_DIR}/tests/dropdel.lua)
+ADD_TEST(couchstore-largefile couchscript ${CMAKE_CURRENT_SOURCE_DIR}/tests/largefile.lua)
+ADD_TEST(couchstore-large couchscript ${CMAKE_CURRENT_SOURCE_DIR}/tests/large.lua)
 ENDIF(LUA_FOUND)
 
 MACRO (M_ADD_PYTHON_TEST name pyfile)
@@ -129,9 +130,9 @@ MACRO (M_ADD_PYTHON_TEST name pyfile)
     "LD_LIBRARY_PATH=${CMAKE_CURRENT_BINARY_DIR}")
 ENDMACRO()
 
-M_ADD_PYTHON_TEST(couchstore-purge tests/purge.py)
-M_ADD_PYTHON_TEST(couchstore-rewind tests/rewind.py)
-M_ADD_PYTHON_TEST(couchstore-changecount tests/changecount.py)
+M_ADD_PYTHON_TEST(couchstore-purge ${CMAKE_CURRENT_SOURCE_DIR}/tests/purge.py)
+M_ADD_PYTHON_TEST(couchstore-rewind ${CMAKE_CURRENT_SOURCE_DIR}/tests/rewind.py)
+M_ADD_PYTHON_TEST(couchstore-changecount ${CMAKE_CURRENT_SOURCE_DIR}/tests/changecount.py)
 
 ADD_EXECUTABLE(couchstore_testapp tests/testapp.c
 	tests/file_merger_tests.c

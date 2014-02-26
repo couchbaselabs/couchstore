@@ -7,6 +7,8 @@
 #include <sysexits.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sstream>
+#include <string>
 
 #include <libcouchstore/couch_db.h>
 #include "internal.h"
@@ -789,6 +791,17 @@ int main(int argc, char **argv)
     if (argc < 2) {
         std::cerr << "Give me a filename or give me death." << std::endl;
         exit(EX_USAGE);
+    }
+
+    if (getenv("LUA_PATH") == NULL) {
+        std::string path = argv[1];
+        size_t pos = path.find_last_of("/\\");
+        if (pos != std::string::npos) {
+            path.resize(pos);
+            std::stringstream ss;
+            ss << "LUA_PATH=" << path << "/?.lua;;";
+            putenv(strdup(ss.str().c_str()));
+        }
     }
 
     lua_State *ls = luaL_newstate();
