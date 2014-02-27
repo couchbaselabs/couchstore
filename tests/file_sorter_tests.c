@@ -244,6 +244,9 @@ static void test_file_sort(unsigned buffer_size,
                            file_merger_feed_record_t callback,
                            int skip_writeback)
 {
+#ifdef _MSC_VER
+    fprintf(stderr, "This test is broken on WIN32. See MB-10292\n");
+#else
     file_sorter_error_t ret;
     int i = 0;
     create_file();
@@ -269,6 +272,7 @@ static void test_file_sort(unsigned buffer_size,
     }
 
     remove(UNSORTED_FILE_PATH);
+#endif
 }
 
 
