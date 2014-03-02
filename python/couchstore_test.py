@@ -1,4 +1,4 @@
-from couchstore import CouchStore, CouchStoreException, DocumentInfo, SizedBuf
+from couchstore import CouchStore, DocumentInfo, SizedBuf
 import os
 import struct
 import unittest
@@ -7,7 +7,7 @@ import unittest
 def removeIfExists(path):
     try:
         os.remove(path)
-    except OSError as x:
+    except OSError:
         pass
 
 
