@@ -5,13 +5,13 @@ import sys
 import traceback
 
 try:
-    from ctypes import *
+    import ctypes
 except ImportError:
     cb_path = '/opt/couchbase/lib/python'
     while cb_path in sys.path:
         sys.path.remove(cb_path)
     try:
-        from ctypes import *
+        import ctypes
     except ImportError:
         sys.exit('error: could not import ctypes module')
     else:
@@ -23,7 +23,7 @@ for lib in ('libcouchstore.so',      # Linux
             'couchstore.dll',        # Windows
             'libcouchstore-1.dll'):  # Windows (pre-CMake)
     try:
-        _lib = CDLL(lib)
+        _lib = ctypes.CDLL(lib)
         break
     except OSError, err:
         continue
@@ -32,7 +32,7 @@ else:
     sys.exit(1)
 
 
-_lib.couchstore_strerror.restype = c_char_p
+_lib.couchstore_strerror.restype = ctypes.c_char_p
 
 
 class CouchStoreException(Exception):
@@ -65,54 +65,54 @@ def _toString(key):
 
 ### INTERNAL STRUCTS:
 
-class SizedBuf(Structure):
-    _fields_ = [("buf", POINTER(c_char)), ("size", c_size_t)]
+class SizedBuf(ctypes.Structure):
+    _fields_ = [("buf", ctypes.POINTER(ctypes.c_char)), ("size", ctypes.c_size_t)]
 
     def __init__(self, string):
         if string is not None:
             string = _toString(string)
             length = len(string)
-            buf = create_string_buffer(string, length)
-            Structure.__init__(self, buf, length)
+            buf = ctypes.create_string_buffer(string, length)
+            ctypes.Structure.__init__(self, buf, length)
         else:
-            Structure.__init__(self, None, 0)
+            ctypes.Structure.__init__(self, None, 0)
 
     def __str__(self):
-        return string_at(self.buf, self.size)
+        return ctypes.string_at(self.buf, self.size)
 
 
-class DocStruct(Structure):
+class DocStruct(ctypes.Structure):
     _fields_ = [("id", SizedBuf), ("data", SizedBuf)]
 
 
-class DocInfoStruct(Structure):
+class DocInfoStruct(ctypes.Structure):
     _fields_ = [("id", SizedBuf),
-                ("db_seq", c_ulonglong),
-                ("rev_seq", c_ulonglong),
+                ("db_seq", ctypes.c_ulonglong),
+                ("rev_seq", ctypes.c_ulonglong),
                 ("rev_meta", SizedBuf),
-                ("deleted", c_int),
-                ("content_meta", c_ubyte),
-                ("bp", c_ulonglong),
-                ("size", c_size_t)]
+                ("deleted", ctypes.c_int),
+                ("content_meta", ctypes.c_ubyte),
+                ("bp", ctypes.c_ulonglong),
+                ("size", ctypes.c_size_t)]
 
 
-class LocalDocStruct(Structure):
+class LocalDocStruct(ctypes.Structure):
     _fields_ = [("id", SizedBuf),
                 ("json", SizedBuf),
-                ("deleted", c_int)]
+                ("deleted", ctypes.c_int)]
 
 
-class DbInfoStruct(Structure):
-    _fields_ = [("filename", c_char_p),
-                ("last_sequence", c_ulonglong),
-                ("doc_count", c_ulonglong),
-                ("deleted_count", c_ulonglong),
-                ("space_used", c_ulonglong),
-                ("header_position", c_ulonglong)]
+class DbInfoStruct(ctypes.Structure):
+    _fields_ = [("filename", ctypes.c_char_p),
+                ("last_sequence", ctypes.c_ulonglong),
+                ("doc_count", ctypes.c_ulonglong),
+                ("deleted_count", ctypes.c_ulonglong),
+                ("space_used", ctypes.c_ulonglong),
+                ("header_position", ctypes.c_ulonglong)]
 
 
-class CounterStruct(Structure):
-    _fields_ = [("count", c_ulonglong)]
+class CounterStruct(ctypes.Structure):
+    _fields_ = [("count", ctypes.c_ulonglong)]
 
 
 class DocumentInfo(object):
@@ -179,11 +179,11 @@ class DocumentInfo(object):
         if not hasattr(self, "store") or not hasattr(self, "_bp"):
             raise Exception("Contents unknown")
         info = self._asStruct()
-        docptr = pointer(DocStruct())
+        docptr = ctypes.pointer(DocStruct())
         _lib.couchstore_open_doc_with_docinfo(self.store,
-                                              byref(info),
-                                              byref(docptr),
-                                              c_uint64(options))
+                                              ctypes.byref(info),
+                                              ctypes.byref(docptr),
+                                              ctypes.c_uint64(options))
         contents = str(docptr.contents.data)
         _lib.couchstore_free_document(docptr)
         return contents
@@ -199,11 +199,11 @@ class LocalDocs(object):
         """Returns the contents of a local document (as a string) given its ID.
         """
         id = _toString(key)
-        docptr = pointer(LocalDocStruct())
+        docptr = ctypes.pointer(LocalDocStruct())
         err = _lib.couchstore_open_local_document(self.couchstore,
                                                   id,
-                                                  c_size_t(len(id)),
-                                                  byref(docptr))
+                                                  ctypes.c_size_t(len(id)),
+                                                  ctypes.byref(docptr))
         if err == -5 or (err == 0 and docptr.contents.deleted):
             raise KeyError(id)
         _check(err)
@@ -220,7 +220,8 @@ class LocalDocs(object):
             doc.json = SizedBuf(value)
         else:
             doc.deleted = True
-        _check(_lib.couchstore_save_local_document(self.couchstore, byref(doc)))
+        _check(_lib.couchstore_save_local_document(self.couchstore,
+                                                   ctypes.byref(doc)))
 
     def __delitem__(self, key):
         self.__setitem__(key, None)
@@ -240,8 +241,10 @@ class CouchStore(object):
         else:
             flags = 0
 
-        db = c_void_p()
-        _check(_lib.couchstore_open_db(path, c_uint64(flags), byref(db)))
+        db = ctypes.c_void_p()
+        _check(_lib.couchstore_open_db(path,
+                                       ctypes.c_uint64(flags),
+                                       ctypes.byref(db)))
         self._as_parameter_ = db
         self.path = path
 
@@ -262,7 +265,7 @@ class CouchStore(object):
         properties are filename, last_sequence, doc_count, deleted_count,
         space_used, header_position."""
         info = DbInfoStruct()
-        _check(_lib.couchstore_db_info(self, byref(info)))
+        _check(_lib.couchstore_db_info(self, ctypes.byref(info)))
         return info
 
     def rewindHeader(self):
@@ -286,14 +289,14 @@ class CouchStore(object):
             infoStruct = DocInfoStruct(idbuf)
         if data is not None:
             doc = DocStruct(idbuf, SizedBuf(data))
-            docref = byref(doc)
+            docref = ctypes.byref(doc)
             if options & CouchStore.COMPRESS:
                 infoStruct.content_meta |= 0x80
         else:
             docref = None
         _check(_lib.couchstore_save_document(self, docref,
-                                             byref(infoStruct),
-                                             c_uint64(options)))
+                                             ctypes.byref(infoStruct),
+                                             ctypes.c_uint64(options)))
         if isinstance(id, DocumentInfo):
             id.sequence = infoStruct.db_seq
         return infoStruct.db_seq
@@ -304,8 +307,8 @@ class CouchStore(object):
         None, in which case the documents will be deleted.) Returns an array of
         new sequence numbers."""
         n = len(ids)
-        docStructs = (POINTER(DocStruct) * n)()
-        infoStructs = (POINTER(DocInfoStruct) * n)()
+        docStructs = (ctypes.POINTER(DocStruct) * n)()
+        infoStructs = (ctypes.POINTER(DocInfoStruct) * n)()
         for i in xrange(0, n):
             id = ids[i]
             if isinstance(id, DocumentInfo):
@@ -317,12 +320,13 @@ class CouchStore(object):
                 doc.data = SizedBuf(datas[i])
             else:
                 info.deleted = True
-            infoStructs[i] = pointer(info)
-            docStructs[i] = pointer(doc)
-        _check(_lib.couchstore_save_documents(self, byref(docStructs),
-                                              byref(infoStructs),
-                                              c_uint(n),
-                                              c_uint64(options)))
+            infoStructs[i] = ctypes.pointer(info)
+            docStructs[i] = ctypes.pointer(doc)
+        _check(_lib.couchstore_save_documents(self,
+                                              ctypes.byref(docStructs),
+                                              ctypes.byref(infoStructs),
+                                              ctypes.c_uint(n),
+                                              ctypes.c_uint64(options)))
         return [info.contents.db_seq for info in infoStructs]
     pass
 
@@ -335,11 +339,11 @@ class CouchStore(object):
     def get(self, id, options=0):
         """Returns the contents of a document (as a string) given its ID."""
         id = _toString(id)
-        docptr = pointer(DocStruct())
+        docptr = ctypes.pointer(DocStruct())
         err = _lib.couchstore_open_document(self,
                                             id,
-                                            c_size_t(len(id)),
-                                            byref(docptr),
+                                            ctypes.c_size_t(len(id)),
+                                            ctypes.byref(docptr),
                                             options)
         if err == -5:
             raise KeyError(id)
@@ -373,24 +377,27 @@ class CouchStore(object):
     def getInfo(self, id):
         """Returns the DocumentInfo object with the given ID."""
         id = _toString(id)
-        infoptr = pointer(DocInfoStruct())
+        infoptr = ctypes.pointer(DocInfoStruct())
         err = _lib.couchstore_docinfo_by_id(self,
                                             id,
-                                            c_size_t(len(id)),
-                                            byref(infoptr))
+                                            ctypes.c_size_t(len(id)),
+                                            ctypes.byref(infoptr))
         return self._infoPtrToDoc(id, infoptr, err)
 
     def getInfoBySequence(self, sequence):
         """Returns the DocumentInfo object with the given sequence number."""
-        infoptr = pointer(DocInfoStruct())
+        infoptr = ctypes.pointer(DocInfoStruct())
         err = _lib.couchstore_docinfo_by_sequence(self,
-                                                  c_ulonglong(sequence),
-                                                  byref(infoptr))
+                                                  ctypes.c_ulonglong(sequence),
+                                                  ctypes.byref(infoptr))
         return self._infoPtrToDoc(sequence, infoptr, err)
 
     # Iterating:
 
-    ITERATORFUNC = CFUNCTYPE(c_int, c_void_p, POINTER(DocInfoStruct), c_void_p)
+    ITERATORFUNC = ctypes.CFUNCTYPE(ctypes.c_int,
+                                    ctypes.c_void_p,
+                                    ctypes.POINTER(DocInfoStruct),
+                                    ctypes.c_void_p)
 
     def forEachChange(self, since, fn):
         """Calls the function "fn" once for every document sequence since the
@@ -401,10 +408,10 @@ class CouchStore(object):
             fn(DocumentInfo._fromStruct(docInfoPtr.contents, self))
             return 0
         _check(_lib.couchstore_changes_since(self,
-                                             c_uint64(since),
-                                             c_uint64(0),
+                                             ctypes.c_uint64(since),
+                                             ctypes.c_uint64(0),
                                              CouchStore.ITERATORFUNC(callback),
-                                             c_void_p(0)))
+                                             ctypes.c_void_p(0)))
 
     def changesSince(self, since):
         """Returns an array of DocumentInfo objects, for every document that's
@@ -427,17 +434,17 @@ class CouchStore(object):
             numIDs = 2
         _check(_lib.couchstore_docinfos_by_id(self,
                                               ids,
-                                              c_uint(numIDs),
-                                              c_uint64(1),
+                                              ctypes.c_uint(numIDs),
+                                              ctypes.c_uint64(1),
                                               CouchStore.ITERATORFUNC(callback),
-                                              c_void_p(0)))
+                                              ctypes.c_void_p(0)))
 
     def changesCount(self, minimum, maximum):
         cstruct = CounterStruct()
         err = _lib.couchstore_changes_count(self,
-                                            c_uint64(minimum),
-                                            c_uint64(maximum),
-                                            pointer(cstruct))
+                                            ctypes.c_uint64(minimum),
+                                            ctypes.c_uint64(maximum),
+                                            ctypes.pointer(cstruct))
         _check(err)
         return cstruct.count
 
