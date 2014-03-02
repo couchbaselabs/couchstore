@@ -19,20 +19,19 @@ import errno
 import traceback
 
 # Load the couchstore library and customize return types:
-try:
-    _lib = CDLL("libcouchstore.so")         # Linux
-except OSError:
+for lib in ('libcouchstore.so',      # Linux
+            'libcouchstore.dylib',   # Mac OS
+            'couchstore.dll',        # Windows
+            'libcouchstore-1.dll'):  # Windows (pre-CMake)
     try:
-        _lib = CDLL("libcouchstore.dylib")  # Mac OS
-    except OSError:
-        try:
-            _lib = CDLL("couchstore.dll")   # Windows
-        except OSError:
-            try:                            # Windows (pre-CMake)
-                _lib = CDLL("libcouchstore-1.dll")
-            except Exception, err:
-                traceback.print_exc()
-                exit(1)
+        _lib = CDLL(lib)
+        break
+    except OSError, err:
+        continue
+else:
+    traceback.print_exc()
+    exit(1)
+
 
 _lib.couchstore_strerror.restype = c_char_p
 
