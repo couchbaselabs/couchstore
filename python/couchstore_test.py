@@ -203,8 +203,9 @@ class CouchStoreTest (unittest.TestCase):
         self.assertRaises(KeyError, locals.__getitem__, "hello")
 
     def testSizedBuf(self):
-        # Converting Python strings to/from SizedBufs is tricky enough (when the strings might
-        # contain null bytes) that it's worth a unit test of its own.
+        # Converting Python strings to/from SizedBufs is tricky enough (when
+        # the strings might contain null bytes) that it's worth a unit test of
+        # its own.
         data = "foooooobarrrr"
         buf = SizedBuf(data)
         self.assertEqual(buf.size, len(data))
@@ -216,7 +217,8 @@ class CouchStoreTest (unittest.TestCase):
         self.assertEqual(str(buf), data)
 
     def testBinaryMeta(self):
-        # Make sure binary data, as produced by Python's struct module, works in revMeta.
+        # Make sure binary data, as produced by Python's struct module, works
+        # in revMeta.
         packed = struct.pack(">QII", 0, 1, 2)
         d = DocumentInfo("bin")
         d.revMeta = packed
