@@ -1,10 +1,13 @@
 # couchstore.py
 # Python interface to CouchStore library
 
+import errno
+import sys
+import traceback
+
 try:
     from ctypes import *
 except ImportError:
-    import sys
     cb_path = '/opt/couchbase/lib/python'
     while cb_path in sys.path:
         sys.path.remove(cb_path)
@@ -14,9 +17,6 @@ except ImportError:
         sys.exit('error: could not import ctypes module')
     else:
         sys.path.insert(0, cb_path)
-
-import errno
-import traceback
 
 # Load the couchstore library and customize return types:
 for lib in ('libcouchstore.so',      # Linux
@@ -30,7 +30,7 @@ for lib in ('libcouchstore.so',      # Linux
         continue
 else:
     traceback.print_exc()
-    exit(1)
+    sys.exit(1)
 
 
 _lib.couchstore_strerror.restype = c_char_p
