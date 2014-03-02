@@ -3,16 +3,19 @@ import os
 import struct
 import unittest
 
+
 def removeIfExists(path):
     try:
         os.remove(path)
     except OSError as x:
         pass
 
+
 class NonexistentCouchStoreTest (unittest.TestCase):
     def testNonexistent(self):
         removeIfExists("/tmp/nonexistent.couch")
         self.assertRaises(OSError, CouchStore, "/tmp/nonexistent.couch")
+
 
 class CouchStoreTest (unittest.TestCase):
     def setUp(self):

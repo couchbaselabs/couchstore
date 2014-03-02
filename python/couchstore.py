@@ -81,8 +81,10 @@ class SizedBuf(Structure):
     def __str__(self):
         return string_at(self.buf, self.size)
 
+
 class DocStruct(Structure):
     _fields_ = [("id", SizedBuf), ("data", SizedBuf)]
+
 
 class DocInfoStruct(Structure):
     _fields_ = [("id", SizedBuf),
@@ -94,10 +96,12 @@ class DocInfoStruct(Structure):
                 ("bp", c_ulonglong),
                 ("size", c_size_t) ]
 
+
 class LocalDocStruct(Structure):
     _fields_ = [("id", SizedBuf),
                 ("json", SizedBuf),
                 ("deleted", c_int) ]
+
 
 class DbInfoStruct(Structure):
     _fields_ = [("filename", c_char_p),
@@ -107,10 +111,12 @@ class DbInfoStruct(Structure):
                 ("space_used", c_ulonglong),
                 ("header_position", c_ulonglong) ]
 
+
 class CounterStruct(Structure):
     _fields_ = [("count", c_ulonglong)]
 
 ### DOCUMENT INFO CLASS:
+
 
 class DocumentInfo(object):
     """Metadata of a document in a CouchStore database."""
