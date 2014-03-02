@@ -115,8 +115,6 @@ class DbInfoStruct(Structure):
 class CounterStruct(Structure):
     _fields_ = [("count", c_ulonglong)]
 
-### DOCUMENT INFO CLASS:
-
 
 class DocumentInfo(object):
     """Metadata of a document in a CouchStore database."""
@@ -184,8 +182,6 @@ class DocumentInfo(object):
         return contents
 
 
-### LOCAL-DOCUMENTS CLASS:
-
 class LocalDocs(object):
     """Collection that represents the local documents of a CouchStore."""
     def __init__(self, couchstore):
@@ -216,8 +212,6 @@ class LocalDocs(object):
     def __delitem__(self, key):
         self.__setitem__(key, None)
 
-
-### COUCHSTORE CLASS:
 
 class CouchStore(object):
     """Interface to a CouchStore database."""
