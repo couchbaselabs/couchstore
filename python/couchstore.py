@@ -1,4 +1,3 @@
-# couchstore.py
 # Python interface to CouchStore library
 
 import errno
@@ -70,7 +69,7 @@ class SizedBuf(Structure):
     _fields_ = [("buf", POINTER(c_char)), ("size", c_size_t)]
 
     def __init__(self, string):
-        if string != None:
+        if string is not None:
             string = _toString(string)
             length = len(string)
             buf = create_string_buffer(string, length)
@@ -94,13 +93,13 @@ class DocInfoStruct(Structure):
                 ("deleted", c_int),
                 ("content_meta", c_ubyte),
                 ("bp", c_ulonglong),
-                ("size", c_size_t) ]
+                ("size", c_size_t)]
 
 
 class LocalDocStruct(Structure):
     _fields_ = [("id", SizedBuf),
                 ("json", SizedBuf),
-                ("deleted", c_int) ]
+                ("deleted", c_int)]
 
 
 class DbInfoStruct(Structure):
@@ -109,7 +108,7 @@ class DbInfoStruct(Structure):
                 ("doc_count", c_ulonglong),
                 ("deleted_count", c_ulonglong),
                 ("space_used", c_ulonglong),
-                ("header_position", c_ulonglong) ]
+                ("header_position", c_ulonglong)]
 
 
 class CounterStruct(Structure):
@@ -132,7 +131,7 @@ class DocumentInfo(object):
         self.revSequence = 0
 
     @staticmethod
-    def _fromStruct(info, store = None):
+    def _fromStruct(info, store=None):
         self = DocumentInfo(str(info.id))
         self.store = store
         self.sequence = info.db_seq
@@ -147,15 +146,19 @@ class DocumentInfo(object):
 
     def _asStruct(self):
         struct = DocInfoStruct(SizedBuf(self.id))
-        if hasattr(self, "sequence"): struct.db_seq = self.sequence
-        if hasattr(self, "revMeta"): struct.rev_meta = SizedBuf(self.revMeta)
+        if hasattr(self, "sequence"):
+            struct.db_seq = self.sequence
+        if hasattr(self, "revMeta"):
+            struct.rev_meta = SizedBuf(self.revMeta)
         struct.rev_seq = self.revSequence
         struct.deleted = self.deleted
         struct.content_meta = self.contentType & 0x0F
         if hasattr(self, "compressed") and self.compressed:
             struct.content_meta |= 0x80
-        if hasattr(self, "_bp"): struct.bp = self._bp
-        if hasattr(self, "physSize"): struct.size = self.physSize
+        if hasattr(self, "_bp"):
+            struct.bp = self._bp
+        if hasattr(self, "physSize"):
+            struct.size = self.physSize
         return struct
 
     def __str__(self):
@@ -166,10 +169,10 @@ class DocumentInfo(object):
 
     def dump(self):
         return "DocumentInfo('%s', %d bytes, seq=%d, revSeq=%d, deleted=%s, contentType=%d, compressed=%d, bp=%d)" % \
-                 (self.id, self.physSize, self.sequence, self.revSequence, self.deleted, \
-                  self.contentType, self.compressed, self._bp)
+            (self.id, self.physSize, self.sequence, self.revSequence,
+             self.deleted, self.contentType, self.compressed, self._bp)
 
-    def getContents(self, options =0):
+    def getContents(self, options=0):
         """Fetches and returns the contents of a DocumentInfo returned from CouchStore's getInfo
            or getInfoBySequence methods."""
         if not hasattr(self, "store") or not hasattr(self, "_bp"):
@@ -203,7 +206,7 @@ class LocalDocs(object):
         """Saves a local document with the given ID, or deletes it if the value is None."""
         idbuf = SizedBuf(key)
         doc = LocalDocStruct(idbuf)
-        if value != None:
+        if value is not None:
             doc.json = SizedBuf(value)
         else:
             doc.deleted = True
@@ -216,13 +219,13 @@ class LocalDocs(object):
 class CouchStore(object):
     """Interface to a CouchStore database."""
 
-    def __init__(self, path, mode =None):
+    def __init__(self, path, mode=None):
         """Creates a CouchStore at a given path. The option mode parameter can be 'r' for
            read-only access, or 'c' to create the file if it doesn't already exist."""
         if mode == 'r':
-            flags = 2 # RDONLY
+            flags = 2  # RDONLY
         elif mode == 'c':
-            flags = 1 # CREATE
+            flags = 1  # CREATE
         else:
             flags = 0
 
@@ -260,7 +263,7 @@ class CouchStore(object):
 
     COMPRESS = 1
 
-    def save(self, id, data, options =0):
+    def save(self, id, data, options=0):
         """Saves a document with the given ID. Returns the sequence number."""
         if isinstance(id, DocumentInfo):
             infoStruct = id._asStruct()
@@ -268,7 +271,7 @@ class CouchStore(object):
         else:
             idbuf = SizedBuf(id)
             infoStruct = DocInfoStruct(idbuf)
-        if data != None:
+        if data is not None:
             doc = DocStruct(idbuf, SizedBuf(data))
             docref = byref(doc)
             if options & CouchStore.COMPRESS:
@@ -280,7 +283,7 @@ class CouchStore(object):
             id.sequence = infoStruct.db_seq
         return infoStruct.db_seq
 
-    def saveMultiple(self, ids, datas, options =0):
+    def saveMultiple(self, ids, datas, options=0):
         """Saves multiple documents. 'ids' is an array of either strings or DocumentInfo objects.
            'datas' is a parallel array of value strings (or None, in which case the documents
            will be deleted.) Returns an array of new sequence numbers."""
@@ -300,7 +303,7 @@ class CouchStore(object):
                 info.deleted = True
             infoStructs[i] = pointer(info)
             docStructs[i] = pointer(doc)
-        _check(_lib.couchstore_save_documents(self, byref(docStructs), byref(infoStructs), c_uint(n), \
+        _check(_lib.couchstore_save_documents(self, byref(docStructs), byref(infoStructs), c_uint(n),
                                               c_uint64(options)))
         return [info.contents.db_seq for info in infoStructs]
     pass
@@ -311,7 +314,7 @@ class CouchStore(object):
 
     DECOMPRESS = 1
 
-    def get(self, id, options =0):
+    def get(self, id, options=0):
         """Returns the contents of a document (as a string) given its ID."""
         id = _toString(id)
         docptr = pointer(DocStruct())
@@ -339,7 +342,7 @@ class CouchStore(object):
             raise KeyError(key)
         _check(err)
         info = infoptr.contents
-        if info == None:
+        if info is None:
             return None
         doc = DocumentInfo._fromStruct(info, self)
         _lib.couchstore_free_docinfo(infoptr)
@@ -369,7 +372,7 @@ class CouchStore(object):
         def callback(dbPtr, docInfoPtr, context):
             fn(DocumentInfo._fromStruct(docInfoPtr.contents, self))
             return 0
-        _check(_lib.couchstore_changes_since(self, c_uint64(since), c_uint64(0), \
+        _check(_lib.couchstore_changes_since(self, c_uint64(since), c_uint64(0),
                CouchStore.ITERATORFUNC(callback), c_void_p(0)))
 
     def changesSince(self, since):
@@ -391,12 +394,12 @@ class CouchStore(object):
         if endKey:
             ids[1] = SizedBuf(endKey)
             numIDs = 2
-        _check(_lib.couchstore_docinfos_by_id(self, ids, c_uint(numIDs), c_uint64(1), \
+        _check(_lib.couchstore_docinfos_by_id(self, ids, c_uint(numIDs), c_uint64(1),
                CouchStore.ITERATORFUNC(callback), c_void_p(0)))
 
     def changesCount(self, minimum, maximum):
         cstruct = CounterStruct()
-        err = _lib.couchstore_changes_count(self, c_uint64(minimum), \
+        err = _lib.couchstore_changes_count(self, c_uint64(minimum),
                                             c_uint64(maximum), pointer(cstruct))
         _check(err)
         return cstruct.count

@@ -112,12 +112,15 @@ class CouchStoreTest (unittest.TestCase):
         self.assertTrue(info.compressed)
 
     def expectedKey(self, i):
-        return "key_%2d" % (i+1)
+        return "key_%2d" % (i + 1)
+
     def expectedValue(self, i):
-        return "Hi there! I'm value #%d!" % (i+1)
+        return "Hi there! I'm value #%d!" % (i + 1)
+
     def addDocs(self, n):
         for i in xrange(n):
             self.store.save(self.expectedKey(i), self.expectedValue(i))
+
     def addBulkDocs(self, n):
         ids = [self.expectedKey(i) for i in xrange(n)]
         datas = [self.expectedValue(i) for i in xrange(n)]
@@ -162,15 +165,18 @@ class CouchStoreTest (unittest.TestCase):
     def testForAllDocs(self):
         self.addDocs(50)
         docCount = [0]
+
         def checkDoc(docInfo):
             self.assertEquals(docInfo.id, self.expectedKey(docCount[0]))
             docCount[0] += 1
+
         self.store.forEachDoc(None, None, checkDoc)
         self.assertEqual(docCount[0], 50)
 
     def testForSomeDocs(self):
         self.addDocs(50)
         docCount = [0]
+
         def checkDoc(docInfo):
             self.assertEquals(docInfo.id, self.expectedKey(docCount[0]))
             docCount[0] += 1
@@ -228,27 +234,27 @@ class CouchStoreTest (unittest.TestCase):
         v = []
         for i in range(1000):
             d = DocumentInfo(str(i))
-            d.revMeta = "hello-%s" % (i)
+            d.revMeta = "hello-%s" % i
             k.append(d)
-            v.append("world-%s" % (i))
+            v.append("world-%s" % i)
         self.store.saveMultiple(k, v)
         self.store.commit()
         self.store.close()
         self.store = CouchStore("/tmp/test.couch", 'r')
         for doc_info in self.store.changesSince(0):
             i = int(doc_info.id)
-            self.assertEqual(doc_info.revMeta, "hello-%s" % (i))
+            self.assertEqual(doc_info.revMeta, "hello-%s" % i)
             doc_contents = doc_info.getContents()
-            self.assertEqual(doc_contents, "world-%s" % (i))
+            self.assertEqual(doc_contents, "world-%s" % i)
 
     def testMultipleMetaStruct(self):
         k = []
         v = []
         for i in range(1000):
             d = DocumentInfo(str(i))
-            d.revMeta = struct.pack(">QII", i*3, i*2, i)
+            d.revMeta = struct.pack(">QII", i * 3, i * 2, i)
             k.append(d)
-            v.append("world-%s" % (i))
+            v.append("world-%s" % i)
         self.store.saveMultiple(k, v)
         self.store.commit()
         self.store.close()
@@ -256,11 +262,11 @@ class CouchStoreTest (unittest.TestCase):
         for doc_info in self.store.changesSince(0):
             i = int(doc_info.id)
             i3, i2, i1 = struct.unpack(">QII", doc_info.revMeta)
-            self.assertEqual(i3, i*3)
-            self.assertEqual(i2, i*2)
-            self.assertEqual(i1, i*1)
+            self.assertEqual(i3, i * 3)
+            self.assertEqual(i2, i * 2)
+            self.assertEqual(i1, i * 1)
             doc_contents = doc_info.getContents()
-            self.assertEqual(doc_contents, "world-%s" % (doc_info.id))
+            self.assertEqual(doc_contents, "world-%s" % doc_info.id)
 
 
 if __name__ == '__main__':
