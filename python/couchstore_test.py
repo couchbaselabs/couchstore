@@ -173,6 +173,17 @@ class CouchStoreTest (unittest.TestCase):
         self.store.forEachDoc(None, None, checkDoc)
         self.assertEqual(docCount[0], 50)
 
+    def testDocumentInfoRepr(self):
+        self.addDocs(1)
+
+        def checkDoc(docInfo):
+            expected = "DocumentInfo('%s', %d bytes)" % (docInfo.id,
+                                                         docInfo.physSize)
+            self.assertEquals(str(docInfo), expected)
+            self.assertEquals(repr(docInfo), expected)
+
+        self.store.forEachDoc(None, None, checkDoc)
+
     def testForSomeDocs(self):
         self.addDocs(50)
         docCount = [0]

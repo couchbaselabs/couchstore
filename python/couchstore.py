@@ -162,10 +162,10 @@ class DocumentInfo(object):
         return struct
 
     def __str__(self):
-        return "DocumentInfo('%s', %d bytes)" % (self.id, self.size)
+        return "DocumentInfo('%s', %d bytes)" % (self.id, self.physSize)
 
     def __repr__(self):
-        return "DocumentInfo('%s', %d bytes)" % (self.id, self.size)
+        return "DocumentInfo('%s', %d bytes)" % (self.id, self.physSize)
 
     def dump(self):
         return "DocumentInfo('%s', %d bytes, seq=%d, revSeq=%d, deleted=%s, " \
