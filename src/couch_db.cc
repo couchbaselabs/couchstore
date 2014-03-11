@@ -1245,6 +1245,9 @@ static couchstore_error_t btree_eval_seq_reduce(Db *db,
         }
     }
 cleanup:
+    if (nodebuf) {
+        free(nodebuf);
+    }
     return errcode;
 }
 
