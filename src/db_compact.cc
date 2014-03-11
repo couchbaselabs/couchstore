@@ -186,7 +186,7 @@ static couchstore_error_t compact_seq_fetchcb(couchfile_lookup_request *rq,
         db_write_buf(ctx->target_mr->rq->file, &item, &new_bp, &new_size);
 
         bpWithDeleted = (bpWithDeleted & BP_DELETED_FLAG) | new_bp;  //Preserve high bit
-        rawSeq->bp = encode_raw48(bpWithDeleted);
+        encode_raw48(bpWithDeleted, &rawSeq->bp);
         free(item.buf);
     }
 

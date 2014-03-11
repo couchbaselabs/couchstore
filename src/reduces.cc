@@ -12,7 +12,7 @@ couchstore_error_t by_seq_reduce(char *dst, size_t *size_r, const nodelist *leaf
 
     (void) leaflist;
     (void) ctx;
-    raw->count = encode_raw40(count);
+    encode_raw40(count, &raw->count);
     *size_r = sizeof(*raw);
 
     return COUCHSTORE_SUCCESS;
@@ -33,7 +33,7 @@ couchstore_error_t by_seq_rereduce(char *dst, size_t *size_r, const nodelist *pt
         count--;
     }
     raw_by_seq_reduce *raw = (raw_by_seq_reduce*)dst;
-    raw->count = encode_raw40(total);
+    encode_raw40(total, &raw->count);
     *size_r = sizeof(*raw);
 
     return COUCHSTORE_SUCCESS;
@@ -43,9 +43,9 @@ couchstore_error_t by_seq_rereduce(char *dst, size_t *size_r, const nodelist *pt
 static size_t encode_by_id_reduce(char *dst, uint64_t notdeleted, uint64_t deleted, uint64_t size)
 {
     raw_by_id_reduce *raw = (raw_by_id_reduce*)dst;
-    raw->notdeleted = encode_raw40(notdeleted);
-    raw->deleted = encode_raw40(deleted);
-    raw->size = encode_raw48(size);
+    encode_raw40(notdeleted, &raw->notdeleted);
+    encode_raw40(deleted, &raw->deleted);
+    encode_raw48(size, &raw->size);
     return sizeof(*raw);
 }
 

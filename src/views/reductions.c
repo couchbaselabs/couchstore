@@ -238,7 +238,8 @@ static void enc_uint16(uint16_t u, char **buf)
 
 static void enc_raw40(uint64_t u, char **buf)
 {
-    raw_40 r = encode_raw40(u);
+    raw_40 r;
+    encode_raw40(u, &r);
     memcpy(*buf, &r, 5);
     *buf += 5;
 }

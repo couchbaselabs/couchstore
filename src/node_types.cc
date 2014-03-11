@@ -68,8 +68,8 @@ size_t encode_root(void *buf, node_pointer *node)
     }
     if (buf) {
         raw_btree_root *root = static_cast<raw_btree_root*>(buf);
-        root->pointer = encode_raw48(node->pointer);
-        root->subtreesize = encode_raw48(node->subtreesize);
+        encode_raw48(node->pointer, &root->pointer);
+        encode_raw48(node->subtreesize, &root->subtreesize);
         memcpy(root + 1, node->reduce_value.buf, node->reduce_value.size);
     }
     return sizeof(raw_btree_root) + node->reduce_value.size;

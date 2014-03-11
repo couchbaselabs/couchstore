@@ -131,9 +131,9 @@ static couchstore_error_t db_write_header(Db *db)
     writebuf.buf = (char *) calloc(1, writebuf.size);
     raw_file_header* header = (raw_file_header*)writebuf.buf;
     header->version = encode_raw08(COUCH_DISK_VERSION);
-    header->update_seq = encode_raw48(db->header.update_seq);
-    header->purge_seq = encode_raw48(db->header.purge_seq);
-    header->purge_ptr = encode_raw48(db->header.purge_ptr);
+    encode_raw48(db->header.update_seq, &header->update_seq);
+    encode_raw48(db->header.purge_seq, &header->purge_seq);
+    encode_raw48(db->header.purge_ptr, &header->purge_ptr);
     header->seqrootsize = encode_raw16((uint16_t)seqrootsize);
     header->idrootsize = encode_raw16((uint16_t)idrootsize);
     header->localrootsize = encode_raw16((uint16_t)localrootsize);
@@ -754,7 +754,7 @@ couchstore_error_t couchstore_changes_since(Db *db,
 
     since_term.buf = since_termbuf;
     since_term.size = 6;
-    *(raw_48*)since_term.buf = encode_raw48(since);
+    encode_raw48(since, (raw_48*)since_term.buf);
 
     rq.cmp.compare = seq_cmp;
     rq.file = &db->file;
@@ -900,7 +900,8 @@ couchstore_error_t couchstore_walk_seq_tree(Db *db,
                                            couchstore_walk_tree_callback_fn callback,
                                            void *ctx)
 {
-    raw_48 start_termbuf = encode_raw48(startSequence);
+    raw_48 start_termbuf;
+    encode_raw48(startSequence, &start_termbuf);
     sized_buf start_term = {(char*)&start_termbuf, 6};
 
     return couchstore_walk_tree(db, 0, db->header.by_seq_root, &start_term,
@@ -1009,7 +1010,7 @@ couchstore_error_t couchstore_docinfos_by_sequence(Db *db,
     error_unless(keylist && keyvalues, COUCHSTORE_ERROR_ALLOC_FAIL);
     unsigned i;
     for (i = 0; i< numDocs; ++i) {
-        keyvalues[i].sequence = encode_raw48(sequence[i]);
+        encode_raw48(sequence[i], &keyvalues[i].sequence);
         keylist[i].buf = static_cast<char*>((void*) &keyvalues[i]);
         keylist[i].size = sizeof(keyvalues[i]);
     }
@@ -1259,8 +1260,8 @@ couchstore_error_t couchstore_changes_count(Db* db,
     rightk.buf = (char*) &rightkr;
     leftk.size = 6;
     rightk.size = 6;
-    leftkr = encode_raw48(min_seq);
-    rightkr = encode_raw48(max_seq);
+    encode_raw48(min_seq, &leftkr);
+    encode_raw48(max_seq, &rightkr);
 
     *count = 0;
     if(db->header.by_seq_root) {

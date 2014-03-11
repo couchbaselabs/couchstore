@@ -24,9 +24,9 @@ static size_t assemble_seq_index_value(DocInfo *docinfo, char *dst)
     char* const start = dst;
     raw_seq_index_value *raw = (raw_seq_index_value*)dst;
     raw->sizes = encode_kv_length(docinfo->id.size, docinfo->size);
-    raw->bp = encode_raw48(docinfo->bp | (docinfo->deleted ? 1LL<<47 : 0));
+    encode_raw48(docinfo->bp | (docinfo->deleted ? 1LL<<47 : 0), &raw->bp);
     raw->content_meta = encode_raw08(docinfo->content_meta);
-    raw->rev_seq = encode_raw48(docinfo->rev_seq);
+    encode_raw48(docinfo->rev_seq, &raw->rev_seq);
     dst += sizeof(*raw);
 
     memcpy(dst, docinfo->id.buf, docinfo->id.size);
@@ -40,11 +40,11 @@ static size_t assemble_id_index_value(DocInfo *docinfo, char *dst)
 {
     char* const start = dst;
     raw_id_index_value *raw = (raw_id_index_value*)dst;
-    raw->db_seq = encode_raw48(docinfo->db_seq);
+    encode_raw48(docinfo->db_seq, &raw->db_seq);
     raw->size = encode_raw32((uint32_t)docinfo->size);
-    raw->bp = encode_raw48(docinfo->bp | (docinfo->deleted ? 1LL<<47 : 0));
+    encode_raw48(docinfo->bp | (docinfo->deleted ? 1LL<<47 : 0), &raw->bp);
     raw->content_meta = encode_raw08(docinfo->content_meta);
-    raw->rev_seq = encode_raw48(docinfo->rev_seq);
+    encode_raw48(docinfo->rev_seq, &raw->rev_seq);
     dst += sizeof(*raw);
 
     memcpy(dst, docinfo->rev_meta.buf, docinfo->rev_meta.size);
@@ -133,7 +133,7 @@ static void idfetch_update_cb(couchfile_modify_request *rq,
     delbuf->buf = (char *) fatbuf_get(ctx->deltermbuf, 6);
     delbuf->size = 6;
     memset(delbuf->buf, 0, 6);
-    *(raw_48*)delbuf->buf = encode_raw48(oldseq);
+    encode_raw48(oldseq, (raw_48*)delbuf->buf);
 
     ctx->seqacts[ctx->actpos].type = ACTION_REMOVE;
     ctx->seqacts[ctx->actpos].value.data = NULL;
@@ -287,7 +287,7 @@ static couchstore_error_t add_doc_to_update_list(Db *db,
     seqterm->buf = (char *) fatbuf_get(fb, RAW_SEQ_SIZE);
     seqterm->size = RAW_SEQ_SIZE;
     error_unless(seqterm->buf, COUCHSTORE_ERROR_ALLOC_FAIL);
-    *(raw_48*)seqterm->buf = encode_raw48(seq);
+    encode_raw48(seq, (raw_48*)seqterm->buf);
 
     if (doc) {
         size_t disk_size;

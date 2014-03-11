@@ -494,7 +494,8 @@ static void enc_uint16(uint16_t u, char **buf)
 
 static void enc_uint48(uint64_t u, char **buf)
 {
-    raw_48 r = encode_raw48(u);
+    raw_48 r;
+    encode_raw48(u, &r);
     memcpy(*buf, &r, 6);
     *buf += 6;
 }

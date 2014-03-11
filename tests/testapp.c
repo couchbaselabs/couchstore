@@ -82,7 +82,7 @@ static void test_raw_40(uint64_t value, const uint8_t expected[8])
         uint8_t bytes[8];
     } data;
     memset(&data, 0, sizeof(data));
-    data.raw = encode_raw40(value);
+    encode_raw40(value, &data.raw);
     assert(memcmp(data.bytes, expected, 8) == 0);
     assert(decode_raw40(data.raw) == value);
 }
@@ -94,7 +94,7 @@ static void test_raw_48(uint64_t value, const uint8_t expected[8])
         uint8_t bytes[8];
     } data;
     memset(&data, 0, sizeof(data));
-    data.raw = encode_raw48(value);
+    encode_raw48(value, &data.raw);
     assert(memcmp(data.bytes, expected, 8) == 0);
     assert(decode_raw48(data.raw) == value);
 }

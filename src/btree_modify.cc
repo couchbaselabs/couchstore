@@ -146,8 +146,8 @@ static nodelist *encode_pointer(arena* a, node_pointer *ptr)
         return NULL;
     }
     raw_node_pointer *raw = (raw_node_pointer*)pel->data.buf;
-    raw->pointer = encode_raw48(ptr->pointer);
-    raw->subtreesize = encode_raw48(ptr->subtreesize);
+    encode_raw48(ptr->pointer, &raw->pointer);
+    encode_raw48(ptr->subtreesize, &raw->subtreesize);
     raw->reduce_value_size = encode_raw16((uint16_t)ptr->reduce_value.size);
     memcpy(raw + 1, ptr->reduce_value.buf, ptr->reduce_value.size);
     pel->pointer = ptr;

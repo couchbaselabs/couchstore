@@ -372,7 +372,8 @@ static void enc_uint16(uint16_t u, char **buf)
 
 static void enc_raw24(uint32_t u, char **buf)
 {
-    raw_24 v = encode_raw24(u);
+    raw_24 v;
+    encode_raw24(u, &v);
     memcpy(*buf, &v, 3);
     *buf += 3;
 }
