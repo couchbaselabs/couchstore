@@ -1,3 +1,6 @@
+PROJECT(Couchstore)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+
 INCLUDE(CheckFunctionExists)
 INCLUDE(CheckIncludeFile)
 INCLUDE(CheckIncludeFiles)
