@@ -154,6 +154,7 @@ M_ADD_PYTHON_TEST(couchstore-changecount ${CMAKE_CURRENT_SOURCE_DIR}/tests/chang
 ADD_EXECUTABLE(couchstore_testapp tests/testapp.c
 	tests/file_merger_tests.c
 	tests/file_sorter_tests.c
+	tests/file_deduper_tests.c
 	tests/mapreduce/tests.c
 	tests/mapreduce/map.c
 	tests/mapreduce/reduce.c

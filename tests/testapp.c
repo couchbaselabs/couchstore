@@ -800,7 +800,9 @@ int main(int argc, const char *argv[])
         "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\""
         "}";
 
+
     file_merger_tests();
+    file_deduper_tests();
     file_sorter_tests();
 
     if (argc > 1)

@@ -8,9 +8,7 @@ extern "C" {
 
    extern void file_sorter_tests(void);
    extern void file_merger_tests(void);
-
-
-
+   extern void file_deduper_tests(void);
 
 #ifdef __cplusplus
 }
