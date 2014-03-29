@@ -1034,6 +1034,7 @@ couchstore_error_t couchstore_db_info(Db *db, DbInfo* dbinfo) {
     dbinfo->filename = db->file.path;
     dbinfo->header_position = db->header.position;
     dbinfo->last_sequence = db->header.update_seq;
+    dbinfo->purge_seq = db->header.purge_seq;
     dbinfo->deleted_count = dbinfo->doc_count = dbinfo->space_used = 0;
     dbinfo->file_size = db->file.pos;
     if (id_root) {

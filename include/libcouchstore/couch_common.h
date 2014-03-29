@@ -96,6 +96,7 @@ extern "C" {
         uint64_t space_used;        /**< Disk space actively used by docs */
         uint64_t file_size;         /**< Total disk space used by database */
         cs_off_t header_position;   /**< File offset of current header */
+        uint64_t purge_seq;         /**< Last Purge sequence number */
     } DbInfo;
 
 
