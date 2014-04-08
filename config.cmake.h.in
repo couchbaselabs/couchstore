@@ -1,11 +1,63 @@
+/* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #pragma once
 
 #cmakedefine HAVE_NETINET_IN_H ${HAVE_NETINET_IN_H}
 #cmakedefine HAVE_ARPA_INET_H ${HAVE_ARPA_INET_H}
 #cmakedefine HAVE_INTTYPES_H ${HAVE_INTTYPES_H}
 #cmakedefine HAVE_UNISTD_H ${HAVE_UNISTD_H}
-
 #cmakedefine HAVE_FDATASYNC ${HAVE_FDATASYNC}
 #cmakedefine HAVE_QSORT_R ${HAVE_QSORT_R}
 
-#include "config_static.h"
+/* Large File Support */
+#define _LARGE_FILE 1
+#ifndef _FILE_OFFSET_BITS
+#  define _FILE_OFFSET_BITS 64
+#elif (_FILE_OFFSET_BITS != 64)
+#error "bad things"
+#endif
+#define _LARGEFILE_SOURCE 1
+#ifndef O_LARGEFILE
+# define O_LARGEFILE 0
+#endif
+
+#include <sys/types.h>
+
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+
+#ifdef HAVE_ARPA_INET_H
+#include <arpa/inet.h>
+#endif
+
+#ifdef HAVE_INTTYPES_H
+#include <inttypes.h>
+#endif
+
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
+#ifdef __APPLE__
+/* autoconf things OS X has fdatasync but it doesn't */
+#define fdatasync(FD) fsync(FD)
+#endif /* __APPLE__ */
+
+#include <platform/platform.h>
+
+#ifdef linux
+#undef ntohs
+#undef ntohl
+#undef htons
+#undef htonl
+#endif
+
+#if defined(WIN32) || defined(_WIN32)
+#define WINDOWS
+/* Mute:
+ * "The POSIX name for this item is deprecated. Instead, use the ISO
+ * C++ conformant name: _strdup."
+*/
+#pragma warning(disable: 4996)
+#define snprintf _snprintf
+#endif
