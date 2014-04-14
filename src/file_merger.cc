@@ -45,22 +45,25 @@ typedef struct {
 } sorted_vector_t;
 
 typedef struct file_merger_ctx_t {
-    unsigned                       num_files;
-    FILE                           **files;
-    FILE                           *dest_file;
-    file_merger_read_record_t      read_record;
-    file_merger_write_record_t     write_record;
-    file_merger_record_free_t      free_record;
-    file_merger_compare_records_t  compare_records;
-    file_merger_feed_record_t      feed_record;
-    void                           *user_ctx;
-    sorted_vector_t                sorted_vector;
+    unsigned                            num_files;
+    FILE                                **files;
+    FILE                                *dest_file;
+    file_merger_read_record_t           read_record;
+    file_merger_write_record_t          write_record;
+    file_merger_record_free_t           free_record;
+    file_merger_compare_records_t       compare_records;
+    file_merger_deduplicate_records_t   dedup_records;
+    file_merger_feed_record_t           feed_record;
+    void                                *user_ctx;
+    sorted_vector_t                     sorted_vector;
 } file_merger_ctx_t;
 
 
 static int  init_sorted_vector(sorted_vector_t *sorted_vector, unsigned max_elements, file_merger_ctx_t *ctx);
 static void sorted_vector_destroy(sorted_vector_t *sorted_vector);
-static record_t *sorted_vector_pop(sorted_vector_t *sorted_vector);
+static void sorted_vector_pop(sorted_vector_t *sorted_vector,
+                              record_t ***records,
+                              size_t *n);
 static int  sorted_vector_add(sorted_vector_t *sorted_vector, record_t *record);
 
 static file_merger_error_t do_merge_files(file_merger_ctx_t *ctx);
@@ -73,6 +76,7 @@ file_merger_error_t merge_files(const char *source_files[],
                                 file_merger_write_record_t write_record,
                                 file_merger_feed_record_t feed_record,
                                 file_merger_compare_records_t compare_records,
+                                file_merger_deduplicate_records_t dedup_records,
                                 file_merger_record_free_t free_record,
                                 int skip_writeback,
                                 void *user_ctx)
@@ -92,6 +96,7 @@ file_merger_error_t merge_files(const char *source_files[],
     ctx.compare_records = compare_records;
     ctx.user_ctx = user_ctx;
     ctx.feed_record = feed_record;
+    ctx.dedup_records = dedup_records;
 
     if (feed_record && skip_writeback) {
         ctx.dest_file = NULL;
@@ -179,19 +184,27 @@ static file_merger_error_t do_merge_files(file_merger_ctx_t *ctx)
     }
 
     while (ctx->sorted_vector.count != 0) {
-        record_t *record;
+        record_t **records;
+        size_t n;
+        size_t i;
         void *record_data;
         int record_len;
         file_merger_error_t ret;
 
-        record = sorted_vector_pop(&ctx->sorted_vector);
-        assert(record != NULL);
-        assert(ctx->files[record->file] != NULL);
+        /* The head of the list is the required item which needs to be written
+         * to the output destination records file.
+         * For each duplicated item that is eliminated (elements of linked
+         * list), we need to read one record from the same file as the
+         * duplicated record came from and add them to the sort vector.
+         */
+        sorted_vector_pop(&ctx->sorted_vector, &records, &n);
+        assert(records != NULL);
+        assert(n != 0);
 
         if (ctx->feed_record) {
-            ret = (*ctx->feed_record)(record->data, ctx->user_ctx);
+            ret = (*ctx->feed_record)(records[0]->data, ctx->user_ctx);
             if (ret != FILE_MERGER_SUCCESS) {
-                FREE_RECORD(ctx, record);
+                FREE_RECORD(ctx, records[0]);
                 return ret;
             }
         } else {
@@ -199,32 +212,36 @@ static file_merger_error_t do_merge_files(file_merger_ctx_t *ctx)
         }
 
         if (ctx->dest_file) {
-            ret = (*ctx->write_record)(ctx->dest_file, record->data, ctx->user_ctx);
+            ret = (*ctx->write_record)(ctx->dest_file, records[0]->data, ctx->user_ctx);
             if (ret != FILE_MERGER_SUCCESS) {
-                FREE_RECORD(ctx, record);
+                FREE_RECORD(ctx, records[0]);
                 return ret;
             }
         }
 
-        record_len = (*ctx->read_record)(ctx->files[record->file],
-                                         &record_data,
-                                         ctx->user_ctx);
+        for (i = 0; i < n; i++) {
+            record_len = (*ctx->read_record)(ctx->files[records[i]->file],
+                                             &record_data,
+                                             ctx->user_ctx);
+            if (record_len == 0) {
+                fclose(ctx->files[records[i]->file]);
+                ctx->files[records[i]->file] = NULL;
+                FREE_RECORD(ctx, records[i]);
 
-        if (record_len == 0) {
-            fclose(ctx->files[record->file]);
-            ctx->files[record->file] = NULL;
-            FREE_RECORD(ctx, record);
-        } else if (record_len < 0) {
-            FREE_RECORD(ctx, record);
-            return (file_merger_error_t) record_len;
-        } else {
-            int rv;
-            (*ctx->free_record)(record->data, ctx->user_ctx);
-            record->data = record_data;
-            rv = sorted_vector_add(&ctx->sorted_vector, record);
-            assert(rv);
+            } else if (record_len < 0) {
+                FREE_RECORD(ctx, records[i]);
+
+                return (file_merger_error_t) record_len;
+            } else {
+                int rv;
+                (*ctx->free_record)(records[i]->data, ctx->user_ctx);
+                records[i]->data = record_data;
+                rv = sorted_vector_add(&ctx->sorted_vector, records[i]);
+                assert(rv);
+            }
         }
 
+        free(records);
     }
 
     return FILE_MERGER_SUCCESS;
@@ -259,24 +276,54 @@ static void sorted_vector_destroy(sorted_vector_t *sorted_vector)
 }
 
 
-static record_t *sorted_vector_pop(sorted_vector_t *sorted_vector)
+#define SORTED_VECTOR_CMP(h, a, b)  \
+    (*(h)->ctx->compare_records)((a)->data, (b)->data, (h)->ctx->user_ctx)
+
+static void sorted_vector_pop(sorted_vector_t *sorted_vector,
+                              record_t ***records,
+                              size_t *n)
 {
-    record_t *min;
+    record_t *head;
+    file_merger_record_t **duplicates;
+    size_t i, j;
 
     if (sorted_vector->count == 0) {
-        return NULL;
+        *records = NULL;
+        *n = 0;
+        return;
     }
 
-    min = sorted_vector->data[0];
-    sorted_vector->count--;
-    memmove(sorted_vector->data + 0, sorted_vector->data + 1, sizeof(sorted_vector->data[0])*(sorted_vector->count));
+    /* For deduplication, return the list of records whose keys are equal.
+     * Hence they can be eliminated from the sort vector and least element can
+     * be picked for writing out to the output file.
+     * */
+    head = sorted_vector->data[0];
 
-    return min;
+    for (i = 1; sorted_vector->ctx->dedup_records != NULL && i < sorted_vector->count; i++) {
+        if (SORTED_VECTOR_CMP(sorted_vector, head, sorted_vector->data[i]) != 0) {
+            break;
+        }
+    }
+
+    *records = (record_t **) malloc(sizeof(record_t *) * i);
+    memcpy(*records, sorted_vector->data, sizeof(record_t *) * i);
+    *n = i;
+
+
+    if (i > 1) {
+        record_t *tmp;
+        duplicates = (file_merger_record_t **) *records;
+        j = sorted_vector->ctx->dedup_records(duplicates, i, sorted_vector->ctx->user_ctx);
+        tmp = (*records)[0];
+        (*records)[0] = (*records)[j];
+        (*records)[j] = tmp;
+    }
+
+    sorted_vector->count -= i;
+    memmove(sorted_vector->data + 0, sorted_vector->data + i,
+            sizeof(sorted_vector->data[0]) * (sorted_vector->count));
 }
 
-
-#define SORTED_VECTOR_LESS(h, a, b)  \
-    ((*(h)->ctx->compare_records)((a)->data, (b)->data, (h)->ctx->user_ctx) < 0)
 
 static int sorted_vector_add(sorted_vector_t *sorted_vector, record_t *record)
 {
@@ -292,7 +339,7 @@ static int sorted_vector_add(sorted_vector_t *sorted_vector, record_t *record)
     while (r - l > 1) {
         unsigned pos = (l + r) / 2;
 
-        if (SORTED_VECTOR_LESS(sorted_vector, record, sorted_vector->data[pos])) {
+        if (SORTED_VECTOR_CMP(sorted_vector, record, sorted_vector->data[pos]) < 0) {
             r = pos;
         } else {
             l = pos;
@@ -300,7 +347,7 @@ static int sorted_vector_add(sorted_vector_t *sorted_vector, record_t *record)
     }
 
     if (l == 0 && r != 0) {
-        if (SORTED_VECTOR_LESS(sorted_vector, record, sorted_vector->data[0])) {
+        if (SORTED_VECTOR_CMP(sorted_vector, record, sorted_vector->data[0]) < 0) {
             r = 0;
         }
     }

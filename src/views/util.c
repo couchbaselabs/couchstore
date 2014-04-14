@@ -157,7 +157,6 @@ int compare_view_records(const void *r1, const void *r2, void *ctx)
     view_file_merge_record_t *rec1 = (view_file_merge_record_t *) r1;
     view_file_merge_record_t *rec2 = (view_file_merge_record_t *) r2;
     sized_buf k1, k2;
-    int res;
 
     k1.size = rec1->ksize;
     k1.buf = VIEW_RECORD_KEY(rec1);
@@ -165,13 +164,23 @@ int compare_view_records(const void *r1, const void *r2, void *ctx)
     k2.size = rec2->ksize;
     k2.buf = VIEW_RECORD_KEY(rec2);
 
-    res = merge_ctx->key_cmp_fun(&k1, &k2, merge_ctx->user_ctx);
+    return merge_ctx->key_cmp_fun(&k1, &k2, merge_ctx->user_ctx);
+}
 
-    if (res == 0 && merge_ctx->type == INCREMENTAL_UPDATE_VIEW_RECORD) {
-        return ((int) rec1->op) - ((int) rec2->op);
+
+size_t dedup_view_records_merger(file_merger_record_t **records, size_t len, void *ctx)
+{
+    size_t i;
+    size_t max = 0;
+    (void) ctx;
+
+    for (i = 1; i < len; i++) {
+        if (records[max]->filenum < records[i]->filenum) {
+            max = i;
+        }
     }
 
-    return res;
+    return max;
 }
 
 

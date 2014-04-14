@@ -744,6 +744,7 @@ static file_sorter_error_t merge_tmp_files(file_sort_ctx_t *ctx,
                                             ctx->write_record,
                                             feed_record,
                                             ctx->compare_records,
+                                            NULL,
                                             ctx->free_record,
                                             ctx->skip_writeback,
                                             ctx->user_ctx);

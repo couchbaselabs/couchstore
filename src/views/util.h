@@ -76,6 +76,9 @@ extern "C" {
        prototype defined in src/file_merger.h */
     int compare_view_records(const void *r1, const void *r2, void *ctx);
 
+    /* Pick the winner from the duplicate entries */
+    size_t dedup_view_records_merger(file_merger_record_t **records, size_t len, void *ctx);
+
     /* frees a view record, obbeys the record free function prototype
        defined in src/file_merger.h */
     void free_view_record(void *record, void *ctx);
