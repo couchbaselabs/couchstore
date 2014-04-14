@@ -12,7 +12,7 @@ INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/include
                            ${CMAKE_CURRENT_SOURCE_DIR}/src
                            ${CMAKE_CURRENT_BINARY_DIR}
                            ${CMAKE_CURRENT_SOURCE_DIR}
-                           ${CMAKE_CURRENT_SOURCE_DIR}/../platform/include
+                           ${Platform_SOURCE_DIR}/include
                            ${CMAKE_INSTALL_PREFIX}/include)
 INCLUDE_DIRECTORIES(AFTER ${ICU_INCLUDE_DIR}
                           ${V8_INCLUDE_DIR}
@@ -80,14 +80,14 @@ ADD_EXECUTABLE(couch_view_group_compactor src/views/bin/couch_view_group_compact
 TARGET_LINK_LIBRARIES(couch_view_group_compactor couchstore)
 
 IF (INSTALL_HEADER_FILES)
-INSTALL(FILES
-        include/libcouchstore/couch_db.h
-        include/libcouchstore/couch_index.h
-        include/libcouchstore/couch_common.h
-        include/libcouchstore/error.h
-        include/libcouchstore/file_ops.h
-        include/libcouchstore/visibility.h
-        DESTINATION include/libcouchstore)
+   INSTALL(FILES
+           include/libcouchstore/couch_db.h
+           include/libcouchstore/couch_index.h
+           include/libcouchstore/couch_common.h
+           include/libcouchstore/error.h
+           include/libcouchstore/file_ops.h
+           include/libcouchstore/visibility.h
+           DESTINATION include/libcouchstore)
 ENDIF(INSTALL_HEADER_FILES)
 
 INSTALL(TARGETS couchstore
@@ -116,18 +116,27 @@ CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/config.cmake.h.in
 # Tests:
 
 IF (LUA_FOUND)
-ADD_EXECUTABLE(couchscript src/couchscript.cc)
-SET_TARGET_PROPERTIES(couchscript PROPERTIES COMPILE_FLAGS -I${LUA_INCLUDE_DIR})
-TARGET_LINK_LIBRARIES(couchscript couchstore ${LUA_LIBRARIES})
+   ADD_EXECUTABLE(couchscript src/couchscript.cc)
+   SET_TARGET_PROPERTIES(couchscript PROPERTIES COMPILE_FLAGS
+                         -I${LUA_INCLUDE_DIR})
+   TARGET_LINK_LIBRARIES(couchscript couchstore ${LUA_LIBRARIES})
 
-ADD_TEST(couchstore-localdoc couchscript ${CMAKE_CURRENT_SOURCE_DIR}/tests/localdoc.lua)
-ADD_TEST(couchstore-corrupt couchscript ${CMAKE_CURRENT_SOURCE_DIR}/tests/corrupt.lua)
-ADD_TEST(couchstore-bulk couchscript ${CMAKE_CURRENT_SOURCE_DIR}/tests/bulk.lua)
-ADD_TEST(couchstore-changes-since-filter couchscript ${CMAKE_CURRENT_SOURCE_DIR}/tests/changessincefilter.lua)
-ADD_TEST(couchstore-compact couchscript ${CMAKE_CURRENT_SOURCE_DIR}/tests/compact.lua)
-ADD_TEST(couchstore-dropdel couchscript ${CMAKE_CURRENT_SOURCE_DIR}/tests/dropdel.lua)
-ADD_TEST(couchstore-largefile couchscript ${CMAKE_CURRENT_SOURCE_DIR}/tests/largefile.lua)
-ADD_TEST(couchstore-large couchscript ${CMAKE_CURRENT_SOURCE_DIR}/tests/large.lua)
+   ADD_TEST(couchstore-localdoc
+            couchscript ${CMAKE_CURRENT_SOURCE_DIR}/tests/localdoc.lua)
+   ADD_TEST(couchstore-corrupt
+            couchscript ${CMAKE_CURRENT_SOURCE_DIR}/tests/corrupt.lua)
+   ADD_TEST(couchstore-bulk
+            couchscript ${CMAKE_CURRENT_SOURCE_DIR}/tests/bulk.lua)
+   ADD_TEST(couchstore-changes-since-filter
+           couchscript ${CMAKE_CURRENT_SOURCE_DIR}/tests/changessincefilter.lua)
+   ADD_TEST(couchstore-compact
+            couchscript ${CMAKE_CURRENT_SOURCE_DIR}/tests/compact.lua)
+   ADD_TEST(couchstore-dropdel
+            couchscript ${CMAKE_CURRENT_SOURCE_DIR}/tests/dropdel.lua)
+   ADD_TEST(couchstore-largefile
+            couchscript ${CMAKE_CURRENT_SOURCE_DIR}/tests/largefile.lua)
+   ADD_TEST(couchstore-large
+            couchscript ${CMAKE_CURRENT_SOURCE_DIR}/tests/large.lua)
 ENDIF(LUA_FOUND)
 
 MACRO (M_ADD_PYTHON_TEST name pyfile)
