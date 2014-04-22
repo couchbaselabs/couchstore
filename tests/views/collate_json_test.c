@@ -139,6 +139,7 @@ static void TestCollateUnicodeStrings(void)
     CollateJSONMode mode = kCollateJSON_Unicode;
     fprintf(stderr, "Unicode... ");
     assert_eq(collateStrs("\"fréd\"", "\"fréd\"", mode), 0);
+    assert_eq(collateStrs("\"mip你好\"", "\"mip你好\"", mode), 0);
     assert_eq(collateStrs("\"ømø\"",  "\"omo\"", mode), 1);
     assert_eq(collateStrs("\"\t\"",   "\" \"", mode), -1);
     assert_eq(collateStrs("\"\001\"", "\" \"", mode), -1);

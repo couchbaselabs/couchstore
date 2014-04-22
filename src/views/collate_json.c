@@ -308,7 +308,7 @@ static int compareUnicode(const char* str1, size_t len1,
         return compareUnicodeSlow(str1, len1, str2, len2);
     }
 
-    result = ucol_strcoll(coll, b1, len1, b2, len2);
+    result = ucol_strcoll(coll, b1, ret1, b2, ret2);
     free(b1);
     free(b2);
 
