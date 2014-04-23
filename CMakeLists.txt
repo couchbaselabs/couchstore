@@ -65,7 +65,7 @@ TARGET_LINK_LIBRARIES(couch_compact couchstore)
 ADD_EXECUTABLE(couch_view_file_sorter src/views/bin/couch_view_file_sorter.c)
 TARGET_LINK_LIBRARIES(couch_view_file_sorter couchstore)
 
-ADD_EXECUTABLE(couch_view_file_merger src/views/bin/couch_view_file_merger.c)
+ADD_EXECUTABLE(couch_view_file_merger src/views/bin/couch_view_file_merger.c src/views/bin/util.c)
 TARGET_LINK_LIBRARIES(couch_view_file_merger couchstore)
 
 ADD_EXECUTABLE(couch_view_index_builder src/views/bin/couch_view_index_builder.c src/views/bin/util.c)

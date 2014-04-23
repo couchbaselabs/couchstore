@@ -26,6 +26,7 @@
 #include <libcouchstore/couch_db.h>
 #include "../file_merger.h"
 #include "../util.h"
+#include "util.h"
 
 #define LINE_BUF_SIZE (8 * 1024)
 #define MERGE_ERROR_CODE(Err) (100 + (Err))
@@ -39,6 +40,7 @@ int main(int argc, char *argv[])
     char **view_files;
     char dest_file[LINE_BUF_SIZE];
     file_merger_error_t error;
+    cb_thread_t exit_thread;
     int status = 0;
 
     (void) argc;
@@ -92,6 +94,12 @@ int main(int argc, char *argv[])
     if (couchstore_read_line(stdin, dest_file, LINE_BUF_SIZE) != dest_file) {
         fprintf(stderr, "Error reading destination file name.\n");
         status = 1;
+        goto finished;
+    }
+
+    status = start_exit_listener(&exit_thread);
+    if (status) {
+        fprintf(stderr, "Error starting stdin exit listener thread\n");
         goto finished;
     }
 
