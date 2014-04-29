@@ -110,11 +110,10 @@ static void qsort_fallback(void *a, size_t n, size_t es, sort_cmp_t *cmp, void *
     char *pa, *pb, *pc, *pd, *pl, *pm, *pn;
     size_t d, r;
     int cmp_result;
-    int swaptype, swap_cnt;
+    int swaptype;
 
 loop:
     SWAPINIT(a, es);
-    swap_cnt = 0;
     if (n < 7) {
         for (pm = (char *)a + es; pm < (char *)a + n * es; pm += es)
             for (pl = pm;
@@ -142,7 +141,6 @@ loop:
     for (;;) {
         while (pb <= pc && (cmp_result = CMP(thunk, pb, a)) <= 0) {
             if (cmp_result == 0) {
-                swap_cnt = 1;
                 swap(pa, pb);
                 pa += es;
             }
@@ -150,7 +148,6 @@ loop:
         }
         while (pb <= pc && (cmp_result = CMP(thunk, pc, a)) >= 0) {
             if (cmp_result == 0) {
-                swap_cnt = 1;
                 swap(pc, pd);
                 pd -= es;
             }
@@ -159,17 +156,8 @@ loop:
         if (pb > pc)
             break;
         swap(pb, pc);
-        swap_cnt = 1;
         pb += es;
         pc -= es;
-    }
-    if (swap_cnt == 0) {  /* Switch to insertion sort */
-        for (pm = (char *)a + es; pm < (char *)a + n * es; pm += es)
-            for (pl = pm;
-                 pl > (char *)a && CMP(thunk, pl - es, pl) > 0;
-                 pl -= es)
-                swap(pl, pl - es);
-        return;
     }
 
     pn = (char *)a + n * es;
