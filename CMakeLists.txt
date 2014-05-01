@@ -176,3 +176,5 @@ SET_TARGET_PROPERTIES(couchstore_testapp PROPERTIES COMPILE_FLAGS "-DLIBCOUCHSTO
 
 TARGET_LINK_LIBRARIES(couchstore_testapp ${COUCHSTORE_LIBRARIES})
 ADD_TEST(couchstore-testapp couchstore_testapp)
+
+ADD_SUBDIRECTORY(programs)
