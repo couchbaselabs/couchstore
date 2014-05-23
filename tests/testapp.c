@@ -673,6 +673,83 @@ static void mb5086(void)
     assert(remove("mb5085.couch") == 0);
 }
 
+static void mb11104(void) {
+    int errcode = 0;
+    Db *db;
+    unsigned i;
+    DbInfo info;
+    sized_buf *ids = NULL;
+
+    fprintf(stderr, "regression mb-11104 ");
+    fflush(stderr);
+    docset_init(4);
+    SETDOC(0, "doc1", "{\"test_doc_index\":1}", zerometa);
+    SETDOC(1, "doc3", "{\"test_doc_index\":3}", zerometa);
+    SETDOC(2, "doc5", "{\"test_doc_index\":5}", zerometa);
+    SETDOC(3, "doc7", "{\"test_doc_index\":7}", zerometa);
+    remove(testfilepath);
+
+    try(couchstore_open_db(testfilepath, COUCHSTORE_OPEN_FLAG_CREATE, &db));
+    try(couchstore_save_document(db, &testdocset.docs[0],
+                                     &testdocset.infos[0], 0));
+    try(couchstore_save_document(db, &testdocset.docs[1],
+                                     &testdocset.infos[1], 0));
+    try(couchstore_save_document(db, &testdocset.docs[2],
+                                     &testdocset.infos[2], 0));
+    try(couchstore_save_document(db, &testdocset.docs[3],
+                                     &testdocset.infos[3], 0));
+    try(couchstore_commit(db));
+
+    assert(couchstore_close_db(db) == COUCHSTORE_SUCCESS);
+
+    try(couchstore_open_db(testfilepath, 0, &db));
+    /* Read back in bulk by doc IDs, some of which are not existent */
+    fprintf(stderr, "bulk IDs... ");
+    char *keys[10] = {"doc1", "doc2", "doc3", "doc4", "doc5", "doc6", "doc7",
+                      "doc8", "doc9"};
+    int count = 3;
+    ids = malloc(count * sizeof(sized_buf));
+    for (i = 0; i < count; ++i) { // "doc1", "doc2", "doc3"
+        ids[i].size = strlen(keys[i]);
+        ids[i].buf = keys[i];
+    }
+    ZERO(testdocset.counters);
+    try(couchstore_docinfos_by_id(db, ids, count, 0, dociter_check, &testdocset));
+    assert(testdocset.counters.totaldocs == 2);
+    assert(testdocset.counters.deleted == 0);
+
+    for (i = 0; i < count; ++i) { // "doc2", "doc4", "doc6"
+        int idx = i * 2 + 1;
+        ids[i].size = strlen(keys[idx]);
+        ids[i].buf = keys[idx];
+    }
+    ZERO(testdocset.counters);
+    try(couchstore_docinfos_by_id(db, ids, count, 0, dociter_check, &testdocset));
+    assert(testdocset.counters.totaldocs == 0);
+    assert(testdocset.counters.deleted == 0);
+
+    for (i = 0; i < count; ++i) { // "doc3", "doc6", "doc9"
+        int idx = i * 3 + 2;
+        ids[i].size = strlen(keys[idx]);
+        ids[i].buf = keys[idx];
+    }
+    ZERO(testdocset.counters);
+    try(couchstore_docinfos_by_id(db, ids, count, 0, dociter_check, &testdocset));
+    assert(testdocset.counters.totaldocs == 1);
+    assert(testdocset.counters.deleted == 0);
+
+    assert(couchstore_db_info(db, &info) == COUCHSTORE_SUCCESS);
+    assert(info.last_sequence == 4);
+    assert(info.doc_count == 4);
+    assert(info.deleted_count == 0);
+    assert(info.header_position == 4096);
+
+    assert(couchstore_close_db(db) == COUCHSTORE_SUCCESS);
+
+cleanup:
+    free(ids);
+}
+
 static void test_asis_seqs(void)
 {
    Db *db = NULL;
@@ -829,8 +906,12 @@ int main(int argc, const char *argv[])
     fprintf(stderr, " OK\n");
     test_changes_no_dups();
     fprintf(stderr, " OK\n");
+
     mb5086();
     fprintf(stderr, " OK\n");
+    mb11104();
+    fprintf(stderr, " OK\n");
+
     remove(testfilepath);
     test_huge_revseq();
     fprintf(stderr, " OK\n");

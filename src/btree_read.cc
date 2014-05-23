@@ -78,9 +78,13 @@ static couchstore_error_t btree_lookup_inner(couchfile_lookup_request *rq,
             }
         }
     } else if (nodebuf[0] == 1) { //KV Node
+        sized_buf cmp_key, val_buf;
+        bool next_key = true;
         while (bufpos < nodebuflen && current < end) {
-            sized_buf cmp_key, val_buf;
-            bufpos += read_kv(nodebuf + bufpos, &cmp_key, &val_buf);
+            if (next_key) {
+                bufpos += read_kv(nodebuf + bufpos, &cmp_key, &val_buf);
+            }
+
             int cmp_val = lookup_compare(rq, &cmp_key, rq->keys[current]);
             if (cmp_val >= 0 && rq->fold && !rq->in_fold) {
                 rq->in_fold = 1;
@@ -92,12 +96,20 @@ static couchstore_error_t btree_lookup_inner(couchfile_lookup_request *rq,
                 current = end;
             }
 
-            if (cmp_val == 0 || (cmp_val > 0 && rq->in_fold)) {
-                //Found
-                error_pass(rq->fetch_callback(rq, &cmp_key, &val_buf));
-                if (!rq->in_fold) {
-                    current++;
+            if (cmp_val >= 0) {
+                if (cmp_val == 0 || rq->in_fold) { // Found
+                    error_pass(rq->fetch_callback(rq, &cmp_key, &val_buf));
+                } else {
+                    error_pass(rq->fetch_callback(rq, rq->keys[current], NULL));
                 }
+                if (!rq->in_fold) {
+                    ++current;
+                    next_key = cmp_val == 0;
+                } else {
+                    next_key = true;
+                }
+            } else {
+                next_key = true;
             }
         }
     }
