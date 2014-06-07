@@ -147,7 +147,7 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
         printf("     content_meta: %d\n", docinfo->content_meta);
         printf("     size (on disk): %zu\n", docinfo->size);
     }
-    if (docinfo->rev_meta.size == sizeof(CouchbaseRevMeta)) {
+    if (docinfo->rev_meta.size >= sizeof(CouchbaseRevMeta)) {
         const CouchbaseRevMeta* meta = (const CouchbaseRevMeta*)docinfo->rev_meta.buf;
         cas = decode_raw64(meta->cas);
         expiry = decode_raw32(meta->expiry);

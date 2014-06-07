@@ -58,6 +58,7 @@ int main(int argc, char** argv)
     couchstore_error_t errcode;
     time_purge_ctx timepurge = {0, 0};
     couchstore_compact_hook hook = NULL;
+    couchstore_docinfo_hook dhook = NULL;
     void* hook_ctx = NULL;
     int argp = 1;
     couchstore_compact_flags flags = 0;
@@ -102,7 +103,7 @@ int main(int argc, char** argv)
     {
         exit_error(errcode);
     }
-    errcode = couchstore_compact_db_ex(source, argv[argp], flags, hook, hook_ctx, target_io_ops);
+    errcode = couchstore_compact_db_ex(source, argv[argp], flags, hook, dhook, hook_ctx, target_io_ops);
     if(errcode)
     {
         exit_error(errcode);

@@ -94,3 +94,26 @@ sized_buf* arena_copy_buf(arena* a, const sized_buf *src)
     memcpy(nbuf->buf, src->buf, src->size);
     return nbuf;
 }
+
+sized_buf* arena_special_copy_buf_and_revmeta(arena *a, const sized_buf *val,
+                                              const DocInfo *docinfo)
+{
+    sized_buf *nbuf = static_cast<sized_buf*>(arena_alloc(a, sizeof(sized_buf)));
+    if (nbuf == NULL) {
+        return NULL;
+    }
+
+    const raw_seq_index_value *raw = (const raw_seq_index_value*)val->buf;
+    uint32_t idsize, datasize;
+    decode_kv_length(&raw->sizes, &idsize, &datasize);
+
+    nbuf->size = sizeof(*raw) + idsize + docinfo->rev_meta.size;
+    nbuf->buf = static_cast<char*>(arena_alloc(a, nbuf->size));
+    if (nbuf->buf == NULL) {
+        return NULL;
+    }
+    memcpy(nbuf->buf, val->buf, sizeof(*raw) + idsize);
+    memcpy(nbuf->buf + sizeof(*raw) + idsize, docinfo->rev_meta.buf,
+           docinfo->rev_meta.size);
+    return nbuf;
+}

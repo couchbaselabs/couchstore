@@ -151,7 +151,6 @@ extern "C" {
     LIBCOUCHSTORE_API
     const char* couchstore_get_db_filename(Db *db);
 
-
     /**
      * Get the position in the file of the mostly recently written
      * database header.
@@ -642,14 +641,21 @@ extern "C" {
      *
      * If a compactor hook is set, COUCHSTORE_COMPACT_FLAG_DROP_DELETES will *not* drop deletes,
      * but will bump the purge counter. The hook is responsible for dropping deletes.
+     *
+     * The couchstore_docinfo_hook is for editing the docinfo of the item if the rev_meta
+     * section in docinfo is not found to already contain extended metadata.
      */
     enum {
         COUCHSTORE_COMPACT_KEEP_ITEM = 0,
         COUCHSTORE_COMPACT_DROP_ITEM = 1
     };
+
     typedef int (*couchstore_compact_hook)(Db* target,
                                            DocInfo *docinfo,
                                            void *ctx);
+
+    typedef int (*couchstore_docinfo_hook)(DocInfo **docinfo,
+                                           const sized_buf *item);
 
     /**
      * Set purge sequence number. This allows the compactor hook to set the highest
@@ -670,13 +676,17 @@ extern "C" {
      * @param source the source database
      * @param target_filename the filename of the new database to create.
      * @param flags flags that change compaction behavior
+     * @param hook time_purge_hook callback
+     * @param dhook get_extmeta_hook callback
+     * @param hook_ctx compaction_ctx struct
      * @param ops Pointer to a structure containing the file I/O operations
      *            you want the library to use.
      * @return COUCHSTORE_SUCCESS on success
      */
     LIBCOUCHSTORE_API
     couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filename, uint64_t flags,
-                                                couchstore_compact_hook hook, void* hook_ctx,
+                                                couchstore_compact_hook hook,
+                                                couchstore_docinfo_hook dhook, void* hook_ctx,
                                                 const couch_file_ops *ops);
 
 

@@ -22,6 +22,7 @@ typedef struct compact_ctx {
     couchfile_modify_result *target_mr;
     Db* target;
     couchstore_compact_hook hook;
+    couchstore_docinfo_hook dhook;
     void* hook_ctx;
     couchstore_compact_flags flags;
 } compact_ctx;
@@ -32,12 +33,13 @@ static couchstore_error_t compact_localdocs_tree(Db* source, Db* target, compact
 couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filename,
                                             couchstore_compact_flags flags,
                                             couchstore_compact_hook hook,
+                                            couchstore_docinfo_hook dhook,
                                             void* hook_ctx,
                                             const couch_file_ops *ops)
 {
     Db* target = NULL;
     couchstore_error_t errcode;
-    compact_ctx ctx = {NULL, new_arena(0), new_arena(0), NULL, NULL, hook, hook_ctx, 0};
+    compact_ctx ctx = {NULL, new_arena(0), new_arena(0), NULL, NULL, hook, dhook, hook_ctx, 0};
     ctx.flags = flags;
     error_unless(!source->dropped, COUCHSTORE_ERROR_FILE_CLOSED);
     error_unless(ctx.transient_arena && ctx.persistent_arena, COUCHSTORE_ERROR_ALLOC_FAIL);
@@ -84,11 +86,13 @@ cleanup:
 
 couchstore_error_t couchstore_compact_db(Db* source, const char* target_filename)
 {
-    return couchstore_compact_db_ex(source, target_filename, 0, NULL, NULL, couchstore_get_default_file_ops());
+    return couchstore_compact_db_ex(source, target_filename, 0, NULL, NULL, NULL,
+                                    couchstore_get_default_file_ops());
 }
 
 static couchstore_error_t output_seqtree_item(const sized_buf *k,
                                               const sized_buf *v,
+                                              const DocInfo *docinfo,
                                               compact_ctx *ctx)
 {
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
@@ -103,19 +107,26 @@ static couchstore_error_t output_seqtree_item(const sized_buf *k,
     if (k_c == NULL) {
         error_pass(COUCHSTORE_ERROR_READ);
     }
-    v_c = arena_copy_buf(ctx->transient_arena, v);
+
+    if (docinfo) {
+        v_c = arena_special_copy_buf_and_revmeta(ctx->transient_arena,
+                                                 v, docinfo);
+    } else {
+        v_c = arena_copy_buf(ctx->transient_arena, v);
+    }
+
     if (v_c == NULL) {
         error_pass(COUCHSTORE_ERROR_READ);
     }
 
     error_pass(mr_push_item(k_c, v_c, ctx->target_mr));
-    
+
     // Decode the by-sequence index value. See the file format doc or
     // assemble_id_index_value in couch_db.c:
-    rawSeq = (const raw_seq_index_value*)v->buf;
+    rawSeq = (const raw_seq_index_value*)v_c->buf;
     decode_kv_length(&rawSeq->sizes, &idsize, &datasize);
-    revMetaSize = (uint32_t)v->size - (sizeof(raw_seq_index_value) + idsize);
-    
+    revMetaSize = (uint32_t)v_c->size - (sizeof(raw_seq_index_value) + idsize);
+
     // Set up sized_bufs for the ID tree key and value:
     id_k.buf = (char*)(rawSeq + 1);
     id_k.size = idsize;
@@ -151,6 +162,8 @@ static couchstore_error_t compact_seq_fetchcb(couchfile_lookup_request *rq,
     raw_seq_index_value* rawSeq = (raw_seq_index_value*)v->buf;
     uint64_t bpWithDeleted = decode_raw48(rawSeq->bp);
     uint64_t bp = bpWithDeleted & ~BP_DELETED_FLAG;
+    int ret_val = 0;
+
     if ((bpWithDeleted & BP_DELETED_FLAG) &&
        (ctx->hook == NULL) &&
        (ctx->flags & COUCHSTORE_COMPACT_FLAG_DROP_DELETES)) {
@@ -179,10 +192,13 @@ static couchstore_error_t compact_seq_fetchcb(couchfile_lookup_request *rq,
 
         int itemsize = pread_bin(rq->file, bp, &item.buf);
         if (itemsize < 0) {
-	    return static_cast<couchstore_error_t>(itemsize);
+            return static_cast<couchstore_error_t>(itemsize);
         }
         item.size = itemsize;
 
+        if (ctx->dhook) {
+            ret_val = ctx->dhook(&info, &item);
+        }
         db_write_buf(ctx->target_mr->rq->file, &item, &new_bp, &new_size);
 
         bpWithDeleted = (bpWithDeleted & BP_DELETED_FLAG) | new_bp;  //Preserve high bit
@@ -190,7 +206,11 @@ static couchstore_error_t compact_seq_fetchcb(couchfile_lookup_request *rq,
         free(item.buf);
     }
 
-    error_pass(output_seqtree_item(k, v, ctx));
+    if (ret_val) {
+        error_pass(output_seqtree_item(k, v, info, ctx));
+    } else {
+        error_pass(output_seqtree_item(k, v, NULL, ctx));
+    }
 cleanup:
     couchstore_free_docinfo(info);
     return errcode;
@@ -242,8 +262,8 @@ static couchstore_error_t compact_localdocs_fetchcb(couchfile_lookup_request *rq
     compact_ctx *ctx = (compact_ctx *) rq->callback_ctx;
     //printf("V: '%.*s'\n", v->size, v->buf);
     return mr_push_item(arena_copy_buf(ctx->persistent_arena, k),
-			arena_copy_buf(ctx->persistent_arena, v),
-			ctx->target_mr);
+                        arena_copy_buf(ctx->persistent_arena, v),
+                        ctx->target_mr);
 }
 
 static couchstore_error_t compact_localdocs_tree(Db* source, Db* target, compact_ctx *ctx)

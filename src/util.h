@@ -22,6 +22,10 @@ int seq_cmp(const sized_buf *k1, const sized_buf *k2);
 /* Copy buffer to arena */
 sized_buf* arena_copy_buf(arena* a, const sized_buf *src);
 
+/* Copy rev_meta from docinfo and buffer to arena */
+sized_buf* arena_special_copy_buf_and_revmeta(arena *a, const sized_buf *val,
+                                              const DocInfo *docinfo);
+
 /** Offsets the pointer PTR by BYTES bytes. Result is of the same type as PTR. */
 #define offsetby(PTR, BYTES)    ((__typeof(PTR))((uint8_t*)(PTR) + (BYTES)))
 
