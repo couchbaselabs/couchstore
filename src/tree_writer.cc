@@ -44,7 +44,26 @@ couchstore_error_t TreeWriterOpen(const char* unsortedFilePath,
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     TreeWriter* writer = static_cast<TreeWriter*>(calloc(1, sizeof(TreeWriter)));
     error_unless(writer, COUCHSTORE_ERROR_ALLOC_FAIL);
-    writer->file = unsortedFilePath ? fopen(unsortedFilePath, "r+b") : tmpfile();
+    if (!(writer->file = tmpfile())) {
+        if (unsortedFilePath) {
+            int len = strlen(unsortedFilePath);
+            char tmpFile[512];
+            memcpy(tmpFile, unsortedFilePath, len);
+            tmpFile[len++] = 'T';
+            tmpFile[len++] = 'm';
+            tmpFile[len++] = 'p';
+            tmpFile[len] = '\0';
+            writer->file = fopen(tmpFile, "w+b");
+            if (writer->file) { // ensure tmpFile gets deleted on close
+#ifdef WIN32
+                _unlink(tmpFile);
+#else
+                unlink(tmpFile);
+#endif
+            }
+        }
+    }
+
     if (!writer->file) {
         TreeWriterFree(writer);
         error_pass(COUCHSTORE_ERROR_NO_SUCH_FILE);
