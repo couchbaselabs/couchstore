@@ -116,14 +116,14 @@ static index_header_t *test_index_header_decoding_v1(const char *header_bin,
     assert(header->id_btree_state->reduce_value.size == 133);
     /* TODO: once view reduction decoding is done, test the exact reduction value. */
 
-    assert(header->view_btree_states[0]->pointer == 2901853);
-    assert(header->view_btree_states[0]->subtreesize == 1284202);
-    assert(header->view_btree_states[0]->reduce_value.size == 140);
+    assert(header->view_states[0]->pointer == 2901853);
+    assert(header->view_states[0]->subtreesize == 1284202);
+    assert(header->view_states[0]->reduce_value.size == 140);
     /* TODO: once view reduction decoding is done, test the exact reduction value. */
 
-    assert(header->view_btree_states[1]->pointer == 4180175);
-    assert(header->view_btree_states[1]->subtreesize == 1278451);
-    assert(header->view_btree_states[1]->reduce_value.size == 140);
+    assert(header->view_states[1]->pointer == 4180175);
+    assert(header->view_states[1]->subtreesize == 1278451);
+    assert(header->view_states[1]->reduce_value.size == 140);
     /* TODO: once view reduction decoding is done, test the exact reduction value. */
 
     assert(header->has_replica == 1);
@@ -245,19 +245,19 @@ static index_header_t *test_index_header_decoding_v2(const char *header_bin,
         header->id_btree_state->reduce_value.buf, "redval",
         header->id_btree_state->reduce_value.size) == 0);
 
-    assert(header->view_btree_states[0]->pointer == 2345);
-    assert(header->view_btree_states[0]->subtreesize == 789);
-    assert(header->view_btree_states[0]->reduce_value.size == 7);
+    assert(header->view_states[0]->pointer == 2345);
+    assert(header->view_states[0]->subtreesize == 789);
+    assert(header->view_states[0]->reduce_value.size == 7);
     assert(memcmp(
-        header->view_btree_states[0]->reduce_value.buf, "redval2",
-        header->view_btree_states[0]->reduce_value.size) == 0);
+        header->view_states[0]->reduce_value.buf, "redval2",
+        header->view_states[0]->reduce_value.size) == 0);
 
-    assert(header->view_btree_states[1]->pointer == 3456);
-    assert(header->view_btree_states[1]->subtreesize == 8901);
-    assert(header->view_btree_states[1]->reduce_value.size == 7);
+    assert(header->view_states[1]->pointer == 3456);
+    assert(header->view_states[1]->subtreesize == 8901);
+    assert(header->view_states[1]->reduce_value.size == 7);
     assert(memcmp(
-        header->view_btree_states[1]->reduce_value.buf, "redval3",
-        header->view_btree_states[1]->reduce_value.size) == 0);
+        header->view_states[1]->reduce_value.buf, "redval3",
+        header->view_states[1]->reduce_value.size) == 0);
 
     assert(header->has_replica == 0);
     assert(header->replicas_on_transfer != NULL);

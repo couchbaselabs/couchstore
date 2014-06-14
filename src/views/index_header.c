@@ -78,7 +78,7 @@ couchstore_error_t decode_index_header(const char *bytes,
     }
     h->seqs = NULL;
     h->id_btree_state = NULL;
-    h->view_btree_states = NULL;
+    h->view_states = NULL;
     h->replicas_on_transfer = NULL;
     h->pending_transition.active = NULL;
     h->pending_transition.passive = NULL;
@@ -128,15 +128,15 @@ couchstore_error_t decode_index_header(const char *bytes,
     h->num_views = (uint8_t) b[0];
     b += 1;
 
-    h->view_btree_states = (node_pointer **) malloc(sizeof(node_pointer *) * h->num_views);
-    if (h->view_btree_states == NULL) {
+    h->view_states = (node_pointer **) malloc(sizeof(node_pointer *) * h->num_views);
+    if (h->view_states == NULL) {
         goto alloc_error;
     }
 
     for (i = 0; i < (uint16_t) h->num_views; ++i) {
         sz = dec_uint16(b);
         b += 2;
-        h->view_btree_states[i] = read_root((void *) b, (int) sz);
+        h->view_states[i] = read_root((void *) b, (int) sz);
         b += sz;
     }
 
@@ -326,9 +326,9 @@ couchstore_error_t encode_index_header(const index_header_t *header,
     sz += 1;
     for (i = 0; i < header->num_views; ++i) {
         sz += 2;
-        if (header->view_btree_states[i] != NULL) {
+        if (header->view_states[i] != NULL) {
             sz += sizeof(raw_btree_root);
-            sz += header->view_btree_states[i]->reduce_value.size;
+            sz += header->view_states[i]->reduce_value.size;
         }
     }
     /* has_replicas */
@@ -386,16 +386,16 @@ couchstore_error_t encode_index_header(const index_header_t *header,
     b[0] = (char) header->num_views;
     b += 1;
     for (i = 0; i < header->num_views; ++i) {
-        uint16_t btree_state_size = 0;
+        uint16_t view_state_size = 0;
 
-        if (header->view_btree_states[i] != NULL) {
-            btree_state_size = (uint16_t) sizeof(raw_btree_root);
-            btree_state_size += (uint16_t) header->view_btree_states[i]->reduce_value.size;
+        if (header->view_states[i] != NULL) {
+            view_state_size = (uint16_t) sizeof(raw_btree_root);
+            view_state_size += (uint16_t) header->view_states[i]->reduce_value.size;
         }
-        enc_uint16(btree_state_size, &b);
+        enc_uint16(view_state_size, &b);
 
-        encode_root(b, header->view_btree_states[i]);
-        b += btree_state_size;
+        encode_root(b, header->view_states[i]);
+        b += view_state_size;
     }
 
     b[0] = (char) (header->has_replica ? 1 : 0);
@@ -452,11 +452,11 @@ void free_index_header(index_header_t *header)
     sorted_list_free(header->seqs);
     free(header->id_btree_state);
 
-    if (header->view_btree_states != NULL) {
+    if (header->view_states != NULL) {
         for (i = 0; i < header->num_views; ++i) {
-            free(header->view_btree_states[i]);
+            free(header->view_states[i]);
         }
-        free(header->view_btree_states);
+        free(header->view_states);
     }
 
     sorted_list_free(header->replicas_on_transfer);

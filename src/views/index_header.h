@@ -78,7 +78,7 @@ typedef struct {
     void                       *seqs;
     node_pointer               *id_btree_state;
     /* array of num_views elements */
-    node_pointer               **view_btree_states;
+    node_pointer               **view_states;
     int                        has_replica;
     /* sorted_list instance, values of type uint16_t */
     void                       *replicas_on_transfer;

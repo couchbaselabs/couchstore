@@ -405,8 +405,8 @@ couchstore_error_t couchstore_build_view_group(view_group_info_t *info,
             goto out;
         }
 
-        free(header->view_btree_states[i]);
-        header->view_btree_states[i] = view_roots[i];
+        free(header->view_states[i]);
+        header->view_states[i] = view_roots[i];
         view_roots[i] = NULL;
     }
 
@@ -974,7 +974,7 @@ couchstore_error_t couchstore_cleanup_view_group(view_group_info_t *info,
     /* Cleanup all view btrees */
     for (i = 0; i < info->num_btrees; ++i) {
         ret = cleanup_view_btree(&index_file,
-                                 (node_pointer *) header->view_btree_states[i],
+                                 (node_pointer *) header->view_states[i],
                                  &info->btree_infos[i],
                                  &view_roots[i],
                                  &purge_ctx,
@@ -984,11 +984,11 @@ couchstore_error_t couchstore_cleanup_view_group(view_group_info_t *info,
             goto cleanup;
         }
 
-        if (header->view_btree_states[i] != view_roots[i]) {
-            free(header->view_btree_states[i]);
+        if (header->view_states[i] != view_roots[i]) {
+            free(header->view_states[i]);
         }
 
-        header->view_btree_states[i] = view_roots[i];
+        header->view_states[i] = view_roots[i];
         view_bitmask(view_roots[i], &bm_cleanup);
         view_roots[i] = NULL;
     }
@@ -1356,7 +1356,7 @@ couchstore_error_t couchstore_update_view_group(view_group_info_t *info,
         ret = update_view_btree(kv_records_files[i],
                                 &info->btree_infos[i],
                                 &index_file,
-                                header->view_btree_states[i],
+                                header->view_states[i],
                                 batch_size,
                                 &purge_ctx,
                                 &stats->kvs_inserted,
@@ -1368,11 +1368,11 @@ couchstore_error_t couchstore_update_view_group(view_group_info_t *info,
             goto cleanup;
         }
 
-        if (header->view_btree_states[i] != view_roots[i]) {
-            free(header->view_btree_states[i]);
+        if (header->view_states[i] != view_roots[i]) {
+            free(header->view_states[i]);
         }
 
-        header->view_btree_states[i] = view_roots[i];
+        header->view_states[i] = view_roots[i];
         view_bitmask(view_roots[i], &bm_cleanup);
         view_roots[i] = NULL;
     }
@@ -1688,7 +1688,7 @@ couchstore_error_t couchstore_compact_view_group(view_group_info_t *info,
         ret = compact_view_btree(&index_file,
                                  &compact_file,
                                  &info->btree_infos[i],
-                                 header->view_btree_states[i],
+                                 header->view_states[i],
                                  filterbm,
                                  stats,
                                  &view_roots[i],
@@ -1698,8 +1698,8 @@ couchstore_error_t couchstore_compact_view_group(view_group_info_t *info,
             goto cleanup;
         }
 
-        free(header->view_btree_states[i]);
-        header->view_btree_states[i] = view_roots[i];
+        free(header->view_states[i]);
+        header->view_states[i] = view_roots[i];
         view_roots[i] = NULL;
     }
 
