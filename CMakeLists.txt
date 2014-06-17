@@ -8,12 +8,13 @@ INCLUDE(CheckLibraryExists)
 INCLUDE(CheckSymbolExists)
 INCLUDE(CheckTypeSize)
 
-INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/include
+INCLUDE_DIRECTORIES(BEFORE ${CMAKE_INSTALL_PREFIX}/include
+                           ${CMAKE_CURRENT_SOURCE_DIR}/include
                            ${CMAKE_CURRENT_SOURCE_DIR}/src
                            ${CMAKE_CURRENT_BINARY_DIR}
                            ${CMAKE_CURRENT_SOURCE_DIR}
-                           ${Platform_SOURCE_DIR}/include
-                           ${CMAKE_INSTALL_PREFIX}/include)
+                           ${Platform_SOURCE_DIR}/include)
+
 INCLUDE_DIRECTORIES(AFTER ${ICU_INCLUDE_DIR}
                           ${V8_INCLUDE_DIR}
                           ${SNAPPY_INCLUDE_DIR})
