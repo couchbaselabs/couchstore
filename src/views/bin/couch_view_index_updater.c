@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
     view_group_update_stats_t stats;
     sized_buf header_buf = {NULL, 0};
     sized_buf header_outbuf = {NULL, 0};
-    view_error_t error_info;
+    view_error_t error_info = {NULL, NULL};
     cb_thread_t exit_thread;
 
     (void) argc;

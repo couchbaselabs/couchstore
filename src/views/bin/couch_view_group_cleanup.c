@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
     uint64_t purge_count;
     int ret = 2;
     uint64_t header_pos;
-    view_error_t error_info;
+    view_error_t error_info = {NULL, NULL};
     cb_thread_t exit_thread;
 
     (void) argc;
