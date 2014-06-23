@@ -192,6 +192,7 @@ view_group_info_t *couchstore_read_view_group_info(FILE *in_stream,
     for (i = 0; i < info->num_btrees; ++i) {
         view_btree_info_t *bti = &info->btree_infos[i];
 
+        bti->view_id = i;
         bti->num_reducers = couchstore_read_int(in_stream,
                                                 buf,
                                                 sizeof(buf),
@@ -666,15 +667,7 @@ static couchstore_error_t build_view_btree(const char *source_file,
                       out_root);
 
     if (ret != COUCHSTORE_SUCCESS) {
-        char *error_msg = NULL;
-
-        if (red_ctx->error != NULL) {
-            error_msg = strdup(red_ctx->error);
-        } else {
-            error_msg = view_error_msg(ret);
-        }
-        error_info->error_msg = (const char *) error_msg;
-        error_info->view_name = (const char *) strdup(info->names[0]);
+        set_error_info(info, red_ctx->error, ret, error_info);
     }
 
     free_view_reducer_ctx(red_ctx);
@@ -1249,15 +1242,7 @@ static couchstore_error_t update_view_btree(const char *source_file,
                       out_root);
 
     if (ret != COUCHSTORE_SUCCESS) {
-        char *error_msg = NULL;
-
-        if (red_ctx->error != NULL) {
-            error_msg = strdup(red_ctx->error);
-        } else {
-            error_msg = view_error_msg(ret);
-        }
-        error_info->error_msg = (const char *) error_msg;
-        error_info->view_name = (const char *) strdup(info->names[0]);
+        set_error_info(info, red_ctx->error, ret, error_info);
     }
 
     free_view_reducer_ctx(red_ctx);
@@ -1613,15 +1598,7 @@ static couchstore_error_t compact_view_btree(tree_file *source,
                         out_root);
 
     if (ret != COUCHSTORE_SUCCESS) {
-        char *error_msg = NULL;
-
-        if (red_ctx->error != NULL) {
-            error_msg = strdup(red_ctx->error);
-        } else {
-            error_msg = view_error_msg(ret);
-        }
-        error_info->error_msg = (const char *) error_msg;
-        error_info->view_name = (const char *) strdup(info->names[0]);
+        set_error_info(info, red_ctx->error, ret, error_info);
     }
 
     free_view_reducer_ctx(red_ctx);

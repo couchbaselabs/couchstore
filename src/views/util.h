@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <libcouchstore/couch_db.h>
 #include "../file_merger.h"
+#include "view_group.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -90,8 +91,11 @@ extern "C" {
     uint64_t couchstore_read_int(FILE *in, char *buf, size_t size,
                                                       couchstore_error_t *ret);
 
-    /* Generate appropriate view error message from error code */
-    char *view_error_msg(couchstore_error_t ret);
+    /* Generate appropriate view error messages */
+    void set_error_info(const view_btree_info_t *info,
+                        const char *red_error,
+                        couchstore_error_t ret,
+                        view_error_t *error_info);
 
 #ifdef __cplusplus
 }

@@ -230,24 +230,40 @@ uint64_t couchstore_read_int(FILE *in, char *buf, size_t size,
 }
 
 
-char *view_error_msg(couchstore_error_t ret)
+void set_error_info(const view_btree_info_t *info,
+                    const char *red_error,
+                    couchstore_error_t ret,
+                    view_error_t *error_info)
 {
-    char *error_msg = NULL;
+    char buf[4096];
+    size_t len = 0;
+
     if (ret == COUCHSTORE_SUCCESS) {
-        return NULL;
+        return;
     }
 
     /* TODO: add more human friendly messages for other error types */
     switch (ret) {
     case COUCHSTORE_ERROR_REDUCTION_TOO_LARGE:
-        /* TODO: add reduction byte size information to error message */
-        error_msg =  strdup("reduction too large");
+        len = snprintf(buf, 4096, "(view %d) reduction too large, ret = %d",
+                                                                info->view_id,
+                                                                ret);
+        buf[len] = '\0';
+
     default:
-        error_msg = (char *) malloc(64);
-        if (error_msg != NULL) {
-            sprintf(error_msg, "%d", ret);
-        }
+        len = snprintf(buf, 4096, "(view %d) failed, ret = %d", info->view_id, ret);
+        buf[len] = '\0';
     }
 
-    return error_msg;
+    if (len) {
+        error_info->error_msg = (const char *) strdup(buf);
+    }
+
+    if (red_error) {
+        error_info->error_msg = (const char *) strdup(red_error);
+    }
+
+    if (info->num_reducers) {
+        error_info->view_name = (const char *) strdup(info->names[0]);
+    }
 }

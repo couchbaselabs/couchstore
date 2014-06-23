@@ -37,6 +37,7 @@ extern "C" {
     } view_error_t;
 
     typedef struct {
+        int           view_id;
         int           num_reducers;
         const char  **names;
         const char  **reducers;
