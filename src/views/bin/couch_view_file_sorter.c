@@ -24,6 +24,7 @@
 #include <string.h>
 #include "../file_sorter.h"
 #include "../util.h"
+#include "util.h"
 
 #define LINE_BUF_SIZE (8 * 1024)
 #define SORT_ERROR_CODE(Err) (100 + (Err))
@@ -51,14 +52,19 @@ int main(int argc, char *argv[])
     (void) argc;
     (void) argv;
 
+    if (set_binary_mode() < 0) {
+        fprintf(stderr, "Error setting binary mode\n");
+        exit(EXIT_FAILURE);
+    }
+
     if (couchstore_read_line(stdin, tmp_dir, LINE_BUF_SIZE) != tmp_dir) {
         fprintf(stderr, "Error reading temporary directory path.\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     if (fscanf(stdin, "%c\n", &type) != 1) {
         fprintf(stderr, "Error reading view file type.\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     switch (type) {
     case INITIAL_VIEW_FILE:
@@ -67,27 +73,27 @@ int main(int argc, char *argv[])
         break;
     default:
         fprintf(stderr, "Invalid view file type: %c.\n", type);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     if (fscanf(stdin, "%d\n", &num_views) != 1) {
         fprintf(stderr, "Error reading number of views.\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     if (num_views < 0) {
         fprintf(stderr, "Number of views is negative.\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     if (couchstore_read_line(stdin, id_file, LINE_BUF_SIZE) != id_file) {
         fprintf(stderr, "Error reading id file path.\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     view_files = (char **) malloc(sizeof(char *) * num_views);
     if (view_files == NULL) {
         fprintf(stderr, "Memory allocation failure.\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     for (i = 0; i < num_views; ++i) {
@@ -98,7 +104,7 @@ int main(int argc, char *argv[])
             }
             free(view_files);
             fprintf(stderr, "Memory allocation failure.\n");
-            exit(1);
+            exit(EXIT_FAILURE);
         }
 
         if (couchstore_read_line(stdin, view_files[i], LINE_BUF_SIZE) != view_files[i]) {
@@ -107,7 +113,7 @@ int main(int argc, char *argv[])
             }
             free(view_files);
             fprintf(stderr, "Error reading view %d file.\n", (i + 1));
-            exit(1);
+            exit(EXIT_FAILURE);
         }
     }
 

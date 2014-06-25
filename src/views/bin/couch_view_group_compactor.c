@@ -58,6 +58,11 @@ int main(int argc, char *argv[])
      */
     setvbuf(stdout, (char *) NULL, _IONBF, 0);
 
+    if (set_binary_mode() < 0) {
+        fprintf(stderr, "Error setting binary mode\n");
+        goto out;
+    }
+
     /* Read target filepath */
     if (couchstore_read_line(stdin, buf, BUF_SIZE) != buf) {
         fprintf(stderr, "Error reading compaction target filepath\n");

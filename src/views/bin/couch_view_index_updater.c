@@ -48,6 +48,11 @@ int main(int argc, char *argv[])
     (void) argc;
     (void) argv;
 
+    if (set_binary_mode() < 0) {
+        fprintf(stderr, "Error setting binary mode\n");
+        goto out;
+    }
+
     /* Set all stats counters to zero */
     memset((char *) &stats, 0, sizeof(view_group_update_stats_t));
 

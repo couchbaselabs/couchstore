@@ -18,6 +18,7 @@
  * the License.
  **/
 
+#include "config.h"
 #include "util.h"
 #include <string.h>
 #include <stdio.h>
@@ -52,4 +53,13 @@ int start_exit_listener(cb_thread_t *id)
     }
 
     return ret;
+}
+
+int set_binary_mode()
+{
+    if (platform_set_binary_mode(stdin) < 0 ||
+            platform_set_binary_mode(stdout) < 0) {
+        return -1;
+    }
+    return 0;
 }

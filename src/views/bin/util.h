@@ -24,5 +24,6 @@
 #include "config.h"
     /* Start a thread to handle exit message*/
     int start_exit_listener(cb_thread_t *id);
+    int set_binary_mode(void);
 
 #endif

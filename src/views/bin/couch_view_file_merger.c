@@ -46,28 +46,33 @@ int main(int argc, char *argv[])
     (void) argc;
     (void) argv;
 
+    if (set_binary_mode() < 0) {
+        fprintf(stderr, "Error setting binary mode\n");
+        exit(EXIT_FAILURE);
+    }
+
     if (fscanf(stdin, "%c\n", &view_file_type) != 1) {
         fprintf(stderr, "Error reading view file type.\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     if (view_file_type != 'i' && view_file_type != 'v') {
         fprintf(stderr, "View file type must be 'i' or 'v'.\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     if (fscanf(stdin, "%d\n", &num_files) != 1) {
         fprintf(stderr, "Error reading number of files to merge.\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     if (num_files <= 0) {
         fprintf(stderr, "Number of files to merge is negative or zero.\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     view_files = (char **) malloc(sizeof(char *) * num_files);
     if (view_files == NULL) {
         fprintf(stderr, "Memory allocation failure.\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     for (i = 0; i < num_files; ++i) {
@@ -78,7 +83,7 @@ int main(int argc, char *argv[])
             }
             free(view_files);
             fprintf(stderr, "Memory allocation failure.\n");
-            exit(1);
+            exit(EXIT_FAILURE);
         }
 
         if (couchstore_read_line(stdin, view_files[i], LINE_BUF_SIZE) != view_files[i]) {
@@ -87,7 +92,7 @@ int main(int argc, char *argv[])
             }
             free(view_files);
             fprintf(stderr, "Error reading view file number %d.\n", (i + 1));
-            exit(1);
+            exit(EXIT_FAILURE);
         }
     }
 

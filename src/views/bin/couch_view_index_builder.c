@@ -46,6 +46,11 @@ int main(int argc, char *argv[])
     (void) argc;
     (void) argv;
 
+    if (set_binary_mode() < 0) {
+        fprintf(stderr, "Error setting binary mode\n");
+        goto out;
+    }
+
     group_info = couchstore_read_view_group_info(stdin, stderr);
     if (group_info == NULL) {
         ret = COUCHSTORE_ERROR_ALLOC_FAIL;
