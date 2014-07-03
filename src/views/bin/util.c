@@ -33,12 +33,12 @@ static void exit_thread_helper(void *args)
 
     /* If the other end closed the pipe */
     if (len == 0) {
-        exit(1);
+        _exit(1);
     } else if (len == 4 && !strncmp(buf, "exit", 4)) {
-        exit(1);
+        _exit(1);
     } else {
         fprintf(stderr, "Error occured waiting for exit message (%d)\n", len);
-        exit(2);
+        _exit(2);
     }
 }
 
