@@ -43,6 +43,10 @@ static couchstore_error_t read_btree_info(view_group_info_t *info,
                                           FILE *in_stream,
                                           FILE *error_stream);
 
+static couchstore_error_t read_spatial_info(view_group_info_t *info,
+                                            FILE *in_stream,
+                                            FILE *error_stream);
+
 static couchstore_error_t open_view_group_file(const char *path,
                                                couchstore_open_flags open_flags,
                                                tree_file *file);
@@ -201,7 +205,14 @@ view_group_info_t *couchstore_read_view_group_info(FILE *in_stream,
         goto out_error;
     }
 
-    ret = read_btree_info(info, in_stream, error_stream);
+    switch (info->type) {
+    case VIEW_INDEX_TYPE_MAPREDUCE:
+        ret = read_btree_info(info, in_stream, error_stream);
+        break;
+    case VIEW_INDEX_TYPE_SPATIAL:
+        ret = read_spatial_info(info, in_stream, error_stream);
+        break;
+    }
     if (ret != COUCHSTORE_SUCCESS) {
         goto out_error;
     }
@@ -315,6 +326,52 @@ static couchstore_error_t read_btree_info(view_group_info_t *info,
 }
 
 
+/* Read in the information about the spatial view indexes */
+static couchstore_error_t read_spatial_info(view_group_info_t *info,
+                                            FILE *in_stream,
+                                            FILE *error_stream)
+{
+    char buf[24];
+    int i;
+    couchstore_error_t ret;
+
+    info->view_infos.spatial = (view_spatial_info_t *)
+        calloc(info->num_btrees, sizeof(view_spatial_info_t));
+    if (info->view_infos.spatial == NULL) {
+        fprintf(error_stream, "Memory allocation failure on spatial infos\n");
+        info->num_btrees = 0;
+        return COUCHSTORE_ERROR_ALLOC_FAIL;
+    }
+
+    for (i = 0; i < info->num_btrees; ++i) {
+        view_spatial_info_t *si = &info->view_infos.spatial[i];
+
+        si->dimension = couchstore_read_int(in_stream, buf, sizeof(buf), &ret);
+
+        if (ret != COUCHSTORE_SUCCESS) {
+            fprintf(error_stream,
+                    "Error reading the dimension of spatial view %d\n", i);
+            return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
+        }
+
+        si->mbb = (double *) calloc(si->dimension * 2, sizeof(double));
+        if (si->mbb == NULL) {
+            fprintf(error_stream,
+                    "Memory allocation failure on spatial view %d\n", i);
+            si->dimension = 0;
+            return COUCHSTORE_ERROR_ALLOC_FAIL;
+        }
+
+        if (fread(si->mbb, sizeof(double), si->dimension * 2, in_stream) <
+                si->dimension * 2) {
+            fprintf(error_stream, "Error reading mbb of view %d\n", i);
+            return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
+        }
+    }
+    return COUCHSTORE_SUCCESS;
+}
+
+
 LIBCOUCHSTORE_API
 void couchstore_free_view_group_info(view_group_info_t *info)
 {
@@ -325,17 +382,27 @@ void couchstore_free_view_group_info(view_group_info_t *info)
 
     close_view_group_file(info);
 
-    for (i = 0; i < info->num_btrees; ++i) {
-        view_btree_info_t vi = info->view_infos.btree[i];
+    switch (info->type) {
+    case VIEW_INDEX_TYPE_MAPREDUCE:
+        for (i = 0; i < info->num_btrees; ++i) {
+            view_btree_info_t vi = info->view_infos.btree[i];
 
-        for (j = 0; j < vi.num_reducers; ++j) {
-            free((void *) vi.names[j]);
-            free((void *) vi.reducers[j]);
+            for (j = 0; j < vi.num_reducers; ++j) {
+                free((void *) vi.names[j]);
+                free((void *) vi.reducers[j]);
+            }
+            free(vi.names);
+            free(vi.reducers);
         }
-        free(vi.names);
-        free(vi.reducers);
+        free(info->view_infos.btree);
+        break;
+    case VIEW_INDEX_TYPE_SPATIAL:
+        for (i = 0; i < info->num_btrees; ++i) {
+            free((void *) info->view_infos.spatial[i].mbb);
+        }
+        free(info->view_infos.spatial);
+        break;
     }
-    free(info->view_infos.btree);
     free((void *) info->filepath);
     free(info);
 }
