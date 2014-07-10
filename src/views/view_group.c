@@ -226,16 +226,16 @@ static couchstore_error_t read_btree_info(view_group_info_t *info,
     int reduce_len;
     couchstore_error_t ret;
 
-    info->btree_infos = (view_btree_info_t *)
+    info->view_infos.btree = (view_btree_info_t *)
         calloc(info->num_btrees, sizeof(view_btree_info_t));
-    if (info->btree_infos == NULL) {
+    if (info->view_infos.btree == NULL) {
         fprintf(error_stream, "Memory allocation failure on btree infos\n");
         info->num_btrees = 0;
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
 
     for (i = 0; i < info->num_btrees; ++i) {
-        view_btree_info_t *bti = &info->btree_infos[i];
+        view_btree_info_t *bti = &info->view_infos.btree[i];
 
         bti->view_id = i;
         bti->num_reducers = couchstore_read_int(in_stream,
@@ -326,7 +326,7 @@ void couchstore_free_view_group_info(view_group_info_t *info)
     close_view_group_file(info);
 
     for (i = 0; i < info->num_btrees; ++i) {
-        view_btree_info_t vi = info->btree_infos[i];
+        view_btree_info_t vi = info->view_infos.btree[i];
 
         for (j = 0; j < vi.num_reducers; ++j) {
             free((void *) vi.names[j]);
@@ -335,7 +335,7 @@ void couchstore_free_view_group_info(view_group_info_t *info)
         free(vi.names);
         free(vi.reducers);
     }
-    free(info->btree_infos);
+    free(info->view_infos.btree);
     free((void *) info->filepath);
     free(info);
 }
@@ -442,7 +442,7 @@ couchstore_error_t couchstore_build_view_group(view_group_info_t *info,
 
     for (i = 0; i < info->num_btrees; ++i) {
         ret = build_view_btree(kv_records_files[i],
-                               &info->btree_infos[i],
+                               &info->view_infos.btree[i],
                                &index_file,
                                tmpdir,
                                &view_roots[i],
@@ -1021,7 +1021,7 @@ couchstore_error_t couchstore_cleanup_view_group(view_group_info_t *info,
     for (i = 0; i < info->num_btrees; ++i) {
         ret = cleanup_view_btree(&index_file,
                                  (node_pointer *) header->view_states[i],
-                                 &info->btree_infos[i],
+                                 &info->view_infos.btree[i],
                                  &view_roots[i],
                                  &purge_ctx,
                                  error_info);
@@ -1394,13 +1394,13 @@ couchstore_error_t couchstore_update_view_group(view_group_info_t *info,
                 snprintf(buf, sizeof(buf),
                         "Error sorting records file: %s", kv_records_files[i]);
                 error_info->error_msg = strdup(buf);
-                error_info->view_name = (const char *) strdup(info->btree_infos[i].names[0]);
+                error_info->view_name = (const char *) strdup(info->view_infos.btree[i].names[0]);
                 goto cleanup;
             }
         }
 
         ret = update_view_btree(kv_records_files[i],
-                                &info->btree_infos[i],
+                                &info->view_infos.btree[i],
                                 &index_file,
                                 header->view_states[i],
                                 batch_size,
@@ -1733,7 +1733,7 @@ couchstore_error_t couchstore_compact_view_group(view_group_info_t *info,
     for (i = 0; i < info->num_btrees; ++i) {
         ret = compact_view_btree(&index_file,
                                  &compact_file,
-                                 &info->btree_infos[i],
+                                 &info->view_infos.btree[i],
                                  header->view_states[i],
                                  filterbm,
                                  stats,

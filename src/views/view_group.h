@@ -49,12 +49,24 @@ extern "C" {
     } view_btree_info_t;
 
     typedef struct {
-        const char         *filepath;
-        uint64_t            header_pos;
-        int                 num_btrees;
-        view_index_type_t   type;
-        view_btree_info_t  *btree_infos;
-        tree_file           file;
+        /* Number of dimensions the multidimensional bounding box (MBB) has */
+        uint16_t  dimension;
+        /* The MBB that enclosed the whole spatial view*/
+        double   *mbb;
+    } view_spatial_info_t;
+
+    typedef union {
+        view_btree_info_t   *btree;
+        view_spatial_info_t *spatial;
+    } view_infos_t;
+
+    typedef struct {
+        const char        *filepath;
+        uint64_t           header_pos;
+        int                num_btrees;
+        view_index_type_t  type;
+        view_infos_t       view_infos;
+        tree_file          file;
     } view_group_info_t;
 
     typedef struct {
