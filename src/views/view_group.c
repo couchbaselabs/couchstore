@@ -39,6 +39,10 @@
 #define MAX_HEADER_SIZE         (64 * 1024)
 #define MAX_ACTIONS_SIZE        (2 * 1024 * 1024)
 
+static couchstore_error_t read_btree_info(view_group_info_t *info,
+                                          FILE *in_stream,
+                                          FILE *error_stream);
+
 static couchstore_error_t open_view_group_file(const char *path,
                                                couchstore_open_flags open_flags,
                                                tree_file *file);
@@ -144,8 +148,6 @@ view_group_info_t *couchstore_read_view_group_info(FILE *in_stream,
     view_group_info_t *info;
     char buf[4096];
     char *dup;
-    int i, j;
-    int reduce_len;
     couchstore_error_t ret;
 
     info = (view_group_info_t *) calloc(1, sizeof(*info));
@@ -181,12 +183,37 @@ view_group_info_t *couchstore_read_view_group_info(FILE *in_stream,
         goto out_error;
     }
 
+    ret = read_btree_info(info, in_stream, error_stream);
+    if (ret != COUCHSTORE_SUCCESS) {
+        goto out_error;
+    }
+
+    return info;
+
+out_error:
+    couchstore_free_view_group_info(info);
+
+    return NULL;
+}
+
+
+/* Read in the information about the mapreduce view indexes */
+static couchstore_error_t read_btree_info(view_group_info_t *info,
+                                          FILE *in_stream,
+                                          FILE *error_stream)
+{
+    char buf[4096];
+    char *dup;
+    int i, j;
+    int reduce_len;
+    couchstore_error_t ret;
+
     info->btree_infos = (view_btree_info_t *)
         calloc(info->num_btrees, sizeof(view_btree_info_t));
     if (info->btree_infos == NULL) {
-        fprintf(error_stream, "Memory allocation failure\n");
+        fprintf(error_stream, "Memory allocation failure on btree infos\n");
         info->num_btrees = 0;
-        goto out_error;
+        return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
 
     for (i = 0; i < info->num_btrees; ++i) {
@@ -201,34 +228,39 @@ view_group_info_t *couchstore_read_view_group_info(FILE *in_stream,
         if (ret != COUCHSTORE_SUCCESS) {
             fprintf(error_stream,
                     "Error reading number of reducers for btree %d\n", i);
-            goto out_error;
+            return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
         }
 
         bti->names = (const char **) calloc(bti->num_reducers, sizeof(char *));
         if (bti->names == NULL) {
-            fprintf(error_stream, "Memory allocation failure\n");
+            fprintf(error_stream,
+                    "Memory allocation failure on btree %d reducer names\n",
+                    i);
             bti->num_reducers = 0;
-            goto out_error;
+            return COUCHSTORE_ERROR_ALLOC_FAIL;
         }
 
         bti->reducers = (const char **) calloc(bti->num_reducers, sizeof(char *));
         if (bti->reducers == NULL) {
-            fprintf(error_stream, "Memory allocation failure\n");
+            fprintf(error_stream,
+                    "Memory allocation failure on btree %d reducers\n", i);
             bti->num_reducers = 0;
             free(bti->names);
-            goto out_error;
+            return COUCHSTORE_ERROR_ALLOC_FAIL;
         }
 
         for (j = 0; j < bti->num_reducers; ++j) {
             if (couchstore_read_line(in_stream, buf, sizeof(buf)) != buf) {
                 fprintf(error_stream,
                         "Error reading btree %d view %d name\n", i, j);
-                goto out_error;
+                return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
             }
             dup = strdup(buf);
             if (dup == NULL) {
-                fprintf(error_stream, "Memory allocation failure\n");
-                goto out_error;
+                fprintf(error_stream,
+                        "Memory allocation failure on btree %d "
+                        "view %d name\n", i, j);
+                return COUCHSTORE_ERROR_ALLOC_FAIL;
             }
             bti->names[j] = (const char *) dup;
 
@@ -240,32 +272,28 @@ view_group_info_t *couchstore_read_view_group_info(FILE *in_stream,
                 fprintf(error_stream,
                         "Error reading btree %d view %d "
                         "reduce function size\n", i, j);
-                goto out_error;
+                return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
             }
 
             dup = (char *) malloc(reduce_len + 1);
             if (dup == NULL) {
-                fprintf(error_stream, "Memory allocation failure\n");
-                goto out_error;
+                fprintf(error_stream,
+                        "Memory allocation failure on btree %d "
+                        "view %d reducer\n", i, j);
+                return COUCHSTORE_ERROR_ALLOC_FAIL;
             }
 
             if (fread(dup, reduce_len, 1, in_stream) != 1) {
                 fprintf(error_stream,
                         "Error reading btree %d view %d reducer\n", i, j);
                 free(dup);
-                goto out_error;
+                return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
             }
             dup[reduce_len] = '\0';
             bti->reducers[j] = (const char *) dup;
         }
     }
-
-    return info;
-
-out_error:
-    couchstore_free_view_group_info(info);
-
-    return NULL;
+    return COUCHSTORE_SUCCESS;
 }
 
 
