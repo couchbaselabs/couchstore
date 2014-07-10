@@ -149,10 +149,28 @@ view_group_info_t *couchstore_read_view_group_info(FILE *in_stream,
     char buf[4096];
     char *dup;
     couchstore_error_t ret;
+    uint64_t type;
 
     info = (view_group_info_t *) calloc(1, sizeof(*info));
     if (info == NULL) {
         fprintf(error_stream, "Memory allocation failure\n");
+        goto out_error;
+    }
+
+    type = couchstore_read_int(in_stream, buf, sizeof(buf), &ret);
+    if (ret != COUCHSTORE_SUCCESS) {
+        fprintf(stderr, "Error reading view file type\n");
+        goto out_error;
+    }
+    switch (type) {
+    case VIEW_INDEX_TYPE_MAPREDUCE:
+        info->type = VIEW_INDEX_TYPE_MAPREDUCE;
+        break;
+    case VIEW_INDEX_TYPE_SPATIAL:
+        info->type = VIEW_INDEX_TYPE_SPATIAL;
+        break;
+    default:
+        fprintf(stderr, "Invalid view file type: %"PRIu64"\n", type);
         goto out_error;
     }
 

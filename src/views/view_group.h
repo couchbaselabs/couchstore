@@ -31,6 +31,11 @@
 extern "C" {
 #endif
 
+    typedef enum {
+        VIEW_INDEX_TYPE_MAPREDUCE,
+        VIEW_INDEX_TYPE_SPATIAL
+    }  view_index_type_t;
+
     typedef struct {
         const char *view_name;
         const char *error_msg;
@@ -47,6 +52,7 @@ extern "C" {
         const char         *filepath;
         uint64_t            header_pos;
         int                 num_btrees;
+        view_index_type_t   type;
         view_btree_info_t  *btree_infos;
         tree_file           file;
     } view_group_info_t;
