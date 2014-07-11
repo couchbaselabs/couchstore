@@ -46,6 +46,12 @@ int main(int argc, char *argv[])
     (void) argc;
     (void) argv;
 
+    /*
+     * Disable buffering for stdout since index builder messages
+     * needs to be immediately available at erlang side
+     */
+    setvbuf(stdout, (char *) NULL, _IONBF, 0);
+
     if (set_binary_mode() < 0) {
         fprintf(stderr, "Error setting binary mode\n");
         goto out;

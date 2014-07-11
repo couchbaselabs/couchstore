@@ -71,7 +71,7 @@ int read_view_record(FILE *in, void **buf, void *ctx)
 {
     uint32_t len, vlen;
     uint16_t klen;
-    uint8_t op;
+    uint8_t op = 0;
     view_file_merge_record_t *rec;
     view_file_merge_ctx_t *merge_ctx = (view_file_merge_ctx_t *) ctx;
 
