@@ -94,11 +94,11 @@ LIBCOUCHSTORE_API
 file_sorter_error_t sort_spatial_kvs_file(const char *file_path,
                                           const char *tmp_dir,
                                           const double *mbb,
-                                          const uint16_t mbb_num)
+                                          const uint16_t dimension)
 {
     file_sorter_error_t ret;
     view_file_merge_ctx_t ctx;
-    scale_factor_t *user_ctx = spatial_scale_factor(mbb, mbb_num/2,
+    scale_factor_t *user_ctx = spatial_scale_factor(mbb, dimension,
                                                     ZCODE_MAX_VALUE);
 
     ctx.key_cmp_fun = spatial_key_cmp;

@@ -203,9 +203,11 @@ int main(int argc, char *argv[])
                 break;
             case INITIAL_SPATIAL_FILE:
                 /* For sorting the spatial file extra information
-                 * (the bounding box) is needed */
+                 * (the bounding box) is needed. We pass on the
+                 * dimensionality of the bbox instead of the number
+                 * of numbers */
                 error = sort_spatial_kvs_file(view_files[i], tmp_dir,
-                                              extra_data[i], num_doubles[i]);
+                                              extra_data[i], num_doubles[i] / 2);
                 break;
             }
             if (error != FILE_SORTER_SUCCESS) {
