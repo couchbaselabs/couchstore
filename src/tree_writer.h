@@ -20,7 +20,7 @@ typedef struct TreeWriter TreeWriter;
  * @param out_writer The new TreeWriter pointer will be stored here.
  * @return Error code or COUCHSTORE_SUCCESS.
  */
-couchstore_error_t TreeWriterOpen(const char* unsortedFilePath,
+couchstore_error_t TreeWriterOpen(char* unsortedFilePath,
                                   compare_callback key_compare,
                                   reduce_fn reduce,
                                   reduce_fn rereduce,

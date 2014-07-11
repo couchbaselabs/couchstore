@@ -38,6 +38,15 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
                                             const couch_file_ops *ops)
 {
     Db* target = NULL;
+#ifdef WIN32
+#define PATH_MAX MAX_PATH
+#endif
+
+#ifndef PATH_MAX
+#define PATH_MAX 1024
+#endif
+
+    char tmpFile[PATH_MAX]; // keep this on the stack for duration of the call
     couchstore_error_t errcode;
     compact_ctx ctx = {NULL, new_arena(0), new_arena(0), NULL, NULL, hook, dhook, hook_ctx, 0};
     ctx.flags = flags;
@@ -58,7 +67,9 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
     target->header.purge_ptr = source->header.purge_ptr;
 
     if (source->header.by_seq_root) {
-        error_pass(TreeWriterOpen(target_filename, ebin_cmp, by_id_reduce, by_id_rereduce, NULL, &ctx.tree_writer));
+        strcpy(tmpFile, target_filename);
+        strcat(tmpFile, ".btree-tmp_0");
+        error_pass(TreeWriterOpen(tmpFile, ebin_cmp, by_id_reduce, by_id_rereduce, NULL, &ctx.tree_writer));
         error_pass(compact_seq_tree(source, target, &ctx));
         error_pass(TreeWriterSort(ctx.tree_writer));
         error_pass(TreeWriterWrite(ctx.tree_writer, &target->file, &target->header.by_id_root));

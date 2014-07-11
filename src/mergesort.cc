@@ -39,6 +39,39 @@ static int compare_records(void *p, void *q, void *pointer)
     return (*point->compare)(pp->record, qq->record, point->pointer);
 }
 
+FILE *openTmpFile(char *path) {
+    FILE *tempFile = NULL;
+    int pos = strlen(path);
+    // If file name is 4.couch.2.compact.btree-tmp_356
+    // pull out suffix as int in reverse i.e 653
+    // increment suffix by 1 to 654
+    // append new suffix in reverse as 4.couch.2.compact.btree-tmp_456
+    int suffix = 0;
+    while (path[--pos] != '_'){ // ok to crash on underflow
+        suffix = suffix * 10 + (path[pos] - '0'); // atoi
+    }
+
+    suffix++;
+
+    // do itoa in reverse
+    while (suffix) {
+        int tens = suffix % 10;
+        path[++pos] = tens + '0';
+        suffix = suffix / 10;
+    }
+    path[++pos] = '\0';
+
+    tempFile = fopen(path, "w+b");
+    if (tempFile) {
+#ifdef WIN32
+        _unlink(path);
+#else
+        unlink(path);
+#endif
+    }
+    return tempFile;
+}
+
 #define OK                   COUCHSTORE_SUCCESS
 #define INSUFFICIENT_MEMORY  COUCHSTORE_ERROR_ALLOC_FAIL
 #define FILE_CREATION_ERROR  COUCHSTORE_ERROR_OPEN_FILE
@@ -46,6 +79,7 @@ static int compare_records(void *p, void *q, void *pointer)
 #define FILE_READ_ERROR      COUCHSTORE_ERROR_READ
 
 int merge_sort(FILE *unsorted_file, FILE *sorted_file,
+               char *tmp_path,
                mergesort_read_record_t read,
                mergesort_write_record_t write,
                mergesort_compare_records_t compare,
@@ -71,14 +105,14 @@ int merge_sort(FILE *unsorted_file, FILE *sorted_file,
         return INSUFFICIENT_MEMORY;
     }
     /* create temporary files source_tape[0] and source_tape[1] */
-    source_tape[0].fp = tmpfile();
+    source_tape[0].fp = openTmpFile(tmp_path);
     source_tape[0].count = 0L;
     if (source_tape[0].fp == NULL) {
         (*record_free)(record[0]);
         (*record_free)(record[1]);
         return FILE_CREATION_ERROR;
     }
-    source_tape[1].fp = tmpfile();
+    source_tape[1].fp = openTmpFile(tmp_path);
     source_tape[1].count = 0L;
     if (source_tape[1].fp == NULL) {
         fclose(source_tape[0].fp);
@@ -186,7 +220,7 @@ int merge_sort(FILE *unsorted_file, FILE *sorted_file,
             struct tape destination_tape[2];
             int record1_size, record2_size;
             destination_tape[0].fp = source_tape[0].count <= block_size ?
-                                     sorted_file : tmpfile();
+                                     sorted_file : openTmpFile(tmp_path);
             destination_tape[0].count = 0L;
             if (destination_tape[0].fp == NULL) {
                 fclose(source_tape[0].fp);

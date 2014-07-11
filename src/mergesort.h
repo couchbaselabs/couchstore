@@ -39,7 +39,10 @@ typedef void  (*mergesort_record_free_t)(char *record);
 
 void *sort_linked_list(void *, unsigned, int (*)(void *, void *, void *), void *, unsigned long *);
 
+FILE *openTmpFile(char *path);
+
 int merge_sort(FILE *unsorted_file, FILE *sorted_file,
+               char *tmp_path,
                mergesort_read_record_t read,
                mergesort_write_record_t write,
                mergesort_compare_records_t compare,

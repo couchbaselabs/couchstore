@@ -27,6 +27,7 @@ static int compare_id_record(const void *r1, const void *r2, void *ctx);
 
 struct TreeWriter {
     FILE* file;
+    char *tmp_path; // a buffer used to build unique temporary filenames
     compare_callback key_compare;
     reduce_fn reduce;
     reduce_fn rereduce;
@@ -34,7 +35,7 @@ struct TreeWriter {
 };
 
 
-couchstore_error_t TreeWriterOpen(const char* unsortedFilePath,
+couchstore_error_t TreeWriterOpen(char* unsortedFilePath,
                                   compare_callback key_compare,
                                   reduce_fn reduce,
                                   reduce_fn rereduce,
@@ -44,24 +45,10 @@ couchstore_error_t TreeWriterOpen(const char* unsortedFilePath,
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     TreeWriter* writer = static_cast<TreeWriter*>(calloc(1, sizeof(TreeWriter)));
     error_unless(writer, COUCHSTORE_ERROR_ALLOC_FAIL);
-    if (!(writer->file = tmpfile())) {
-        if (unsortedFilePath) {
-            int len = strlen(unsortedFilePath);
-            char tmpFile[512];
-            memcpy(tmpFile, unsortedFilePath, len);
-            tmpFile[len++] = 'T';
-            tmpFile[len++] = 'm';
-            tmpFile[len++] = 'p';
-            tmpFile[len] = '\0';
-            writer->file = fopen(tmpFile, "w+b");
-            if (writer->file) { // ensure tmpFile gets deleted on close
-#ifdef WIN32
-                _unlink(tmpFile);
-#else
-                unlink(tmpFile);
-#endif
-            }
-        }
+    if (unsortedFilePath) {
+        // stash the temp file path into context for uniq tempfile construction
+        writer->tmp_path = unsortedFilePath;
+        writer->file = openTmpFile(writer->tmp_path);
     }
 
     if (!writer->file) {
@@ -111,6 +98,7 @@ couchstore_error_t TreeWriterSort(TreeWriter* writer)
     rewind(writer->file);
     return static_cast<couchstore_error_t>(merge_sort(writer->file,
                                                       writer->file,
+                                                      writer->tmp_path,
                                                       read_id_record,
                                                       write_id_record,
                                                       compare_id_record,
