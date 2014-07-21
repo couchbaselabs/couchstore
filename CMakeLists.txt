@@ -175,7 +175,8 @@ ADD_EXECUTABLE(couchstore_testapp tests/testapp.c
 	tests/btree_purge/tests.c
 	tests/btree_purge/purge.c
         ${COUCHSTORE_SOURCES} )
-SET_TARGET_PROPERTIES(couchstore_testapp PROPERTIES COMPILE_FLAGS "-DLIBCOUCHSTORE_NO_VISIBILITY=1")
+SET_TARGET_PROPERTIES(couchstore_testapp PROPERTIES
+                      COMPILE_FLAGS "-DLIBCOUCHSTORE_NO_VISIBILITY=1 -DTESTAPP=1")
 
 TARGET_LINK_LIBRARIES(couchstore_testapp ${COUCHSTORE_LIBRARIES})
 ADD_TEST(couchstore-testapp couchstore_testapp)

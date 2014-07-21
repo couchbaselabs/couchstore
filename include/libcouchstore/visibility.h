@@ -24,4 +24,12 @@
 
 #endif
 
+
+#if defined(TESTAPP)
+#define STATIC
+#else
+#define STATIC static
+#endif
+
+
 #endif
