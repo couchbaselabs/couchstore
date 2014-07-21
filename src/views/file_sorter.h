@@ -69,9 +69,8 @@ extern "C" {
     LIBCOUCHSTORE_API
     file_sorter_error_t sort_spatial_kvs_file(const char *file_path,
                                               const char *tmp_dir,
-                                              const double *mbb,
-                                              const uint16_t dimension);
-
+                                              file_merger_feed_record_t callback,
+                                              void *user_ctx);
     /* Record file sorter */
     typedef file_sorter_error_t (*sort_record_fn)(const char *file_path,
                                                   const char *tmp_dir,

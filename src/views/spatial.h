@@ -24,6 +24,7 @@
 #include "config.h"
 #include <libcouchstore/couch_db.h>
 #include "../file_merger.h"
+#include "../couch_btree.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,6 +49,14 @@ extern "C" {
         uint8_t dim;
     } scale_factor_t;
 
+    /* The context to build the initial index */
+    typedef struct {
+        arena                   *transient_arena;
+        couchfile_modify_result *modify_result;
+        /* Scale MBBs up for a better results when using the space filling
+         * curve */
+        scale_factor_t          *scale_factor;
+    } view_spatial_builder_ctx_t;
 
     /* compare keys of a spatial index */
     int spatial_key_cmp(const sized_buf *key1, const sized_buf *key2,

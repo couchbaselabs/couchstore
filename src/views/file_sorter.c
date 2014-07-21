@@ -93,21 +93,18 @@ file_sorter_error_t sort_view_ids_file(const char *file_path,
 LIBCOUCHSTORE_API
 file_sorter_error_t sort_spatial_kvs_file(const char *file_path,
                                           const char *tmp_dir,
-                                          const double *mbb,
-                                          const uint16_t dimension)
+                                          file_merger_feed_record_t callback,
+                                          void *user_ctx)
 {
     file_sorter_error_t ret;
     view_file_merge_ctx_t ctx;
-    scale_factor_t *user_ctx = spatial_scale_factor(mbb, dimension,
-                                                    ZCODE_MAX_VALUE);
 
     ctx.key_cmp_fun = spatial_key_cmp;
     ctx.type = INITIAL_BUILD_SPATIAL_RECORD;
-    ctx.user_ctx = (void *)user_ctx;
+    ctx.user_ctx = user_ctx;
 
-    ret = do_sort_file(file_path, tmp_dir, NULL, 0, &ctx);
+    ret = do_sort_file(file_path, tmp_dir, callback, 1, &ctx);
 
-    free_spatial_scale_factor(user_ctx);
     return ret;
 }
 

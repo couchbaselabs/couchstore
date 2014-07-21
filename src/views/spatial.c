@@ -37,7 +37,8 @@
 int spatial_key_cmp(const sized_buf *key1, const sized_buf *key2,
                     const void *user_ctx)
 {
-    scale_factor_t *sf = (scale_factor_t *)user_ctx;
+    scale_factor_t *sf =
+            ((view_spatial_builder_ctx_t *) user_ctx)->scale_factor;
     uint16_t mbb1_num = decode_raw16(*((raw_16 *) key1->buf));
     uint16_t mbb2_num = decode_raw16(*((raw_16 *) key2->buf));
     sized_mbb_t mbbs[2];
