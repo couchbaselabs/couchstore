@@ -25,14 +25,27 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include "../macros.h"
 #include "../src/views/bitmap.h"
 #include "../src/views/spatial.h"
+
+/* Those functions are normaly static. They are declared here to prevent
+ * compile time warning */
+couchstore_error_t encode_spatial_key(const sized_mbb_t *mbb,
+                                      char *key,
+                                      size_t nkey);
+couchstore_error_t decode_spatial_key(const char *key, sized_mbb_t *mbb);
+couchstore_error_t expand_mbb(sized_mbb_t *original, sized_mbb_t *expander);
+
 
 void test_interleaving(void);
 void test_spatial_scale_factor(void);
 void test_spatial_center(void);
 void test_spatial_scale_point(void);
 void test_set_bit_sized(void);
+void test_encode_spatial_key(void);
+void test_decode_spatial_key(void);
+void test_expand_mbb(void);
 
 #endif

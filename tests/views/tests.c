@@ -43,4 +43,7 @@ void view_tests()
     test_spatial_center();
     test_spatial_scale_point();
     test_set_bit_sized();
+    test_encode_spatial_key();
+    test_decode_spatial_key();
+    test_expand_mbb();
 }

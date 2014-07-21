@@ -33,6 +33,18 @@
 #define MAP_CHUNK(map, size, bit)   (map)[CHUNK_INDEX(map, size, bit)]
 #define CHUNK_OFFSET(bit)           ((bit) % CHUNK_BITS)
 
+#define MIN(a, b) (a) < (b) ? a : b
+#define MAX(a, b) (a) > (b) ? a : b
+
+
+STATIC couchstore_error_t encode_spatial_key(const sized_mbb_t *mbb,
+                                          char *key,
+                                          size_t nkey);
+STATIC couchstore_error_t decode_spatial_key(const char *key,
+                                             sized_mbb_t *mbb);
+STATIC couchstore_error_t expand_mbb(sized_mbb_t *original,
+                                     sized_mbb_t *expander);
+
 
 int spatial_key_cmp(const sized_buf *key1, const sized_buf *key2,
                     const void *user_ctx)
@@ -190,4 +202,47 @@ unsigned char *interleave_uint32s(uint32_t *numbers, uint16_t num)
         }
     }
     return bitmap;
+}
+
+
+STATIC couchstore_error_t decode_spatial_key(const char *key, sized_mbb_t *mbb)
+{
+    mbb->num = decode_raw16(*((raw_16 *) key));
+    mbb->mbb = (double *)(key + 2);
+    return COUCHSTORE_SUCCESS;
+}
+
+
+STATIC couchstore_error_t encode_spatial_key(const sized_mbb_t *mbb,
+                                             char *key,
+                                             size_t nkey)
+{
+    raw_16 num = encode_raw16(mbb->num);
+
+    memcpy(key, &num, 2);
+    key += 2;
+
+    assert(mbb->num * sizeof(double) <= nkey);
+    memcpy(key, mbb->mbb, mbb->num * sizeof(double));
+
+    return COUCHSTORE_SUCCESS;
+}
+
+
+/* Expands the `original` MBB with the `expander` */
+STATIC couchstore_error_t expand_mbb(sized_mbb_t *original,
+                                     sized_mbb_t *expander) {
+    int i;
+
+    assert(original->num == expander->num);
+
+    for (i = 0; i < original->num; ++i) {
+        if (i % 2 == 0) {
+            original->mbb[i] = MIN(original->mbb[i], expander->mbb[i]);
+        } else {
+            original->mbb[i] = MAX(original->mbb[i], expander->mbb[i]);
+        }
+    }
+
+    return COUCHSTORE_SUCCESS;
 }

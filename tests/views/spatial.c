@@ -271,3 +271,110 @@ void test_set_bit_sized()
     free(bitmap);
     free(bitmap2);
 }
+
+
+void test_encode_spatial_key()
+{
+    sized_mbb_t mbb_struct;
+    char encoded[66];
+    double mbb[] = {6.3, 18.7};
+    double mbb2[] = {1.0, 3.0, 30.33, 31.33, 15.4, 138.7, 7.8, 7.8};
+    unsigned char expected[] = {
+        0x00, 0x02, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x19, 0x40,
+        0x33, 0x33, 0x33, 0x33, 0x33, 0xb3, 0x32, 0x40
+    };
+    unsigned char expected2[] = {
+        0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0x3f,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x40, 0x14, 0xae,
+        0x47, 0xe1, 0x7a, 0x54, 0x3e, 0x40, 0x14, 0xae, 0x47, 0xe1,
+        0x7a, 0x54, 0x3f, 0x40, 0xcd, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc,
+        0x2e, 0x40, 0x66, 0x66, 0x66, 0x66, 0x66, 0x56, 0x61, 0x40,
+        0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x1f, 0x40, 0x33, 0x33,
+        0x33, 0x33, 0x33, 0x33, 0x1f, 0x40
+    };
+
+    fprintf(stderr, "Running encode spatial key tests\n");
+
+    mbb_struct.mbb = mbb;
+    mbb_struct.num = sizeof(mbb)/sizeof(double);
+    encode_spatial_key(&mbb_struct, (char *)&encoded, sizeof(encoded));
+    assert(memcmp(encoded, expected, 18) == 0);
+
+    mbb_struct.mbb = mbb2;
+    mbb_struct.num = sizeof(mbb2)/sizeof(double);
+    encode_spatial_key(&mbb_struct, (char *)&encoded, sizeof(encoded));
+    assert(memcmp(encoded, expected2, 66) == 0);
+}
+
+
+/* Compares two arrays of doubles. 1 if equal, 0 if not equal */
+static bool is_double_array_equal(double *a, double *b, int len)
+{
+    int i;
+
+    for (i = 0; i < len; ++i) {
+        if (a[i] != b[i]) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+void test_decode_spatial_key()
+{
+    sized_mbb_t decoded;
+    unsigned char mbb[] = {
+        0x00, 0x02, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x19, 0x40,
+        0x33, 0x33, 0x33, 0x33, 0x33, 0xb3, 0x32, 0x40
+    };
+    unsigned char mbb2[] = {
+        0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0x3f,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x40, 0x14, 0xae,
+        0x47, 0xe1, 0x7a, 0x54, 0x3e, 0x40, 0x14, 0xae, 0x47, 0xe1,
+        0x7a, 0x54, 0x3f, 0x40, 0xcd, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc,
+        0x2e, 0x40, 0x66, 0x66, 0x66, 0x66, 0x66, 0x56, 0x61, 0x40,
+        0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x1f, 0x40, 0x33, 0x33,
+        0x33, 0x33, 0x33, 0x33, 0x1f, 0x40
+    };
+    double expected[] = {6.3, 18.7};
+    double expected2[] = {1.0, 3.0, 30.33, 31.33, 15.4, 138.7, 7.8, 7.8};
+
+    fprintf(stderr, "Running decode spatial key tests\n");
+
+    decode_spatial_key((char *)mbb, &decoded);
+    assert(decoded.num == 2);
+    assert(is_double_array_equal(decoded.mbb, expected, 2));
+
+    decode_spatial_key((char *)mbb2, &decoded);
+    assert(decoded.num == 8);
+    assert(is_double_array_equal(decoded.mbb, expected2, 8));
+}
+
+
+void test_expand_mbb()
+{
+    sized_mbb_t mbb_struct_a, mbb_struct_b;
+    double mbb_a[] = {6.3, 18.7};
+    double mbb_b[] = {10.1, 31.5};
+    double expected_mbb[] = {6.3, 31.5};
+    double mbb2_a[] = {3.0, 5.0, 100.1, 150.2, 12.5, 13.75};
+    double mbb2_b[] = {2.9, 4.9, 80.0, 222.2, 13.0, 13.1};
+    double expected2_mbb[] = {2.9, 5.0, 80.0, 222.2, 12.5, 13.75};
+
+    fprintf(stderr, "Running expand MBB tests\n");
+
+    mbb_struct_a.num = 2;
+    mbb_struct_a.mbb = mbb_a;
+    mbb_struct_b.num = 2;
+    mbb_struct_b.mbb = mbb_b;
+    expand_mbb(&mbb_struct_a, &mbb_struct_b);
+    assert(is_double_array_equal(mbb_struct_a.mbb, expected_mbb, 2));
+
+    mbb_struct_a.num = 6;
+    mbb_struct_a.mbb = mbb2_a;
+    mbb_struct_b.num = 6;
+    mbb_struct_b.mbb = mbb2_b;
+    expand_mbb(&mbb_struct_a, &mbb_struct_b);
+    assert(is_double_array_equal(mbb_struct_a.mbb, expected2_mbb, 6));
+}
