@@ -32,9 +32,9 @@ extern "C" {
     #define ZCODE_MAX_VALUE UINT32_MAX
 
     typedef struct {
-        const double *mbb;
+        double *mbb;
         /* the total number of values (two times the dimension) */
-        uint32_t num;
+        uint16_t num;
     } sized_mbb_t;
 
     /* It is used to scale up MBBs to the relative size of an enclosing one */
@@ -45,7 +45,7 @@ extern "C" {
         /* The scale factors for every dimension */
         double *scales;
         /* the total number of values, one per dimension */
-        uint16_t dim;
+        uint8_t dim;
     } scale_factor_t;
 
 
