@@ -144,6 +144,10 @@ extern "C" {
                                                 node_pointer *root,
                                                 couchstore_error_t *errcode);
 
+    node_pointer* copy_node_pointer(node_pointer* ptr);
+
+    node_pointer *read_pointer(arena* a, sized_buf *key, char *buf);
+
 #ifdef __cplusplus
 }
 #endif

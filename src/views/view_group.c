@@ -29,6 +29,7 @@
 #include "purgers.h"
 #include "util.h"
 #include "file_sorter.h"
+#include "spatial.h"
 #include "../arena.h"
 #include "../couch_btree.h"
 #include "../internal.h"
@@ -144,6 +145,27 @@ static couchstore_error_t compact_view_btree(tree_file *source,
                                       compactor_stats_t *stats,
                                       node_pointer **out_root,
                                       view_error_t *error_info);
+
+/* Some preparations before building the actual spatial index */
+static couchstore_error_t build_view_spatial(const char *source_file,
+                                             const view_spatial_info_t *info,
+                                             tree_file *dest_file,
+                                             const char *tmpdir,
+                                             node_pointer **out_root,
+                                             view_error_t *error_info);
+
+/* Build the actual spatial index */
+static couchstore_error_t build_spatial(const char *source_file,
+                                        tree_file *dest_file,
+                                        compare_info *cmp,
+                                        reduce_fn reduce_fun,
+                                        reduce_fn rereduce_fun,
+                                        const uint16_t dimension,
+                                        const double *mbb,
+                                        const char *tmpdir,
+                                        sort_record_fn sort_fun,
+                                        node_pointer **out_root);
+
 
 LIBCOUCHSTORE_API
 view_group_info_t *couchstore_read_view_group_info(FILE *in_stream,
@@ -508,12 +530,24 @@ couchstore_error_t couchstore_build_view_group(view_group_info_t *info,
     id_root = NULL;
 
     for (i = 0; i < info->num_btrees; ++i) {
-        ret = build_view_btree(kv_records_files[i],
-                               &info->view_infos.btree[i],
-                               &index_file,
-                               tmpdir,
-                               &view_roots[i],
-                               error_info);
+        switch(info->type) {
+        case VIEW_INDEX_TYPE_MAPREDUCE:
+            ret = build_view_btree(kv_records_files[i],
+                                   &info->view_infos.btree[i],
+                                   &index_file,
+                                   tmpdir,
+                                   &view_roots[i],
+                                   error_info);
+            break;
+        case VIEW_INDEX_TYPE_SPATIAL:
+            ret = build_view_spatial(kv_records_files[i],
+                                     &info->view_infos.spatial[i],
+                                     &index_file,
+                                     tmpdir,
+                                     &view_roots[i],
+                                     error_info);
+            break;
+        }
         if (ret != COUCHSTORE_SUCCESS) {
             goto out;
         }
@@ -1835,6 +1869,151 @@ cleanup:
             free(view_roots[i]);
         }
         free(view_roots);
+    }
+
+    return ret;
+}
+
+
+/*
+ * For initial spatial build, feed the spatial builder as soon as
+ * sorted records are available.
+ */
+static file_merger_error_t build_spatial_record_callback(void *buf, void *ctx)
+{
+    int ret;
+    sized_buf *k, *v;
+    view_file_merge_record_t *rec = (view_file_merge_record_t *) buf;
+    view_file_merge_ctx_t *merge_ctx = (view_file_merge_ctx_t *) ctx;
+    view_spatial_builder_ctx_t *build_ctx =
+            (view_spatial_builder_ctx_t *) merge_ctx->user_ctx;
+    sized_buf src_k, src_v;
+
+    src_k.size = rec->ksize;
+    src_k.buf = VIEW_RECORD_KEY(rec);
+    src_v.size = rec->vsize;
+    src_v.buf = VIEW_RECORD_VAL(rec);
+
+    k = arena_copy_buf(build_ctx->transient_arena, &src_k);
+    v = arena_copy_buf(build_ctx->transient_arena, &src_v);
+    ret = spatial_push_item(k, v, build_ctx->modify_result);
+
+    if (ret != COUCHSTORE_SUCCESS) {
+        return ret;
+    }
+
+    if (build_ctx->modify_result->count == 0) {
+        arena_free_all(build_ctx->transient_arena);
+    }
+
+    return ret;
+}
+
+
+static couchstore_error_t build_view_spatial(const char *source_file,
+                                             const view_spatial_info_t *info,
+                                             tree_file *dest_file,
+                                             const char *tmpdir,
+                                             node_pointer **out_root,
+                                             view_error_t *error_info)
+{
+    couchstore_error_t ret;
+    compare_info cmp;
+    char buf[64];
+    size_t len = 0;
+
+    /* cmp.compare is only needed when you read a b-tree node or modify a
+     * b-tree node (btree_modify:modify_node()). We don't do either in the
+     * spatial view. */
+    cmp.compare = NULL;
+    ret = build_spatial(source_file,
+                        dest_file,
+                        &cmp,
+                        view_spatial_reduce,
+                        /* Use the reduce function also for the re-reduce */
+                        view_spatial_reduce,
+                        info->dimension,
+                        info->mbb,
+                        tmpdir,
+                        sort_spatial_kvs_file,
+                        out_root);
+
+    if (ret != COUCHSTORE_SUCCESS) {
+        len = snprintf(buf, sizeof(buf), "ret = %d", ret);
+        buf[len] = '\0';
+        if (len) {
+            error_info->error_msg = (const char *) strdup(buf);
+        }
+    }
+
+    return ret;
+}
+
+
+static couchstore_error_t build_spatial(const char *source_file,
+                                        tree_file *dest_file,
+                                        compare_info *cmp,
+                                        reduce_fn reduce_fun,
+                                        reduce_fn rereduce_fun,
+                                        const uint16_t dimension,
+                                        const double *mbb,
+                                        const char *tmpdir,
+                                        sort_record_fn sort_fun,
+                                        node_pointer **out_root)
+{
+    couchstore_error_t ret = COUCHSTORE_SUCCESS;
+    arena *transient_arena = new_arena(0);
+    arena *persistent_arena = new_arena(0);
+    couchfile_modify_result *mr;
+    view_spatial_builder_ctx_t build_ctx;
+
+    if (transient_arena == NULL || persistent_arena == NULL) {
+        ret = COUCHSTORE_ERROR_ALLOC_FAIL;
+        goto out;
+    }
+
+    mr = new_btree_modres(persistent_arena,
+                          transient_arena,
+                          dest_file,
+                          cmp,
+                          reduce_fun,
+                          rereduce_fun,
+                          NULL,
+                          /* Normally the nodes are flushed to disk when 2/3 of
+                           * the threshold is reached. In order to have a
+                           * higher fill grade, we add 1/3 */
+                          VIEW_KV_CHUNK_THRESHOLD + (VIEW_KV_CHUNK_THRESHOLD / 3),
+                          VIEW_KP_CHUNK_THRESHOLD + (VIEW_KP_CHUNK_THRESHOLD / 3));
+    if (mr == NULL) {
+        ret = COUCHSTORE_ERROR_ALLOC_FAIL;
+        goto out;
+    }
+
+    build_ctx.transient_arena = transient_arena;
+    build_ctx.modify_result = mr;
+    build_ctx.scale_factor = spatial_scale_factor(mbb, dimension,
+                                                  ZCODE_MAX_VALUE);
+
+    ret = (couchstore_error_t) sort_fun(source_file,
+                                        tmpdir,
+                                        build_spatial_record_callback,
+                                        &build_ctx);
+    free_spatial_scale_factor(build_ctx.scale_factor);
+    if (ret != COUCHSTORE_SUCCESS) {
+        goto out;
+    }
+
+    *out_root = complete_new_spatial(mr, &ret);
+    if (ret != COUCHSTORE_SUCCESS) {
+        goto out;
+    }
+
+    /* Don't care about success/failure. Erlang side will eventually delete it. */
+    remove(source_file);
+
+out:
+    if (transient_arena != NULL) {
+        delete_arena(transient_arena);
     }
 
     return ret;

@@ -44,7 +44,8 @@ SET(COUCHSTORE_SOURCES src/arena.cc src/bitfield.c src/btree_modify.cc
             src/views/mapreduce/mapreduce.cc
             src/views/mapreduce/mapreduce_c.cc src/views/reducers.c
             src/views/reductions.c src/views/sorted_list.c
-            src/views/spatial.c src/views/util.c src/views/values.c
+            src/views/spatial.c src/views/spatial_modify.c
+            src/views/util.c src/views/values.c
             src/views/view_group.c src/views/purgers.c
             src/views/compaction.c src/quicksort.c ${COUCHSTORE_FILE_OPS})
 SET(COUCHSTORE_LIBRARIES ${V8_LIBRARIES} ${ICU_LIBRARIES} ${SNAPPY_LIBRARIES} platform)

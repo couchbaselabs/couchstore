@@ -169,7 +169,7 @@ static couchstore_error_t mr_push_pointerinfo(node_pointer *ptr,
     return maybe_flush(dst);
 }
 
-static node_pointer *read_pointer(arena* a, sized_buf *key, char *buf)
+node_pointer *read_pointer(arena* a, sized_buf *key, char *buf)
 {
     //Parse KP pair into a node_pointer {K, {ptr, reduce_value, subtreesize}}
     node_pointer *p = (node_pointer *) arena_alloc(a, sizeof(node_pointer));
@@ -647,7 +647,7 @@ cleanup:
 }
 
 // Copies a node_pointer and its values to the malloc heap.
-static node_pointer* copy_node_pointer(node_pointer* ptr)
+node_pointer* copy_node_pointer(node_pointer* ptr)
 {
     if (!ptr) {
         return NULL;

@@ -89,6 +89,23 @@ extern "C" {
      * The maximum number of numbers is (2^14)-1 (16383). */
     unsigned char *interleave_uint32s(uint32_t *numbers, uint16_t num);
 
+    /* A reduce is used to calculate the enclosing MBB of a parent node (it's
+     * its key) */
+    couchstore_error_t view_spatial_reduce(char *dst,
+                                           size_t *size_r,
+                                           const nodelist *leaflist,
+                                           int count,
+                                           void *ctx);
+
+    /* Puts an item into the results set. If there are enough items they are
+     * are flused to disk */
+    couchstore_error_t spatial_push_item(sized_buf *k, sized_buf *v,
+                                         couchfile_modify_result *dst);
+
+    /* Build an r-tree bottom-up from the already stored leaf nodes */
+    node_pointer* complete_new_spatial(couchfile_modify_result* mr,
+                                       couchstore_error_t *errcode);
+
 #ifdef __cplusplus
 }
 #endif

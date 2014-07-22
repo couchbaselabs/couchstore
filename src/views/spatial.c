@@ -23,6 +23,7 @@
 #include <assert.h>
 #include "spatial.h"
 #include "../bitfield.h"
+#include "../couch_btree.h"
 
 
 #define BYTE_PER_COORD sizeof(uint32_t)
@@ -243,6 +244,34 @@ STATIC couchstore_error_t expand_mbb(sized_mbb_t *original,
             original->mbb[i] = MAX(original->mbb[i], expander->mbb[i]);
         }
     }
+
+    return COUCHSTORE_SUCCESS;
+}
+
+
+/* This reduce function is also used for the re-reduce */
+couchstore_error_t view_spatial_reduce(char *dst,
+                                       size_t *size_r,
+                                       const nodelist *leaflist,
+                                       int count,
+                                       void *ctx)
+{
+    sized_mbb_t enclosing;
+    sized_mbb_t tmp_mbb;
+    const nodelist *i;
+    (void) ctx;
+
+    decode_spatial_key(leaflist->key.buf, &enclosing);
+    count--;
+
+    for (i = leaflist->next; i != NULL && count > 0; i = i->next, count--) {
+        decode_spatial_key(i->key.buf, &tmp_mbb);
+        expand_mbb(&enclosing, &tmp_mbb);
+    }
+
+    encode_spatial_key(&enclosing, dst, MAX_REDUCTION_SIZE);
+    /* 2 is the prefix with the number of doubles */
+    *size_r = 2 + (enclosing.num * sizeof(double));
 
     return COUCHSTORE_SUCCESS;
 }
