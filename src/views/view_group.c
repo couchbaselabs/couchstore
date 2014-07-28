@@ -1400,7 +1400,13 @@ couchstore_error_t couchstore_update_view_group(view_group_info_t *info,
         goto cleanup;
     }
 
-    assert(info->num_btrees == header->num_views);
+    /* Spatial views use the native updater only for sorting the ID b-tree.
+     * Before starting it, the references to the spatial view index files
+     * get removed, hence the number of trees in `info` don't match the number
+     * in the header */
+    if (info->type != VIEW_INDEX_TYPE_SPATIAL) {
+        assert(info->num_btrees == header->num_views);
+    }
 
     /* Setup purger context */
     purge_ctx.count = 0;
