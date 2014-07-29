@@ -88,9 +88,11 @@ cleanup:
     TreeWriterFree(ctx.tree_writer);
     delete_arena(ctx.transient_arena);
     delete_arena(ctx.persistent_arena);
-    couchstore_close_db(target);
-    if (errcode != COUCHSTORE_SUCCESS && target != NULL) {
-        remove(target_filename);
+    if (target != NULL) {
+        couchstore_close_db(target);
+        if (errcode != COUCHSTORE_SUCCESS) {
+            remove(target_filename);
+        }
     }
     return errcode;
 }
