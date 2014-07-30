@@ -242,25 +242,26 @@ void set_error_info(const view_btree_info_t *info,
         return;
     }
 
-    /* TODO: add more human friendly messages for other error types */
-    switch (ret) {
-    case COUCHSTORE_ERROR_REDUCTION_TOO_LARGE:
-        len = snprintf(buf, 4096, "(view %d) reduction too large, ret = %d",
-                                                                info->view_id,
-                                                                ret);
-        buf[len] = '\0';
-
-    default:
-        len = snprintf(buf, 4096, "(view %d) failed, ret = %d", info->view_id, ret);
-        buf[len] = '\0';
-    }
-
-    if (len) {
-        error_info->error_msg = (const char *) strdup(buf);
-    }
-
     if (red_error) {
         error_info->error_msg = (const char *) strdup(red_error);
+    } else {
+        /* TODO: add more human friendly messages for other error types */
+        switch (ret) {
+            case COUCHSTORE_ERROR_REDUCTION_TOO_LARGE:
+                len = snprintf(buf, 4096, "(view %d) reduction too large, ret = %d",
+                        info->view_id,
+                        ret);
+                buf[len] = '\0';
+                break;
+
+            default:
+                len = snprintf(buf, 4096, "(view %d) failed, ret = %d", info->view_id, ret);
+                buf[len] = '\0';
+        }
+
+        if (len) {
+            error_info->error_msg = (const char *) strdup(buf);
+        }
     }
 
     if (info->num_reducers) {

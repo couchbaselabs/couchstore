@@ -754,7 +754,7 @@ static couchstore_error_t build_view_btree(const char *source_file,
                                            node_pointer **out_root,
                                            view_error_t *error_info)
 {
-    couchstore_error_t ret;
+    couchstore_error_t ret = COUCHSTORE_SUCCESS;
     compare_info cmp;
     view_reducer_ctx_t *red_ctx = NULL;
     char *error_msg = NULL;
@@ -764,8 +764,7 @@ static couchstore_error_t build_view_btree(const char *source_file,
                                     info->num_reducers,
                                     &error_msg);
     if (red_ctx == NULL) {
-        error_info->error_msg = (const char *) error_msg;
-        error_info->view_name = (const char *) strdup(info->names[0]);
+        set_error_info(info, (const char *) error_msg, ret, error_info);
         return COUCHSTORE_ERROR_REDUCER_FAILURE;
     }
 
@@ -965,7 +964,7 @@ static couchstore_error_t cleanup_view_btree(tree_file *file,
                                              view_purger_ctx_t *purge_ctx,
                                              view_error_t *error_info)
 {
-    couchstore_error_t ret;
+    couchstore_error_t ret = COUCHSTORE_SUCCESS;
     compare_info cmp;
     view_reducer_ctx_t *red_ctx = NULL;
     char *error_msg = NULL;
@@ -975,8 +974,7 @@ static couchstore_error_t cleanup_view_btree(tree_file *file,
                                     info->num_reducers,
                                     &error_msg);
     if (red_ctx == NULL) {
-        error_info->error_msg = (const char *) error_msg;
-        error_info->view_name = (const char *) strdup(info->names[0]);
+        set_error_info(info, (const char *) error_msg, ret, error_info);
         return COUCHSTORE_ERROR_REDUCER_FAILURE;
     }
 
@@ -1002,8 +1000,7 @@ static couchstore_error_t cleanup_view_btree(tree_file *file,
                 sprintf(error_msg, "%d", ret);
             }
         }
-        error_info->error_msg = (const char *) error_msg;
-        error_info->view_name = (const char *) strdup(info->names[0]);
+        set_error_info(info, (const char *) error_msg, ret, error_info);
     }
 
     free_view_reducer_ctx(red_ctx);
@@ -1324,7 +1321,7 @@ static couchstore_error_t update_view_btree(const char *source_file,
                                             node_pointer **out_root,
                                             view_error_t *error_info)
 {
-    couchstore_error_t ret;
+    couchstore_error_t ret = COUCHSTORE_SUCCESS;
     compare_info cmp;
     view_reducer_ctx_t *red_ctx = NULL;
     char *error_msg = NULL;
@@ -1334,8 +1331,7 @@ static couchstore_error_t update_view_btree(const char *source_file,
                                     info->num_reducers,
                                     &error_msg);
     if (red_ctx == NULL) {
-        error_info->error_msg = (const char *) error_msg;
-        error_info->view_name = (const char *) strdup(info->names[0]);
+        set_error_info(info, (const char *) error_msg, ret, error_info);
         return COUCHSTORE_ERROR_REDUCER_FAILURE;
     }
 
@@ -1460,8 +1456,7 @@ couchstore_error_t couchstore_update_view_group(view_group_info_t *info,
                 char buf[1024];
                 snprintf(buf, sizeof(buf),
                         "Error sorting records file: %s", kv_records_files[i]);
-                error_info->error_msg = strdup(buf);
-                error_info->view_name = (const char *) strdup(info->view_infos.btree[i].names[0]);
+                set_error_info(&info->view_infos.btree[i], buf, ret, error_info);
                 goto cleanup;
             }
         }
@@ -1683,7 +1678,7 @@ static couchstore_error_t compact_view_btree(tree_file *source,
                                       node_pointer **out_root,
                                       view_error_t *error_info)
 {
-    couchstore_error_t ret;
+    couchstore_error_t ret = COUCHSTORE_SUCCESS;
     compare_info cmp;
     view_reducer_ctx_t *red_ctx = NULL;
     char *error_msg = NULL;
@@ -1693,8 +1688,7 @@ static couchstore_error_t compact_view_btree(tree_file *source,
                                     info->num_reducers,
                                     &error_msg);
     if (red_ctx == NULL) {
-        error_info->error_msg = (const char *) error_msg;
-        error_info->view_name = (const char *) strdup(info->names[0]);
+        set_error_info(info, (const char *) error_msg, ret, error_info);
         return COUCHSTORE_ERROR_REDUCER_FAILURE;
     }
 
