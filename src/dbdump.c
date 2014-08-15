@@ -141,11 +141,11 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
     if (dumpJson) {
         printf("\"rev\":%"PRIu64",\"content_meta\":%d,", docinfo->rev_seq,
                                                          docinfo->content_meta);
-        printf("\"physical_size\":%zu,", docinfo->size);
+        printf("\"physical_size\":%"PRIu64",", (uint64_t)docinfo->size);
     } else {
         printf("     rev: %"PRIu64"\n", docinfo->rev_seq);
         printf("     content_meta: %d\n", docinfo->content_meta);
-        printf("     size (on disk): %zu\n", docinfo->size);
+        printf("     size (on disk): %"PRIu64"\n", (uint64_t)docinfo->size);
     }
     if (docinfo->rev_meta.size >= sizeof(CouchbaseRevMeta)) {
         const CouchbaseRevMeta* meta = (const CouchbaseRevMeta*)docinfo->rev_meta.buf;
@@ -187,7 +187,7 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
             uncompr_body.size = uncompr_len;
             uncompr_body.buf = decbuf;
             if (dumpJson) {
-                printf("\"size\":%zu,", uncompr_body.size);
+                printf("\"size\":%"PRIu64",", (uint64_t)uncompr_body.size);
                 printf("\"snappy\":true,\"body\":\"");
                 if (dumpHex) {
                     printsbhexraw(&uncompr_body);
@@ -196,7 +196,7 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
                 }
                 printf("\"}\n");
             } else {
-                printf("     size: %zu\n", uncompr_body.size);
+                printf("     size: %"PRIu64"\n", (uint64_t)uncompr_body.size);
                 printf("     data: (snappy) ");
                 if (dumpHex) {
                     printsbhexraw(&uncompr_body);
@@ -207,12 +207,12 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
             }
         } else if (doc) {
             if (dumpJson) {
-                printf("\"size\":%zu,", doc->data.size);
+                printf("\"size\":%"PRIu64",", (uint64_t)doc->data.size);
                 printf("\"body\":\"");
                 printjquote(&doc->data);
                 printf("\"}\n");
             } else {
-                printf("     size: %zu\n", doc->data.size);
+                printf("     size: %"PRIu64"\n", (uint64_t)doc->data.size);
                 printf("     data: ");
                 if (dumpHex) {
                     printsbhexraw(&doc->data);
