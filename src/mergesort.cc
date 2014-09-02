@@ -20,6 +20,12 @@ struct compare_info {
     void *pointer;
 };
 
+struct tape {
+    FILE *fp;
+    unsigned long count;
+    char path[PATH_MAX];
+};
+
 static void free_memory_blocks(struct record_in_memory *first,
                                mergesort_record_free_t record_free)
 {
@@ -62,14 +68,15 @@ FILE *openTmpFile(char *path) {
     path[++pos] = '\0';
 
     tempFile = fopen(path, "w+b");
-    if (tempFile) {
-#ifdef WIN32
-        _unlink(path);
-#else
-        unlink(path);
-#endif
-    }
+
     return tempFile;
+}
+
+void releaseTmpFile(struct tape *tmp_file) {
+    if (tmp_file) {
+        fclose(tmp_file->fp);
+        remove(tmp_file->path);
+    }
 }
 
 #define OK                   COUCHSTORE_SUCCESS
@@ -90,10 +97,6 @@ int merge_sort(FILE *unsorted_file, FILE *sorted_file,
                unsigned long block_size,
                unsigned long *pcount)
 {
-    struct tape {
-        FILE *fp;
-        unsigned long count;
-    };
     struct tape source_tape[2];
     char *record[2];
     /* allocate memory */
@@ -112,14 +115,16 @@ int merge_sort(FILE *unsorted_file, FILE *sorted_file,
         (*record_free)(record[1]);
         return FILE_CREATION_ERROR;
     }
+    strncpy(source_tape[0].path, tmp_path, PATH_MAX);
     source_tape[1].fp = openTmpFile(tmp_path);
     source_tape[1].count = 0L;
     if (source_tape[1].fp == NULL) {
-        fclose(source_tape[0].fp);
+        releaseTmpFile(&source_tape[0]);
         (*record_free)(record[0]);
         (*record_free)(record[1]);
         return FILE_CREATION_ERROR;
     }
+    strncpy(source_tape[1].path, tmp_path, PATH_MAX);
     /* read blocks, sort them in memory, and write the alternately to */
     /* tapes 0 and 1 */
     {
@@ -134,8 +139,8 @@ int merge_sort(FILE *unsorted_file, FILE *sorted_file,
             if (record_size > 0) {
                 struct record_in_memory *p = (struct record_in_memory *) malloc(sizeof(*p));
                 if (p == NULL) {
-                    fclose(source_tape[0].fp);
-                    fclose(source_tape[1].fp);
+                    releaseTmpFile(&source_tape[0]);
+                    releaseTmpFile(&source_tape[1]);
                     (*record_free)(record[0]);
                     (*record_free)(record[1]);
                     free_memory_blocks(first, record_free);
@@ -143,8 +148,8 @@ int merge_sort(FILE *unsorted_file, FILE *sorted_file,
                 }
                 p->record = (*record_duplicate)(record[0]);
                 if (p->record == NULL) {
-                    fclose(source_tape[0].fp);
-                    fclose(source_tape[1].fp);
+                    releaseTmpFile(&source_tape[0]);
+                    releaseTmpFile(&source_tape[1]);
                     free(p);
                     (*record_free)(record[0]);
                     (*record_free)(record[1]);
@@ -155,8 +160,8 @@ int merge_sort(FILE *unsorted_file, FILE *sorted_file,
                 first = p;
                 block_count++;
             } else if (record_size < 0) {
-                fclose(source_tape[0].fp);
-                fclose(source_tape[1].fp);
+                releaseTmpFile(&source_tape[0]);
+                releaseTmpFile(&source_tape[1]);
                 (*record_free)(record[0]);
                 (*record_free)(record[1]);
                 free_memory_blocks(first, record_free);
@@ -168,8 +173,8 @@ int merge_sort(FILE *unsorted_file, FILE *sorted_file,
                     struct record_in_memory *next = first->next;
                     if ((*write)(source_tape[destination].fp, first->record,
                                  pointer) == 0) {
-                        fclose(source_tape[0].fp);
-                        fclose(source_tape[1].fp);
+                        releaseTmpFile(&source_tape[0]);
+                        releaseTmpFile(&source_tape[1]);
                         (*record_free)(record[0]);
                         (*record_free)(record[1]);
                         free_memory_blocks(first, record_free);
@@ -196,18 +201,18 @@ int merge_sort(FILE *unsorted_file, FILE *sorted_file,
     /* delete the unsorted file here, if required (see instructions) */
     /* handle case where memory sort is all that is required */
     if (source_tape[1].count == 0L) {
-        fclose(source_tape[1].fp);
+        releaseTmpFile(&source_tape[1]);
         source_tape[1] = source_tape[0];
         source_tape[0].fp = sorted_file;
         while (source_tape[1].count-- != 0L) {
             if ((*read)(source_tape[1].fp, record[0], pointer) <= 0) {
-                fclose(source_tape[1].fp);
+                releaseTmpFile(&source_tape[1]);
                 (*record_free)(record[0]);
                 (*record_free)(record[1]);
                 return FILE_READ_ERROR;
             }
             if ((*write)(source_tape[0].fp, record[0], pointer) == 0) {
-                fclose(source_tape[1].fp);
+                releaseTmpFile(&source_tape[1]);
                 (*record_free)(record[0]);
                 (*record_free)(record[1]);
                 return FILE_WRITE_ERROR;
@@ -222,33 +227,40 @@ int merge_sort(FILE *unsorted_file, FILE *sorted_file,
             destination_tape[0].fp = source_tape[0].count <= block_size ?
                                      sorted_file : openTmpFile(tmp_path);
             destination_tape[0].count = 0L;
+
             if (destination_tape[0].fp == NULL) {
-                fclose(source_tape[0].fp);
-                fclose(source_tape[1].fp);
+                releaseTmpFile(&source_tape[0]);
+                releaseTmpFile(&source_tape[1]);
                 (*record_free)(record[0]);
                 (*record_free)(record[1]);
                 return FILE_CREATION_ERROR;
             }
-            destination_tape[1].fp = tmpfile();
+
+            if (destination_tape[0].fp != sorted_file) {
+                strncpy(destination_tape[0].path, tmp_path, PATH_MAX);
+            }
+
+            destination_tape[1].fp = openTmpFile(tmp_path);
             destination_tape[1].count = 0L;
             if (destination_tape[1].fp == NULL) {
                 if (destination_tape[0].fp != sorted_file) {
-                    fclose(destination_tape[0].fp);
+                    releaseTmpFile(&destination_tape[0]);
                 }
-                fclose(source_tape[0].fp);
-                fclose(source_tape[1].fp);
+                releaseTmpFile(&source_tape[0]);
+                releaseTmpFile(&source_tape[1]);
                 (*record_free)(record[0]);
                 (*record_free)(record[1]);
                 return FILE_CREATION_ERROR;
             }
+            strncpy(destination_tape[1].path, tmp_path, PATH_MAX);
             record1_size = (*read)(source_tape[0].fp, record[0], pointer);
             record2_size = (*read)(source_tape[1].fp, record[1], pointer);
             if (record1_size <= 0 || record2_size <= 0) {
                 if (destination_tape[0].fp != sorted_file) {
-                    fclose(destination_tape[0].fp);
+                    releaseTmpFile(&destination_tape[0]);
                 }
-                fclose(source_tape[0].fp);
-                fclose(source_tape[1].fp);
+                releaseTmpFile(&source_tape[0]);
+                releaseTmpFile(&source_tape[1]);
                 (*record_free)(record[0]);
                 (*record_free)(record[1]);
                 return FILE_READ_ERROR;
@@ -269,11 +281,11 @@ int merge_sort(FILE *unsorted_file, FILE *sorted_file,
                     if ((*write)(destination_tape[destination].fp, record[select],
                                  pointer) == 0) {
                         if (destination_tape[0].fp != sorted_file) {
-                            fclose(destination_tape[0].fp);
+                            releaseTmpFile(&destination_tape[0]);
                         }
-                        fclose(destination_tape[1].fp);
-                        fclose(source_tape[0].fp);
-                        fclose(source_tape[1].fp);
+                        releaseTmpFile(&destination_tape[1]);
+                        releaseTmpFile(&source_tape[0]);
+                        releaseTmpFile(&source_tape[1]);
                         (*record_free)(record[0]);
                         (*record_free)(record[1]);
                         return FILE_WRITE_ERROR;
@@ -281,11 +293,11 @@ int merge_sort(FILE *unsorted_file, FILE *sorted_file,
                     if (source_tape[select].count > 1L) {
                         if ((*read)(source_tape[select].fp, record[select], pointer) <= 0) {
                             if (destination_tape[0].fp != sorted_file) {
-                                fclose(destination_tape[0].fp);
+                                releaseTmpFile(&destination_tape[0]);
                             }
-                            fclose(destination_tape[1].fp);
-                            fclose(source_tape[0].fp);
-                            fclose(source_tape[1].fp);
+                            releaseTmpFile(&destination_tape[1]);
+                            releaseTmpFile(&source_tape[0]);
+                            releaseTmpFile(&source_tape[1]);
                             (*record_free)(record[0]);
                             (*record_free)(record[1]);
                             return FILE_READ_ERROR;
@@ -297,14 +309,14 @@ int merge_sort(FILE *unsorted_file, FILE *sorted_file,
                 }
                 destination ^= 1;
             }
-            fclose(source_tape[0].fp);
-            fclose(source_tape[1].fp);
+            releaseTmpFile(&source_tape[0]);
+            releaseTmpFile(&source_tape[1]);
             if (fflush(destination_tape[0].fp) == EOF ||
                     fflush(destination_tape[1].fp) == EOF) {
                 if (destination_tape[0].fp != sorted_file) {
-                    fclose(destination_tape[0].fp);
+                    releaseTmpFile(&destination_tape[0]);
                 }
-                fclose(destination_tape[1].fp);
+                releaseTmpFile(&destination_tape[1]);
                 (*record_free)(record[0]);
                 (*record_free)(record[1]);
                 return FILE_WRITE_ERROR;
@@ -315,7 +327,7 @@ int merge_sort(FILE *unsorted_file, FILE *sorted_file,
             block_size <<= 1;
         }
     }
-    fclose(source_tape[1].fp);
+    releaseTmpFile(&source_tape[1]);
     if (pcount != NULL) {
         *pcount = source_tape[0].count;
     }

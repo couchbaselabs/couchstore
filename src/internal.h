@@ -17,6 +17,14 @@
 #define COUCH_SNAPPY_THRESHOLD 64
 #define MAX_DB_HEADER_SIZE 1024    /* Conservative estimate; just for sanity check */
 
+#ifdef WIN32
+#define PATH_MAX MAX_PATH
+#endif
+
+#ifndef PATH_MAX
+#define PATH_MAX 1024
+#endif
+
 enum {
     /** Additional couchstore_docinfos_options flag */
     COUCHSTORE_INCLUDE_CORRUPT_DOCS = 0x40000000

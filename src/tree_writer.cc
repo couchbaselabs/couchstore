@@ -28,6 +28,7 @@ static int compare_id_record(const void *r1, const void *r2, void *ctx);
 struct TreeWriter {
     FILE* file;
     char *tmp_path; // a buffer used to build unique temporary filenames
+    char path[PATH_MAX];
     compare_callback key_compare;
     reduce_fn reduce;
     reduce_fn rereduce;
@@ -55,6 +56,8 @@ couchstore_error_t TreeWriterOpen(char* unsortedFilePath,
         TreeWriterFree(writer);
         error_pass(COUCHSTORE_ERROR_NO_SUCH_FILE);
     }
+
+    strncpy(writer->path, writer->tmp_path, PATH_MAX);
     if (unsortedFilePath) {
         fseek(writer->file, 0, SEEK_END);  // in case more items will be added
     }
@@ -72,6 +75,7 @@ void TreeWriterFree(TreeWriter* writer)
 {
     if (writer && writer->file) {
         fclose(writer->file);
+        remove(writer->path);
     }
     free(writer);
 }
