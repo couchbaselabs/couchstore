@@ -112,6 +112,7 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
     Doc *doc = NULL;
     uint64_t cas;
     uint32_t expiry, flags;
+    uint8_t datatype = 0x00, flex_code;
     couchstore_error_t docerr;
     (*count)++;
 
@@ -152,13 +153,28 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
         cas = decode_raw64(meta->cas);
         expiry = decode_raw32(meta->expiry);
         flags = decode_raw32(meta->flags);
-        if (dumpJson) {
-            printf("\"cas\":\"%"PRIu64"\",\"expiry\":%"PRIu32",\"flags\":%"PRIu32",",
-                    cas, expiry, flags);
+        if (docinfo->rev_meta.size > sizeof(CouchbaseRevMeta)) {
+            flex_code = *((uint8_t *)(docinfo->rev_meta.buf + sizeof(CouchbaseRevMeta)));
+            assert(flex_code >= 0x01);
+            datatype = *((uint8_t *)(docinfo->rev_meta.buf + sizeof(CouchbaseRevMeta) +
+                        sizeof(uint8_t)));
+            if (dumpJson) {
+                printf("\"cas\":\"%"PRIu64"\",\"expiry\":%"PRIu32",\"flags\":%"PRIu32","
+                        "\"datatype\":%d,",
+                        cas, expiry, flags, datatype);
+            } else {
+                printf("     cas: %"PRIu64", expiry: %"PRIu32", flags: %"PRIu32", "
+                        "datatype: %d\n",
+                        cas, expiry, flags, datatype);
+            }
         } else {
-            printf("     cas: %"PRIu64", expiry: %"PRIu32", flags: %"PRIu32"\n", cas,
-                    expiry,
-                    flags);
+            if (dumpJson) {
+                printf("\"cas\":\"%"PRIu64"\",\"expiry\":%"PRIu32",\"flags\":%"PRIu32",",
+                        cas, expiry, flags);
+            } else {
+                printf("     cas: %"PRIu64", expiry: %"PRIu32", flags: %"PRIu32"\n",
+                        cas, expiry, flags);
+            }
         }
     }
     if (docinfo->deleted) {
@@ -205,21 +221,37 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
                     printsb(&uncompr_body);
                 }
             }
+            free (uncompr_body.buf);
         } else if (doc) {
+            sized_buf new_body;
+            if (datatype >= 0x02) {
+                size_t rlen;
+                snappy_uncompressed_length(doc->data.buf, doc->data.size, &rlen);
+                char *decbuf = (char *) malloc(rlen);
+                size_t new_len;
+                snappy_uncompress(doc->data.buf, doc->data.size, decbuf, &new_len);
+                new_body.size = new_len;
+                new_body.buf = decbuf;
+            } else {
+                new_body = doc->data;
+            }
             if (dumpJson) {
-                printf("\"size\":%"PRIu64",", (uint64_t)doc->data.size);
+                printf("\"size\":%"PRIu64",", (uint64_t)new_body.size);
                 printf("\"body\":\"");
-                printjquote(&doc->data);
+                printjquote(&new_body);
                 printf("\"}\n");
             } else {
-                printf("     size: %"PRIu64"\n", (uint64_t)doc->data.size);
+                printf("     size: %"PRIu64"\n", (uint64_t)new_body.size);
                 printf("     data: ");
                 if (dumpHex) {
-                    printsbhexraw(&doc->data);
+                    printsbhexraw(&new_body);
                     printf("\n");
                 } else {
-                    printsb(&doc->data);
+                    printsb(&new_body);
                 }
+            }
+            if (datatype >= 0x02) {
+                free (new_body.buf);
             }
         }
     } else {
