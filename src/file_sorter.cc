@@ -29,6 +29,7 @@
 #define NSORT_RECORDS_INIT 500000
 #define NSORT_RECORD_INCR  100000
 #define NSORT_THREADS 2
+#define SORTER_TMP_FILE_SUFFIX ".XXXXXX"
 
 typedef struct {
     char     *name;
@@ -117,6 +118,10 @@ static file_sorter_error_t parallel_sorter_add_job(parallel_sorter_t *s,
 static file_sorter_error_t parallel_sorter_wait(parallel_sorter_t *s, size_t n);
 
 static file_sorter_error_t parallel_sorter_finish(parallel_sorter_t *s);
+
+static int sorter_random_name(char *tmpl, int totlen, int suffixlen);
+
+static char *sorter_tmp_file_path(const char *tmp_dir, const char *prefix);
 
 file_sorter_error_t sort_file(const char *source_file,
                               const char *tmp_dir,
@@ -617,7 +622,8 @@ static tmp_file_t *create_tmp_file(file_sort_ctx_t *ctx)
     assert(ctx->tmp_files[i].name == NULL);
     assert(ctx->tmp_files[i].level == 0);
 
-    ctx->tmp_files[i].name = tmp_file_path(ctx->tmp_dir, ctx->tmp_file_prefix);
+    ctx->tmp_files[i].name = sorter_tmp_file_path(ctx->tmp_dir,
+        ctx->tmp_file_prefix);
     if (ctx->tmp_files[i].name == NULL) {
         return NULL;
     }
@@ -730,7 +736,8 @@ static file_sorter_error_t merge_tmp_files(file_sort_ctx_t *ctx,
 
         feed_record = ctx->feed_record;
     } else {
-        dest_tmp_file = tmp_file_path(ctx->tmp_dir, ctx->tmp_file_prefix);
+        dest_tmp_file = sorter_tmp_file_path(ctx->tmp_dir,
+            ctx->tmp_file_prefix);
         if (dest_tmp_file == NULL) {
             free(files);
             return FILE_SORTER_ERROR_MK_TMP_FILE;
@@ -822,4 +829,40 @@ cleanup:
     }
 
     return (file_sorter_error_t) ret;
+}
+
+int sorter_random_name(char *tmpl, int totlen, int suffixlen) {
+    static unsigned int value = 0;
+    tmpl = tmpl + totlen - suffixlen;
+#ifdef WINDOWS
+    _snprintf(tmpl, suffixlen, ".%d", value);
+#else
+    snprintf(tmpl, suffixlen, ".%d", value);
+#endif
+    if (++value > 2 << 18) {
+        value = 0;
+    }
+    return 0;
+}
+
+char *sorter_tmp_file_path(const char *tmp_dir, const char *prefix) {
+    char *file_path;
+    size_t tmp_dir_len, prefix_len, total_len;
+    tmp_dir_len = strlen(tmp_dir);
+    prefix_len = strlen(prefix);
+    total_len = tmp_dir_len + 1 + prefix_len + sizeof(SORTER_TMP_FILE_SUFFIX);
+    file_path = (char *) malloc(total_len);
+
+    if (file_path == NULL) {
+        return NULL;
+    }
+
+    memcpy(file_path, tmp_dir, tmp_dir_len);
+    /* Windows specific file API functions and stdio file functions on Windows
+     * convert forward slashes to back slashes. */
+    file_path[tmp_dir_len] = '/';
+    memcpy(file_path + tmp_dir_len + 1, prefix, prefix_len);
+    sorter_random_name(file_path, total_len - 1, sizeof(SORTER_TMP_FILE_SUFFIX)
+        - 1);
+    return file_path;
 }
