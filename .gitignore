@@ -37,7 +37,6 @@
 /couch_dbdump
 /couch_dbinfo
 /couch_viewgen
-/couch_view_file_sorter
 /couch_view_file_merger
 /couch_view_index_builder
 /couchscript
