@@ -163,9 +163,9 @@ void file_deduper_tests(void)
     test_record_t rec;
     int key;
     int multiples[] = {5, 10, 20, 40};
-    int expected_result[40 * MAX_RECORDS_PER_FILE + 1];
     int max_arr_size = 40 * MAX_RECORDS_PER_FILE + 1;
-    memset(expected_result, 0, sizeof(int) * max_arr_size);
+    int *expected_result = calloc(40 * MAX_RECORDS_PER_FILE + 1, sizeof(int));
+    assert(expected_result != NULL);
 
     fprintf(stderr, "\nRunning file deduper tests...\n");
 
@@ -202,4 +202,5 @@ void file_deduper_tests(void)
     remove(dest_file);
 
     fprintf(stderr, "Running file deduper tests passed\n\n");
+    free(expected_result);
 }
