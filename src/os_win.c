@@ -98,7 +98,9 @@ static couchstore_error_t couch_open(couchstore_error_info_t *errinfo,
                                    NULL, creationflag, 0, NULL);
 
     if(os_handle == INVALID_HANDLE_VALUE) {
-        if(save_windows_error(errinfo) == ERROR_FILE_NOT_FOUND) {
+        DWORD last_error = save_windows_error(errinfo);
+        if(last_error == ERROR_FILE_NOT_FOUND ||
+                last_error == ERROR_SUCCESS) {
             return (ssize_t) COUCHSTORE_ERROR_NO_SUCH_FILE;
         };
         return COUCHSTORE_ERROR_OPEN_FILE;
