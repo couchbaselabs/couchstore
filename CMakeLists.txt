@@ -63,7 +63,7 @@ SET_TARGET_PROPERTIES(couch_dbdump PROPERTIES COMPILE_FLAGS "-DLIBCOUCHSTORE_NO_
 TARGET_LINK_LIBRARIES(couch_dbdump ${COUCHSTORE_LIBRARIES})
 
 ADD_EXECUTABLE(couch_dbinfo src/dbinfo.c)
-TARGET_LINK_LIBRARIES(couch_dbinfo couchstore)
+TARGET_LINK_LIBRARIES(couch_dbinfo couchstore platform)
 
 ADD_EXECUTABLE(couch_compact src/compactor.c)
 TARGET_LINK_LIBRARIES(couch_compact couchstore)

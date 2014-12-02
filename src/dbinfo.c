@@ -6,10 +6,12 @@
 #include <inttypes.h>
 #include <libcouchstore/couch_db.h>
 #include <snappy-c.h>
+#include <getopt.h>
 
 #include "internal.h"
 #include "util.h"
 #include "bitfield.h"
+
 
 static char *size_str(double size)
 {
@@ -37,12 +39,11 @@ static void print_db_info(Db* db)
     printf("   data size: %s\n", size_str(info.space_used));
 }
 
-static int process_file(const char *file)
+static int process_file(const char *file, int iterate_headers)
 {
     Db *db;
     couchstore_error_t errcode;
     uint64_t btreesize = 0;
-    int iterate_headers = getenv("ITERATE_HEADERS") != NULL;
 
     errcode = couchstore_open_db(file, COUCHSTORE_OPEN_FLAG_RDONLY, &db);
     if (errcode != COUCHSTORE_SUCCESS) {
@@ -76,18 +77,37 @@ next_header:
     return 0;
 }
 
+static void usage(const char *name)
+{
+    fprintf(stderr, "USAGE: %s [-i] <file.couch>\n", name);
+    fprintf(stderr, "\t-i Iterate through all headers\n");
+    exit(EXIT_FAILURE);
+}
+
 int main(int argc, char **argv)
 {
     int error = 0;
     int ii;
+    int iterate_headers = getenv("ITERATE_HEADERS") != NULL;
+    int cmd;
 
-    if (argc < 2) {
-        printf("USAGE: %s <file.couch>\n", argv[0]);
-        exit(EXIT_FAILURE);
+    while ((cmd = getopt(argc, argv, "i")) != -1) {
+        switch (cmd) {
+        case 'i':
+            iterate_headers = 1;
+            break;
+        default:
+            usage(argv[0]);
+            /* NOTREACHED */
+        }
     }
 
-    for (ii = 1; ii < argc; ++ii) {
-        error += process_file(argv[ii]);
+    if (optind == argc) {
+        usage(argv[0]);
+    }
+
+    for (ii = optind; ii < argc; ++ii) {
+        error += process_file(argv[ii], iterate_headers);
     }
 
     if (error) {
