@@ -39,6 +39,7 @@ extern "C" {
     typedef struct {
         const char *view_name;
         const char *error_msg;
+        const char *idx_type;
     } view_error_t;
 
     typedef struct {

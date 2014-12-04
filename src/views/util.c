@@ -244,6 +244,7 @@ void set_error_info(const view_btree_info_t *info,
 
     if (red_error) {
         error_info->error_msg = (const char *) strdup(red_error);
+        error_info->idx_type = "MAPREDUCE";
     } else {
         /* TODO: add more human friendly messages for other error types */
         switch (ret) {
@@ -252,6 +253,7 @@ void set_error_info(const view_btree_info_t *info,
                         info->view_id,
                         ret);
                 buf[len] = '\0';
+                error_info->idx_type = "MAPREDUCE";
                 break;
 
             default:

@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
     view_group_update_stats_t stats;
     sized_buf header_buf = {NULL, 0};
     sized_buf header_outbuf = {NULL, 0};
-    view_error_t error_info = {NULL, NULL};
+    view_error_t error_info = {NULL, NULL, "GENERIC"};
     cb_thread_t exit_thread;
 
     (void) argc;
@@ -165,7 +165,8 @@ int main(int argc, char *argv[])
     if (ret != COUCHSTORE_SUCCESS) {
         if (error_info.error_msg != NULL && error_info.view_name != NULL) {
             fprintf(stderr,
-                    "Error updating index for view `%s`, reason: %s\n",
+                    "%s Error updating index for view `%s`, reason: %s\n",
+                    error_info.idx_type,
                     error_info.view_name,
                     error_info.error_msg);
         }
