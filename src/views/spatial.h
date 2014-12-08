@@ -25,6 +25,7 @@
 #include <libcouchstore/couch_db.h>
 #include "../file_merger.h"
 #include "../couch_btree.h"
+#include "bitmap.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -110,6 +111,9 @@ extern "C" {
     node_pointer* complete_new_spatial(couchfile_modify_result* mr,
                                        couchstore_error_t *errcode);
 
+    /* Filter function for the compactor */
+    int view_spatial_filter(const sized_buf *k, const sized_buf *v,
+                            const bitmap_t *bm);
 #ifdef __cplusplus
 }
 #endif

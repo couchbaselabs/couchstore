@@ -291,3 +291,14 @@ couchstore_error_t view_spatial_reduce(char *dst,
 
     return COUCHSTORE_SUCCESS;
 }
+
+
+int view_spatial_filter(const sized_buf *k, const sized_buf *v,
+                        const bitmap_t *bm)
+{
+    uint16_t partition = 0;
+    (void) k;
+
+    partition = decode_raw16(*((raw_16 *) v->buf));
+    return is_bit_set(bm, partition);
+}

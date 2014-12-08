@@ -166,6 +166,32 @@ static couchstore_error_t build_spatial(const char *source_file,
                                         sort_record_fn sort_fun,
                                         node_pointer **out_root);
 
+/* Callback for every item that got fetched from the original view */
+static couchstore_error_t compact_spatial_fetchcb(couchfile_lookup_request *rq,
+                                                  const sized_buf *k,
+                                                  const sized_buf *v);
+
+/* Some preparations before compacting the actual spatial index */
+static couchstore_error_t compact_view_spatial(tree_file *source,
+                                               tree_file *target,
+                                               const view_spatial_info_t *info,
+                                               const node_pointer *root,
+                                               const bitmap_t *filterbm,
+                                               compactor_stats_t *stats,
+                                               node_pointer **out_root,
+                                               view_error_t *error_info);
+
+/* Compact the actual spatial index */
+static couchstore_error_t compact_spatial(tree_file *source,
+                                          tree_file *target,
+                                          const node_pointer *root,
+                                          compare_info *cmp,
+                                          reduce_fn reduce_fun,
+                                          reduce_fn rereduce_fun,
+                                          compact_filter_fn filter_fun,
+                                          const bitmap_t *filterbm,
+                                          compactor_stats_t *stats,
+                                          node_pointer **out_root);
 
 LIBCOUCHSTORE_API
 view_group_info_t *couchstore_read_view_group_info(FILE *in_stream,
@@ -374,6 +400,11 @@ static couchstore_error_t read_spatial_info(view_group_info_t *info,
             fprintf(error_stream,
                     "Error reading the dimension of spatial view %d\n", i);
             return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
+        }
+
+        /* If the dimension is 0, no index exists or hasn't been built yet */
+        if (si->dimension == 0) {
+            continue;
         }
 
         si->mbb = (double *) calloc(si->dimension * 2, sizeof(double));
@@ -1832,15 +1863,28 @@ couchstore_error_t couchstore_compact_view_group(view_group_info_t *info,
     id_root = NULL;
 
     for (i = 0; i < info->num_btrees; ++i) {
-        ret = compact_view_btree(&index_file,
-                                 &compact_file,
-                                 &info->view_infos.btree[i],
-                                 header->view_states[i],
-                                 filterbm,
-                                 stats,
-                                 &view_roots[i],
-                                 error_info);
-
+        switch(info->type) {
+        case VIEW_INDEX_TYPE_MAPREDUCE:
+            ret = compact_view_btree(&index_file,
+                                     &compact_file,
+                                     &info->view_infos.btree[i],
+                                     header->view_states[i],
+                                     filterbm,
+                                     stats,
+                                     &view_roots[i],
+                                     error_info);
+            break;
+        case VIEW_INDEX_TYPE_SPATIAL:
+            ret = compact_view_spatial(&index_file,
+                                       &compact_file,
+                                       &info->view_infos.spatial[i],
+                                       header->view_states[i],
+                                       filterbm,
+                                       stats,
+                                       &view_roots[i],
+                                       error_info);
+            break;
+        }
         if (ret != COUCHSTORE_SUCCESS) {
             goto cleanup;
         }
@@ -2014,6 +2058,167 @@ static couchstore_error_t build_spatial(const char *source_file,
 out:
     if (transient_arena != NULL) {
         delete_arena(transient_arena);
+    }
+
+    return ret;
+}
+
+/* Add the kv pair to modify result
+ * The difference to the mapreduce views is the call to `spatial_push_item` */
+static couchstore_error_t compact_spatial_fetchcb(couchfile_lookup_request *rq,
+                                                  const sized_buf *k,
+                                                  const sized_buf *v)
+{
+    int ret;
+    sized_buf *k_c, *v_c;
+    view_compact_ctx_t *ctx = (view_compact_ctx_t *) rq->callback_ctx;
+    compactor_stats_t *stats = ctx->stats;
+
+    if (k == NULL || v == NULL) {
+        return COUCHSTORE_ERROR_READ;
+    }
+
+    if (ctx->filter_fun) {
+        ret = ctx->filter_fun(k, v, ctx->filterbm);
+        if (ret < 0) {
+            return (couchstore_error_t) ret;
+        } else if (ret) {
+            return COUCHSTORE_SUCCESS;
+        }
+    }
+
+    k_c = arena_copy_buf(ctx->transient_arena, k);
+    v_c = arena_copy_buf(ctx->transient_arena, v);
+    ret = spatial_push_item(k_c, v_c, ctx->mr);
+    if (ret != COUCHSTORE_SUCCESS) {
+        return ret;
+    }
+
+    if (stats) {
+        stats->inserted++;
+        if (stats->update_fun) {
+            stats->update_fun(stats->freq, stats->inserted);
+        }
+    }
+
+    if (ctx->mr->count == 0) {
+        arena_free_all(ctx->transient_arena);
+    }
+
+    return (couchstore_error_t) ret;
+}
+
+static couchstore_error_t compact_view_spatial(tree_file *source,
+                                               tree_file *target,
+                                               const view_spatial_info_t *info,
+                                               const node_pointer *root,
+                                               const bitmap_t *filterbm,
+                                               compactor_stats_t *stats,
+                                               node_pointer **out_root,
+                                               view_error_t *error_info)
+{
+    couchstore_error_t ret;
+    compare_info cmp;
+
+    cmp.compare = view_btree_cmp;
+    ret = compact_spatial(source,
+                          target,
+                          root,
+                          &cmp,
+                          view_spatial_reduce,
+                          /* Use the reduce function also for the re-reduce */
+                          view_spatial_reduce,
+                          view_spatial_filter,
+                          filterbm,
+                          stats,
+                          out_root);
+
+    return ret;
+}
+
+static couchstore_error_t compact_spatial(tree_file *source,
+                                          tree_file *target,
+                                          const node_pointer *root,
+                                          compare_info *cmp,
+                                          reduce_fn reduce_fun,
+                                          reduce_fn rereduce_fun,
+                                          compact_filter_fn filter_fun,
+                                          const bitmap_t *filterbm,
+                                          compactor_stats_t *stats,
+                                          node_pointer **out_root)
+{
+    couchstore_error_t ret = COUCHSTORE_SUCCESS;
+    arena *transient_arena = new_arena(0);
+    arena *persistent_arena = new_arena(0);
+    couchfile_modify_result *modify_result;
+    couchfile_lookup_request lookup_rq;
+    view_compact_ctx_t compact_ctx;
+    sized_buf nullkey = {NULL, 0};
+    sized_buf *lowkeys = &nullkey;
+
+    if (!root) {
+        return COUCHSTORE_SUCCESS;
+    }
+
+    if (transient_arena == NULL || persistent_arena == NULL) {
+        ret = COUCHSTORE_ERROR_ALLOC_FAIL;
+        goto cleanup;
+    }
+
+    /* Create new spatial index on new file */
+    modify_result = new_btree_modres(persistent_arena,
+                                     transient_arena,
+                                     target,
+                                     cmp,
+                                     reduce_fun,
+                                     rereduce_fun,
+                                     NULL,
+                                     /* Normally the nodes are flushed to disk
+                                      * when 2/3 of the threshold is reached.
+                                      * In order to have a higher fill grade,
+                                      * we add 1/3 */
+                                     VIEW_KV_CHUNK_THRESHOLD +
+                                         (VIEW_KV_CHUNK_THRESHOLD / 3),
+                                     VIEW_KP_CHUNK_THRESHOLD +
+                                         (VIEW_KP_CHUNK_THRESHOLD / 3));
+    if (modify_result == NULL) {
+        ret = COUCHSTORE_ERROR_ALLOC_FAIL;
+        goto cleanup;
+    }
+
+    compact_ctx.filter_fun = NULL;
+    compact_ctx.mr = modify_result;
+    compact_ctx.transient_arena = transient_arena;
+    compact_ctx.stats = stats;
+
+    if (filterbm) {
+        compact_ctx.filterbm = filterbm;
+        compact_ctx.filter_fun = filter_fun;
+    }
+
+    lookup_rq.cmp.compare = cmp->compare;
+    lookup_rq.file = source;
+    lookup_rq.num_keys = 1;
+    lookup_rq.keys = &lowkeys;
+    lookup_rq.callback_ctx = &compact_ctx;
+    lookup_rq.fetch_callback = compact_spatial_fetchcb;
+    lookup_rq.node_callback = NULL;
+    lookup_rq.fold = 1;
+
+    ret = btree_lookup(&lookup_rq, root->pointer);
+    if (ret != COUCHSTORE_SUCCESS) {
+        goto cleanup;
+    }
+
+    *out_root = complete_new_spatial(modify_result, &ret);
+
+cleanup:
+    if (transient_arena != NULL) {
+        delete_arena(transient_arena);
+    }
+
+    if (persistent_arena != NULL) {
+        delete_arena(persistent_arena);
     }
 
     return ret;
