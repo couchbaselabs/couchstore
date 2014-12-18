@@ -143,6 +143,8 @@ static void TestCollateUnicodeStrings(void)
     assert_eq(collateStrs("\"ømø\"",  "\"omo\"", mode), 1);
     assert_eq(collateStrs("\"\t\"",   "\" \"", mode), -1);
     assert_eq(collateStrs("\"\001\"", "\" \"", mode), -1);
+    /* MB-12967 */
+    assert_eq(collateStrs("\"法\"", "\"法、\"", mode), -1);
 }
 
 void test_collate_json(void)
