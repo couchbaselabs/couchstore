@@ -19,6 +19,10 @@ INCLUDE_DIRECTORIES(BEFORE ${CMAKE_INSTALL_PREFIX}/include
                            ${CMAKE_CURRENT_SOURCE_DIR}
                            ${Platform_SOURCE_DIR}/include)
 
+IF (LUA_FOUND)
+   INCLUDE_DIRECTORIES(AFTER {LUA_INCLUDE_DIR})
+ENDIF (LUA_FOUND)
+
 INCLUDE_DIRECTORIES(AFTER ${ICU_INCLUDE_DIR}
                           ${V8_INCLUDE_DIR}
                           ${SNAPPY_INCLUDE_DIR})
