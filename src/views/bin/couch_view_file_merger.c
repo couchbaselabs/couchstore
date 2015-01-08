@@ -31,13 +31,20 @@
 #define LINE_BUF_SIZE (8 * 1024)
 #define MERGE_ERROR_CODE(Err) (100 + (Err))
 
+typedef enum {
+    MERGE_FILE_TYPE_ID_BTREE = 'i',
+    MERGE_FILE_TYPE_MAPREDUCE_VIEW = 'v',
+    MERGE_FILE_TYPE_SPATIAL = 's'
+} merge_file_type_t;
+
 
 int main(int argc, char *argv[])
 {
-    char view_file_type;
+    merge_file_type_t view_file_type;
     int num_files;
     int i, j;
     char **view_files;
+    char tmp_dir[LINE_BUF_SIZE];
     char dest_file[LINE_BUF_SIZE];
     file_merger_error_t error;
     cb_thread_t exit_thread;
@@ -57,15 +64,26 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    if (fscanf(stdin, "%c\n", &view_file_type) != 1) {
+    if (fscanf(stdin, "%c\n", (char *)&view_file_type) != 1) {
         fprintf(stderr, "Error reading view file type.\n");
         exit(EXIT_FAILURE);
     }
-    if (view_file_type != 'i' && view_file_type != 'v') {
-        fprintf(stderr, "View file type must be 'i' or 'v'.\n");
-        exit(EXIT_FAILURE);
+    switch(view_file_type) {
+        case MERGE_FILE_TYPE_ID_BTREE:
+        case MERGE_FILE_TYPE_MAPREDUCE_VIEW:
+        case MERGE_FILE_TYPE_SPATIAL:
+            break;
+        default:
+            fprintf(stderr, "View file type must be 'i', 'v' or 's'.\n");
+            exit(EXIT_FAILURE);
     }
 
+    if (view_file_type == MERGE_FILE_TYPE_SPATIAL) {
+        if (couchstore_read_line(stdin, tmp_dir, LINE_BUF_SIZE) != tmp_dir) {
+            fprintf(stderr, "Error reading temporary directory path.\n");
+            exit(EXIT_FAILURE);
+        }
+    }
     if (fscanf(stdin, "%d\n", &num_files) != 1) {
         fprintf(stderr, "Error reading number of files to merge.\n");
         exit(EXIT_FAILURE);
@@ -117,11 +135,15 @@ int main(int argc, char *argv[])
     if (num_files > 1) {
         const char **src_files = (const char **) view_files;
         switch (view_file_type) {
-        case 'i':
+        case MERGE_FILE_TYPE_ID_BTREE:
             error = merge_view_ids_ops_files(src_files, num_files, dest_file);
             break;
-        case 'v':
+        case MERGE_FILE_TYPE_MAPREDUCE_VIEW:
             error = merge_view_kvs_ops_files(src_files, num_files, dest_file);
+            break;
+        case MERGE_FILE_TYPE_SPATIAL:
+            error = merge_spatial_kvs_ops_files(src_files, num_files,
+                                                dest_file, tmp_dir);
             break;
         default:
             fprintf(stderr, "Unknown view file type: %c\n", view_file_type);

@@ -36,7 +36,8 @@ extern "C" {
         FILE_MERGER_ERROR_FILE_READ  = -2,
         FILE_MERGER_ERROR_FILE_WRITE = -3,
         FILE_MERGER_ERROR_BAD_ARG    = -4,
-        FILE_MERGER_ERROR_ALLOC      = -5
+        FILE_MERGER_ERROR_ALLOC      = -5,
+        FILE_MERGER_SORT_ERROR       = -6
     } file_merger_error_t;
 
 

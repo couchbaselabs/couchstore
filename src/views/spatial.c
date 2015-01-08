@@ -84,6 +84,22 @@ int spatial_key_cmp(const sized_buf *key1, const sized_buf *key2,
     return res;
 }
 
+int spatial_merger_key_cmp(const sized_buf *key1, const sized_buf *key2,
+                           const void *user_ctx)
+{
+    (void)user_ctx;
+
+    /* To be able to remove duplicates, the items in the file needs to have a
+     * a reproducible total order. As it's for de-duplication and not for
+     * some spatial optimizations, the order can be based on the bytes and
+     * doesn't need to put spatially close-by items together. */
+    if (key1->size == key2->size) {
+        return memcmp(key1->buf, key2->buf, key1->size);
+    }
+
+    return key1->size - key2->size;
+}
+
 
 scale_factor_t *spatial_scale_factor(const double *mbb, uint16_t dim,
                                      uint32_t max)

@@ -45,7 +45,8 @@ extern "C" {
     enum view_record_type {
         INITIAL_BUILD_VIEW_RECORD,
         INCREMENTAL_UPDATE_VIEW_RECORD,
-        INITIAL_BUILD_SPATIAL_RECORD
+        INITIAL_BUILD_SPATIAL_RECORD,
+        INCREMENTAL_UPDATE_SPATIAL_RECORD
     };
 
     typedef struct {

@@ -62,6 +62,10 @@ extern "C" {
     int spatial_key_cmp(const sized_buf *key1, const sized_buf *key2,
                         const void *user_ctx);
 
+    /* Compare keys of a spatial index for the file merger */
+    int spatial_merger_key_cmp(const sized_buf *key1, const sized_buf *key2,
+                               const void *user_ctx);
+
     /* Return the scale factor for every dimension that would be needed to
      * scale this MBB to the maximum value `max` (when shifted to the
      * origin)

@@ -24,6 +24,7 @@
 #include "config.h"
 #include <libcouchstore/visibility.h>
 #include "../file_sorter.h"
+#include "util.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -71,6 +72,16 @@ extern "C" {
                                               const char *tmp_dir,
                                               file_merger_feed_record_t callback,
                                               void *user_ctx);
+
+    /*
+     * Sort a file containing records of spatial index operations for a
+     * spatial view.
+     */
+    LIBCOUCHSTORE_API
+    file_sorter_error_t sort_spatial_kvs_ops_file(const char *file_path,
+                                                  const char *tmp_dir,
+                                                  view_file_merge_ctx_t *ctx);
+
     /* Record file sorter */
     typedef file_sorter_error_t (*sort_record_fn)(const char *file_path,
                                                   const char *tmp_dir,

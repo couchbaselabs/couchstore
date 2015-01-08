@@ -50,6 +50,16 @@ extern "C" {
                                                  const char *dest_path);
 
 
+    /*
+     * Merge a group files containing sets of operations for a spatial view
+     * index.
+     */
+    LIBCOUCHSTORE_API
+    file_merger_error_t merge_spatial_kvs_ops_files(const char *source_files[],
+                                                    unsigned num_source_files,
+                                                    const char *dest_path,
+                                                    const char *tmp_dir);
+
 #ifdef __cplusplus
 }
 #endif

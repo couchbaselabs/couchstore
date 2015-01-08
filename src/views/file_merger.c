@@ -21,6 +21,8 @@
 #include "config.h"
 #include "util.h"
 #include "file_merger.h"
+#include "file_sorter.h"
+#include "spatial.h"
 
 static file_merger_error_t merge_view_files(const char *source_files[],
                                             unsigned num_source_files,
@@ -51,6 +53,34 @@ file_merger_error_t merge_view_ids_ops_files(const char *source_files[],
 
     ctx.key_cmp_fun = view_id_cmp;
     ctx.type = INCREMENTAL_UPDATE_VIEW_RECORD;
+
+    return merge_view_files(source_files, num_source_files, dest_path, &ctx);
+}
+
+
+LIBCOUCHSTORE_API
+file_merger_error_t merge_spatial_kvs_ops_files(const char *source_files[],
+                                                unsigned num_source_files,
+                                                const char *dest_path,
+                                                const char *tmp_dir)
+{
+    file_sorter_error_t ret;
+    view_file_merge_ctx_t ctx;
+    int i;
+
+    ctx.key_cmp_fun = spatial_merger_key_cmp;
+    ctx.type = INCREMENTAL_UPDATE_SPATIAL_RECORD;
+
+    /* The spatial kv files are not sorted, hence sort them before merge
+     * sorting them */
+    for(i = 0; i < num_source_files; ++i) {
+        ret = sort_spatial_kvs_ops_file(source_files[i], tmp_dir, &ctx);
+        if (ret != FILE_SORTER_SUCCESS) {
+            fprintf(stderr, "Error sorting spatial view records file (%d): %s",
+                    ret, source_files[i]);
+            return FILE_MERGER_SORT_ERROR;
+        }
+    }
 
     return merge_view_files(source_files, num_source_files, dest_path, &ctx);
 }

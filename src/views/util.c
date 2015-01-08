@@ -18,12 +18,19 @@
  * the License.
  **/
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include "util.h"
 #include "../util.h"
 #include "../bitfield.h"
 #include "collate_json.h"
+
+
+static bool is_incremental_update_record(view_file_merge_ctx_t *ctx) {
+    return ctx->type == INCREMENTAL_UPDATE_VIEW_RECORD ||
+            ctx->type == INCREMENTAL_UPDATE_SPATIAL_RECORD;
+}
 
 
 int view_key_cmp(const sized_buf *key1, const sized_buf *key2,
@@ -85,7 +92,7 @@ int read_view_record(FILE *in, void **buf, void *ctx)
             return FILE_MERGER_ERROR_FILE_READ;
         }
     }
-    if (merge_ctx->type == INCREMENTAL_UPDATE_VIEW_RECORD) {
+    if (is_incremental_update_record(merge_ctx)) {
         if (fread(&op, sizeof(rec->op), 1, in) != 1) {
             return FILE_MERGER_ERROR_FILE_READ;
         }
@@ -96,7 +103,7 @@ int read_view_record(FILE *in, void **buf, void *ctx)
 
     klen = ntohs(klen);
     vlen = len - sizeof(klen) - klen;
-    if (merge_ctx->type == INCREMENTAL_UPDATE_VIEW_RECORD) {
+    if (is_incremental_update_record(merge_ctx)) {
         vlen -= sizeof(op);
     }
 
@@ -128,14 +135,14 @@ file_merger_error_t write_view_record(FILE *out, void *buf, void *ctx)
     view_file_merge_ctx_t *merge_ctx = (view_file_merge_ctx_t *) ctx;
 
     len = (uint32_t)  sizeof(klen) + rec->ksize + rec->vsize;
-    if (merge_ctx->type == INCREMENTAL_UPDATE_VIEW_RECORD) {
+    if (is_incremental_update_record(merge_ctx)) {
         len += (uint32_t) sizeof(rec->op);
     }
 
     if (fwrite(&len, sizeof(len), 1, out) != 1) {
         return FILE_MERGER_ERROR_FILE_WRITE;
     }
-    if (merge_ctx->type == INCREMENTAL_UPDATE_VIEW_RECORD) {
+    if (is_incremental_update_record(merge_ctx)) {
         if (fwrite(&rec->op, sizeof(rec->op), 1, out) != 1) {
             return FILE_MERGER_ERROR_FILE_WRITE;
         }
