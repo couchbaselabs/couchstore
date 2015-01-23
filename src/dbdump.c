@@ -112,7 +112,7 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
     Doc *doc = NULL;
     uint64_t cas;
     uint32_t expiry, flags;
-    uint8_t datatype = 0x00, flex_code;
+    uint8_t datatype = 0x00, flex_code = 0x01, conf_res_mode = 0x00;
     couchstore_error_t docerr;
     (*count)++;
 
@@ -154,18 +154,47 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
         expiry = decode_raw32(meta->expiry);
         flags = decode_raw32(meta->flags);
         if (docinfo->rev_meta.size > sizeof(CouchbaseRevMeta)) {
+            // 18 bytes of rev_meta indicates CouchbaseRevMeta along with
+            // flex_meta_code (1B) and datatype (1B)
+            if (docinfo->rev_meta.size < sizeof(CouchbaseRevMeta) + 2) {
+                printf("     Error parsing the document: Possible corruption\n");
+                return 1;
+            }
             flex_code = *((uint8_t *)(docinfo->rev_meta.buf + sizeof(CouchbaseRevMeta)));
-            assert(flex_code >= 0x01);
+            if (flex_code < 0x01) {
+                printf("     Error: Flex code mismatch (bad code: %d)\n",
+                       flex_code);
+                return 1;
+            }
             datatype = *((uint8_t *)(docinfo->rev_meta.buf + sizeof(CouchbaseRevMeta) +
                         sizeof(uint8_t)));
-            if (dumpJson) {
-                printf("\"cas\":\"%"PRIu64"\",\"expiry\":%"PRIu32",\"flags\":%"PRIu32","
-                        "\"datatype\":%d,",
-                        cas, expiry, flags, datatype);
+            if (docinfo->rev_meta.size > sizeof(CouchbaseRevMeta) + 2) {
+                // 19 bytes of rev_meta indicates CouchbaseRevMeta along with
+                // flex_meta_code (1B) and datatype (1B), along with the conflict
+                // resolution flag (1B).
+                conf_res_mode = *((uint8_t *)(docinfo->rev_meta.buf +
+                                  sizeof(CouchbaseRevMeta) + sizeof(uint8_t) +
+                                  sizeof(uint8_t)));
+
+                if (dumpJson) {
+                    printf("\"cas\":\"%"PRIu64"\",\"expiry\":%"PRIu32",\"flags\":%"PRIu32","
+                           "\"datatype\":%d,\"conflict_resolution_mode\":%d,",
+                            cas, expiry, flags, datatype, conf_res_mode);
+                } else {
+                    printf("     cas: %"PRIu64", expiry: %"PRIu32", flags: %"PRIu32", "
+                           "datatype: %d, conflict_resolution_mode: %d\n",
+                           cas, expiry, flags, datatype, conf_res_mode);
+                }
             } else {
-                printf("     cas: %"PRIu64", expiry: %"PRIu32", flags: %"PRIu32", "
-                        "datatype: %d\n",
-                        cas, expiry, flags, datatype);
+                if (dumpJson) {
+                    printf("\"cas\":\"%"PRIu64"\",\"expiry\":%"PRIu32",\"flags\":%"PRIu32","
+                           "\"datatype\":%d,",
+                            cas, expiry, flags, datatype);
+                } else {
+                    printf("     cas: %"PRIu64", expiry: %"PRIu32", flags: %"PRIu32", "
+                           "datatype: %d\n",
+                           cas, expiry, flags, datatype);
+                }
             }
         } else {
             if (dumpJson) {
