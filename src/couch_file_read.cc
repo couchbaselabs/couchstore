@@ -18,6 +18,7 @@ couchstore_error_t tree_file_open(tree_file* file,
                                   int openflags,
                                   const couch_file_ops *ops)
 {
+    bool readOnly = (openflags == O_RDONLY);
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
 
     /* Sanity check input parameters */
@@ -35,7 +36,8 @@ couchstore_error_t tree_file_open(tree_file* file,
     file->path = (const char *) strdup(filename);
     error_unless(file->path, COUCHSTORE_ERROR_ALLOC_FAIL);
 
-    file->ops = couch_get_buffered_file_ops(&file->lastError, ops, &file->handle);
+    file->ops = couch_get_buffered_file_ops(&file->lastError, ops, &file->handle,
+                                            readOnly);
     error_unless(file->ops, COUCHSTORE_ERROR_ALLOC_FAIL);
 
     error_pass(file->ops->open(&file->lastError, &file->handle,

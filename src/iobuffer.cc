@@ -233,14 +233,16 @@ static void buffered_destructor(couchstore_error_info_t *errinfo,
     free(h);
 }
 
-static couch_file_handle buffered_constructor_with_raw_ops(couchstore_error_info_t *errinfo, const couch_file_ops* raw_ops)
+static couch_file_handle buffered_constructor_with_raw_ops(couchstore_error_info_t *errinfo,
+                                                           const couch_file_ops* raw_ops,
+                                                           bool readOnly)
 {
     buffered_file_handle *h = static_cast<buffered_file_handle*>(malloc(sizeof(buffered_file_handle)));
     if (h) {
         h->raw_ops = raw_ops;
         h->raw_ops_handle = raw_ops->constructor(errinfo, raw_ops->cookie);
         h->nbuffers = 1;
-        h->write_buffer = new_buffer(h, WRITE_BUFFER_CAPACITY);
+        h->write_buffer = new_buffer(h, readOnly ? 0 : WRITE_BUFFER_CAPACITY);
         h->first_buffer = new_buffer(h, READ_BUFFER_CAPACITY);
 
         if (!h->write_buffer || !h->first_buffer) {
@@ -255,7 +257,7 @@ static couch_file_handle buffered_constructor(couchstore_error_info_t *errinfo,
                                               void* cookie)
 {
     (void) cookie;
-    return buffered_constructor_with_raw_ops(errinfo, couchstore_get_default_file_ops());
+    return buffered_constructor_with_raw_ops(errinfo, couchstore_get_default_file_ops(), false);
 }
 
 static couchstore_error_t buffered_open(couchstore_error_info_t *errinfo,
@@ -424,9 +426,10 @@ static const couch_file_ops ops = {
 
 const couch_file_ops *couch_get_buffered_file_ops(couchstore_error_info_t *errinfo,
                                                   const couch_file_ops* raw_ops,
-                                                  couch_file_handle* handle)
+                                                  couch_file_handle* handle,
+                                                  bool readOnly)
 {
-    *handle = buffered_constructor_with_raw_ops(errinfo, raw_ops);
+    *handle = buffered_constructor_with_raw_ops(errinfo, raw_ops, readOnly);
 
     if (*handle) {
         return &ops;
