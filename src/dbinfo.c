@@ -56,6 +56,7 @@ next_header:
     printf("DB Info (%s) - header at %"PRIu64"\n", file, db->header.position);
     printf("   file format version: %"PRIu64"\n", db->header.disk_version);
     printf("   update_seq: %"PRIu64"\n", db->header.update_seq);
+    printf("   purge_seq: %"PRIu64"\n", db->header.purge_seq);
     print_db_info(db);
     if (db->header.by_id_root) {
         btreesize += db->header.by_id_root->subtreesize;
