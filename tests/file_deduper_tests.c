@@ -113,24 +113,24 @@ static void check_deduped_file(const char *file_path, int *expected_set, int len
     unsigned long num_records = 0;
 
     f = fopen(file_path, "rb");
-    assert(f != NULL);
+    cb_assert(f != NULL);
 
     while (record_size > 0) {
         record_size = read_record(f, (void **) &rec, NULL);
-        assert(record_size >= 0);
+        cb_assert(record_size >= 0);
 
         if (record_size > 0) {
             if (rec->key % 40 == 0) {
-                assert(rec->fileno == 4);
+                cb_assert(rec->fileno == 4);
             } else if (rec->key % 20 == 0) {
-                assert(rec->fileno == 3);
+                cb_assert(rec->fileno == 3);
             } else if (rec->key % 10 == 0) {
-               assert(rec->fileno == 2);
+               cb_assert(rec->fileno == 2);
             } else {
-                assert(rec->fileno == 1);
+                cb_assert(rec->fileno == 1);
             }
 
-            assert(expected_set[rec->key]);
+            cb_assert(expected_set[rec->key]);
             num_records++;
             free_record((void *) rec, NULL);
         }
@@ -143,7 +143,7 @@ static void check_deduped_file(const char *file_path, int *expected_set, int len
         }
     }
 
-    assert(num_records == 0);
+    cb_assert(num_records == 0);
 
     fclose(f);
 }
@@ -165,7 +165,7 @@ void file_deduper_tests(void)
     int multiples[] = {5, 10, 20, 40};
     int max_arr_size = 40 * MAX_RECORDS_PER_FILE + 1;
     int *expected_result = calloc(40 * MAX_RECORDS_PER_FILE + 1, sizeof(int));
-    assert(expected_result != NULL);
+    cb_assert(expected_result != NULL);
 
     fprintf(stderr, "\nRunning file deduper tests...\n");
 
@@ -174,13 +174,13 @@ void file_deduper_tests(void)
 
         remove(source_files[i]);
         f = fopen(source_files[i], "ab");
-        assert(f != NULL);
+        cb_assert(f != NULL);
 
         for (j = 0; j < MAX_RECORDS_PER_FILE; ++j) {
             key = multiples[i] * (j + 1);
             rec.key = key;
             rec.fileno = i + 1;
-            assert(fwrite(&rec, sizeof(test_record_t), 1, f) == 1);
+            cb_assert(fwrite(&rec, sizeof(test_record_t), 1, f) == 1);
             expected_result[key] = 1;
         }
 
@@ -193,7 +193,7 @@ void file_deduper_tests(void)
                       read_record, write_record, NULL, compare_records,
                       dedup_records, free_record, 0, NULL);
 
-    assert(ret == FILE_MERGER_SUCCESS);
+    cb_assert(ret == FILE_MERGER_SUCCESS);
     check_deduped_file(dest_file, expected_result, max_arr_size);
 
     for (i = 0; i < N_FILES; ++i) {

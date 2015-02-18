@@ -192,11 +192,11 @@ static int check_file_sorted(const char *file_path)
     unsigned i;
 
     f = fopen(file_path, "rb");
-    assert(f != NULL);
+    cb_assert(f != NULL);
 
     for (i = 0; i < nrecords; ++i) {
         record_size = read_record(f, &record, NULL);
-        assert(record_size == sizeof(int));
+        cb_assert(record_size == sizeof(int));
         if (*((int *) record) != sorted_data[i]) {
             fclose(f);
             free_record(record, NULL);
@@ -206,7 +206,7 @@ static int check_file_sorted(const char *file_path)
     }
 
     /* Check file has no extra (duplicated or garbage) records. */
-    assert(read_record(f, &record, NULL) == 0);
+    cb_assert(read_record(f, &record, NULL) == 0);
 
     fclose(f);
 
@@ -221,10 +221,10 @@ static void create_file()
 
     remove(UNSORTED_FILE_PATH);
     f = fopen(UNSORTED_FILE_PATH, "ab");
-    assert(f != NULL);
+    cb_assert(f != NULL);
 
     for (i = 0; i < (sizeof(data) / sizeof(int)); ++i) {
-        assert(fwrite(&data[i], sizeof(int), 1, f) == 1);
+        cb_assert(fwrite(&data[i], sizeof(int), 1, f) == 1);
     }
 
     fclose(f);
@@ -233,7 +233,7 @@ static void create_file()
 static file_merger_error_t check_sorted_callback(void *buf, void *ctx)
 {
     int *rec = (int *) buf, *i = (int *) ctx;
-    assert(sorted_data[*i] == *rec);
+    cb_assert(sorted_data[*i] == *rec);
     (*i)++;
 
     return FILE_MERGER_SUCCESS;
@@ -260,12 +260,12 @@ static void test_file_sort(unsigned buffer_size,
                     skip_writeback,
                     &i);
 
-    assert(ret == FILE_SORTER_SUCCESS);
+    cb_assert(ret == FILE_SORTER_SUCCESS);
 
     if (!skip_writeback) {
-        assert(check_file_sorted(UNSORTED_FILE_PATH));
+        cb_assert(check_file_sorted(UNSORTED_FILE_PATH));
     } else {
-        assert(check_file_sorted(UNSORTED_FILE_PATH) == 0);
+        cb_assert(check_file_sorted(UNSORTED_FILE_PATH) == 0);
     }
 
     remove(UNSORTED_FILE_PATH);
@@ -300,7 +300,7 @@ void file_sorter_tests(void)
     fprintf(stderr, "Running file sorter tests...\n");
 
     sorted_data = (int *) malloc(sizeof(data));
-    assert(sorted_data != NULL);
+    cb_assert(sorted_data != NULL);
     memcpy(sorted_data, data, sizeof(data));
     qsort(sorted_data, nrecords, sizeof(int), int_cmp);
 

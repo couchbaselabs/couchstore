@@ -92,7 +92,7 @@ void test_interleaving()
     numbers = (uint32_t *)malloc(numbers_size);
     numbers[0] = b2u("111111000000");
     numbers[1] = b2u("000000111111");
-    assert(interleaving(numbers, numbers_size, "101010101010010101010101"));
+    cb_assert(interleaving(numbers, numbers_size, "101010101010010101010101"));
     free(numbers);
 
     numbers_size = 3 * sizeof(uint32_t);
@@ -100,7 +100,7 @@ void test_interleaving()
     numbers[0] = b2u("1101");
     numbers[1] = b2u("0101");
     numbers[2] = b2u("1111");
-    assert(interleaving(numbers, numbers_size, "101111001111"));
+    cb_assert(interleaving(numbers, numbers_size, "101111001111"));
     free(numbers);
 
     numbers_size = 4 * sizeof(uint32_t);
@@ -109,7 +109,7 @@ void test_interleaving()
     numbers[1] = b2u("1111");
     numbers[2] = b2u("1111");
     numbers[3] = b2u("0000");
-    assert(interleaving(numbers, numbers_size, "0110011001100110"));
+    cb_assert(interleaving(numbers, numbers_size, "0110011001100110"));
     free(numbers);
 
     numbers_size = 5 * sizeof(uint32_t);
@@ -119,14 +119,14 @@ void test_interleaving()
     numbers[2] = b2u("11");
     numbers[3] = b2u("00");
     numbers[4] = b2u("10");
-    assert(interleaving(numbers, numbers_size, "1010111100"));
+    cb_assert(interleaving(numbers, numbers_size, "1010111100"));
     free(numbers);
 
     numbers_size = 2 * sizeof(uint32_t);
     numbers = (uint32_t *)malloc(numbers_size);
     numbers[0] = b2u("11111111111111111111111111111111");
     numbers[1] = b2u("00000000000000000000000000000000");
-    assert(interleaving(numbers, numbers_size, "1010101010101010101010101010101010101010101010101010101010101010"));
+    cb_assert(interleaving(numbers, numbers_size, "1010101010101010101010101010101010101010101010101010101010101010"));
     free(numbers);
 
     numbers_size = 12 * sizeof(uint32_t);
@@ -143,7 +143,7 @@ void test_interleaving()
     numbers[9] = b2u("00");
     numbers[10] = b2u("00");
     numbers[11] = b2u("00");
-    assert(interleaving(numbers, numbers_size, "101100111000101100111000"));
+    cb_assert(interleaving(numbers, numbers_size, "101100111000101100111000"));
     free(numbers);
 }
 
@@ -159,15 +159,15 @@ void test_spatial_scale_factor()
 
     sf = spatial_scale_factor(mbb, dim, max);
 
-    assert(sf->offsets[0] == mbb[0]);
-    assert(sf->offsets[1] == mbb[2]);
-    assert(sf->offsets[2] == mbb[4]);
-    assert(sf->offsets[3] == mbb[6]);
-    assert((uint32_t)(sf->scales[0]*(mbb[1]-mbb[0])) == max);
-    assert((uint32_t)(sf->scales[1]*(mbb[3]-mbb[2])) == max);
-    assert((uint32_t)(sf->scales[2]*(mbb[5]-mbb[4])) == max);
-    assert((uint32_t)(sf->scales[3]) == 0);
-    assert(sf->dim == dim);
+    cb_assert(sf->offsets[0] == mbb[0]);
+    cb_assert(sf->offsets[1] == mbb[2]);
+    cb_assert(sf->offsets[2] == mbb[4]);
+    cb_assert(sf->offsets[3] == mbb[6]);
+    cb_assert((uint32_t)(sf->scales[0]*(mbb[1]-mbb[0])) == max);
+    cb_assert((uint32_t)(sf->scales[1]*(mbb[3]-mbb[2])) == max);
+    cb_assert((uint32_t)(sf->scales[2]*(mbb[5]-mbb[4])) == max);
+    cb_assert((uint32_t)(sf->scales[3]) == 0);
+    cb_assert(sf->dim == dim);
 
     free_spatial_scale_factor(sf);
 }
@@ -185,16 +185,16 @@ void test_spatial_center()
     mbb_struct.mbb = mbb;
     mbb_struct.num = sizeof(mbb)/sizeof(double);
     center = spatial_center(&mbb_struct);
-    assert(center[0] == 2.0);
-    assert(center[1] == 30.83);
-    assert(center[2] == 77.05);
-    assert(center[3] == 7.8);
+    cb_assert(center[0] == 2.0);
+    cb_assert(center[1] == 30.83);
+    cb_assert(center[2] == 77.05);
+    cb_assert(center[3] == 7.8);
     free(center);
 
     mbb_struct.mbb = mbb2;
     mbb_struct.num = sizeof(mbb2)/sizeof(double);
     center = spatial_center(&mbb_struct);
-    assert(center[0] == 12.5);
+    cb_assert(center[0] == 12.5);
     free(center);
 }
 
@@ -212,10 +212,10 @@ void test_spatial_scale_point()
 
     sf = spatial_scale_factor(mbb, dim, max);
     scaled = spatial_scale_point(point, sf);
-    assert(scaled[0] == UINT32_MAX/2);
-    assert(scaled[1] > UINT32_MAX/2 && scaled[1] > 0);
-    assert(scaled[2] < UINT32_MAX/2 && scaled[2] > 0);
-    assert(scaled[3] == 0);
+    cb_assert(scaled[0] == UINT32_MAX/2);
+    cb_assert(scaled[1] > UINT32_MAX/2 && scaled[1] > 0);
+    cb_assert(scaled[2] < UINT32_MAX/2 && scaled[2] > 0);
+    cb_assert(scaled[3] == 0);
 
     free_spatial_scale_factor(sf);
     free(scaled);
@@ -244,29 +244,29 @@ void test_set_bit_sized()
     fprintf(stderr, "Running set bit sized tests\n");
 
     set_bit_sized(bitmap, size, 1);
-    assert(cmp_bytes(bitmap, "00010011", size));
+    cb_assert(cmp_bytes(bitmap, "00010011", size));
 
     set_bit_sized(bitmap, size, 7);
-    assert(cmp_bytes(bitmap, "10010011", size));
+    cb_assert(cmp_bytes(bitmap, "10010011", size));
     set_bit_sized(bitmap, size, 2);
-    assert(cmp_bytes(bitmap, "10010111", size));
+    cb_assert(cmp_bytes(bitmap, "10010111", size));
     set_bit_sized(bitmap, size, 3);
-    assert(cmp_bytes(bitmap, "10011111", size));
+    cb_assert(cmp_bytes(bitmap, "10011111", size));
     /* Setting the same bit doesn't change the value */
     set_bit_sized(bitmap, size, 3);
-    assert(cmp_bytes(bitmap, "10011111", size));
+    cb_assert(cmp_bytes(bitmap, "10011111", size));
 
     size = 2;
     set_bit_sized(bitmap2, size, 0);
-    assert(cmp_bytes(bitmap2, "0000000000000001", size));
+    cb_assert(cmp_bytes(bitmap2, "0000000000000001", size));
     set_bit_sized(bitmap2, size, 13);
-    assert(cmp_bytes(bitmap2, "0010000000000001", size));
+    cb_assert(cmp_bytes(bitmap2, "0010000000000001", size));
     set_bit_sized(bitmap2, size, 7);
-    assert(cmp_bytes(bitmap2, "0010000010000001", size));
+    cb_assert(cmp_bytes(bitmap2, "0010000010000001", size));
     set_bit_sized(bitmap2, size, 3);
-    assert(cmp_bytes(bitmap2, "0010000010001001", size));
+    cb_assert(cmp_bytes(bitmap2, "0010000010001001", size));
     set_bit_sized(bitmap2, size, 12);
-    assert(cmp_bytes(bitmap2, "0011000010001001", size));
+    cb_assert(cmp_bytes(bitmap2, "0011000010001001", size));
 
     free(bitmap);
     free(bitmap2);
@@ -298,12 +298,12 @@ void test_encode_spatial_key()
     mbb_struct.mbb = mbb;
     mbb_struct.num = sizeof(mbb)/sizeof(double);
     encode_spatial_key(&mbb_struct, (char *)&encoded, sizeof(encoded));
-    assert(memcmp(encoded, expected, 18) == 0);
+    cb_assert(memcmp(encoded, expected, 18) == 0);
 
     mbb_struct.mbb = mbb2;
     mbb_struct.num = sizeof(mbb2)/sizeof(double);
     encode_spatial_key(&mbb_struct, (char *)&encoded, sizeof(encoded));
-    assert(memcmp(encoded, expected2, 66) == 0);
+    cb_assert(memcmp(encoded, expected2, 66) == 0);
 }
 
 
@@ -343,12 +343,12 @@ void test_decode_spatial_key()
     fprintf(stderr, "Running decode spatial key tests\n");
 
     decode_spatial_key((char *)mbb, &decoded);
-    assert(decoded.num == 2);
-    assert(is_double_array_equal(decoded.mbb, expected, 2));
+    cb_assert(decoded.num == 2);
+    cb_assert(is_double_array_equal(decoded.mbb, expected, 2));
 
     decode_spatial_key((char *)mbb2, &decoded);
-    assert(decoded.num == 8);
-    assert(is_double_array_equal(decoded.mbb, expected2, 8));
+    cb_assert(decoded.num == 8);
+    cb_assert(is_double_array_equal(decoded.mbb, expected2, 8));
 }
 
 
@@ -369,12 +369,12 @@ void test_expand_mbb()
     mbb_struct_b.num = 2;
     mbb_struct_b.mbb = mbb_b;
     expand_mbb(&mbb_struct_a, &mbb_struct_b);
-    assert(is_double_array_equal(mbb_struct_a.mbb, expected_mbb, 2));
+    cb_assert(is_double_array_equal(mbb_struct_a.mbb, expected_mbb, 2));
 
     mbb_struct_a.num = 6;
     mbb_struct_a.mbb = mbb2_a;
     mbb_struct_b.num = 6;
     mbb_struct_b.mbb = mbb2_b;
     expand_mbb(&mbb_struct_a, &mbb_struct_b);
-    assert(is_double_array_equal(mbb_struct_a.mbb, expected2_mbb, 6));
+    cb_assert(is_double_array_equal(mbb_struct_a.mbb, expected2_mbb, 6));
 }

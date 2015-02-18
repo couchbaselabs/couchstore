@@ -43,13 +43,13 @@ void test_bitmaps(void)
         }
 
         if (set) {
-            assert(is_bit_set(&bm, i));
+            cb_assert(is_bit_set(&bm, i));
         } else {
-            assert(!is_bit_set(&bm, i));
+            cb_assert(!is_bit_set(&bm, i));
         }
 
         unset_bit(&bm, i);
-        assert(!is_bit_set(&bm, i));
+        cb_assert(!is_bit_set(&bm, i));
     }
 
     memset(&bm, 0, sizeof(bitmap_t));
@@ -59,16 +59,16 @@ void test_bitmaps(void)
     for (i = 0; i < (sizeof((bm.chunks)) / sizeof(bm.chunks[0])); ++i) {
         switch (i) {
         case 0:
-            assert(bm.chunks[i] == 0x80);
+            cb_assert(bm.chunks[i] == 0x80);
             break;
         case 63:
-            assert(bm.chunks[i] == 0x04);
+            cb_assert(bm.chunks[i] == 0x04);
             break;
         case 127:
-            assert(bm.chunks[i] == 0x01);
+            cb_assert(bm.chunks[i] == 0x01);
             break;
         default:
-            assert(bm.chunks[i] == 0);
+            cb_assert(bm.chunks[i] == 0);
         }
     }
 
@@ -78,8 +78,8 @@ void test_bitmaps(void)
     set_bit(&bm2, 0);
 
     union_bitmaps(&bm1, &bm2);
-    assert(bm1.chunks[0] == 0x80);
-    assert(bm1.chunks[127] == 0x01);
+    cb_assert(bm1.chunks[0] == 0x80);
+    cb_assert(bm1.chunks[127] == 0x01);
 
     /* Tests for intersection operation */
     memset(&bm1, 0, sizeof(bitmap_t));
@@ -89,8 +89,8 @@ void test_bitmaps(void)
     set_bit(&bm2, 800);
     set_bit(&bm2, 801);
     intersect_bitmaps(&bm1, &bm2);
-    assert(bm1.chunks[0] == 0x0);
-    assert(bm1.chunks[100] == 0x0);
+    cb_assert(bm1.chunks[0] == 0x0);
+    cb_assert(bm1.chunks[100] == 0x0);
 
     set_bit(&bm1, 0);
     set_bit(&bm1, 1023);
@@ -98,19 +98,19 @@ void test_bitmaps(void)
     set_bit(&bm2, 1023);
 
     intersect_bitmaps(&bm1, &bm2);
-    assert(bm1.chunks[0] == 0x80);
-    assert(bm1.chunks[127] == 0x0);
+    cb_assert(bm1.chunks[0] == 0x80);
+    cb_assert(bm1.chunks[127] == 0x0);
 
     /* Tests for is_equal operation */
     memset(&bm1, 0, sizeof(bitmap_t));
     memset(&bm2, 0, sizeof(bitmap_t));
-    assert(is_equal_bitmap(&bm1, &bm2));
+    cb_assert(is_equal_bitmap(&bm1, &bm2));
     set_bit(&bm1, 7);
     set_bit(&bm1, 500);
     set_bit(&bm2, 7);
     set_bit(&bm2, 500);
-    assert(is_equal_bitmap(&bm1, &bm2));
+    cb_assert(is_equal_bitmap(&bm1, &bm2));
     set_bit(&bm2, 1000);
-    assert(!is_equal_bitmap(&bm1, &bm2));
+    cb_assert(!is_equal_bitmap(&bm1, &bm2));
 
 }

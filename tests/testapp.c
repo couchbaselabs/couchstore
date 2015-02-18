@@ -58,21 +58,21 @@ static void test_raw_08(uint8_t value)
 {
     raw_08 raw;
     raw = encode_raw08(value);
-    assert(decode_raw08(raw) == value);
+    cb_assert(decode_raw08(raw) == value);
 }
 
 static void test_raw_16(uint16_t value)
 {
     raw_16 raw;
     raw = encode_raw16(value);
-    assert(decode_raw16(raw) == value);
+    cb_assert(decode_raw16(raw) == value);
 }
 
 static void test_raw_32(uint32_t value)
 {
     raw_32 raw;
     raw = encode_raw32(value);
-    assert(decode_raw32(raw) == value);
+    cb_assert(decode_raw32(raw) == value);
 }
 
 static void test_raw_40(uint64_t value, const uint8_t expected[8])
@@ -83,8 +83,8 @@ static void test_raw_40(uint64_t value, const uint8_t expected[8])
     } data;
     memset(&data, 0, sizeof(data));
     encode_raw40(value, &data.raw);
-    assert(memcmp(data.bytes, expected, 8) == 0);
-    assert(decode_raw40(data.raw) == value);
+    cb_assert(memcmp(data.bytes, expected, 8) == 0);
+    cb_assert(decode_raw40(data.raw) == value);
 }
 
 static void test_raw_48(uint64_t value, const uint8_t expected[8])
@@ -95,8 +95,8 @@ static void test_raw_48(uint64_t value, const uint8_t expected[8])
     } data;
     memset(&data, 0, sizeof(data));
     encode_raw48(value, &data.raw);
-    assert(memcmp(data.bytes, expected, 8) == 0);
-    assert(decode_raw48(data.raw) == value);
+    cb_assert(memcmp(data.bytes, expected, 8) == 0);
+    cb_assert(decode_raw48(data.raw) == value);
 }
 
 static void test_bitfield_fns(void)
@@ -116,21 +116,21 @@ static void test_bitfield_fns(void)
     raw_kv_length kv;
     uint32_t klen, vlen;
 
-    assert(sizeof(cs_off_t) == 8);
+    cb_assert(sizeof(cs_off_t) == 8);
 
-    assert(sizeof(raw_08) == 1);
-    assert(sizeof(raw_16) == 2);
-    assert(sizeof(raw_32) == 4);
-    assert(sizeof(raw_40) == 5);
-    assert(sizeof(raw_48) == 6);
+    cb_assert(sizeof(raw_08) == 1);
+    cb_assert(sizeof(raw_16) == 2);
+    cb_assert(sizeof(raw_32) == 4);
+    cb_assert(sizeof(raw_40) == 5);
+    cb_assert(sizeof(raw_48) == 6);
 
-    assert(sizeof(packed) == 19);
+    cb_assert(sizeof(packed) == 19);
 
-    assert(sizeof(kv) == 5);
+    cb_assert(sizeof(kv) == 5);
     kv = encode_kv_length(1234, 123456);
     decode_kv_length(&kv, &klen, &vlen);
-    assert(klen == 1234);
-    assert(vlen == 123456);
+    cb_assert(klen == 1234);
+    cb_assert(vlen == 123456);
 
     test_raw_08(0);
     test_raw_08(UINT8_MAX);
@@ -188,8 +188,8 @@ static int counter_inc(Db *db, DocInfo *info, void *ctx)
     return 0;
 }
 
-#define EQUAL_DOC_BUF(f) assert(memcmp(doc-> f .buf, testdocset.docs[testdocset.pos]. f .buf, doc-> f .size) == 0)
-#define EQUAL_INFO_BUF(f) assert(memcmp(info-> f  .buf, testdocset.infos[testdocset.pos]. f .buf, info-> f .size) == 0)
+#define EQUAL_DOC_BUF(f) cb_assert(memcmp(doc-> f .buf, testdocset.docs[testdocset.pos]. f .buf, doc-> f .size) == 0)
+#define EQUAL_INFO_BUF(f) cb_assert(memcmp(info-> f  .buf, testdocset.infos[testdocset.pos]. f .buf, info-> f .size) == 0)
 static int docset_check(Db *db, DocInfo *info, void *ctx)
 {
     int errcode = 0;
@@ -205,14 +205,14 @@ static int docset_check(Db *db, DocInfo *info, void *ctx)
     EQUAL_INFO_BUF(rev_meta);
     try(couchstore_open_doc_with_docinfo(db, info, &doc, DECOMPRESS_DOC_BODIES));
     if (testdocset.docs[testdocset.pos].data.size > 0) {
-        assert(doc);
+        cb_assert(doc);
         EQUAL_DOC_BUF(data);
         EQUAL_DOC_BUF(id);
     }
     testdocset.pos++;
     couchstore_free_document(doc);
 cleanup:
-    assert(errcode == 0);
+    cb_assert(errcode == 0);
     return 0;
 }
 
@@ -228,10 +228,10 @@ static int dociter_check(Db *db, DocInfo *info, void *ctx)
         ctr->deleted++;
     }
     try(couchstore_open_doc_with_docinfo(db, info, &doc, DECOMPRESS_DOC_BODIES));
-    assert(doc);
+    cb_assert(doc);
     couchstore_free_document(doc);
 cleanup:
-    assert(errcode == 0);
+    cb_assert(errcode == 0);
     return 0;
 }
 
@@ -241,7 +241,7 @@ static int dump_count(Db *db)
     ZERO(counters);
     try(couchstore_changes_since(db, 0, 0, counter_inc, &counters));
 cleanup:
-    assert(errcode == 0);
+    cb_assert(errcode == 0);
     return errcode;
 }
 
@@ -273,10 +273,10 @@ static void test_save_docs(int count, const char *doc_tpl)
         int valsize;
 
         idBuf = (char *) malloc(sizeof(char) * 32);
-        assert(idBuf != NULL);
+        cb_assert(idBuf != NULL);
         idsize = sprintf(idBuf, "doc%d-%lu", i, (unsigned long)rand());
         valueBuf = (char *) malloc(sizeof(char) * (strlen(doc_tpl) + 20));
-        assert(valueBuf != NULL);
+        cb_assert(valueBuf != NULL);
         valsize = sprintf(valueBuf, doc_tpl, i + 1);
         setdoc(&testdocset.docs[i], &testdocset.infos[i],
                 idBuf, idsize, valueBuf, valsize, zerometa, sizeof(zerometa));
@@ -284,20 +284,20 @@ static void test_save_docs(int count, const char *doc_tpl)
     }
 
     docptrs = (Doc **) malloc(sizeof(Doc*) * count);
-    assert(docptrs != NULL);
+    cb_assert(docptrs != NULL);
     for (i = 0; i < count; ++i) {
         docptrs[i] = &testdocset.docs[i];
     }
 
     nfoptrs = (DocInfo **) malloc(sizeof(DocInfo*) * count);
-    assert(nfoptrs != NULL);
+    cb_assert(nfoptrs != NULL);
     for (i = 0; i < count; ++i) {
         nfoptrs[i] = &testdocset.infos[i];
     }
 
     remove(testfilepath);
     try(couchstore_open_db(testfilepath, COUCHSTORE_OPEN_FLAG_CREATE, &db));
-    assert(strcmp(couchstore_get_db_filename(db), testfilepath) == 0);
+    cb_assert(strcmp(couchstore_get_db_filename(db), testfilepath) == 0);
     try(couchstore_save_documents(db, docptrs, nfoptrs, count, 0));
     try(couchstore_commit(db));
     couchstore_close_db(db);
@@ -323,8 +323,8 @@ static void test_save_docs(int count, const char *doc_tpl)
     }
     ZERO(testdocset.counters);
     try(couchstore_docinfos_by_id(db, ids, count, 0, dociter_check, &testdocset));
-    assert(testdocset.counters.totaldocs == count);
-    assert(testdocset.counters.deleted == 0);
+    cb_assert(testdocset.counters.totaldocs == count);
+    cb_assert(testdocset.counters.deleted == 0);
 
     /* Read back by sequence: */
     fprintf(stderr, "get by sequence... ");
@@ -333,7 +333,7 @@ static void test_save_docs(int count, const char *doc_tpl)
     for (i = 0; i < count; ++i) {
         DocInfo* out_info;
         sequences[i] = testdocset.infos[i].db_seq;
-        assert(sequences[i] == (uint64_t)i + 1);
+        cb_assert(sequences[i] == (uint64_t)i + 1);
         try(couchstore_docinfo_by_sequence(db, testdocset.infos[i].db_seq, &out_info));
         docset_check(db, out_info, &testdocset);
         couchstore_free_docinfo(out_info);
@@ -344,16 +344,16 @@ static void test_save_docs(int count, const char *doc_tpl)
     testdocset.pos = 0;
     ZERO(testdocset.counters);
     try(couchstore_docinfos_by_sequence(db, sequences, count, 0, docset_check, &testdocset));
-    assert(testdocset.counters.totaldocs == count);
-    assert(testdocset.counters.deleted == 0);
+    cb_assert(testdocset.counters.totaldocs == count);
+    cb_assert(testdocset.counters.deleted == 0);
 
     /* Read back using changes_since: */
     fprintf(stderr, "changes_since... ");
     testdocset.pos = 0;
     ZERO(testdocset.counters);
     try(couchstore_changes_since(db, 0, 0, docset_check, &testdocset));
-    assert(testdocset.counters.totaldocs == count);
-    assert(testdocset.counters.deleted == 0);
+    cb_assert(testdocset.counters.totaldocs == count);
+    cb_assert(testdocset.counters.deleted == 0);
 
     idtreesize = db->header.by_id_root->subtreesize;
     seqtreesize = db->header.by_seq_root->subtreesize;
@@ -361,15 +361,15 @@ static void test_save_docs(int count, const char *doc_tpl)
     docssize = decode_raw48(reduce->size);
     dbfilesize = db->file.pos;
 
-    assert(dbfilesize > 0);
-    assert(idtreesize > 0);
-    assert(seqtreesize > 0);
-    assert(docssize > 0);
-    assert(idtreesize < dbfilesize);
-    assert(seqtreesize < dbfilesize);
-    assert(docssize < dbfilesize);
-    assert(db->header.local_docs_root == NULL);
-    assert((idtreesize + seqtreesize + docssize) < dbfilesize);
+    cb_assert(dbfilesize > 0);
+    cb_assert(idtreesize > 0);
+    cb_assert(seqtreesize > 0);
+    cb_assert(docssize > 0);
+    cb_assert(idtreesize < dbfilesize);
+    cb_assert(seqtreesize < dbfilesize);
+    cb_assert(docssize < dbfilesize);
+    cb_assert(db->header.local_docs_root == NULL);
+    cb_assert((idtreesize + seqtreesize + docssize) < dbfilesize);
 
     couchstore_close_db(db);
 cleanup:
@@ -381,7 +381,7 @@ cleanup:
     }
     free(docptrs);
     free(nfoptrs);
-    assert(errcode == 0);
+    cb_assert(errcode == 0);
 }
 
 static void test_save_doc(void)
@@ -412,24 +412,24 @@ static void test_save_doc(void)
 
     /* Check that sequence numbers got filled in */
     for (i = 0; i < 4; ++i) {
-        assert(testdocset.infos[i].db_seq == i + 1);
+        cb_assert(testdocset.infos[i].db_seq == i + 1);
     }
 
     /* Read back */
     try(couchstore_open_db(testfilepath, 0, &db));
     try(couchstore_changes_since(db, 0, 0, docset_check, &testdocset));
-    assert(testdocset.counters.totaldocs == 4);
-    assert(testdocset.counters.deleted == 0);
+    cb_assert(testdocset.counters.totaldocs == 4);
+    cb_assert(testdocset.counters.deleted == 0);
 
-    assert(couchstore_db_info(db, &info) == COUCHSTORE_SUCCESS);
-    assert(info.last_sequence == 4);
-    assert(info.doc_count == 4);
-    assert(info.deleted_count == 0);
-    assert(info.header_position == 4096);
+    cb_assert(couchstore_db_info(db, &info) == COUCHSTORE_SUCCESS);
+    cb_assert(info.last_sequence == 4);
+    cb_assert(info.doc_count == 4);
+    cb_assert(info.deleted_count == 0);
+    cb_assert(info.header_position == 4096);
 
     couchstore_close_db(db);
 cleanup:
-    assert(errcode == 0);
+    cb_assert(errcode == 0);
 }
 
 static void test_compressed_doc_body(void)
@@ -461,11 +461,11 @@ static void test_compressed_doc_body(void)
     /* Read back */
     try(couchstore_open_db(testfilepath, 0, &db));
     try(couchstore_changes_since(db, 0, 0, docset_check, &testdocset));
-    assert(testdocset.counters.totaldocs == 2);
-    assert(testdocset.counters.deleted == 0);
+    cb_assert(testdocset.counters.totaldocs == 2);
+    cb_assert(testdocset.counters.deleted == 0);
     couchstore_close_db(db);
 cleanup:
-    assert(errcode == 0);
+    cb_assert(errcode == 0);
 }
 
 static void test_dump_empty_db(void)
@@ -482,20 +482,20 @@ static void test_dump_empty_db(void)
     try(couchstore_close_db(db));
     try(couchstore_open_db(testfilepath, 0, &db));
     dump_count(db);
-    assert(counters.totaldocs == 0);
-    assert(counters.deleted == 0);
+    cb_assert(counters.totaldocs == 0);
+    cb_assert(counters.deleted == 0);
 
-    assert(couchstore_db_info(db, &info) == COUCHSTORE_SUCCESS);
-    assert(strcmp(info.filename, testfilepath) == 0);
-    assert(info.last_sequence == 0);
-    assert(info.doc_count == 0);
-    assert(info.deleted_count == 0);
-    assert(info.space_used == 0);
-    assert(info.header_position == 0);
+    cb_assert(couchstore_db_info(db, &info) == COUCHSTORE_SUCCESS);
+    cb_assert(strcmp(info.filename, testfilepath) == 0);
+    cb_assert(info.last_sequence == 0);
+    cb_assert(info.doc_count == 0);
+    cb_assert(info.deleted_count == 0);
+    cb_assert(info.space_used == 0);
+    cb_assert(info.header_position == 0);
 
     couchstore_close_db(db);
 cleanup:
-    assert(errcode == 0);
+    cb_assert(errcode == 0);
 }
 
 static void test_local_docs(void)
@@ -518,13 +518,13 @@ static void test_local_docs(void)
     couchstore_close_db(db);
     couchstore_open_db(testfilepath, 0, &db);
     couchstore_open_local_document(db, "_local/testlocal", 16, &lDocRead);
-    assert(lDocRead);
-    assert(lDocRead->json.size == 13);
-    assert(memcmp(lDocRead->json.buf, "{\"test\":true}", 13) == 0);
+    cb_assert(lDocRead);
+    cb_assert(lDocRead->json.size == 13);
+    cb_assert(memcmp(lDocRead->json.buf, "{\"test\":true}", 13) == 0);
     couchstore_free_local_document(lDocRead);
     couchstore_close_db(db);
 cleanup:
-    assert(errcode == 0);
+    cb_assert(errcode == 0);
 }
 
 static void test_open_file_error(void)
@@ -541,11 +541,11 @@ static void test_open_file_error(void)
         print_os_err(db);
     }
 
-    assert(errcode == COUCHSTORE_ERROR_NO_SUCH_FILE);
+    cb_assert(errcode == COUCHSTORE_ERROR_NO_SUCH_FILE);
 
     /* make sure os.c didn't accidentally call close(0): */
 #ifndef WIN32
-    assert(lseek(0, 0, SEEK_CUR) >= 0 || errno != EBADF);
+    cb_assert(lseek(0, 0, SEEK_CUR) >= 0 || errno != EBADF);
 #endif
 }
 
@@ -576,7 +576,7 @@ static int docmap_check(Db *db, DocInfo *info, void *ctx)
     memcpy(buffer, info->id.buf, info->id.size);
     buffer[info->id.size] = 0; /* null terminate */
     sscanf(buffer, "doc%d", &i);
-    assert(docmap[i] == 0);
+    cb_assert(docmap[i] == 0);
     docmap[i] = 1;
     return 0;
 }
@@ -636,10 +636,10 @@ static void test_changes_no_dups(void)
         try(couchstore_changes_since(db, 0, 0, docmap_check, docmap));
     }
 
-    assert(couchstore_db_info(db, &info) == COUCHSTORE_SUCCESS);
-    assert(info.last_sequence == (uint64_t)(numdocs + numdocs/2));
-    assert(info.doc_count == (uint64_t)numdocs);
-    assert(info.deleted_count == 0);
+    cb_assert(couchstore_db_info(db, &info) == COUCHSTORE_SUCCESS);
+    cb_assert(info.last_sequence == (uint64_t)(numdocs + numdocs/2));
+    cb_assert(info.doc_count == (uint64_t)numdocs);
+    cb_assert(info.deleted_count == 0);
 
     couchstore_close_db(db);
 cleanup:
@@ -650,7 +650,7 @@ cleanup:
     free(docptrs);
     free(nfoptrs);
     free(docmap);
-    assert(errcode == 0);
+    cb_assert(errcode == 0);
 }
 
 
@@ -666,11 +666,11 @@ static void mb5086(void)
 
     setdoc(&d, &i, "hi", 2, "foo", 3, NULL, 0);
     err = couchstore_open_db("mb5085.couch", COUCHSTORE_OPEN_FLAG_CREATE, &db);
-    assert(err == COUCHSTORE_SUCCESS);
-    assert(couchstore_save_document(db, &d, &i, 0) == COUCHSTORE_SUCCESS);
-    assert(couchstore_commit(db) == COUCHSTORE_SUCCESS);
-    assert(couchstore_close_db(db) == COUCHSTORE_SUCCESS);
-    assert(remove("mb5085.couch") == 0);
+    cb_assert(err == COUCHSTORE_SUCCESS);
+    cb_assert(couchstore_save_document(db, &d, &i, 0) == COUCHSTORE_SUCCESS);
+    cb_assert(couchstore_commit(db) == COUCHSTORE_SUCCESS);
+    cb_assert(couchstore_close_db(db) == COUCHSTORE_SUCCESS);
+    cb_assert(remove("mb5085.couch") == 0);
 }
 
 static void mb11104(void) {
@@ -700,7 +700,7 @@ static void mb11104(void) {
                                      &testdocset.infos[3], 0));
     try(couchstore_commit(db));
 
-    assert(couchstore_close_db(db) == COUCHSTORE_SUCCESS);
+    cb_assert(couchstore_close_db(db) == COUCHSTORE_SUCCESS);
 
     try(couchstore_open_db(testfilepath, 0, &db));
     /* Read back in bulk by doc IDs, some of which are not existent */
@@ -715,8 +715,8 @@ static void mb11104(void) {
     }
     ZERO(testdocset.counters);
     try(couchstore_docinfos_by_id(db, ids, count, 0, dociter_check, &testdocset));
-    assert(testdocset.counters.totaldocs == 2);
-    assert(testdocset.counters.deleted == 0);
+    cb_assert(testdocset.counters.totaldocs == 2);
+    cb_assert(testdocset.counters.deleted == 0);
 
     for (i = 0; i < count; ++i) { // "doc2", "doc4", "doc6"
         int idx = i * 2 + 1;
@@ -725,8 +725,8 @@ static void mb11104(void) {
     }
     ZERO(testdocset.counters);
     try(couchstore_docinfos_by_id(db, ids, count, 0, dociter_check, &testdocset));
-    assert(testdocset.counters.totaldocs == 0);
-    assert(testdocset.counters.deleted == 0);
+    cb_assert(testdocset.counters.totaldocs == 0);
+    cb_assert(testdocset.counters.deleted == 0);
 
     for (i = 0; i < count; ++i) { // "doc3", "doc6", "doc9"
         int idx = i * 3 + 2;
@@ -735,16 +735,16 @@ static void mb11104(void) {
     }
     ZERO(testdocset.counters);
     try(couchstore_docinfos_by_id(db, ids, count, 0, dociter_check, &testdocset));
-    assert(testdocset.counters.totaldocs == 1);
-    assert(testdocset.counters.deleted == 0);
+    cb_assert(testdocset.counters.totaldocs == 1);
+    cb_assert(testdocset.counters.deleted == 0);
 
-    assert(couchstore_db_info(db, &info) == COUCHSTORE_SUCCESS);
-    assert(info.last_sequence == 4);
-    assert(info.doc_count == 4);
-    assert(info.deleted_count == 0);
-    assert(info.header_position == 4096);
+    cb_assert(couchstore_db_info(db, &info) == COUCHSTORE_SUCCESS);
+    cb_assert(info.last_sequence == 4);
+    cb_assert(info.doc_count == 4);
+    cb_assert(info.deleted_count == 0);
+    cb_assert(info.header_position == 4096);
 
-    assert(couchstore_close_db(db) == COUCHSTORE_SUCCESS);
+    cb_assert(couchstore_close_db(db) == COUCHSTORE_SUCCESS);
 
 cleanup:
     free(ids);
@@ -765,35 +765,35 @@ static void test_asis_seqs(void)
    setdoc(&d, &i, "test", 4, "foo", 3, NULL, 0);
    i.db_seq = 1;
    try(couchstore_save_document(db, &d, &i, COUCHSTORE_SEQUENCE_AS_IS));
-   assert(db->header.update_seq == 1);
+   cb_assert(db->header.update_seq == 1);
 
    setdoc(&d, &i, "test_two", 8, "foo", 3, NULL, 0);
    i.db_seq = 12;
    try(couchstore_save_document(db, &d, &i, COUCHSTORE_SEQUENCE_AS_IS));
-   assert(db->header.update_seq == 12);
+   cb_assert(db->header.update_seq == 12);
 
    setdoc(&d, &i, "test_foo", 8, "foo", 3, NULL, 0);
    i.db_seq = 6;
    try(couchstore_save_document(db, &d, &i, COUCHSTORE_SEQUENCE_AS_IS));
-   assert(db->header.update_seq == 12);
+   cb_assert(db->header.update_seq == 12);
 
    try(couchstore_docinfo_by_id(db, "test", 4, &ir));
-   assert(ir->db_seq == 1);
+   cb_assert(ir->db_seq == 1);
    couchstore_free_docinfo(ir);
 
    try(couchstore_docinfo_by_id(db, "test_two", 8, &ir));
-   assert(ir->db_seq == 12);
+   cb_assert(ir->db_seq == 12);
    couchstore_free_docinfo(ir);
 
    try(couchstore_docinfo_by_id(db, "test_foo", 8, &ir));
-   assert(ir->db_seq == 6);
+   cb_assert(ir->db_seq == 6);
    couchstore_free_docinfo(ir);
 
 cleanup:
    if (db != NULL) {
        couchstore_close_db(db);
    }
-   assert(errcode == COUCHSTORE_SUCCESS);
+   cb_assert(errcode == COUCHSTORE_SUCCESS);
 }
 
 static void test_huge_revseq(void)
@@ -811,14 +811,14 @@ static void test_huge_revseq(void)
     i.rev_seq = 5294967296;
 
     err = couchstore_open_db("bigrevseq.couch", COUCHSTORE_OPEN_FLAG_CREATE, &db);
-    assert(err == COUCHSTORE_SUCCESS);
-    assert(couchstore_save_document(db, &d, &i, 0) == COUCHSTORE_SUCCESS);
-    assert(couchstore_commit(db) == COUCHSTORE_SUCCESS);
-    assert(couchstore_docinfo_by_id(db, "hi", 2, &i2) == COUCHSTORE_SUCCESS);
-    assert(i2->rev_seq == 5294967296);
+    cb_assert(err == COUCHSTORE_SUCCESS);
+    cb_assert(couchstore_save_document(db, &d, &i, 0) == COUCHSTORE_SUCCESS);
+    cb_assert(couchstore_commit(db) == COUCHSTORE_SUCCESS);
+    cb_assert(couchstore_docinfo_by_id(db, "hi", 2, &i2) == COUCHSTORE_SUCCESS);
+    cb_assert(i2->rev_seq == 5294967296);
     couchstore_free_docinfo(i2);
-    assert(couchstore_close_db(db) == COUCHSTORE_SUCCESS);
-    assert(remove("bigrevseq.couch") == 0);
+    cb_assert(couchstore_close_db(db) == COUCHSTORE_SUCCESS);
+    cb_assert(remove("bigrevseq.couch") == 0);
 }
 
 static void test_dropped_handle(void)
@@ -843,7 +843,7 @@ static void test_dropped_handle(void)
     * fails with a read error
     */
    try(couchstore_drop_file(db));
-   assert(couchstore_save_document(db, &d, &i, 0) == COUCHSTORE_ERROR_FILE_CLOSED);
+   cb_assert(couchstore_save_document(db, &d, &i, 0) == COUCHSTORE_ERROR_FILE_CLOSED);
 
    try(couchstore_reopen_file(db, testfilepath, 0));
 
@@ -855,7 +855,7 @@ cleanup:
    if (db != NULL) {
        couchstore_close_db(db);
    }
-   assert(errcode == COUCHSTORE_SUCCESS);
+   cb_assert(errcode == COUCHSTORE_SUCCESS);
 }
 
 int main(int argc, const char *argv[])
@@ -925,7 +925,7 @@ int main(int argc, const char *argv[])
 
     /* make sure os.c didn't accidentally call close(0): */
 #ifndef WIN32
-    assert(lseek(0, 0, SEEK_CUR) >= 0 || errno != EBADF);
+    cb_assert(lseek(0, 0, SEEK_CUR) >= 0 || errno != EBADF);
 #endif
 
     mapreduce_tests();

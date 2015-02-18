@@ -7,12 +7,12 @@ static view_btree_key_t *test_view_btree_key_decoding(const char *key_bin, size_
 {
     view_btree_key_t *k = NULL;
 
-    assert(decode_view_btree_key(key_bin, len, &k) == COUCHSTORE_SUCCESS);
-    assert(k != NULL);
-    assert(k->json_key.size == 4);
-    assert(memcmp(k->json_key.buf, "\"23\"", k->json_key.size) == 0);
-    assert(k->doc_id.size == 12);
-    assert(memcmp(k->doc_id.buf, "doc_00000023", k->doc_id.size) == 0);
+    cb_assert(decode_view_btree_key(key_bin, len, &k) == COUCHSTORE_SUCCESS);
+    cb_assert(k != NULL);
+    cb_assert(k->json_key.size == 4);
+    cb_assert(memcmp(k->json_key.buf, "\"23\"", k->json_key.size) == 0);
+    cb_assert(k->doc_id.size == 12);
+    cb_assert(memcmp(k->doc_id.buf, "doc_00000023", k->doc_id.size) == 0);
 
     return k;
 }
@@ -21,12 +21,12 @@ static view_id_btree_key_t *test_view_id_btree_key_decoding(const char *id_btree
 {
     view_id_btree_key_t *k = NULL;
 
-    assert(decode_view_id_btree_key(id_btree_key_bin, len, &k) == COUCHSTORE_SUCCESS);
-    assert(k != NULL);
+    cb_assert(decode_view_id_btree_key(id_btree_key_bin, len, &k) == COUCHSTORE_SUCCESS);
+    cb_assert(k != NULL);
 
-    assert(k->partition == 57);
-    assert(k->doc_id.size == 12);
-    assert(memcmp(k->doc_id.buf, "doc_00000057", k->doc_id.size) == 0);
+    cb_assert(k->partition == 57);
+    cb_assert(k->doc_id.size == 12);
+    cb_assert(memcmp(k->doc_id.buf, "doc_00000057", k->doc_id.size) == 0);
 
     return k;
 }
@@ -38,7 +38,7 @@ static void test_view_btree_key_encoding(const view_btree_key_t *k,
     couchstore_error_t res;
 
     res = encode_view_btree_key(k, buffer, size);
-    assert(res == COUCHSTORE_SUCCESS);
+    cb_assert(res == COUCHSTORE_SUCCESS);
 }
 
 
@@ -49,7 +49,7 @@ static void test_view_id_btree_key_encoding(const view_id_btree_key_t *k,
     couchstore_error_t res;
 
     res = encode_view_id_btree_key(k, buffer, size);
-    assert(res == COUCHSTORE_SUCCESS);
+    cb_assert(res == COUCHSTORE_SUCCESS);
 }
 
 void test_keys()
@@ -82,14 +82,14 @@ void test_keys()
     fprintf(stderr, "Encoding the previously decoded view btree key ...\n");
     test_view_btree_key_encoding(k, &k_bin2, &k_bin2_size);
 
-    assert(k_bin2_size == sizeof(key_bin));
-    assert(memcmp(k_bin2, key_bin, k_bin2_size) == 0);
+    cb_assert(k_bin2_size == sizeof(key_bin));
+    cb_assert(memcmp(k_bin2, key_bin, k_bin2_size) == 0);
 
     fprintf(stderr, "Encoding the previously decoded view id btree key ...\n");
     test_view_id_btree_key_encoding(id_btree_k, &id_btree_k_bin2, &id_btree_k_bin2_size);
 
-    assert(id_btree_k_bin2_size == sizeof(id_btree_key_bin));
-    assert(memcmp(id_btree_k_bin2, id_btree_key_bin, id_btree_k_bin2_size) == 0);
+    cb_assert(id_btree_k_bin2_size == sizeof(id_btree_key_bin));
+    cb_assert(memcmp(id_btree_k_bin2, id_btree_key_bin, id_btree_k_bin2_size) == 0);
 
     fprintf(stderr, "Decoding the previously encoded view btree key ...\n");
     k2 = test_view_btree_key_decoding(k_bin2, k_bin2_size);
@@ -100,14 +100,14 @@ void test_keys()
     fprintf(stderr, "Encoding the previously decoded view btree key ...\n");
     test_view_btree_key_encoding(k2, &k_bin3, &k_bin3_size);
 
-    assert(k_bin3_size == sizeof(key_bin));
-    assert(memcmp(k_bin3, key_bin, k_bin3_size) == 0);
+    cb_assert(k_bin3_size == sizeof(key_bin));
+    cb_assert(memcmp(k_bin3, key_bin, k_bin3_size) == 0);
 
     fprintf(stderr, "Encoding the previously decoded view id btree key ...\n");
     test_view_id_btree_key_encoding(id_btree_k2, &id_btree_k_bin3, &id_btree_k_bin3_size);
 
-    assert(id_btree_k_bin3_size == sizeof(id_btree_key_bin));
-    assert(memcmp(id_btree_k_bin3, id_btree_key_bin, id_btree_k_bin3_size) == 0);
+    cb_assert(id_btree_k_bin3_size == sizeof(id_btree_key_bin));
+    cb_assert(memcmp(id_btree_k_bin3, id_btree_key_bin, id_btree_k_bin3_size) == 0);
 
     free_view_btree_key(k);
     free_view_btree_key(k2);

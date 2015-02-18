@@ -54,24 +54,24 @@ static void test_sum_function(void)
     mapreduce_map_result_list_t *result = NULL;
 
     ret = mapreduce_start_map_context(functions, 1, &context, &error_msg);
-    assert(ret == MAPREDUCE_SUCCESS);
-    assert(error_msg == NULL);
-    assert(context != NULL);
+    cb_assert(ret == MAPREDUCE_SUCCESS);
+    cb_assert(error_msg == NULL);
+    cb_assert(context != NULL);
 
     ret = mapreduce_map(context, &doc, &meta, &result);
-    assert(ret == MAPREDUCE_SUCCESS);
-    assert(result != NULL);
-    assert(result->length == 1);
-    assert(result->list != NULL);
+    cb_assert(ret == MAPREDUCE_SUCCESS);
+    cb_assert(result != NULL);
+    cb_assert(result->length == 1);
+    cb_assert(result->list != NULL);
 
-    assert(result->list[0].error == MAPREDUCE_SUCCESS);
-    assert(result->list[0].result.kvs.length == 1);
-    assert(result->list[0].result.kvs.kvs[0].key.length == (sizeof("\"doc1\"") - 1));
-    assert(memcmp(result->list[0].result.kvs.kvs[0].key.json,
+    cb_assert(result->list[0].error == MAPREDUCE_SUCCESS);
+    cb_assert(result->list[0].result.kvs.length == 1);
+    cb_assert(result->list[0].result.kvs.kvs[0].key.length == (sizeof("\"doc1\"") - 1));
+    cb_assert(memcmp(result->list[0].result.kvs.kvs[0].key.json,
                   "\"doc1\"",
                   (sizeof("\"doc1\"") - 1)) == 0);
-    assert(result->list[0].result.kvs.kvs[0].value.length == (sizeof("24") - 1));
-    assert(memcmp(result->list[0].result.kvs.kvs[0].value.json,
+    cb_assert(result->list[0].result.kvs.kvs[0].value.length == (sizeof("24") - 1));
+    cb_assert(memcmp(result->list[0].result.kvs.kvs[0].value.json,
                   "24",
                   (sizeof("24") - 1)) == 0);
 
@@ -92,24 +92,24 @@ static void test_b64decode_function(void)
     mapreduce_map_result_list_t *result = NULL;
 
     ret = mapreduce_start_map_context(functions, 1, &context, &error_msg);
-    assert(ret == MAPREDUCE_SUCCESS);
-    assert(error_msg == NULL);
-    assert(context != NULL);
+    cb_assert(ret == MAPREDUCE_SUCCESS);
+    cb_assert(error_msg == NULL);
+    cb_assert(context != NULL);
 
     ret = mapreduce_map(context, &doc, &meta, &result);
-    assert(ret == MAPREDUCE_SUCCESS);
-    assert(result != NULL);
-    assert(result->length == 1);
-    assert(result->list != NULL);
+    cb_assert(ret == MAPREDUCE_SUCCESS);
+    cb_assert(result != NULL);
+    cb_assert(result->length == 1);
+    cb_assert(result->list != NULL);
 
-    assert(result->list[0].error == MAPREDUCE_SUCCESS);
-    assert(result->list[0].result.kvs.length == 1);
-    assert(result->list[0].result.kvs.kvs[0].key.length == (sizeof("\"doc1\"") - 1));
-    assert(memcmp(result->list[0].result.kvs.kvs[0].key.json,
+    cb_assert(result->list[0].error == MAPREDUCE_SUCCESS);
+    cb_assert(result->list[0].result.kvs.length == 1);
+    cb_assert(result->list[0].result.kvs.kvs[0].key.length == (sizeof("\"doc1\"") - 1));
+    cb_assert(memcmp(result->list[0].result.kvs.kvs[0].key.json,
                   "\"doc1\"",
                   (sizeof("\"doc1\"") - 1)) == 0);
-    assert(result->list[0].result.kvs.kvs[0].value.length == (sizeof("\"hello world!\"") - 1));
-    assert(memcmp(result->list[0].result.kvs.kvs[0].value.json,
+    cb_assert(result->list[0].result.kvs.kvs[0].value.length == (sizeof("\"hello world!\"") - 1));
+    cb_assert(memcmp(result->list[0].result.kvs.kvs[0].value.json,
                   "\"hello world!\"",
                   (sizeof("\"hello world!\"") - 1)) == 0);
 
@@ -128,24 +128,24 @@ static void test_date_to_array_function(void)
     mapreduce_map_result_list_t *result = NULL;
 
     ret = mapreduce_start_map_context(functions, 1, &context, &error_msg);
-    assert(ret == MAPREDUCE_SUCCESS);
-    assert(error_msg == NULL);
-    assert(context != NULL);
+    cb_assert(ret == MAPREDUCE_SUCCESS);
+    cb_assert(error_msg == NULL);
+    cb_assert(context != NULL);
 
     ret = mapreduce_map(context, &doc, &meta, &result);
-    assert(ret == MAPREDUCE_SUCCESS);
-    assert(result != NULL);
-    assert(result->length == 1);
-    assert(result->list != NULL);
+    cb_assert(ret == MAPREDUCE_SUCCESS);
+    cb_assert(result != NULL);
+    cb_assert(result->length == 1);
+    cb_assert(result->list != NULL);
 
-    assert(result->list[0].error == MAPREDUCE_SUCCESS);
-    assert(result->list[0].result.kvs.length == 1);
-    assert(result->list[0].result.kvs.kvs[0].key.length == (sizeof("\"doc1\"") - 1));
-    assert(memcmp(result->list[0].result.kvs.kvs[0].key.json,
+    cb_assert(result->list[0].error == MAPREDUCE_SUCCESS);
+    cb_assert(result->list[0].result.kvs.length == 1);
+    cb_assert(result->list[0].result.kvs.kvs[0].key.length == (sizeof("\"doc1\"") - 1));
+    cb_assert(memcmp(result->list[0].result.kvs.kvs[0].key.json,
                   "\"doc1\"",
                   (sizeof("\"doc1\"") - 1)) == 0);
-    assert(result->list[0].result.kvs.kvs[0].value.length == (sizeof("[33658,9,27,1,46,40]") - 1));
-    assert(memcmp(result->list[0].result.kvs.kvs[0].value.json,
+    cb_assert(result->list[0].result.kvs.kvs[0].value.length == (sizeof("[33658,9,27,1,46,40]") - 1));
+    cb_assert(memcmp(result->list[0].result.kvs.kvs[0].value.json,
                   "[33658,9,27,1,46,40]",
                   (sizeof("[33658,9,27,1,46,40]") - 1)) == 0);
 

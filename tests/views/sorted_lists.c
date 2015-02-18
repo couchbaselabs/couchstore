@@ -40,40 +40,40 @@ void test_sorted_lists()
 
     fprintf(stderr, "Running view sorted_list tests\n");
     sorted_elements = (int *) malloc(sizeof(elements));
-    assert(sorted_elements != NULL);
+    cb_assert(sorted_elements != NULL);
     memcpy(sorted_elements, elements, sizeof(elements));
     qsort(sorted_elements, num_elements, sizeof(sorted_elements[0]), int_cmp_fun);
 
-    assert(list != NULL);
-    assert(sorted_list_size(list) == 0);
+    cb_assert(list != NULL);
+    cb_assert(sorted_list_size(list) == 0);
 
     for (i = 0; i < num_elements; ++i) {
         int el = elements[i];
         int *copy, *copy2;
 
-        assert(sorted_list_add(list, &el, sizeof(el)) == 0);
+        cb_assert(sorted_list_add(list, &el, sizeof(el)) == 0);
         copy = sorted_list_get(list, &el);
-        assert(copy != NULL);
-        assert(*copy == el);
-        assert(copy != &el);
+        cb_assert(copy != NULL);
+        cb_assert(*copy == el);
+        cb_assert(copy != &el);
 
-        assert(sorted_list_size(list) == (i + 1));
+        cb_assert(sorted_list_size(list) == (i + 1));
 
         /* Insert existing element replaces existing element. */
-        assert(sorted_list_add(list, &el, sizeof(el)) == 0);
+        cb_assert(sorted_list_add(list, &el, sizeof(el)) == 0);
         copy2 = sorted_list_get(list, &el);
-        assert(copy2 != NULL);
-        assert(*copy2 == el);
-        assert(copy2 != &el);
-        assert(copy2 != copy);
+        cb_assert(copy2 != NULL);
+        cb_assert(*copy2 == el);
+        cb_assert(copy2 != &el);
+        cb_assert(copy2 != copy);
     }
 
     /* Add same elements again. */
     for (i = 0; i < num_elements; ++i) {
         int el = elements[i];
 
-        assert(sorted_list_add(list, &el, sizeof(el)) == 0);
-        assert(sorted_list_size(list) == num_elements);
+        cb_assert(sorted_list_add(list, &el, sizeof(el)) == 0);
+        cb_assert(sorted_list_size(list) == num_elements);
     }
 
     for (i = num_elements - 1; i >= 0; --i) {
@@ -81,46 +81,46 @@ void test_sorted_lists()
         int *copy;
 
         copy = sorted_list_get(list, &el);
-        assert(copy != NULL);
-        assert(*copy == el);
-        assert(copy != &el);
+        cb_assert(copy != NULL);
+        cb_assert(*copy == el);
+        cb_assert(copy != &el);
     }
 
-    assert(sorted_list_size(list) == num_elements);
+    cb_assert(sorted_list_size(list) == num_elements);
 
     for (i = 0; i < num_non_elements; ++i) {
-        assert(sorted_list_get(list, &non_elements[i]) == NULL);
+        cb_assert(sorted_list_get(list, &non_elements[i]) == NULL);
     }
 
-    assert(sorted_list_size(list) == num_elements);
+    cb_assert(sorted_list_size(list) == num_elements);
 
     for (i = 0; i < num_non_elements; ++i) {
         sorted_list_remove(list, &non_elements[i]);
     }
 
-    assert(sorted_list_size(list) == num_elements);
+    cb_assert(sorted_list_size(list) == num_elements);
 
     for (i = 0; i < num_elements; ++i) {
         int el = elements[i];
         int *copy;
 
         copy = sorted_list_get(list, &el);
-        assert(copy != NULL);
-        assert(*copy == el);
-        assert(copy != &el);
+        cb_assert(copy != NULL);
+        cb_assert(*copy == el);
+        cb_assert(copy != &el);
     }
 
-    assert(sorted_list_size(list) == num_elements);
+    cb_assert(sorted_list_size(list) == num_elements);
 
     iterator = sorted_list_iterator(list);
-    assert(iterator != NULL);
+    cb_assert(iterator != NULL);
     for (i = 0; i < num_elements; ++i) {
         int *e = sorted_list_next(iterator);
 
-        assert(e != NULL);
-        assert(*e == sorted_elements[i]);
+        cb_assert(e != NULL);
+        cb_assert(*e == sorted_elements[i]);
     }
-    assert(sorted_list_next(iterator) == NULL);
+    cb_assert(sorted_list_next(iterator) == NULL);
     sorted_list_free_iterator(iterator);
 
     for (i = 0; i < num_elements; ++i) {
@@ -132,21 +132,21 @@ void test_sorted_lists()
             int *copy;
 
             copy = sorted_list_get(list, &elements[j]);
-            assert(copy != NULL);
-            assert(*copy == elements[j]);
-            assert(copy != &elements[j]);
+            cb_assert(copy != NULL);
+            cb_assert(*copy == elements[j]);
+            cb_assert(copy != &elements[j]);
         }
     }
 
-    assert(sorted_list_size(list) == 0);
+    cb_assert(sorted_list_size(list) == 0);
 
     for (i = 0; i < num_elements; ++i) {
-        assert(sorted_list_get(list, &elements[i]) == NULL);
+        cb_assert(sorted_list_get(list, &elements[i]) == NULL);
     }
 
     iterator = sorted_list_iterator(list);
-    assert(iterator != NULL);
-    assert(sorted_list_next(iterator) == NULL);
+    cb_assert(iterator != NULL);
+    cb_assert(sorted_list_next(iterator) == NULL);
     sorted_list_free_iterator(iterator);
 
     sorted_list_free(list);

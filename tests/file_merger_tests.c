@@ -85,19 +85,19 @@ static unsigned long check_file_sorted(const char *file_path)
     unsigned long num_records = 0;
 
     f = fopen(file_path, "rb");
-    assert(f != NULL);
+    cb_assert(f != NULL);
 
     record_size = read_record(f, &a, NULL);
-    assert(record_size > 0);
+    cb_assert(record_size > 0);
     num_records += 1;
 
     while (record_size > 0) {
         record_size = read_record(f, &b, NULL);
-        assert(record_size >= 0);
+        cb_assert(record_size >= 0);
 
         if (record_size > 0) {
             num_records += 1;
-            assert(compare_records(a, b, NULL) < 0);
+            cb_assert(compare_records(a, b, NULL) < 0);
             free_record(a, NULL);
             a = b;
         }
@@ -140,16 +140,16 @@ void file_merger_tests(void)
 
         remove(source_files[i]);
         f = fopen(source_files[i], "ab");
-        assert(f != NULL);
+        cb_assert(f != NULL);
 
         for (j = 0; j < MAX_RECORDS_PER_FILE; ++j) {
             if (batches[i][j] == 0) {
                 break;
             }
             if (j > 0) {
-                assert(batches[i][j] > batches[i][j - 1]);
+                cb_assert(batches[i][j] > batches[i][j - 1]);
             }
-            assert(fwrite(&batches[i][j], sizeof(batches[i][j]), 1, f) == 1);
+            cb_assert(fwrite(&batches[i][j], sizeof(batches[i][j]), 1, f) == 1);
             num_records += 1;
         }
 
@@ -162,8 +162,8 @@ void file_merger_tests(void)
                       read_record, write_record, NULL, compare_records,
                       NULL, free_record, 0, NULL);
 
-    assert(ret == FILE_MERGER_SUCCESS);
-    assert(check_file_sorted(dest_file) == num_records);
+    cb_assert(ret == FILE_MERGER_SUCCESS);
+    cb_assert(check_file_sorted(dest_file) == num_records);
 
     for (i = 0; i < N_FILES; ++i) {
         remove(source_files[i]);

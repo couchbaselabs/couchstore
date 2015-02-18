@@ -40,26 +40,26 @@ static void test_view_id_btree_cleanup()
     data1.partition = 64;
     data1.num_view_keys_map = 1;
     data1.view_keys_map = (view_keys_mapping_t *) malloc(sizeof(view_keys_mapping_t));
-    assert(data1.view_keys_map != NULL);
+    cb_assert(data1.view_keys_map != NULL);
     data1.view_keys_map[0].view_id = 0;
     data1.view_keys_map[0].num_keys = 1;
     data1.view_keys_map[0].json_keys = (sized_buf *) malloc(sizeof(sized_buf));
     data1.view_keys_map[0].json_keys[0].buf = "100";
     data1.view_keys_map[0].json_keys[0].size = sizeof("100") - 1;
-    assert(encode_view_id_btree_value(&data1, &data_bin1, &data_bin1_size) == COUCHSTORE_SUCCESS);
+    cb_assert(encode_view_id_btree_value(&data1, &data_bin1, &data_bin1_size) == COUCHSTORE_SUCCESS);
     valbuf.buf = data_bin1;
     valbuf.size = data_bin1_size;
 
-    assert(view_id_btree_purge_kv(NULL, &valbuf, &purge_ctx) == PURGE_ITEM);
-    assert(purge_ctx.count == 1);
+    cb_assert(view_id_btree_purge_kv(NULL, &valbuf, &purge_ctx) == PURGE_ITEM);
+    cb_assert(purge_ctx.count == 1);
     free(data_bin1);
     data1.partition = 32;
-    assert(encode_view_id_btree_value(&data1, &data_bin1, &data_bin1_size) == COUCHSTORE_SUCCESS);
+    cb_assert(encode_view_id_btree_value(&data1, &data_bin1, &data_bin1_size) == COUCHSTORE_SUCCESS);
     valbuf.buf = data_bin1;
     valbuf.size = data_bin1_size;
     purge_ctx.count = 0;
-    assert(view_id_btree_purge_kv(NULL, &valbuf, &purge_ctx) == PURGE_KEEP);
-    assert(purge_ctx.count == 0);
+    cb_assert(view_id_btree_purge_kv(NULL, &valbuf, &purge_ctx) == PURGE_KEEP);
+    cb_assert(purge_ctx.count == 0);
     free(data_bin1);
     free(data1.view_keys_map[0].json_keys);
     free(data1.view_keys_map);
@@ -68,29 +68,29 @@ static void test_view_id_btree_cleanup()
     reduction1.kv_count = 11;
     memset(&reduction1.partitions_bitmap, 0, sizeof(reduction1.partitions_bitmap));
 
-    assert(encode_view_id_btree_reduction(&reduction1, reduction_bin1, &reduction_bin1_size) == COUCHSTORE_SUCCESS);
+    cb_assert(encode_view_id_btree_reduction(&reduction1, reduction_bin1, &reduction_bin1_size) == COUCHSTORE_SUCCESS);
     np.reduce_value.buf = reduction_bin1;
     np.reduce_value.size = reduction_bin1_size;
 
-    assert(view_id_btree_purge_kp(&np, &purge_ctx) == PURGE_KEEP);
-    assert(purge_ctx.count == 0);
+    cb_assert(view_id_btree_purge_kp(&np, &purge_ctx) == PURGE_KEEP);
+    cb_assert(purge_ctx.count == 0);
 
     set_bit(&reduction1.partitions_bitmap, 64);
-    assert(encode_view_id_btree_reduction(&reduction1, reduction_bin1, &reduction_bin1_size) == COUCHSTORE_SUCCESS);
+    cb_assert(encode_view_id_btree_reduction(&reduction1, reduction_bin1, &reduction_bin1_size) == COUCHSTORE_SUCCESS);
     np.reduce_value.buf = reduction_bin1;
     np.reduce_value.size = reduction_bin1_size;
 
-    assert(view_id_btree_purge_kp(&np, &purge_ctx) == PURGE_ITEM);
-    assert(purge_ctx.count == 11);
+    cb_assert(view_id_btree_purge_kp(&np, &purge_ctx) == PURGE_ITEM);
+    cb_assert(purge_ctx.count == 11);
     purge_ctx.count = 0;
 
     set_bit(&reduction1.partitions_bitmap, 100);
-    assert(encode_view_id_btree_reduction(&reduction1, reduction_bin1, &reduction_bin1_size) == COUCHSTORE_SUCCESS);
+    cb_assert(encode_view_id_btree_reduction(&reduction1, reduction_bin1, &reduction_bin1_size) == COUCHSTORE_SUCCESS);
     np.reduce_value.buf = reduction_bin1;
     np.reduce_value.size = reduction_bin1_size;
 
-    assert(view_id_btree_purge_kp(&np, &purge_ctx) == PURGE_PARTIAL);
-    assert(purge_ctx.count == 0);
+    cb_assert(view_id_btree_purge_kp(&np, &purge_ctx) == PURGE_PARTIAL);
+    cb_assert(purge_ctx.count == 0);
 }
 
 static void test_view_btree_cleanup()
@@ -116,23 +116,23 @@ static void test_view_btree_cleanup()
     value1.values[0].size = sizeof("100") - 1;
     value1.values[1].buf = "1";
     value1.values[1].size = sizeof("1") - 1;
-    assert(encode_view_btree_value(&value1, &value_bin1, &value_bin1_size) == COUCHSTORE_SUCCESS);
+    cb_assert(encode_view_btree_value(&value1, &value_bin1, &value_bin1_size) == COUCHSTORE_SUCCESS);
 
     valbuf.buf = value_bin1;
     valbuf.size = value_bin1_size;
 
-    assert(view_btree_purge_kv(NULL, &valbuf, &purge_ctx) == PURGE_ITEM);
-    assert(purge_ctx.count == 2);
+    cb_assert(view_btree_purge_kv(NULL, &valbuf, &purge_ctx) == PURGE_ITEM);
+    cb_assert(purge_ctx.count == 2);
     purge_ctx.count = 0;
     free(value_bin1);
 
     value1.partition = 100;
-    assert(encode_view_btree_value(&value1, &value_bin1, &value_bin1_size) == COUCHSTORE_SUCCESS);
+    cb_assert(encode_view_btree_value(&value1, &value_bin1, &value_bin1_size) == COUCHSTORE_SUCCESS);
     valbuf.buf = value_bin1;
     valbuf.size = value_bin1_size;
 
-    assert(view_btree_purge_kv(NULL, &valbuf, &purge_ctx) == PURGE_KEEP);
-    assert(purge_ctx.count == 0);
+    cb_assert(view_btree_purge_kv(NULL, &valbuf, &purge_ctx) == PURGE_KEEP);
+    cb_assert(purge_ctx.count == 0);
     free(value_bin1);
     free(value1.values);
 
@@ -144,29 +144,29 @@ static void test_view_btree_cleanup()
     reduction1.reduce_values[0].size = sizeof("value") - 1;
     memset(&reduction1.partitions_bitmap, 0, sizeof(reduction1.partitions_bitmap));
 
-    assert(encode_view_btree_reduction(&reduction1, reduction_bin1, &reduction_bin1_size) == COUCHSTORE_SUCCESS);
+    cb_assert(encode_view_btree_reduction(&reduction1, reduction_bin1, &reduction_bin1_size) == COUCHSTORE_SUCCESS);
     np.reduce_value.buf = reduction_bin1;
     np.reduce_value.size = reduction_bin1_size;
 
-    assert(view_btree_purge_kp(&np, &purge_ctx) == PURGE_KEEP);
-    assert(purge_ctx.count == 0);
+    cb_assert(view_btree_purge_kp(&np, &purge_ctx) == PURGE_KEEP);
+    cb_assert(purge_ctx.count == 0);
 
     set_bit(&reduction1.partitions_bitmap, 64);
-    assert(encode_view_btree_reduction(&reduction1, reduction_bin1, &reduction_bin1_size) == COUCHSTORE_SUCCESS);
+    cb_assert(encode_view_btree_reduction(&reduction1, reduction_bin1, &reduction_bin1_size) == COUCHSTORE_SUCCESS);
     np.reduce_value.buf = reduction_bin1;
     np.reduce_value.size = reduction_bin1_size;
 
-    assert(view_btree_purge_kp(&np, &purge_ctx) == PURGE_ITEM);
-    assert(purge_ctx.count == 11);
+    cb_assert(view_btree_purge_kp(&np, &purge_ctx) == PURGE_ITEM);
+    cb_assert(purge_ctx.count == 11);
     purge_ctx.count = 0;
 
     set_bit(&reduction1.partitions_bitmap, 100);
-    assert(encode_view_btree_reduction(&reduction1, reduction_bin1, &reduction_bin1_size) == COUCHSTORE_SUCCESS);
+    cb_assert(encode_view_btree_reduction(&reduction1, reduction_bin1, &reduction_bin1_size) == COUCHSTORE_SUCCESS);
     np.reduce_value.buf = reduction_bin1;
     np.reduce_value.size = reduction_bin1_size;
 
-    assert(view_btree_purge_kp(&np, &purge_ctx) == PURGE_PARTIAL);
-    assert(purge_ctx.count == 0);
+    cb_assert(view_btree_purge_kp(&np, &purge_ctx) == PURGE_PARTIAL);
+    cb_assert(purge_ctx.count == 0);
     free(reduction1.reduce_values);
 }
 

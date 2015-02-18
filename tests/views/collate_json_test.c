@@ -20,8 +20,8 @@ static int collateStrs(const char* str1, const char* str2, CollateJSONMode mode)
     sized_buf buf1;
     sized_buf buf2;
 
-    assert(padded1);
-    assert(padded2);
+    cb_assert(padded1);
+    cb_assert(padded2);
 
     strcpy(padded1, str1);
     strcat(padded1, "99");
