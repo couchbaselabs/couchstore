@@ -179,7 +179,9 @@ static file_merger_error_t do_merge_files(file_merger_ctx_t *ctx)
             record->data = record_data;
             record->file = i;
             rv = sorted_vector_add(&ctx->sorted_vector, record);
-            assert(rv);
+            if (!rv) {
+                return FILE_MERGER_SORT_ERROR;
+            }
         }
     }
 
@@ -237,7 +239,9 @@ static file_merger_error_t do_merge_files(file_merger_ctx_t *ctx)
                 (*ctx->free_record)(records[i]->data, ctx->user_ctx);
                 records[i]->data = record_data;
                 rv = sorted_vector_add(&ctx->sorted_vector, records[i]);
-                assert(rv);
+                if (!rv) {
+                    return FILE_MERGER_SORT_ERROR;
+                }
             }
         }
 
