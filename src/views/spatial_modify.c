@@ -36,7 +36,8 @@ static couchstore_error_t maybe_flush_spatial(couchfile_modify_result *mr)
         if (mr->modified && (((mr->node_type == KV_NODE) &&
             mr->node_len > (mr->rq->kv_chunk_threshold * 2 / 3)) ||
             ((mr->node_type == KP_NODE) &&
-             mr->node_len > (mr->rq->kp_chunk_threshold * 2 / 3)))) {
+             mr->node_len > (mr->rq->kp_chunk_threshold * 2 / 3) &&
+             mr->count > 1))) {
             return flush_spatial(mr);
         }
     } else if (mr->modified && mr->count > 3) {
@@ -69,7 +70,7 @@ static nodelist *make_nodelist(arena* a, size_t bufsize)
     return r;
 }
 
-static couchfile_modify_result *make_modres(arena* a,
+static couchfile_modify_result *spatial_make_modres(arena* a,
                                             couchfile_modify_request *rq)
 {
     couchfile_modify_result *res = (couchfile_modify_result *) arena_alloc(
@@ -303,12 +304,12 @@ cleanup:
 }
 
 
-static node_pointer *finish_root(couchfile_modify_request *rq,
+static node_pointer *spatial_finish_root(couchfile_modify_request *rq,
                                  couchfile_modify_result *root_result,
                                  couchstore_error_t *errcode)
 {
     node_pointer *ret_ptr = NULL;
-    couchfile_modify_result *collector = make_modres(root_result->arena, rq);
+    couchfile_modify_result *collector = spatial_make_modres(root_result->arena, rq);
     if (collector == NULL) {
         *errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
         return NULL;
@@ -360,7 +361,7 @@ node_pointer* complete_new_spatial(couchfile_modify_result* mr,
         return NULL;
     }
 
-    targ_mr = make_modres(mr->arena, mr->rq);
+    targ_mr = spatial_make_modres(mr->arena, mr->rq);
     if (targ_mr == NULL) {
         *errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
         return NULL;
@@ -374,7 +375,7 @@ node_pointer* complete_new_spatial(couchfile_modify_result* mr,
     }
 
     if(targ_mr->count > 1 || targ_mr->pointers != targ_mr->pointers_end) {
-        ret_ptr = finish_root(mr->rq, targ_mr, errcode);
+        ret_ptr = spatial_finish_root(mr->rq, targ_mr, errcode);
     } else {
         ret_ptr = targ_mr->values_end->pointer;
     }
