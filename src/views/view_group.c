@@ -682,7 +682,7 @@ static int id_btree_cmp(const sized_buf *key1, const sized_buf *key2)
 }
 
 
-static int view_btree_cmp(const sized_buf *key1, const sized_buf *key2)
+int view_btree_cmp(const sized_buf *key1, const sized_buf *key2)
 {
     return view_key_cmp(key1, key2, NULL);
 }

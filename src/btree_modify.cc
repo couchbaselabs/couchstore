@@ -22,11 +22,15 @@ static couchstore_error_t maybe_flush(couchfile_modify_result *mr)
     if(mr->rq->compacting) {
         /* The compactor can (and should), just write out nodes
          * of size CHUNK_SIZE as soon as it can, so that it can
-         * free memory it no longer needs. */
+         * free memory it no longer needs. Flush at least 2 KP
+         * nodes,so that we don't create one parent node for
+         * each of the large KP nodes (one node size > threshold).
+         */
         if (mr->modified && (((mr->node_type == KV_NODE) &&
             mr->node_len > (mr->rq->kv_chunk_threshold * 2 / 3)) ||
             ((mr->node_type == KP_NODE) &&
-             mr->node_len > (mr->rq->kp_chunk_threshold * 2 / 3)))) {
+             mr->node_len > (mr->rq->kp_chunk_threshold * 2 / 3) &&
+             mr->count > 1))) {
             return flush_mr(mr);
         }
     } else if (mr->modified &&  mr->count > 3) {
@@ -58,7 +62,7 @@ static nodelist *make_nodelist(arena* a, size_t bufsize)
     return r;
 }
 
-static couchfile_modify_result *make_modres(arena* a, couchfile_modify_request *rq)
+couchfile_modify_result *make_modres(arena* a, couchfile_modify_request *rq)
 {
     couchfile_modify_result *res;
     res = static_cast<couchfile_modify_result*>(arena_alloc(a, sizeof(couchfile_modify_result)));
@@ -604,7 +608,7 @@ cleanup:
     return errcode;
 }
 
-static node_pointer *finish_root(couchfile_modify_request *rq,
+node_pointer *finish_root(couchfile_modify_request *rq,
                                  couchfile_modify_result *root_result,
                                  couchstore_error_t *errcode)
 {

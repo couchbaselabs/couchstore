@@ -148,6 +148,11 @@ extern "C" {
 
     node_pointer *read_pointer(arena* a, sized_buf *key, char *buf);
 
+    node_pointer *finish_root(couchfile_modify_request *rq,
+                              couchfile_modify_result *root_result,
+                              couchstore_error_t *errcode);
+
+    couchfile_modify_result *make_modres(arena* a, couchfile_modify_request *rq);
 #ifdef __cplusplus
 }
 #endif
