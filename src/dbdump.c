@@ -412,7 +412,7 @@ static int process_file(const char *file, int *total)
                 file, couchstore_strerror(errcode));
         return -1;
     } else {
-        fprintf(stderr, "Dumping \"%s\":\n", file);
+        printf("Dumping \"%s\":\n", file);
     }
 
     switch (mode) {
@@ -522,7 +522,7 @@ int main(int argc, char **argv)
         error += process_file(argv[ii], &count);
     }
 
-    fprintf(stderr, "\nTotal docs: %d\n", count);
+    printf("\nTotal docs: %d\n", count);
     if (error) {
         exit(EXIT_FAILURE);
     } else {
