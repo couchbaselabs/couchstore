@@ -12,7 +12,6 @@
 #define VIEW_KP_CHUNK_THRESHOLD (6 * 1024)
 
 int view_btree_cmp(const sized_buf *key1, const sized_buf *key2);
-couchfile_modify_result *make_modres(arena* a, couchfile_modify_request *rq);
 static void free_node_list(nodelist *nl)
 {
     nodelist *tmp;
