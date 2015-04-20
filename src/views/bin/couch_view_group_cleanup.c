@@ -85,5 +85,6 @@ out:
     free((void *) error_info.error_msg);
     free((void *) error_info.view_name);
 
-    return (ret < 0) ? (100 + ret) : ret;
+    ret = (ret < 0) ? (100 + ret) : ret;
+    _exit(ret);
 }

@@ -155,6 +155,7 @@ out:
     free((void *) header_outbuf.buf);
     free(target_file);
 
-    return (ret < 0) ? (100 + ret) : ret;
+    ret = (ret < 0) ? (100 + ret) : ret;
+    _exit(ret);
 }
 
