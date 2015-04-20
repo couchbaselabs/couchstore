@@ -203,5 +203,6 @@ out:
     free((void *) header_outbuf.buf);
     free(tmp_dir);
 
-    return (ret < 0) ? (100 + ret) : ret;
+    ret = (ret < 0) ? (100 + ret) : ret;
+    _exit(ret);
 }

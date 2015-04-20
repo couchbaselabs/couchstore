@@ -154,5 +154,5 @@ int main(int argc, char *argv[])
     }
     free(view_files);
 
-    return status;
+    _exit(status);
 }
