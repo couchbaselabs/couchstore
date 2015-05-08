@@ -130,7 +130,11 @@ static couchstore_error_t couch_sync(couchstore_error_info_t *errinfo,
     int fd = handle_to_fd(handle);
     int rv;
     do {
+#ifdef __FreeBSD__
+        rv = fsync(fd);
+#else
         rv = fdatasync(fd);
+#endif
     } while (rv == -1 && errno == EINTR);
 
     if (rv == -1) {
