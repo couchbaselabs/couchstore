@@ -144,8 +144,9 @@ static void test_runtime_error(void)
     cb_assert(ret == MAPREDUCE_RUNTIME_ERROR);
     cb_assert(result == NULL);
     cb_assert(error_msg != NULL);
-    cb_assert(strcmp("TypeError: Cannot read property 'bar' of undefined",
-                  error_msg) == 0);
+    cb_assert(strcmp(
+        "TypeError: Cannot read property 'bar' of undefined (line 1:55)",
+        error_msg) == 0);
 
     mapreduce_free_error_msg(error_msg);
     error_msg = NULL;
@@ -156,8 +157,9 @@ static void test_runtime_error(void)
     cb_assert(ret == MAPREDUCE_RUNTIME_ERROR);
     cb_assert(reduction == NULL);
     cb_assert(error_msg != NULL);
-    cb_assert(strcmp("TypeError: Cannot read property 'bar' of undefined",
-                  error_msg) == 0);
+    cb_assert(strcmp(
+        "TypeError: Cannot read property 'bar' of undefined (line 1:55)",
+        error_msg) == 0);
 
     mapreduce_free_error_msg(error_msg);
 

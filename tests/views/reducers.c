@@ -1019,7 +1019,7 @@ static void test_view_btree_js_reducer(void)
 
     cb_assert(view_btree_reduce(red_bin, &red_bin_size, nl, 3, ctx) == COUCHSTORE_ERROR_REDUCER_FAILURE);
     cb_assert(ctx->error != NULL);
-    cb_assert(strcmp(ctx->error, "foobar") == 0);
+    cb_assert(strcmp(ctx->error, "foobar (line 1:63)") == 0);
 
     /* Test JS rereduce */
 
@@ -1246,7 +1246,7 @@ static void test_view_btree_multiple_reducers(void)
 
     cb_assert(view_btree_reduce(red_bin, &red_bin_size, nl, 3, ctx) == COUCHSTORE_ERROR_REDUCER_FAILURE);
     cb_assert(ctx->error != NULL);
-    cb_assert(strcmp(ctx->error, "foobar") == 0);
+    cb_assert(strcmp(ctx->error, "foobar (line 1:63)") == 0);
 
     /* Test JS rereduce */
 

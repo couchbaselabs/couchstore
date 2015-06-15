@@ -559,7 +559,10 @@ static std::string exceptionString(const TryCatch &tryCatch)
     const char *exceptionString = (*exception);
 
     if (exceptionString) {
-        return std::string(exceptionString);
+        Handle<Message> message = tryCatch.Message();
+        return std::string(exceptionString) + " (line " +
+            std::to_string(message->GetLineNumber()) + ":" +
+            std::to_string(message->GetStartColumn()) + ")";
     }
 
     return std::string("runtime error");
