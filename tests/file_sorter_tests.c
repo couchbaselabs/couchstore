@@ -186,7 +186,7 @@ static void free_record(void *rec, void *ctx)
 static int check_file_sorted(const char *file_path)
 {
     FILE *f;
-    void *record;
+    void *record = NULL;
     int record_size;
     unsigned nrecords = (unsigned) (sizeof(data) / sizeof(int));
     unsigned i;

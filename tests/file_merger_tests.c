@@ -80,7 +80,7 @@ static void free_record(void *rec, void *ctx)
 static unsigned long check_file_sorted(const char *file_path)
 {
     FILE *f;
-    void *a, *b;
+    void *a = NULL, *b;
     int record_size;
     unsigned long num_records = 0;
 
