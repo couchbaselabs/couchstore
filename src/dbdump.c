@@ -215,42 +215,13 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
     }
 
     if (!noBody) {
-        docerr = couchstore_open_doc_with_docinfo(db, docinfo, &doc, 0);
+        docerr = couchstore_open_doc_with_docinfo(db, docinfo, &doc, DECOMPRESS_DOC_BODIES);
         if (docerr != COUCHSTORE_SUCCESS) {
             if (dumpJson) {
                 printf("\"body\":null}\n");
             } else {
                 printf("     could not read document body: %s\n", couchstore_strerror(docerr));
             }
-        } else if (doc && (docinfo->content_meta & COUCH_DOC_IS_COMPRESSED)) {
-            size_t rlen;
-            snappy_uncompressed_length(doc->data.buf, doc->data.size, &rlen);
-            char *decbuf = (char *) malloc(rlen);
-            size_t uncompr_len;
-            snappy_uncompress(doc->data.buf, doc->data.size, decbuf, &uncompr_len);
-            sized_buf uncompr_body;
-            uncompr_body.size = uncompr_len;
-            uncompr_body.buf = decbuf;
-            if (dumpJson) {
-                printf("\"size\":%"PRIu64",", (uint64_t)uncompr_body.size);
-                printf("\"snappy\":true,\"body\":\"");
-                if (dumpHex) {
-                    printsbhexraw(&uncompr_body);
-                } else {
-                    printjquote(&uncompr_body);
-                }
-                printf("\"}\n");
-            } else {
-                printf("     size: %"PRIu64"\n", (uint64_t)uncompr_body.size);
-                printf("     data: (snappy) ");
-                if (dumpHex) {
-                    printsbhexraw(&uncompr_body);
-                    printf("\n");
-                } else {
-                    printsb(&uncompr_body);
-                }
-            }
-            free (uncompr_body.buf);
         } else if (doc) {
             sized_buf new_body;
             if (datatype >= 0x02) {
@@ -266,12 +237,18 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
             }
             if (dumpJson) {
                 printf("\"size\":%"PRIu64",", (uint64_t)new_body.size);
-                printf("\"body\":\"");
+                if (docinfo->content_meta & COUCH_DOC_IS_COMPRESSED) {
+                    printf("\"snappy\":true,\"body\":\"");
+                } else {
+                    printf("\"body\":\"");
+                }
                 printjquote(&new_body);
                 printf("\"}\n");
             } else {
                 printf("     size: %"PRIu64"\n", (uint64_t)new_body.size);
-                printf("     data: ");
+                printf("     data:%s",
+                       docinfo->content_meta & COUCH_DOC_IS_COMPRESSED ?
+                       " (snappy) " : " ");
                 if (dumpHex) {
                     printsbhexraw(&new_body);
                     printf("\n");
