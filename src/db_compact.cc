@@ -42,10 +42,19 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
     couchstore_error_t errcode;
     compact_ctx ctx = {NULL, new_arena(0), new_arena(0), NULL, NULL, hook, dhook, hook_ctx, 0};
     ctx.flags = flags;
+    couchstore_open_flags open_flags = COUCHSTORE_OPEN_FLAG_CREATE;
     error_unless(!source->dropped, COUCHSTORE_ERROR_FILE_CLOSED);
     error_unless(ctx.transient_arena && ctx.persistent_arena, COUCHSTORE_ERROR_ALLOC_FAIL);
 
-    error_pass(couchstore_open_db_ex(target_filename, COUCHSTORE_OPEN_FLAG_CREATE, ops, &target));
+    // If the old file is downlevel ...
+    // ... and upgrade is not requested
+    // then the new file must use the old/legacy crc
+    if (source->header.disk_version <= COUCH_DISK_VERSION_11 &&
+        !(flags & COUCHSTORE_COMPACT_FLAG_UPGRADE_DB)) {
+        open_flags |= COUCHSTORE_OPEN_WITH_LEGACY_CRC;
+    }
+
+    error_pass(couchstore_open_db_ex(target_filename, open_flags, ops, &target));
 
     ctx.target = target;
     target->file.pos = 1;

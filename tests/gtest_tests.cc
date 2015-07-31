@@ -632,6 +632,257 @@ TEST_F(CouchstoreTest, dropped_handle)
 #endif
 }
 
+// Create a new-file(s) and check crc is crc32-c
+TEST_F(CouchstoreTest, crc32c) {
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_open_db(filePath.c_str(),
+                                 COUCHSTORE_OPEN_FLAG_CREATE,
+                                 &db));
+    EXPECT_EQ(CRC32C, db->file.crc_mode);
+}
+
+// Create a new-file(s) and test that we can't open again with old CRC
+TEST_F(CouchstoreTest, legacy_crc_flags) {
+    // Open the new/clean file and ask for 'legacy-CRC'
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_open_db(filePath.c_str(),
+                                 COUCHSTORE_OPEN_FLAG_CREATE |
+                                 COUCHSTORE_OPEN_WITH_LEGACY_CRC,
+                                 &db));
+
+    EXPECT_EQ(CRC32, db->file.crc_mode);
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    db = nullptr;
+
+    // Open the now existing file and we should be allowed if ask for legacy-crc
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_open_db(filePath.c_str(),
+                                 COUCHSTORE_OPEN_FLAG_CREATE |
+                                 COUCHSTORE_OPEN_WITH_LEGACY_CRC,
+                                 &db));
+
+    EXPECT_EQ(CRC32, db->file.crc_mode);
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    db = nullptr;
+
+    // Open the now existing file and we should be allowed, legacy crc will be auto-selected
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_open_db(filePath.c_str(),
+                                 COUCHSTORE_OPEN_FLAG_CREATE,
+                                 &db));
+
+    EXPECT_EQ(CRC32, db->file.crc_mode);
+
+    // Close and delete.
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    db = nullptr;
+
+    ASSERT_EQ(0, remove(filePath.c_str()));
+
+    // Open the a new file without legacy CRC
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_open_db(filePath.c_str(),
+                                 COUCHSTORE_OPEN_FLAG_CREATE,
+                                 &db));
+
+    // Should be in crc32c
+    EXPECT_EQ(CRC32C, db->file.crc_mode);
+    EXPECT_GE(uint64_t(COUCH_DISK_VERSION_12), db->header.disk_version);
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    db = nullptr;
+
+    // Open it again and we should not be allowed.
+    ASSERT_EQ(COUCHSTORE_ERROR_INVALID_ARGUMENTS,
+              couchstore_open_db(filePath.c_str(),
+                                 COUCHSTORE_OPEN_FLAG_CREATE |
+                                 COUCHSTORE_OPEN_WITH_LEGACY_CRC,
+                                 &db));
+
+    // no open file for destruction...
+    db = nullptr;
+}
+
+// Test compaction doesn't upgrade (no upgrade flag specified)
+TEST_F(CouchstoreTest, no_crc_upgrade) {
+
+    const int docCount = 100;
+    Documents documents(docCount);
+    documents.generateDocs();
+
+    // Open file in legacy mode
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_open_db(filePath.c_str(),
+                                 COUCHSTORE_OPEN_FLAG_CREATE |
+                                 COUCHSTORE_OPEN_WITH_LEGACY_CRC,
+                                 &db));
+    EXPECT_EQ(CRC32, db->file.crc_mode);
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_save_documents(db,
+                                                            documents.getDocs(),
+                                                            documents.getDocInfos(),
+                                                            docCount,
+                                                            0));
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_commit(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    db = nullptr;
+
+    // re-open, we're going to compact the file
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+        couchstore_open_db(filePath.c_str(),
+                           0,
+                           &db));
+    EXPECT_EQ(CRC32, db->file.crc_mode);
+    // new file should 11 or less
+    EXPECT_LE(db->header.disk_version, uint64_t(COUCH_DISK_VERSION_11));
+
+    std::string target("compacted.couch");
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_compact_db_ex(db,
+                                                           target.c_str(),
+                                                           0,
+                                                           nullptr,
+                                                           nullptr,
+                                                           nullptr,
+                                                           couchstore_get_default_file_ops()));
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    db = nullptr;
+
+    // Open target...
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+        couchstore_open_db(target.c_str(),
+                           0,
+                           &db));
+
+    EXPECT_EQ(CRC32, db->file.crc_mode); // new file still uses old CRC
+    EXPECT_LE(db->header.disk_version, uint64_t(COUCH_DISK_VERSION_11)); // compacted file still 11 or less
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    db = nullptr;
+    ASSERT_EQ(0, remove(target.c_str()));
+}
+
+// Test compaction upgrades when upgrade flag specified.
+TEST_F(CouchstoreTest, crc_upgrade) {
+    const int docCount = 100;
+    Documents documents(docCount);
+    documents.generateDocs();
+
+    // Open file in legacy mode
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_open_db(filePath.c_str(),
+                                 COUCHSTORE_OPEN_FLAG_CREATE |
+                                 COUCHSTORE_OPEN_WITH_LEGACY_CRC,
+                                 &db));
+    EXPECT_EQ(CRC32, db->file.crc_mode);
+    // new file must be version 11 or less
+    EXPECT_LE(db->header.disk_version, uint64_t(COUCH_DISK_VERSION_11));
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_save_documents(db,
+                                                            documents.getDocs(),
+                                                            documents.getDocInfos(),
+                                                            docCount,
+                                                            0));
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_commit(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    db = nullptr;
+
+    // re-open, we're going to compact the file
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+        couchstore_open_db(filePath.c_str(),
+                           COUCHSTORE_OPEN_FLAG_CREATE,
+                           &db));
+    EXPECT_EQ(CRC32, db->file.crc_mode);
+
+    std::string target("compacted.couch");
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_compact_db_ex(db,
+                                                           target.c_str(),
+                                                           COUCHSTORE_COMPACT_FLAG_UPGRADE_DB,
+                                                           nullptr,
+                                                           nullptr,
+                                                           nullptr,
+                                                           couchstore_get_default_file_ops()));
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    db = nullptr;
+
+    // Open target...
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+        couchstore_open_db(target.c_str(),
+                           0,
+                           &db));
+
+    // File now with CRC32-C
+    EXPECT_EQ(CRC32C, db->file.crc_mode);
+    EXPECT_GE(db->header.disk_version, uint64_t(COUCH_DISK_VERSION_12)); // upgraded to 12
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    db = nullptr;
+    ASSERT_EQ(0, remove(target.c_str()));
+}
+
+// Test compaction upgrades has no ill effect when upgrade flag specified and the file
+// is already at version 12/crc32c
+TEST_F(CouchstoreTest, crc_upgrade2) {
+    const size_t docCount = 100;
+    Documents documents(docCount);
+    documents.generateDocs();
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_open_db(filePath.c_str(),
+                                 COUCHSTORE_OPEN_FLAG_CREATE,
+                                 &db));
+    EXPECT_EQ(CRC32C, db->file.crc_mode);
+    // new file must be version 11 or less
+    EXPECT_GE(db->header.disk_version, uint64_t(COUCH_DISK_VERSION_12));
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_save_documents(db,
+                                                            documents.getDocs(),
+                                                            documents.getDocInfos(),
+                                                            docCount,
+                                                            0));
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_commit(db));
+
+    std::string target("compacted.couch");
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_compact_db_ex(db,
+                                                           target.c_str(),
+                                                           COUCHSTORE_COMPACT_FLAG_UPGRADE_DB,
+                                                           nullptr,
+                                                           nullptr,
+                                                           nullptr,
+                                                           couchstore_get_default_file_ops()));
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    db = nullptr;
+
+    // Open target...
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+        couchstore_open_db(target.c_str(),
+                           0,
+                           &db));
+
+    // File should still be v12 with crc32C
+    EXPECT_EQ(CRC32C, db->file.crc_mode);
+    EXPECT_GE(db->header.disk_version, uint64_t(COUCH_DISK_VERSION_12)); // still version 12
+
+    // Now use callback to validate new file.
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_changes_since(db,
+                                                           0,
+                                                           0,
+                                                           &Documents::checkCallback,
+                                                           &documents));
+
+    EXPECT_EQ(docCount, size_t(documents.getCallbacks()));
+    EXPECT_EQ(0, documents.getDeleted());
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    db = nullptr;
+    ASSERT_EQ(0, remove(target.c_str()));
+}
+
 INSTANTIATE_TEST_CASE_P(InstantiationName,
                         CouchstoreDoctest,
                         ::testing::Combine(::testing::Bool(), ::testing::Values(4, 69, 666, 4090)));

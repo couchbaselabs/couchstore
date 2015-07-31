@@ -25,7 +25,15 @@ extern "C" {
         /**
          * Open the database in read only mode
          */
-        COUCHSTORE_OPEN_FLAG_RDONLY = 2
+        COUCHSTORE_OPEN_FLAG_RDONLY = 2,
+        /**
+         * Require the database to use the legacy CRC.
+         * This forces the disk_version flag to be 11 and is only valid for new files
+         * and existing version 11 files.
+         * When excluded the correct CRC is automatically chosen for existing files.
+         * When excluded the latest file version is always used for new files.
+         */
+        COUCHSTORE_OPEN_WITH_LEGACY_CRC = 4
     };
 
 
@@ -631,7 +639,14 @@ extern "C" {
         /**
          * Do not copy the tombstones of deleted items into compacted file.
          */
-        COUCHSTORE_COMPACT_FLAG_DROP_DELETES = 1
+        COUCHSTORE_COMPACT_FLAG_DROP_DELETES = 1,
+
+        /**
+         * Upgrade the database whilst compacting.
+         * The only supported upgrade is from version 11 to 12 which
+         * changes the CRC function used.
+         */
+        COUCHSTORE_COMPACT_FLAG_UPGRADE_DB = 2,
     };
 
     /**

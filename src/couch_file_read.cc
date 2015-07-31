@@ -16,6 +16,7 @@
 couchstore_error_t tree_file_open(tree_file* file,
                                   const char *filename,
                                   int openflags,
+                                  crc_mode_e crc_mode,
                                   const couch_file_ops *ops)
 {
     bool readOnly = (openflags == O_RDONLY);
@@ -32,6 +33,8 @@ couchstore_error_t tree_file_open(tree_file* file,
     }
 
     memset(file, 0, sizeof(*file));
+
+    file->crc_mode = crc_mode;
 
     file->path = (const char *) strdup(filename);
     error_unless(file->path, COUCHSTORE_ERROR_ALLOC_FAIL);
@@ -125,20 +128,22 @@ static int pread_bin_internal(tree_file *file,
     }
     info.crc32 = ntohl(info.crc32);
 
-    char* buf = static_cast<char*>(malloc(info.chunk_len));
+    uint8_t* buf = static_cast<uint8_t*>(malloc(info.chunk_len));
     if (!buf) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
     err = read_skipping_prefixes(file, &pos, info.chunk_len, buf);
-    if (!err && info.crc32 && info.crc32 != hash_crc32(buf, info.chunk_len)) {
+
+    if (!err && !perform_integrity_check(buf, info.chunk_len, info.crc32, file->crc_mode)) {
         err = COUCHSTORE_ERROR_CHECKSUM_FAIL;
     }
+
     if (err < 0) {
         free(buf);
         return err;
     }
 
-    *ret_ptr = buf;
+    *ret_ptr = reinterpret_cast<char*>(buf);
     return info.chunk_len;
 }
 

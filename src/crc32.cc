@@ -5,8 +5,11 @@
  * src/usr.bin/cksum/crc32.c.
  */
 #include <stdint.h>
+#include <limits>
 #include <sys/types.h>
 #include "crc32.h"
+#include <platform/crc32c.h>
+#include <platform/cbassert.h>
 
 static const uint32_t crc32tab[256] = {
     0x00000000, 0x77073096, 0xee0e612c, 0x990951ba,
@@ -75,14 +78,56 @@ static const uint32_t crc32tab[256] = {
     0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d,
 };
 
-uint32_t hash_crc32(const char *key, size_t key_length)
+
+extern "C" uint32_t hash_crc32(const uint8_t *key, size_t key_length)
 {
     uint64_t x;
-    uint32_t crc = UINT32_MAX;
+    uint32_t crc = std::numeric_limits<uint32_t>::max();
 
     for (x = 0; x < key_length; x++) {
         crc = (crc >> 8) ^ crc32tab[(crc ^ (uint64_t)key[x]) & 0xff];
     }
 
     return (crc ^ 0xFFFFFFFF);
+}
+
+/*
+ * Perform an integrity check of buf for buf_len bytes.
+ *
+ * A checksum of buf is created and compared against checksum argument.
+ *
+ * mode = UNKNOWN is an acceptable input. All modes are tried before failing.
+ *
+ * Returns 1 for success, 0 for failure.
+ */
+int perform_integrity_check(const uint8_t* buf,
+                            size_t buf_len,
+                            uint32_t checksum,
+                            crc_mode_e mode) {
+    bool success = false;
+    if (mode == CRC_UNKNOWN || mode == CRC32C) {
+        success = checksum == crc32c(buf, buf_len, 0);
+        if (!success && mode == CRC_UNKNOWN) {
+            success = checksum == hash_crc32(buf, buf_len);
+        }
+    } else {
+        success = checksum == hash_crc32(buf, buf_len);
+    }
+    return int(success); // couchstore's C files need int instead of bool
+}
+
+/*
+ * Get a checksum of buf for buf_len bytes.
+ *
+ * mode = UNKNOWN is an invalid input (triggers assert).
+ */
+uint32_t get_checksum(const uint8_t* buf,
+                      size_t buf_len,
+                      crc_mode_e mode) {
+    if (mode == CRC32C) {
+        return crc32c(buf, buf_len, 0);
+    } else {
+        cb_assert(mode == CRC32);
+        return hash_crc32(buf, buf_len);
+    }
 }

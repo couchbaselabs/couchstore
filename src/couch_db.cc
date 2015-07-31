@@ -63,7 +63,10 @@ static couchstore_error_t find_header_at_pos(Db *db, cs_off_t pos)
 
     db->header.position = pos;
     db->header.disk_version = decode_raw08(header_buf.raw->version);
-    error_unless(db->header.disk_version == COUCH_DISK_VERSION,
+
+    // Only 12 and 11 are valid
+    error_unless(db->header.disk_version == COUCH_DISK_VERSION ||
+                 db->header.disk_version == COUCH_DISK_VERSION_11,
                  COUCHSTORE_ERROR_HEADER_VERSION);
     db->header.update_seq = decode_raw48(header_buf.raw->update_seq);
     db->header.purge_seq = decode_raw48(header_buf.raw->purge_seq);
@@ -130,7 +133,7 @@ static couchstore_error_t db_write_header(Db *db)
     writebuf.size = sizeof(raw_file_header) + seqrootsize + idrootsize + localrootsize;
     writebuf.buf = (char *) calloc(1, writebuf.size);
     raw_file_header* header = (raw_file_header*)writebuf.buf;
-    header->version = encode_raw08(COUCH_DISK_VERSION);
+    header->version = encode_raw08(db->header.disk_version);
     encode_raw48(db->header.update_seq, &header->update_seq);
     encode_raw48(db->header.purge_seq, &header->purge_seq);
     encode_raw48(db->header.purge_ptr, &header->purge_ptr);
@@ -154,7 +157,14 @@ static couchstore_error_t db_write_header(Db *db)
 
 static couchstore_error_t create_header(Db *db)
 {
-    db->header.disk_version = COUCH_DISK_VERSION;
+    // Select the version based upon selected CRC
+    if (db->file.crc_mode == CRC32) {
+        // user is creating down-level files
+        db->header.disk_version = COUCH_DISK_VERSION_11;
+    } else {
+        // user is using latest
+        db->header.disk_version = COUCH_DISK_VERSION;
+    }
     db->header.update_seq = 0;
     db->header.by_id_root = NULL;
     db->header.by_seq_root = NULL;
@@ -245,19 +255,43 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
         openflags |= O_CREAT;
     }
 
-    error_pass(tree_file_open(&db->file, filename, openflags, ops));
+    // open with CRC unknown, CRC will be selected when header is read/or not found.
+    error_pass(tree_file_open(&db->file, filename, openflags, CRC_UNKNOWN, ops));
 
     if ((db->file.pos = db->file.ops->goto_eof(&db->file.lastError, db->file.handle)) == 0) {
         /* This is an empty file. Create a new fileheader unless the
          * user wanted a read-only version of the file
          */
+
+
         if (flags & COUCHSTORE_OPEN_FLAG_RDONLY) {
             error_pass(COUCHSTORE_ERROR_NO_HEADER);
         } else {
+
+            // Select the CRC to use on this new file
+            if (flags & COUCHSTORE_OPEN_WITH_LEGACY_CRC) {
+                db->file.crc_mode = CRC32;
+            } else {
+                db->file.crc_mode = CRC32C;
+            }
+
             error_pass(create_header(db));
         }
     } else {
         error_pass(find_header(db, db->file.pos - 2));
+
+        if (db->header.disk_version <= COUCH_DISK_VERSION_11) {
+            db->file.crc_mode = CRC32;
+        } else {
+            cb_assert(db->header.disk_version >= COUCH_DISK_VERSION_12);
+            db->file.crc_mode = CRC32C;
+        }
+
+        // Not allowed. Can't request legacy_crc but be opening non legacy CRC files.
+        if (db->file.crc_mode == CRC32C && flags & COUCHSTORE_OPEN_WITH_LEGACY_CRC) {
+            errcode = COUCHSTORE_ERROR_INVALID_ARGUMENTS;
+            goto cleanup;
+        }
     }
 
     *pDb = db;
@@ -297,7 +331,11 @@ couchstore_error_t couchstore_reopen_file(Db* db, const char* filename, couchsto
         openflags = O_RDWR;
     }
 
-    error_pass(tree_file_open(&db->file, filename, openflags, db->file.ops));
+    error_pass(tree_file_open(&db->file,
+                              filename,
+                              openflags,
+                              db->file.crc_mode,
+                              db->file.ops));
     error_pass(find_header_at_pos(db, previous.position));
     free(previous.by_id_root);
     free(previous.by_seq_root);

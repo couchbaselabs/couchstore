@@ -41,7 +41,7 @@ ENDIF(WIN32)
 
 SET(COUCHSTORE_SOURCES src/arena.cc src/bitfield.c src/btree_modify.cc
             src/btree_read.cc src/couch_db.cc src/couch_file_read.cc
-            src/couch_file_write.cc src/couch_save.cc src/crc32.c
+            src/couch_file_write.cc src/couch_save.cc src/crc32.cc
             src/db_compact.cc src/file_merger.cc src/file_name_utils.c
             src/file_sorter.cc src/iobuffer.cc src/llmsort.cc
             src/mergesort.cc src/node_types.cc src/reduces.cc
