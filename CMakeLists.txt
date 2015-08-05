@@ -157,33 +157,51 @@ M_ADD_PYTHON_TEST(couchstore-purge ${CMAKE_CURRENT_SOURCE_DIR}/tests/purge.py)
 M_ADD_PYTHON_TEST(couchstore-rewind ${CMAKE_CURRENT_SOURCE_DIR}/tests/rewind.py)
 M_ADD_PYTHON_TEST(couchstore-changecount ${CMAKE_CURRENT_SOURCE_DIR}/tests/changecount.py)
 
-ADD_EXECUTABLE(couchstore_testapp tests/testapp.c
-	tests/file_merger_tests.c
-	tests/file_sorter_tests.c
-	tests/file_deduper_tests.c
-	tests/mapreduce/tests.c
-	tests/mapreduce/map.c
-	tests/mapreduce/reduce.c
-	tests/mapreduce/builtin.c
-	tests/views/tests.c
-	tests/views/collate_json_test.c
-	tests/views/index_headers.c
-	tests/views/bitmaps.c
-	tests/views/sorted_lists.c
-	tests/views/reductions.c
-	tests/views/keys.c
-	tests/views/values.c
-	tests/views/reducers.c
-	tests/views/cleanup.c
-	tests/views/spatial.c
-	tests/btree_purge/purge_tests.h
-	tests/btree_purge/tests.c
-	tests/btree_purge/purge.c
-        ${COUCHSTORE_SOURCES} )
+ADD_EXECUTABLE(couchstore_testapp
+  tests/testapp.c
+  tests/file_merger_tests.c
+  tests/file_sorter_tests.c
+  tests/file_deduper_tests.c
+  tests/mapreduce/tests.c
+  tests/mapreduce/map.c
+  tests/mapreduce/reduce.c
+  tests/mapreduce/builtin.c
+  tests/views/tests.c
+  tests/views/collate_json_test.c
+  tests/views/index_headers.c
+  tests/views/bitmaps.c
+  tests/views/sorted_lists.c
+  tests/views/reductions.c
+  tests/views/keys.c
+  tests/views/values.c
+  tests/views/reducers.c
+  tests/views/cleanup.c
+  tests/views/spatial.c
+  tests/btree_purge/purge_tests.h
+  tests/btree_purge/tests.c
+  tests/btree_purge/purge.c
+        ${COUCHSTORE_SOURCES})
+TARGET_LINK_LIBRARIES(couchstore_testapp ${COUCHSTORE_LIBRARIES})
 SET_TARGET_PROPERTIES(couchstore_testapp PROPERTIES
                       COMPILE_FLAGS "-DLIBCOUCHSTORE_NO_VISIBILITY=1 -DTESTAPP=1")
-
-TARGET_LINK_LIBRARIES(couchstore_testapp ${COUCHSTORE_LIBRARIES})
 ADD_TEST(couchstore-testapp couchstore_testapp)
+
+ADD_EXECUTABLE(couchstore_gtest
+  tests/couchstoretest.cc
+  tests/documents.cc
+  tests/gtest_tests.cc
+  src/node_types.cc)
+
+SET_TARGET_PROPERTIES(couchstore_gtest PROPERTIES
+                      COMPILE_FLAGS "-DLIBCOUCHSTORE_NO_VISIBILITY=1 -DTESTAPP=1")
+target_include_directories(couchstore_gtest PUBLIC ${gtest_SOURCE_DIR}/include)
+
+TARGET_LINK_LIBRARIES(couchstore_gtest
+  gtest
+  gtest_main
+  couchstore
+  ${COUCHSTORE_LIBRARIES})
+
+ADD_TEST(couchstore-gtest couchstore_gtest)
 
 ADD_SUBDIRECTORY(programs)

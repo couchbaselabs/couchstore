@@ -1,4 +1,4 @@
-/* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+/* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
  *     Copyright 2015 Couchbase, Inc
  *
@@ -15,19 +15,16 @@
  *   limitations under the License.
  */
 
-#include "file_tests.h"
+#pragma once
 
-extern void mapreduce_tests();
-extern void view_tests();
-extern void purge_tests();
+#include "couchstoretest.h"
 
-int main() {
-    file_merger_tests();
-    file_deduper_tests();
-    file_sorter_tests();
+#include <libcouchstore/couch_db.h>
 
-    mapreduce_tests();
-    view_tests();
-    purge_tests();
-    return 0;
-}
+/*
+    CouchstoreDoctest
+        - Subclass that enables parameterised testing
+*/
+class CouchstoreDoctest : public CouchstoreTest,
+                          public ::testing::WithParamInterface<std::tuple<bool, int> > {
+};

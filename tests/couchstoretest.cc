@@ -1,4 +1,4 @@
-/* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+/* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
  *     Copyright 2015 Couchbase, Inc
  *
@@ -15,19 +15,26 @@
  *   limitations under the License.
  */
 
-#include "file_tests.h"
+#include "couchstoretest.h"
+#include <libcouchstore/couch_db.h>
 
-extern void mapreduce_tests();
-extern void view_tests();
-extern void purge_tests();
+CouchstoreTest::CouchstoreTest()
+    : db(nullptr),
+      filePath("testfile.couch") {
+}
 
-int main() {
-    file_merger_tests();
-    file_deduper_tests();
-    file_sorter_tests();
-
-    mapreduce_tests();
-    view_tests();
-    purge_tests();
-    return 0;
+/**
+    Called after each test finishes.
+      - Closes db (if non-null)
+      - Removes testfile.couch
+**/
+CouchstoreTest::~CouchstoreTest() {
+    if (db) {
+        couchstore_close_db(db);
+    }
+    remove(filePath.c_str());
+    /* make sure os.c didn't accidentally call close(0): */
+#ifndef WIN32
+    EXPECT_TRUE(lseek(0, 0, SEEK_CUR) >= 0 || errno != EBADF);
+#endif
 }
