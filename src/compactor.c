@@ -12,7 +12,7 @@ static void exit_error(couchstore_error_t errcode)
 }
 
 static void usage(const char* prog) {
-    fprintf(stderr, "Usage: %s [--purge-before <timestamp>] [--purge-only-upto-seq seq] [--dropdeletes] <input file> <output file>\n", prog);
+    fprintf(stderr, "Usage: %s [--purge-before <timestamp>] [--purge-only-upto-seq seq] [--dropdeletes] [--upgrade] <input file> <output file>\n", prog);
     exit(-1);
 }
 
@@ -94,7 +94,15 @@ int main(int argc, char** argv)
             if(argc + argp < 2) {
                 usage(argv[0]);
             }
-            flags = COUCHSTORE_COMPACT_FLAG_DROP_DELETES;
+            flags |= COUCHSTORE_COMPACT_FLAG_DROP_DELETES;
+        }
+
+        if(!strcmp(argv[argp], "--upgrade")) {
+            argp++;
+            if(argc + argp < 2) {
+                usage(argv[0]);
+            }
+            flags |= COUCHSTORE_COMPACT_FLAG_UPGRADE_DB;
         }
     }
 
