@@ -1,4 +1,4 @@
-/* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+/* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
  *     Copyright 2015 Couchbase, Inc
  *
@@ -14,20 +14,24 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
+#pragma once
 
-#include "file_tests.h"
+#include <gtest/gtest.h>
+#include <libcouchstore/couch_db.h>
+#include <string>
+/*
+    CouchstoreTest
+        * Global test class for most of the couchstore tests.
+        * Auto-cleans when the test is complete.
+          a) If db is not null, closes the db
+          b) removes testfile.couch.
+*/
+class CouchstoreTest : public ::testing::Test {
+protected:
+    CouchstoreTest();
 
-extern void mapreduce_tests();
-extern void view_tests();
-extern void purge_tests();
+    virtual ~CouchstoreTest();
 
-int main() {
-    file_merger_tests();
-    file_deduper_tests();
-    file_sorter_tests();
-
-    mapreduce_tests();
-    view_tests();
-    purge_tests();
-    return 0;
-}
+    Db* db;
+    std::string filePath;
+};

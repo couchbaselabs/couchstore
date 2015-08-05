@@ -28,7 +28,7 @@
     do {                                                            \
         if((errcode = (C)) < 0) {                                   \
             fprintf(stderr, "Couchstore error `%s' at %s:%d\r\n",   \
-            couchstore_strerror(errcode), __FILE__, __LINE__);      \
+            couchstore_strerror((couchstore_error_t)errcode), __FILE__, __LINE__);      \
             goto cleanup;                                           \
         }                                                           \
     } while (0)

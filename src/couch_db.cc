@@ -283,7 +283,7 @@ couchstore_error_t couchstore_drop_file(Db *db)
 }
 
 LIBCOUCHSTORE_API
-couchstore_error_t couchstore_reopen_file(Db* db, char* filename, couchstore_open_flags flags)
+couchstore_error_t couchstore_reopen_file(Db* db, const char* filename, couchstore_open_flags flags)
 {
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     if(!db->dropped) {

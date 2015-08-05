@@ -109,8 +109,9 @@ extern "C" {
      * as before.
      */
     LIBCOUCHSTORE_API
-    couchstore_error_t couchstore_reopen_file(Db* db, char* filename, couchstore_open_flags flags);
-
+    couchstore_error_t couchstore_reopen_file(Db* db,
+                                              const char* filename,
+                                              couchstore_open_flags flags);
 
     /**
      * Rewind a db handle to the next-oldest header still present in the file.
