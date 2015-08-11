@@ -16,6 +16,8 @@
  */
 #pragma once
 
+#include "config.h"
+
 #include <gtest/gtest.h>
 #include <libcouchstore/couch_db.h>
 #include <string>

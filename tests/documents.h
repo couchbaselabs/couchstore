@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include "config.h"
+
 #include <libcouchstore/couch_db.h>
 #include <set>
 #include <string>

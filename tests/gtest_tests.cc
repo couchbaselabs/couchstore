@@ -11,6 +11,7 @@
 #include "node_types.h"
 #include "reduces.h"
 
+#include <cstdint>
 #include <gtest/gtest.h>
 #include <libcouchstore/couch_db.h>
 #include <limits>
