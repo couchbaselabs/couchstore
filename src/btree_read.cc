@@ -10,18 +10,16 @@ static int lookup_compare(couchfile_lookup_request *rq,
                           const sized_buf *key1,
                           const sized_buf *key2)
 {
-        /* For handling low key = NULL for full btree iteration */
-        if (!key1->size || !key2->size) {
-            if (!key1->size) {
-                return -1;
-            } else if (!key2->size) {
-                return 1;
-            }
+    /* For handling the case where low key is empty for full btree iteration */
+    if (!key1->size && !key2->size) {
+        return 0;
+    } else if (!key1->size) {
+        return -1;
+    } else if (!key2->size) {
+        return 1;
+    }
 
-            return 0;
-        }
-
-        return rq->cmp.compare(key1, key2);
+    return rq->cmp.compare(key1, key2);
 }
 
 static couchstore_error_t btree_lookup_inner(couchfile_lookup_request *rq,
