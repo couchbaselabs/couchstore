@@ -1,6 +1,8 @@
 # Python interface to CouchStore library
 
 import errno
+import inspect
+import os
 import sys
 import traceback
 
@@ -18,8 +20,10 @@ except ImportError:
         sys.path.insert(0, cb_path)
 
 # Load the couchstore library and customize return types:
+_lib_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))[:-6]
+osx_path = os.path.join(_lib_dir + 'libcouchstore.dylib')
 for lib in ('libcouchstore.so',      # Linux
-            'libcouchstore.dylib',   # Mac OS
+            osx_path,                # Mac OS
             'couchstore.dll',        # Windows
             'libcouchstore-1.dll'):  # Windows (pre-CMake)
     try:
@@ -28,8 +32,7 @@ for lib in ('libcouchstore.so',      # Linux
     except OSError, err:
         continue
 else:
-    traceback.print_exc()
-    sys.exit(1)
+    raise ImportError("Failed to locate suitable couchstore shared library")
 
 
 _lib.couchstore_strerror.restype = ctypes.c_char_p
