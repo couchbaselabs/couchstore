@@ -108,6 +108,10 @@ extern "C" {
                                                uint64_t *pos,
                                                const index_header_t *header);
 
+    couchstore_error_t open_view_group_file(const char *path,
+                                            couchstore_open_flags open_flags,
+                                            tree_file *file);
+
     LIBCOUCHSTORE_API
     couchstore_error_t couchstore_cleanup_view_group(view_group_info_t *info,
                                                      uint64_t *header_pos,

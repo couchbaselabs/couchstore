@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include <inttypes.h>
 #include <libcouchstore/couch_db.h>
 #include <snappy-c.h>
@@ -11,6 +13,12 @@
 #include "util.h"
 #include "bitfield.h"
 #include "internal.h"
+#include "node_types.h"
+#include "views/util.h"
+#include "views/index_header.h"
+#include "views/view_group.h"
+
+#define MAX_HEADER_SIZE (64 * 1024)
 
 typedef enum {
     DumpBySequence,
@@ -24,6 +32,8 @@ static bool dumpJson = false;
 static bool dumpHex = false;
 static bool oneKey = false;
 static bool noBody = false;
+static bool decodeVbucket = true;
+static bool decodeIndex = false;
 static sized_buf dumpKey;
 
 typedef struct {
@@ -31,6 +41,11 @@ typedef struct {
     raw_32 expiry;
     raw_32 flags;
 } CouchbaseRevMeta;
+
+static int view_btree_cmp(const sized_buf *key1, const sized_buf *key2)
+{
+    return view_key_cmp(key1, key2, NULL);
+}
 
 static void printsb(const sized_buf *sb)
 {
@@ -377,7 +392,7 @@ static couchstore_error_t couchstore_print_local_docs(Db *db, int *count)
     return errcode;
 }
 
-static int process_file(const char *file, int *total)
+static int process_vbucket_file(const char *file, int *total)
 {
     Db *db;
     couchstore_error_t errcode;
@@ -434,18 +449,172 @@ static int process_file(const char *file, int *total)
     return 0;
 }
 
+static couchstore_error_t lookup_callback(couchfile_lookup_request *rq,
+                                          const sized_buf *k,
+                                          const sized_buf *v)
+{
+    const uint16_t json_key_len = decode_raw16(*((raw_16 *) k->buf));
+    sized_buf json_key;
+    sized_buf json_value;
+
+    json_key.buf = k->buf + sizeof(uint16_t);
+    json_key.size = json_key_len;
+
+    json_value.size = v->size - sizeof(raw_kv_length);
+    json_value.buf = v->buf + sizeof(raw_kv_length);
+
+    if (dumpJson) {
+        printf("{\"id\":\"");
+        printjquote(&json_key);
+        printf("\",\"data\":\"");
+        printjquote(&json_value);
+        printf("\"}\n");
+    } else {
+        printf("Doc ID: ");
+        printsb(&json_key);
+        printf("data: ");
+        printsb(&json_value);
+    }
+
+    printf("\n");
+    rq->num_keys++;
+
+    return COUCHSTORE_SUCCESS;
+}
+
+static couchstore_error_t find_view_header_at_pos(view_group_info_t *info,
+                                                cs_off_t pos)
+{
+    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
+    uint8_t buf;
+    ssize_t readsize = info->file.ops->pread(&info->file.lastError,
+                                            info->file.handle,
+                                            &buf, 1, pos);
+    error_unless(readsize == 1, COUCHSTORE_ERROR_READ);
+    if (buf == 0) {
+        return COUCHSTORE_ERROR_NO_HEADER;
+    } else if (buf != 1) {
+        return COUCHSTORE_ERROR_CORRUPT;
+    }
+
+    info->header_pos = pos;
+
+    return COUCHSTORE_SUCCESS;
+
+cleanup:
+    return errcode;
+}
+
+static couchstore_error_t find_view_header(view_group_info_t *info,
+                                        int64_t start_pos)
+{
+    couchstore_error_t last_header_errcode = COUCHSTORE_ERROR_NO_HEADER;
+    int64_t pos = start_pos;
+    pos -= pos % COUCH_BLOCK_SIZE;
+    for (; pos >= 0; pos -= COUCH_BLOCK_SIZE) {
+        couchstore_error_t errcode = find_view_header_at_pos(info, pos);
+        switch(errcode) {
+            case COUCHSTORE_SUCCESS:
+                // Found it!
+                return COUCHSTORE_SUCCESS;
+            case COUCHSTORE_ERROR_NO_HEADER:
+                // No header here, so keep going
+                break;
+            case COUCHSTORE_ERROR_ALLOC_FAIL:
+                // Fatal error
+                return errcode;
+            default:
+                // Invalid header; continue, but remember the last error
+                last_header_errcode = errcode;
+                break;
+        }
+    }
+    return last_header_errcode;
+}
+
+static int process_view_file(const char *file, int *total)
+{
+    view_group_info_t *info;
+    couchstore_error_t errcode;
+    index_header_t *header = NULL;
+    char *header_buf = NULL;
+    int header_len;
+
+    info = (view_group_info_t *)calloc(1, sizeof(view_group_info_t));
+    if (info == NULL) {
+        fprintf(stderr, "Unable to allocate memory\n");
+        return -1;
+    }
+    info->type = VIEW_INDEX_TYPE_MAPREDUCE;
+
+    errcode = open_view_group_file(file, COUCHSTORE_OPEN_FLAG_RDONLY, &info->file);
+    if (errcode != COUCHSTORE_SUCCESS) {
+        fprintf(stderr, "Failed to open \"%s\": %s\n",
+                file, couchstore_strerror(errcode));
+        return -1;
+    } else {
+        printf("Dumping \"%s\":\n", file);
+    }
+
+    info->file.pos = info->file.ops->goto_eof(&info->file.lastError,
+                                              info->file.handle);
+
+    errcode = find_view_header(info, info->file.pos - 2);
+    if (errcode != COUCHSTORE_SUCCESS) {
+        fprintf(stderr, "Unable to find header position \"%s\": %s\n",
+                file, couchstore_strerror(errcode));
+        return -1;
+    }
+
+    header_len = pread_header(&info->file, (cs_off_t)info->header_pos, &header_buf,
+                            MAX_HEADER_SIZE);
+
+    if (header_len < 0) {
+        return -1;
+    }
+
+    errcode = decode_index_header(header_buf, (size_t) header_len, &header);
+    free(header_buf);
+    printf("Num views: %d\n", header->num_views);
+
+    for (int i = 0; i < header->num_views; ++i) {
+        printf("\nKV pairs from index: %d\n", i);
+        sized_buf nullkey = {NULL, 0};
+        sized_buf *lowkeys = &nullkey;
+        couchfile_lookup_request rq;
+
+        rq.cmp.compare = view_btree_cmp;
+        rq.file = &info->file;
+        rq.num_keys = 1;
+        rq.keys = &lowkeys;
+        rq.callback_ctx = NULL;
+        rq.fetch_callback = lookup_callback;
+        rq.node_callback = NULL;
+        rq.fold = 1;
+
+        errcode = btree_lookup(&rq, header->view_states[i]->pointer);
+        if (errcode != COUCHSTORE_SUCCESS) {
+            return -1;
+        }
+        *total = rq.num_keys - 1;
+    }
+    return 0;
+}
+
 static void usage(void) {
-    printf("USAGE: couch_dbdump [options] file.couch [file2.couch ...]\n");
+    printf("USAGE: couch_dbdump [options] file.couch [main_xxxx.view.X ...]\n");
     printf("\nOptions:\n");
-    printf("       --key <key>  dump only the specified document\n");
-    printf("       --hex-body   convert document body data to hex (for binary data)\n");
-    printf("       --no-body    don't retrieve document bodies (metadata only, faster)\n");
-    printf("       --byid       sort output by document ID\n");
-    printf("       --byseq      sort output by document sequence number (default)\n");
-    printf("       --json       dump data as JSON objects (one per line)\n");
+    printf("    --vbucket <vb_file> decode vbucket file\n");
+    printf("    --view <view_file> decode view index file\n");
+    printf("    --key <key>  dump only the specified document\n");
+    printf("    --hex-body   convert document body data to hex (for binary data)\n");
+    printf("    --no-body    don't retrieve document bodies (metadata only, faster)\n");
+    printf("    --byid       sort output by document ID\n");
+    printf("    --byseq      sort output by document sequence number (default)\n");
+    printf("    --json       dump data as JSON objects (one per line)\n");
     printf("\nAlternate modes:\n");
-    printf("       --tree       show file b-tree structure instead of data\n");
-    printf("       --local      dump local documents\n");
+    printf("    --tree       show file b-tree structure instead of data\n");
+    printf("    --local      dump local documents\n");
     exit(EXIT_FAILURE);
 }
 
@@ -460,7 +629,11 @@ int main(int argc, char **argv)
     }
 
     while (ii < argc && strncmp(argv[ii], "-", 1) == 0) {
-        if (strcmp(argv[ii], "--byid") == 0) {
+        if (strcmp(argv[ii], "--view") == 0) {
+            decodeIndex = true;
+        } else if (strcmp(argv[ii], "--vbucket") == 0) {
+            decodeVbucket = true;
+        } else if (strcmp(argv[ii], "--byid") == 0) {
             mode = DumpByID;
         } else if (strcmp(argv[ii], "--byseq") == 0) {
             mode = DumpBySequence;
@@ -496,7 +669,13 @@ int main(int argc, char **argv)
     }
 
     for (; ii < argc; ++ii) {
-        error += process_file(argv[ii], &count);
+        if (decodeIndex) {
+            error += process_view_file(argv[ii], &count);
+        } else if (decodeVbucket) {
+            error += process_vbucket_file(argv[ii], &count);
+        } else {
+            usage();
+        }
     }
 
     printf("\nTotal docs: %d\n", count);
