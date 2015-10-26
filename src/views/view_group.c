@@ -1434,7 +1434,7 @@ couchstore_error_t couchstore_update_view_group(view_group_info_t *info,
                                                view_error_t *error_info)
 {
     couchstore_error_t ret;
-    tree_file index_file;
+    tree_file index_file = {0, NULL, NULL, NULL, {-1}, CRC32};
     index_header_t *header = NULL;
     node_pointer *id_root = NULL;
     node_pointer **view_roots = NULL;
@@ -1451,9 +1451,6 @@ couchstore_error_t couchstore_update_view_group(view_group_info_t *info,
 
     error_info->view_name = NULL;
     error_info->error_msg = NULL;
-    index_file.handle = NULL;
-    index_file.ops = NULL;
-    index_file.path = NULL;
 
     view_roots = (node_pointer **) calloc(info->num_btrees,
                                           sizeof(node_pointer *));
