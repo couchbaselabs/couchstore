@@ -31,6 +31,10 @@
 extern "C" {
 #endif
 
+/* The maximum header size is based on the
+ * couch_set_view_util:group_to_header_bin/1 function in couchdb */
+#define MAX_VIEW_HEADER_SIZE (20 * 1024 * 1024)
+
     typedef enum {
         VIEW_INDEX_TYPE_MAPREDUCE,
         VIEW_INDEX_TYPE_SPATIAL

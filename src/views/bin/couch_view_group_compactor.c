@@ -45,6 +45,7 @@ int main(int argc, char *argv[])
     sized_buf header_buf = {NULL, 0};
     sized_buf header_outbuf = {NULL, 0};
     uint64_t total_changes = 0;
+    uint64_t header_size = 0;
     view_error_t error_info = {NULL, NULL, "GENERIC"};
     cb_thread_t exit_thread;
     compactor_stats_t stats;
@@ -91,13 +92,22 @@ int main(int argc, char *argv[])
     }
 
     /* Read group header bin */
-    header_buf.size = couchstore_read_int(stdin, buf, sizeof(buf), &ret);
+    header_size = couchstore_read_int(stdin, buf, sizeof(buf), &ret);
     if (ret != COUCHSTORE_SUCCESS) {
         fprintf(stderr, "Error reading viewgroup header size\n");
         ret = COUCHSTORE_ERROR_INVALID_ARGUMENTS;
         goto out;
     }
 
+    if (header_size > MAX_VIEW_HEADER_SIZE) {
+        fprintf(stderr, "View header is too large (%"PRIu64" bytes). "
+                "Maximum size is %d bytes\n",
+                header_size, MAX_VIEW_HEADER_SIZE);
+        ret = COUCHSTORE_ERROR_INVALID_ARGUMENTS;
+        goto out;
+    }
+
+    header_buf.size = (size_t)header_size;
     header_buf.buf = malloc(header_buf.size);
     if (header_buf.buf == NULL) {
         fprintf(stderr, "Memory allocation failure\n");
