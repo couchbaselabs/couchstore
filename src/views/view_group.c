@@ -37,7 +37,9 @@
 
 #define VIEW_KV_CHUNK_THRESHOLD (7 * 1024)
 #define VIEW_KP_CHUNK_THRESHOLD (6 * 1024)
-#define MAX_HEADER_SIZE         (64 * 1024)
+/* The maximum header size is based on the
+ * couch_set_view_util:group_to_header_bin/1 function in couchdb */
+#define MAX_HEADER_SIZE         (20 * 1024 * 1024)
 #define MAX_ACTIONS_SIZE        (2 * 1024 * 1024)
 
 static couchstore_error_t read_btree_info(view_group_info_t *info,
