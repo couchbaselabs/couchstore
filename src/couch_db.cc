@@ -1072,6 +1072,9 @@ cleanup:
 
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_db_info(Db *db, DbInfo* dbinfo) {
+    if (db == NULL) {
+        return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
+    }
     const node_pointer *id_root = db->header.by_id_root;
     const node_pointer *seq_root = db->header.by_seq_root;
     const node_pointer *local_root = db->header.local_docs_root;
