@@ -1072,7 +1072,7 @@ cleanup:
 
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_db_info(Db *db, DbInfo* dbinfo) {
-    if (db == NULL) {
+    if (db == NULL || dbinfo == NULL) {
         return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
     }
     const node_pointer *id_root = db->header.by_id_root;
