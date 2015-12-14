@@ -26,6 +26,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include "util.h"
+#include "../mapreduce/mapreduce.h"
 
 #define BUF_SIZE 8192
 
@@ -64,10 +65,12 @@ int main(int argc, char *argv[])
         goto out;
     }
 
+    initV8();
     ret = couchstore_cleanup_view_group(group_info,
                                         &header_pos,
                                         &purge_count,
                                         &error_info);
+    deinitV8();
 
     if (ret != COUCHSTORE_SUCCESS) {
         if (error_info.error_msg != NULL && error_info.view_name != NULL) {

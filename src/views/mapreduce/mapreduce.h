@@ -25,6 +25,7 @@
 
 #include "config.h"
 #include "visibility.h"
+#include <libcouchstore/visibility.h>
 
 
 #ifdef __cplusplus
@@ -75,7 +76,21 @@ extern "C" {
         int                    length;
     } mapreduce_map_result_list_t;
 
+    /**
+     * This API needs to be called once per process to initialize
+     * v8 javascript engine. This needs to be called before
+     * any v8 APIs like creating v8 isolate and v8 context.
+     **/
+    LIBCOUCHSTORE_API
+    void initV8();
 
+    /**
+     * This API needs to be called once per process to cleanup
+     * v8 resources. This needs to be called after disposing all
+     * v8 thread contexts like v8 isolate and v8 context.
+     **/
+    LIBCOUCHSTORE_API
+    void deinitV8();
 
     /**
      * If return value other than MAPREDUCE_SUCCESS, error_msg might be

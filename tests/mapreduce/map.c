@@ -438,7 +438,7 @@ static void test_map_multiple_emits(void)
     cb_assert(result->list[2].error == MAPREDUCE_RUNTIME_ERROR);
     cb_assert(result->list[2].result.error_msg != NULL);
     cb_assert(strcmp(
-        "TypeError: Cannot read property 'z' of undefined (line 2:72)",
+        "TypeError: Cannot read property 'z' of undefined (line 2:78)",
         result->list[2].result.error_msg) == 0);
 
     mapreduce_free_map_result_list(result);

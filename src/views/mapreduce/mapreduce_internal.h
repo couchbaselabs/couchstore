@@ -28,10 +28,11 @@
 #include <string>
 #include <list>
 #include <vector>
+#include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <time.h>
-#include <v8.h>
+#include <include/v8.h>
 
 
 class MapReduceError;
@@ -40,9 +41,26 @@ typedef std::list<mapreduce_json_t>                    json_results_list_t;
 typedef std::list<mapreduce_kv_t>                      kv_list_int_t;
 typedef std::vector< v8::Persistent<v8::Function>* >   function_vector_t;
 
+class ArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
+public:
+    virtual void* Allocate(size_t length) {
+        void* data = AllocateUninitialized(length);
+        return data == NULL ? data : memset(data, 0, length);
+    }
+
+    virtual void* AllocateUninitialized(size_t length) {
+        return malloc(length);
+    }
+
+    virtual void Free(void* data, size_t) {
+        free(data);
+    }
+};
+
 typedef struct {
     v8::Persistent<v8::Context> jsContext;
     v8::Isolate                 *isolate;
+    ArrayBufferAllocator        *bufAllocator;
     function_vector_t           *functions;
     kv_list_int_t               *kvs;
     volatile time_t             taskStartTime;
@@ -98,6 +116,5 @@ private:
     const mapreduce_error_t _error;
     const std::string _msg;
 };
-
 
 #endif
