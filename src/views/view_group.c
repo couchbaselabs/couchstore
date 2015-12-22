@@ -827,6 +827,7 @@ static couchstore_error_t build_view_btree(const char *source_file,
                                     &error_msg);
     if (red_ctx == NULL) {
         set_error_info(info, (const char *) error_msg, ret, error_info);
+        free(error_msg);
         return COUCHSTORE_ERROR_REDUCER_FAILURE;
     }
 
@@ -1037,6 +1038,7 @@ static couchstore_error_t cleanup_view_btree(tree_file *file,
                                     &error_msg);
     if (red_ctx == NULL) {
         set_error_info(info, (const char *) error_msg, ret, error_info);
+        free (error_msg);
         return COUCHSTORE_ERROR_REDUCER_FAILURE;
     }
 
@@ -1052,15 +1054,9 @@ static couchstore_error_t cleanup_view_btree(tree_file *file,
                         out_root);
 
     if (ret != COUCHSTORE_SUCCESS) {
-        char *error_msg = NULL;
-
+        const char *error_msg = NULL;
         if (red_ctx->error != NULL) {
-            error_msg = strdup(red_ctx->error);
-        } else {
-            error_msg = (char *) malloc(64);
-            if (error_msg != NULL) {
-                sprintf(error_msg, "%d", ret);
-            }
+            error_msg = red_ctx->error;
         }
         set_error_info(info, (const char *) error_msg, ret, error_info);
     }
@@ -1394,6 +1390,7 @@ static couchstore_error_t update_view_btree(const char *source_file,
                                     &error_msg);
     if (red_ctx == NULL) {
         set_error_info(info, (const char *) error_msg, ret, error_info);
+        free(error_msg);
         return COUCHSTORE_ERROR_REDUCER_FAILURE;
     }
 
@@ -1485,10 +1482,11 @@ couchstore_error_t couchstore_update_view_group(view_group_info_t *info,
     if (!is_sorted) {
         ret = (couchstore_error_t) sort_view_ids_ops_file(id_records_file, tmp_dir);
         if (ret != COUCHSTORE_SUCCESS) {
-            char buf[1024];
-            snprintf(buf, sizeof(buf),
+            char error_msg[1024];
+            snprintf(error_msg, sizeof(error_msg),
                     "Error sorting records file: %s", id_records_file);
-            error_info->error_msg = strdup(buf);
+            error_info->error_msg = strdup(error_msg);
+            error_info->idx_type = "MAPREDUCE";
             error_info->view_name = (const char *) strdup("id_btree");
             goto cleanup;
         }
@@ -1518,10 +1516,11 @@ couchstore_error_t couchstore_update_view_group(view_group_info_t *info,
         if (!is_sorted) {
             ret = (couchstore_error_t) sort_view_kvs_ops_file(kv_records_files[i], tmp_dir);
             if (ret != COUCHSTORE_SUCCESS) {
-                char buf[1024];
-                snprintf(buf, sizeof(buf),
+                char error_msg[1024];
+                snprintf(error_msg, sizeof(error_msg),
                         "Error sorting records file: %s", kv_records_files[i]);
-                set_error_info(&info->view_infos.btree[i], buf, ret, error_info);
+                set_error_info(&info->view_infos.btree[i], error_msg, ret,
+                               error_info);
                 goto cleanup;
             }
         }
@@ -1754,6 +1753,7 @@ static couchstore_error_t compact_view_btree(tree_file *source,
                                     &error_msg);
     if (red_ctx == NULL) {
         set_error_info(info, (const char *) error_msg, ret, error_info);
+        free(error_msg);
         return COUCHSTORE_ERROR_REDUCER_FAILURE;
     }
 
