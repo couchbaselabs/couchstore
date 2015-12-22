@@ -23,6 +23,7 @@ couchstore_error_t decode_view_btree_key(const char *bytes,
     }
 
     k->json_key.buf = NULL;
+    k->doc_id.buf = NULL;
 
     assert(len >= 2);
     sz = dec_uint16(bytes);

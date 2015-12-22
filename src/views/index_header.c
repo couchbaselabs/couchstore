@@ -84,6 +84,7 @@ couchstore_error_t decode_index_header(const char *bytes,
     h->pending_transition.passive = NULL;
     h->pending_transition.unindexable = NULL;
     h->unindexable_seqs = NULL;
+    h->part_versions = NULL;
     memcpy(h->signature, bytes, 16);
 
     h->version = (uint8_t) b[0];

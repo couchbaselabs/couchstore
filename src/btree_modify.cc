@@ -229,6 +229,7 @@ static couchstore_error_t flush_mr_partial(couchfile_modify_result *res, size_t 
     *(dst++) = (char) res->node_type;
 
     nodelist *i = res->values->next;
+    final_key = i->key;
     //We don't care that we've reached mr_quota if we haven't written out
     //at least two items and we're not writing a leaf node.
     while (i != NULL && (mr_quota > 0 || (itmcount < 2 && res->node_type == KP_NODE))) {
