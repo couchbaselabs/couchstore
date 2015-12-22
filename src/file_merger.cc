@@ -67,6 +67,8 @@ static void sorted_vector_pop(sorted_vector_t *sorted_vector,
 static int  sorted_vector_add(sorted_vector_t *sorted_vector, record_t *record);
 
 static file_merger_error_t do_merge_files(file_merger_ctx_t *ctx);
+static void free_all_records(file_merger_ctx_t *ctx, record_t **records,
+                             int offset, int num);
 
 
 file_merger_error_t merge_files(const char *source_files[],
@@ -180,6 +182,7 @@ static file_merger_error_t do_merge_files(file_merger_ctx_t *ctx)
             record->file = i;
             rv = sorted_vector_add(&ctx->sorted_vector, record);
             if (!rv) {
+                FREE_RECORD(ctx, record);
                 return FILE_MERGER_SORT_ERROR;
             }
         }
@@ -206,7 +209,7 @@ static file_merger_error_t do_merge_files(file_merger_ctx_t *ctx)
         if (ctx->feed_record) {
             ret = (*ctx->feed_record)(records[0]->data, ctx->user_ctx);
             if (ret != FILE_MERGER_SUCCESS) {
-                FREE_RECORD(ctx, records[0]);
+                free_all_records(ctx, records, 0, n);
                 return ret;
             }
         } else {
@@ -216,7 +219,7 @@ static file_merger_error_t do_merge_files(file_merger_ctx_t *ctx)
         if (ctx->dest_file) {
             ret = (*ctx->write_record)(ctx->dest_file, records[0]->data, ctx->user_ctx);
             if (ret != FILE_MERGER_SUCCESS) {
-                FREE_RECORD(ctx, records[0]);
+                free_all_records(ctx, records, 0, n);
                 return ret;
             }
         }
@@ -231,8 +234,7 @@ static file_merger_error_t do_merge_files(file_merger_ctx_t *ctx)
                 FREE_RECORD(ctx, records[i]);
 
             } else if (record_len < 0) {
-                FREE_RECORD(ctx, records[i]);
-
+                free_all_records(ctx, records, i, n);
                 return (file_merger_error_t) record_len;
             } else {
                 int rv;
@@ -240,6 +242,7 @@ static file_merger_error_t do_merge_files(file_merger_ctx_t *ctx)
                 records[i]->data = record_data;
                 rv = sorted_vector_add(&ctx->sorted_vector, records[i]);
                 if (!rv) {
+                    free_all_records(ctx, records, i, n);
                     return FILE_MERGER_SORT_ERROR;
                 }
             }
@@ -249,6 +252,15 @@ static file_merger_error_t do_merge_files(file_merger_ctx_t *ctx)
     }
 
     return FILE_MERGER_SUCCESS;
+}
+
+
+static void free_all_records(file_merger_ctx_t *ctx, record_t **records,
+                             int offset, int num) {
+    for (; offset < num; offset++) {
+        FREE_RECORD(ctx, records[offset]);
+    }
+    free(records);
 }
 
 
