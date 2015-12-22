@@ -276,6 +276,14 @@ static int compareUnicode(const char* str1, size_t len1,
     int ret1, ret2;
     int result;
 
+    if (len1 == 0 && len2 == 0) {
+        return 0;
+    } else if (len1 == 0) {
+        return -1;
+    } else if (len2 == 0) {
+        return 1;
+    }
+
     UErrorCode status = U_ZERO_ERROR;
     if (!coll) {
         coll = ucol_open("", &status);

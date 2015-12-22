@@ -145,6 +145,9 @@ static void TestCollateUnicodeStrings(void)
     assert_eq(collateStrs("\"\001\"", "\" \"", mode), -1);
     /* MB-12967 */
     assert_eq(collateStrs("\"法\"", "\"法、\"", mode), -1);
+    assert_eq(collateStrs("\"\"", "\"a\"", mode), -1);
+    assert_eq(collateStrs("\"a\"", "\"\"", mode), 1);
+    assert_eq(collateStrs("\"\"", "\"\"", mode), 0);
 }
 
 void test_collate_json(void)
