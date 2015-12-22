@@ -13,6 +13,11 @@
 #include <libcouchstore/couch_db.h>
 #include "internal.h"
 
+// The number of bytes that is maximally needed to set the `LUA_PATH`
+// environment variable. The `18` is the number of bytes of the `LUA_PATH=`
+// prefix, the `/?.lua;;` postfix, plus the null-terminator.
+#define LUA_PATH_MAX_SIZE (PATH_MAX + 18)
+
 // For building against lua 5.2 and up. Also requires that lua was
 // built with this define. Homebrew at least will build lua with this
 // set.
@@ -795,12 +800,14 @@ int main(int argc, char **argv)
 
     if (getenv("LUA_PATH") == NULL) {
         std::string path = argv[1];
+        static char lua_path[LUA_PATH_MAX_SIZE];
         size_t pos = path.find_last_of("/\\");
         if (pos != std::string::npos) {
             path.resize(pos);
             std::stringstream ss;
             ss << "LUA_PATH=" << path << "/?.lua;;";
-            putenv(strdup(ss.str().c_str()));
+            memcpy(lua_path, ss.str().c_str(), ss.str().length() + 1);
+            putenv(lua_path);
         }
     }
 
