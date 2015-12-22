@@ -35,6 +35,12 @@ couchstore_error_t decode_view_btree_value(const char *bytes,
     bytes += 2;
     len -= 2;
 
+    // No values to decode
+    if (len == 0) {
+        *value = v;
+        return COUCHSTORE_SUCCESS;
+    }
+
     bs = bytes;
     length = len;
 
@@ -178,6 +184,12 @@ couchstore_error_t decode_view_id_btree_value(const char *bytes,
     v->partition = dec_uint16(bytes);
     bytes += 2;
     len -= 2;
+
+    // No values to decode
+    if (len == 0) {
+        *value = v;
+        return COUCHSTORE_SUCCESS;
+    }
 
     bs = bytes;
     length = len;
