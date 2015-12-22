@@ -60,17 +60,25 @@ int spatial_key_cmp(const sized_buf *key1, const sized_buf *key2,
     unsigned char *mbbs_zcode[2];
     int res;
 
+    cb_assert(sf->dim > 0);
+
     mbbs[0].num = mbb1_num;
     mbbs[0].mbb = (double *)(key1->buf + sizeof(uint16_t));
     mbbs_center[0] = spatial_center(&mbbs[0]);
+    cb_assert(mbbs_center[0] != NULL);
     mbbs_scaled[0] = spatial_scale_point(mbbs_center[0], sf);
+    cb_assert(mbbs_scaled[0] != NULL);
     mbbs_zcode[0] = interleave_uint32s(mbbs_scaled[0], sf->dim);
+    cb_assert(mbbs_zcode[0] != NULL);
 
     mbbs[1].num = mbb2_num;
     mbbs[1].mbb = (double *)(key2->buf + sizeof(uint16_t));
     mbbs_center[1] = spatial_center(&mbbs[1]);
+    cb_assert(mbbs_center[1] != NULL);
     mbbs_scaled[1] = spatial_scale_point(mbbs_center[1], sf);
+    cb_assert(mbbs_scaled[1] != NULL);
     mbbs_zcode[1] = interleave_uint32s(mbbs_scaled[1], sf->dim);
+    cb_assert(mbbs_zcode[1] != NULL);
 
     res = memcmp(mbbs_zcode[0], mbbs_zcode[1], sf->dim * BYTE_PER_COORD);
 
@@ -155,7 +163,7 @@ void free_spatial_scale_factor(scale_factor_t *sf)
 
 double *spatial_center(const sized_mbb_t *mbb)
 {
-    double *center = (double *)malloc(sizeof(double) * (mbb->num/2));
+    double *center = (double *)calloc(mbb->num/2, sizeof(double));
     uint32_t i;
     if (center == NULL) {
         return NULL;
