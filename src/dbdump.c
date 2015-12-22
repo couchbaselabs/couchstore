@@ -574,6 +574,11 @@ static int process_view_file(const char *file, int *total)
     }
 
     errcode = decode_index_header(header_buf, (size_t) header_len, &header);
+    if (errcode != COUCHSTORE_SUCCESS) {
+        fprintf(stderr, "Unable to decode header \"%s\": %s\n",
+                file, couchstore_strerror(errcode));
+        return -1;
+    }
     free(header_buf);
     printf("Num views: %d\n", header->num_views);
 
