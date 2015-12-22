@@ -637,6 +637,11 @@ couchstore_error_t view_btree_reduce(char *dst,
     mapreduce_json_list_t *value_list = NULL;
     view_btree_value_t **values = NULL;
 
+    /* The reduce function is only called (in btree_modify.cc) if there
+       are any items */
+    cb_assert(count > 0);
+    cb_assert(leaflist != NULL);
+
     values = (view_btree_value_t **) calloc(count, sizeof(view_btree_value_t *));
     red = (view_btree_reduction_t *) calloc(1, sizeof(*red));
     key_list = (mapreduce_json_list_t *) calloc(1, sizeof(*key_list));
@@ -718,10 +723,12 @@ couchstore_error_t view_btree_reduce(char *dst,
 
  out:
     if (red != NULL) {
-        for (i = 0; i < red->num_values; ++i) {
-            free(red->reduce_values[i].buf);
+        if (red->reduce_values != NULL) {
+            for (i = 0; i < red->num_values; ++i) {
+                free(red->reduce_values[i].buf);
+            }
+            free(red->reduce_values);
         }
-        free(red->reduce_values);
         free(red);
     }
     free_json_key_list(key_list);
@@ -824,10 +831,12 @@ couchstore_error_t view_btree_rereduce(char *dst,
 
  out:
     if (red != NULL) {
-        for (i = 0; i < red->num_values; ++i) {
-            free(red->reduce_values[i].buf);
+        if (red->reduce_values != NULL) {
+            for (i = 0; i < red->num_values; ++i) {
+                free(red->reduce_values[i].buf);
+            }
+            free(red->reduce_values);
         }
-        free(red->reduce_values);
         free(red);
     }
     if (reductions != NULL) {
