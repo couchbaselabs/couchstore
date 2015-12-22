@@ -236,8 +236,8 @@ static void test_reduce_and_rereduce_success(void)
         "}"
     };
     mapreduce_json_list_t *result = NULL;
-    mapreduce_json_list_t *keys = all_keys();
-    mapreduce_json_list_t *values = all_values();
+    mapreduce_json_list_t *keys = NULL;
+    mapreduce_json_list_t *values = NULL;
     mapreduce_json_t *reduction = NULL;
 
     ret = mapreduce_start_reduce_context(functions, 2, &context, &error_msg);
@@ -329,8 +329,8 @@ static void test_timeout(void)
         "}"
     };
     mapreduce_json_list_t *result = NULL;
-    mapreduce_json_list_t *keys = all_keys();
-    mapreduce_json_list_t *values = all_values();
+    mapreduce_json_list_t *keys = NULL;
+    mapreduce_json_list_t *values = NULL;
     mapreduce_json_t *reduction = NULL;
 
     ret = mapreduce_start_reduce_context(functions, 1, &context, &error_msg);
