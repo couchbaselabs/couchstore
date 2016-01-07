@@ -115,6 +115,8 @@ static file_sorter_error_t parallel_sorter_add_job(parallel_sorter_t *s,
                                                   void **records,
                                                   size_t n);
 
+static void free_n_records(parallel_sorter_t *s, void **records, size_t n);
+
 static file_sorter_error_t parallel_sorter_wait(parallel_sorter_t *s, size_t n);
 
 static file_sorter_error_t parallel_sorter_finish(parallel_sorter_t *s);
@@ -340,7 +342,16 @@ static void sort_worker(void *args)
 }
 
 
- // Add a job and block wait until a worker picks up the job
+/* Adds the specified array of records to the given parallel sorter job,
+ * and block wait until a worker picks up the job.
+ * @param s The sorter to add the job to
+ * @param records an array of records to add. Ownership of this array
+ *                is transferred to the sorter, and it will be responsible
+ *                for later free()ing it.
+ * @param n The number of elements in records.
+ * @return FILE_SORTER_SUCCESS if the job is successfully added,
+ *         otherwise the reason for the failure.
+ */
 static file_sorter_error_t parallel_sorter_add_job(parallel_sorter_t *s,
                                                   void **records,
                                                   size_t n)
@@ -350,16 +361,19 @@ static file_sorter_error_t parallel_sorter_add_job(parallel_sorter_t *s,
     tmp_file_t *tmp_file = create_tmp_file(s->ctx);
 
     if (tmp_file == NULL) {
+        free_n_records(s, records, n);
         return FILE_SORTER_ERROR_MK_TMP_FILE;
     }
 
     job = create_sort_job(records, n, tmp_file);
     if (!job) {
+        free_n_records(s, records, n);
         return FILE_SORTER_ERROR_ALLOC;
     }
 
     cb_mutex_enter(&s->mutex);
     if (s->finished) {
+        free_sort_job(job, s);
         ret = s->error;
         cb_mutex_exit(&s->mutex);
         return ret;
@@ -376,6 +390,14 @@ static file_sorter_error_t parallel_sorter_add_job(parallel_sorter_t *s,
     cb_mutex_exit(&s->mutex);
 
     return FILE_SORTER_SUCCESS;
+}
+
+
+static void free_n_records(parallel_sorter_t *s, void **records, size_t n) {
+    for (size_t i = 0; i < n; i++) {
+        (*s->ctx->free_record)(records[i], s->ctx->user_ctx);
+    }
+    free(records);
 }
 
 
@@ -432,14 +454,19 @@ static file_sorter_error_t do_sort_file(file_sort_ctx_t *ctx)
     file_sorter_error_t ret;
     file_merger_feed_record_t feed_record = ctx->feed_record;
     parallel_sorter_t *sorter;
+    // This records array acts as a buffer for the parallel sorter. One
+    // batch of records will be passed on to sorter job which will then
+    // be responsible to free the memory in case of failures of success.
     void **records = (void **) calloc(record_count, sizeof(void *));
 
     if (records == NULL) {
+        free(records);
         return FILE_SORTER_ERROR_ALLOC;
     }
 
     sorter = create_parallel_sorter(NSORT_THREADS, ctx);
     if (sorter == NULL) {
+        free(records);
         return FILE_SORTER_ERROR_ALLOC;
     }
 
@@ -450,6 +477,11 @@ static file_sorter_error_t do_sort_file(file_sort_ctx_t *ctx)
         record_size = (*ctx->read_record)(ctx->f, &record, ctx->user_ctx);
         if (record_size < 0) {
            ret = (file_sorter_error_t) record_size;
+           // If there's on error before a job got created, free the records
+           // directly
+           if (sorter->job == NULL) {
+               free(records);
+           }
            goto failure;
         } else if (record_size == 0) {
             break;
