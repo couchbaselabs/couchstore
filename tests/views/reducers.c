@@ -1724,6 +1724,7 @@ static void test_view_btree_large_reducer(void)
     free(value1_bin);
     free(value2_bin);
     free(value3_bin);
+    free_node_list(nl);
     free_node_list(nl0);
     delete_arena(persistent_arena);
     delete_arena(transient_arena);

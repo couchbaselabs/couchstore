@@ -150,4 +150,5 @@ void test_sorted_lists()
     sorted_list_free_iterator(iterator);
 
     sorted_list_free(list);
+    free(sorted_elements);
 }
