@@ -58,7 +58,8 @@ int start_exit_listener(cb_thread_t *id)
 int set_binary_mode()
 {
     if (platform_set_binary_mode(stdin) < 0 ||
-            platform_set_binary_mode(stdout) < 0) {
+            platform_set_binary_mode(stdout) < 0 ||
+            platform_set_binary_mode(stderr) < 0) {
         return -1;
     }
     return 0;

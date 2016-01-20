@@ -42,9 +42,10 @@ int main(int argc, char *argv[])
     (void) argv;
 
     /*
-     * Disable buffering for stdout
+     * Disable buffering for stdout/stderr
      */
     setvbuf(stdout, (char *) NULL, _IONBF, 0);
+    setvbuf(stderr, (char *) NULL, _IONBF, 0);
 
     if (set_binary_mode() < 0) {
         fprintf(stderr, "Error setting binary mode\n");
