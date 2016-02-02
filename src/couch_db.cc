@@ -117,10 +117,19 @@ static couchstore_error_t find_header(Db *db, int64_t start_pos)
     return last_header_errcode;
 }
 
-static couchstore_error_t db_write_header(Db *db)
+/**
+ * Calculates how large in bytes the current header will be
+ * when written to disk.
+ *
+ * The seqrootsize, idrootsize and localrootsize params are
+ * used to return the respective sizes in this header if
+ * needed.
+ */
+size_t calculate_header_size(Db *db, size_t& seqrootsize,
+                             size_t& idrootsize, size_t& localrootsize)
 {
-    sized_buf writebuf;
-    size_t seqrootsize = 0, idrootsize = 0, localrootsize = 0;
+    seqrootsize = idrootsize = localrootsize = 0;
+
     if (db->header.by_seq_root) {
         seqrootsize = ROOT_BASE_SIZE + db->header.by_seq_root->reduce_value.size;
     }
@@ -130,7 +139,15 @@ static couchstore_error_t db_write_header(Db *db)
     if (db->header.local_docs_root) {
         localrootsize = ROOT_BASE_SIZE + db->header.local_docs_root->reduce_value.size;
     }
-    writebuf.size = sizeof(raw_file_header) + seqrootsize + idrootsize + localrootsize;
+    return sizeof(raw_file_header) + seqrootsize + idrootsize + localrootsize;
+}
+
+static couchstore_error_t db_write_header(Db *db)
+{
+    sized_buf writebuf;
+    size_t seqrootsize, idrootsize, localrootsize;
+    writebuf.size = calculate_header_size(db, seqrootsize,
+                                          idrootsize, localrootsize);
     writebuf.buf = (char *) calloc(1, writebuf.size);
     raw_file_header* header = (raw_file_header*)writebuf.buf;
     header->version = encode_raw08(db->header.disk_version);
@@ -181,30 +198,45 @@ uint64_t couchstore_get_header_position(Db *db)
     return db->header.position;
 }
 
-LIBCOUCHSTORE_API
-couchstore_error_t couchstore_commit(Db *db)
+/**
+ * Precommit should occur before writing a header, it has two
+ * purposes. Firstly it ensures data is written before we attempt
+ * to write the header. This means it's impossible for the header
+ * to be written before the data. This is accomplished through
+ * a sync.
+ *
+ * The second purpose is to extend the file to be large enough
+ * to include the subsequently written header. This is done so
+ * the fdatasync performed by writing a header doesn't have to
+ * do an additional (expensive) modified metadata flush on top
+ * of the one we're already doing.
+ */
+couchstore_error_t precommit(Db *db)
 {
     cs_off_t curpos = db->file.pos;
+
     sized_buf zerobyte = { const_cast<char*>("\0"), 1};
-    size_t seqrootsize = 0, idrootsize = 0, localrootsize = 0;
-    if (db->header.by_seq_root) {
-        seqrootsize = 12 + db->header.by_seq_root->reduce_value.size;
-    }
-    if (db->header.by_id_root) {
-        idrootsize = 12 + db->header.by_id_root->reduce_value.size;
-    }
-    if (db->header.local_docs_root) {
-        localrootsize = 12 + db->header.local_docs_root->reduce_value.size;
-    }
-    db->file.pos += 25 + seqrootsize + idrootsize + localrootsize;
+
+    size_t seqrootsize, idrootsize, localrootsize;
+    db->file.pos += calculate_header_size(db, seqrootsize,
+                                          idrootsize, localrootsize);
+
     //Extend file size to where end of header will land before we do first sync
     db_write_buf(&db->file, &zerobyte, NULL, NULL);
 
     couchstore_error_t errcode = db->file.ops->sync(&db->file.lastError,
                                                     db->file.handle);
 
-    //Set the pos back to where it was when we started to write the real header.
+    // Move cursor back to where it was
     db->file.pos = curpos;
+    return errcode;
+}
+
+LIBCOUCHSTORE_API
+couchstore_error_t couchstore_commit(Db *db)
+{
+    couchstore_error_t errcode = precommit(db);
+
     if (errcode == COUCHSTORE_SUCCESS) {
         errcode = db_write_header(db);
     }
