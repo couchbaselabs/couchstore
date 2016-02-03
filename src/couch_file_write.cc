@@ -50,7 +50,7 @@ static ssize_t raw_write(tree_file *file, const sized_buf *buf, cs_off_t pos)
 
 couchstore_error_t write_header(tree_file *file, sized_buf *buf, cs_off_t *pos)
 {
-    cs_off_t write_pos = file->pos;
+    cs_off_t write_pos = align_to_next_block(file->pos);
     ssize_t written;
     uint32_t size = htonl(buf->size + 4); //Len before header includes hash len.
     uint32_t crc32 = htonl(get_checksum(reinterpret_cast<uint8_t*>(buf->buf),
@@ -58,9 +58,6 @@ couchstore_error_t write_header(tree_file *file, sized_buf *buf, cs_off_t *pos)
                                         file->crc_mode));
     char headerbuf[1 + 4 + 4];
 
-    if (write_pos % COUCH_BLOCK_SIZE != 0) {
-        write_pos += COUCH_BLOCK_SIZE - (write_pos % COUCH_BLOCK_SIZE);    //Move to next block boundary.
-    }
     *pos = write_pos;
 
     // Write the header's block header

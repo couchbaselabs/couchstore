@@ -31,9 +31,18 @@
 class CouchstoreTest : public ::testing::Test {
 protected:
     CouchstoreTest();
+    CouchstoreTest(const std::string& _filePath);
 
     virtual ~CouchstoreTest();
 
     Db* db;
     std::string filePath;
+};
+
+/*
+ * Global test class for internal only tests. Extends CouchstoreTest.
+ */
+class CouchstoreInternalTest : public CouchstoreTest {
+protected:
+    CouchstoreInternalTest();
 };

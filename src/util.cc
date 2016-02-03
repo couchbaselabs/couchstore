@@ -117,3 +117,11 @@ sized_buf* arena_special_copy_buf_and_revmeta(arena *a, const sized_buf *val,
            docinfo->rev_meta.size);
     return nbuf;
 }
+
+cs_off_t align_to_next_block(cs_off_t offset)
+{
+    if (offset % COUCH_BLOCK_SIZE != 0) {
+        return offset + COUCH_BLOCK_SIZE - (offset % COUCH_BLOCK_SIZE);
+    }
+    return offset;
+}

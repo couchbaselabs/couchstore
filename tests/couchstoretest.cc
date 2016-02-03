@@ -23,6 +23,11 @@ CouchstoreTest::CouchstoreTest()
       filePath("testfile.couch") {
 }
 
+CouchstoreTest::CouchstoreTest(const std::string& _filePath)
+    : db(nullptr),
+    filePath(_filePath) {
+}
+
 /**
     Called after each test finishes.
       - Closes db (if non-null)
@@ -37,4 +42,8 @@ CouchstoreTest::~CouchstoreTest() {
 #ifndef WIN32
     EXPECT_TRUE(lseek(0, 0, SEEK_CUR) >= 0 || errno != EBADF);
 #endif
+}
+
+CouchstoreInternalTest::CouchstoreInternalTest()
+        : CouchstoreTest("testfile_internal.couch") {
 }

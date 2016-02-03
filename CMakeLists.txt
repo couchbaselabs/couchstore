@@ -216,4 +216,21 @@ TARGET_LINK_LIBRARIES(couchstore_gtest
 
 ADD_TEST(couchstore-gtest couchstore_gtest)
 
+ADD_EXECUTABLE(couchstore_internal_gtest
+        tests/couchstoretest.cc
+        tests/documents.cc
+        tests/gtest_internal_tests.cc
+        ${COUCHSTORE_SOURCES}
+        )
+
+SET_TARGET_PROPERTIES(couchstore_internal_gtest PROPERTIES
+        COMPILE_FLAGS "-DLIBCOUCHSTORE_NO_VISIBILITY=1 -DTESTAPP=1")
+TARGET_INCLUDE_DIRECTORIES(couchstore_internal_gtest PUBLIC ${gtest_SOURCE_DIR}/include src)
+
+TARGET_LINK_LIBRARIES(couchstore_internal_gtest
+        gtest
+        gtest_main
+        ${COUCHSTORE_LIBRARIES})
+
+ADD_TEST(couchstore-internal-gtest couchstore_internal_gtest)
 ADD_SUBDIRECTORY(programs)

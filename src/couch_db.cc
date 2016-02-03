@@ -142,7 +142,7 @@ size_t calculate_header_size(Db *db, size_t& seqrootsize,
     return sizeof(raw_file_header) + seqrootsize + idrootsize + localrootsize;
 }
 
-static couchstore_error_t db_write_header(Db *db)
+couchstore_error_t db_write_header(Db *db)
 {
     sized_buf writebuf;
     size_t seqrootsize, idrootsize, localrootsize;
@@ -215,6 +215,7 @@ couchstore_error_t precommit(Db *db)
 {
     cs_off_t curpos = db->file.pos;
 
+    db->file.pos = align_to_next_block(db->file.pos);
     sized_buf zerobyte = { const_cast<char*>("\0"), 1};
 
     size_t seqrootsize, idrootsize, localrootsize;
