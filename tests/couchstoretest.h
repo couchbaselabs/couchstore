@@ -19,8 +19,12 @@
 #include "config.h"
 
 #include <gtest/gtest.h>
+#include "gmock/gmock.h"
 #include <libcouchstore/couch_db.h>
 #include <string>
+#include "test_fileops.h"
+#include "documents.h"
+
 /*
     CouchstoreTest
         * Global test class for most of the couchstore tests.
@@ -34,6 +38,7 @@ protected:
     CouchstoreTest(const std::string& _filePath);
 
     virtual ~CouchstoreTest();
+    void clean_up();
 
     Db* db;
     std::string filePath;
@@ -45,4 +50,55 @@ protected:
 class CouchstoreInternalTest : public CouchstoreTest {
 protected:
     CouchstoreInternalTest();
+    virtual ~CouchstoreInternalTest();
+
+    /**
+     * Opens a database instance with the current filePath, ops and with
+     * buffering disabled.
+     *
+     * @param extra_flags  Any additional flags, other than
+     *                     COUCHSTORE_OPEN_FLAG_UNBUFFERED to open the db with.
+     */
+    couchstore_error_t open_db(couchstore_open_flags extra_flags);
+
+    /**
+     * Opens a database instance with the current filePath, ops and with
+     * buffering disabled. It then populates the database with the
+     * specified number of documents.
+     *
+     * @param extra_flags  Any additional flags, other than
+     *                     COUCHSTORE_OPEN_FLAG_UNBUFFERED to open the db with.
+     * @param count  Number of documents to populate with
+     */
+    void open_db_and_populate(couchstore_open_flags extra_flags, size_t count);
+
+    /**
+     * Creates a LocalDoc object from two strings
+     *
+     * Note: The localDoc will just point to strings' memory
+     * so the strings should stay alive as long as the LocalDoc
+     * does.
+     *
+     * @param id  ID of the document
+     * @param json  Body of the document
+     */
+    LocalDoc create_local_doc(std::string& id, std::string& json);
+
+    std::string compactPath;
+    Documents documents;
+    ::testing::NiceMock<MockOps> ops;
+    DocInfo* info;
+    Doc* doc;
+};
+
+/**
+ * Test class for error injection tests
+ */
+typedef CouchstoreInternalTest FileOpsErrorInjectionTest;
+
+/**
+ * Parameterised test class for error injection tests
+ */
+class ParameterisedFileOpsErrorInjectionTest : public FileOpsErrorInjectionTest,
+                                               public ::testing::WithParamInterface<int> {
 };

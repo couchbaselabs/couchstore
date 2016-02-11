@@ -202,15 +202,19 @@ ADD_EXECUTABLE(couchstore_gtest
                tests/couchstoretest.cc
                tests/documents.cc
                tests/gtest_tests.cc
-               src/node_types.cc)
+               tests/test_fileops.cc
+               src/node_types.cc
+               ${COUCHSTORE_FILE_OPS})
+
 
 SET_TARGET_PROPERTIES(couchstore_gtest PROPERTIES
                       COMPILE_FLAGS "-DLIBCOUCHSTORE_NO_VISIBILITY=1 -DTESTAPP=1")
-TARGET_INCLUDE_DIRECTORIES(couchstore_gtest PUBLIC ${gtest_SOURCE_DIR}/include)
+TARGET_INCLUDE_DIRECTORIES(couchstore_gtest PUBLIC ${gtest_SOURCE_DIR}/include ${gmock_SOURCE_DIR}/include)
 
 TARGET_LINK_LIBRARIES(couchstore_gtest
   gtest
   gtest_main
+  gmock
   couchstore
   ${COUCHSTORE_LIBRARIES})
 
@@ -220,16 +224,18 @@ ADD_EXECUTABLE(couchstore_internal_gtest
         tests/couchstoretest.cc
         tests/documents.cc
         tests/gtest_internal_tests.cc
+        tests/test_fileops.cc
         ${COUCHSTORE_SOURCES}
         )
 
 SET_TARGET_PROPERTIES(couchstore_internal_gtest PROPERTIES
         COMPILE_FLAGS "-DLIBCOUCHSTORE_NO_VISIBILITY=1 -DTESTAPP=1")
-TARGET_INCLUDE_DIRECTORIES(couchstore_internal_gtest PUBLIC ${gtest_SOURCE_DIR}/include src)
+TARGET_INCLUDE_DIRECTORIES(couchstore_internal_gtest PUBLIC ${gtest_SOURCE_DIR}/include ${gmock_SOURCE_DIR}/include)
 
 TARGET_LINK_LIBRARIES(couchstore_internal_gtest
         gtest
         gtest_main
+        gmock
         ${COUCHSTORE_LIBRARIES})
 
 ADD_TEST(couchstore-internal-gtest couchstore_internal_gtest)

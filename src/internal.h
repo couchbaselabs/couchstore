@@ -72,7 +72,14 @@ extern "C" {
         void *userdata;
     };
 
-    FileOpsInterface* couch_get_default_file_ops(void);
+    /**
+     * Returns a newed FileOpsInterface implementation
+     * instance.
+     *
+     * Useful for assuming that a FileOpsInterface object
+     * is heap-allocated.
+     */
+    FileOpsInterface* create_default_file_ops(void);
 
     /** Opens or creates a tree_file.
         @param file  Pointer to tree_file struct to initialize.

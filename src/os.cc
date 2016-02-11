@@ -243,3 +243,8 @@ FileOpsInterface* couchstore_get_default_file_ops(void)
 {
     return &default_file_ops;
 }
+
+FileOpsInterface* create_default_file_ops(void)
+{
+    return new PosixFileOps();
+}
