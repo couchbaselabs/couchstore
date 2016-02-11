@@ -62,7 +62,7 @@ int main(int argc, char** argv)
     void* hook_ctx = NULL;
     int argp = 1;
     couchstore_compact_flags flags = 0;
-    const couch_file_ops* target_io_ops = couchstore_get_default_file_ops();
+    FileOpsInterface* target_io_ops = couchstore_get_default_file_ops();
     if(argc < 3)
     {
         usage(argv[0]);

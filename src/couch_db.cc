@@ -261,7 +261,7 @@ couchstore_error_t couchstore_open_db(const char *filename,
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_open_db_ex(const char *filename,
                                          couchstore_open_flags flags,
-                                         const couch_file_ops *ops,
+                                         FileOpsInterface* ops,
                                          Db **pDb)
 {
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
