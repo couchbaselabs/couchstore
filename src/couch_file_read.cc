@@ -17,20 +17,14 @@ couchstore_error_t tree_file_open(tree_file* file,
                                   const char *filename,
                                   int openflags,
                                   crc_mode_e crc_mode,
-                                  const couch_file_ops *ops)
+                                  FileOpsInterface* ops)
 {
-    bool readOnly = (openflags == O_RDONLY);
-    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
-
-    /* Sanity check input parameters */
-    if (filename == NULL || file == NULL || ops == NULL ||
-            ops->version != 5 ||
-            ops->constructor == NULL || ops->open == NULL ||
-            ops->close == NULL || ops->pread == NULL ||
-            ops->pwrite == NULL || ops->goto_eof == NULL ||
-            ops->sync == NULL || ops->destructor == NULL) {
+    if(filename == nullptr || file == nullptr || ops == nullptr) {
         return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
     }
+
+    bool readOnly = (openflags == O_RDONLY);
+    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
 
     memset(file, 0, sizeof(*file));
 
