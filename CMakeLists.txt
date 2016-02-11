@@ -55,7 +55,7 @@ SET(COUCHSTORE_SOURCES src/arena.cc src/bitfield.c src/btree_modify.cc
             src/views/reductions.c src/views/sorted_list.c
             src/views/spatial.c src/views/spatial_modify.c
             src/views/util.c src/views/values.c
-            src/views/view_group.c src/views/purgers.c
+            src/views/view_group.cc src/views/purgers.c
             src/views/compaction.c src/quicksort.c ${COUCHSTORE_FILE_OPS})
 SET(COUCHSTORE_LIBRARIES ${V8_LIBRARIES} ${ICU_LIBRARIES} ${SNAPPY_LIBRARIES} platform)
 
@@ -63,7 +63,7 @@ ADD_LIBRARY(couchstore SHARED ${COUCHSTORE_SOURCES})
 SET_TARGET_PROPERTIES(couchstore PROPERTIES COMPILE_FLAGS "-DLIBCOUCHSTORE_INTERNAL=1 -DLIBMAPREDUCE_INTERNAL=1")
 TARGET_LINK_LIBRARIES(couchstore ${COUCHSTORE_LIBRARIES})
 
-ADD_EXECUTABLE(couch_dbdump src/dbdump.c ${COUCHSTORE_SOURCES})
+ADD_EXECUTABLE(couch_dbdump src/dbdump.cc ${COUCHSTORE_SOURCES})
 SET_TARGET_PROPERTIES(couch_dbdump PROPERTIES COMPILE_FLAGS "-DLIBCOUCHSTORE_NO_VISIBILITY=1")
 TARGET_LINK_LIBRARIES(couch_dbdump ${COUCHSTORE_LIBRARIES})
 

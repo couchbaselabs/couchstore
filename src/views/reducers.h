@@ -38,7 +38,7 @@ extern "C" {
         /* If not NULL, an error happened and it contains a human
            readable error message. */
         const char           *error;
-        void                 *private;
+        void                 *priv;
     } view_reducer_ctx_t;
 
     typedef struct {

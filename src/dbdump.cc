@@ -132,19 +132,19 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
     (*count)++;
 
     if (dumpJson) {
-        printf("{\"seq\":%"PRIu64",\"id\":\"", docinfo->db_seq);
+        printf("{\"seq\":%" PRIu64 ",\"id\":\"", docinfo->db_seq);
         printjquote(&docinfo->id);
         printf("\",");
     } else {
         if (mode == DumpBySequence) {
-            printf("Doc seq: %"PRIu64"\n", docinfo->db_seq);
+            printf("Doc seq: %" PRIu64 "\n", docinfo->db_seq);
             printf("     id: ");
             printsb(&docinfo->id);
         } else {
             printf("  Doc ID: ");
             printsb(&docinfo->id);
             if (docinfo->db_seq > 0) {
-                printf("     seq: %"PRIu64"\n", docinfo->db_seq);
+                printf("     seq: %" PRIu64 "\n", docinfo->db_seq);
             }
         }
     }
@@ -155,13 +155,13 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
         return 0;
     }
     if (dumpJson) {
-        printf("\"rev\":%"PRIu64",\"content_meta\":%d,", docinfo->rev_seq,
+        printf("\"rev\":%" PRIu64 ",\"content_meta\":%d,", docinfo->rev_seq,
                                                          docinfo->content_meta);
-        printf("\"physical_size\":%"PRIu64",", (uint64_t)docinfo->size);
+        printf("\"physical_size\":%" PRIu64 ",", (uint64_t)docinfo->size);
     } else {
-        printf("     rev: %"PRIu64"\n", docinfo->rev_seq);
+        printf("     rev: %" PRIu64 "\n", docinfo->rev_seq);
         printf("     content_meta: %d\n", docinfo->content_meta);
-        printf("     size (on disk): %"PRIu64"\n", (uint64_t)docinfo->size);
+        printf("     size (on disk): %" PRIu64 "\n", (uint64_t)docinfo->size);
     }
     if (docinfo->rev_meta.size >= sizeof(CouchbaseRevMeta)) {
         const CouchbaseRevMeta* meta = (const CouchbaseRevMeta*)docinfo->rev_meta.buf;
@@ -192,31 +192,35 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
                                   sizeof(uint8_t)));
 
                 if (dumpJson) {
-                    printf("\"cas\":\"%"PRIu64"\",\"expiry\":%"PRIu32",\"flags\":%"PRIu32","
-                           "\"datatype\":%d,\"conflict_resolution_mode\":%d,",
+                    printf("\"cas\":\"%" PRIu64 "\",\"expiry\":%" PRIu32
+                           ",\"flags\":%" PRIu32
+                           ",\"datatype\":%d,\"conflict_resolution_mode\":%d,",
                             cas, expiry, flags, datatype, conf_res_mode);
                 } else {
-                    printf("     cas: %"PRIu64", expiry: %"PRIu32", flags: %"PRIu32", "
+                    printf("     cas: %" PRIu64 ", expiry: %" PRIu32
+                           ", flags: %" PRIu32 ", "
                            "datatype: %d, conflict_resolution_mode: %d\n",
                            cas, expiry, flags, datatype, conf_res_mode);
                 }
             } else {
                 if (dumpJson) {
-                    printf("\"cas\":\"%"PRIu64"\",\"expiry\":%"PRIu32",\"flags\":%"PRIu32","
-                           "\"datatype\":%d,",
+                    printf("\"cas\":\"%" PRIu64 "\",\"expiry\":%" PRIu32
+                           ",\"flags\":%" PRIu32 "," "\"datatype\":%d,",
                             cas, expiry, flags, datatype);
                 } else {
-                    printf("     cas: %"PRIu64", expiry: %"PRIu32", flags: %"PRIu32", "
-                           "datatype: %d\n",
+                    printf("     cas: %" PRIu64 ", expiry: %" PRIu32
+                           ", flags: %" PRIu32 ", datatype: %d\n",
                            cas, expiry, flags, datatype);
                 }
             }
         } else {
             if (dumpJson) {
-                printf("\"cas\":\"%"PRIu64"\",\"expiry\":%"PRIu32",\"flags\":%"PRIu32",",
+                printf("\"cas\":\"%" PRIu64 "\",\"expiry\":%" PRIu32
+                       ",\"flags\":%" PRIu32 ",",
                         cas, expiry, flags);
             } else {
-                printf("     cas: %"PRIu64", expiry: %"PRIu32", flags: %"PRIu32"\n",
+                printf("     cas: %" PRIu64 ", expiry: %" PRIu32 ", flags: %"
+                       PRIu32 "\n",
                         cas, expiry, flags);
             }
         }
@@ -251,7 +255,7 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
                 new_body = doc->data;
             }
             if (dumpJson) {
-                printf("\"size\":%"PRIu64",", (uint64_t)new_body.size);
+                printf("\"size\":%" PRIu64 ",", (uint64_t)new_body.size);
                 if (docinfo->content_meta & COUCH_DOC_IS_COMPRESSED) {
                     printf("\"snappy\":true,\"body\":\"");
                 } else {
@@ -260,7 +264,7 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
                 printjquote(&new_body);
                 printf("\"}\n");
             } else {
-                printf("     size: %"PRIu64"\n", (uint64_t)new_body.size);
+                printf("     size: %" PRIu64 "\n", (uint64_t)new_body.size);
                 printf("     data:%s",
                        docinfo->content_meta & COUCH_DOC_IS_COMPRESSED ?
                        " (snappy) " : " ");
@@ -302,15 +306,15 @@ static int visit_node(Db *db,
         printf("  ");
     if (reduceValue) {
         /* This is a tree node: */
-        printf("+ (%"PRIu64") ", subtreeSize);
+        printf("+ (%" PRIu64 ") ", subtreeSize);
         printsbhex(reduceValue, 0);
     } else if (docinfo->bp > 0) {
         int *count;
         /* This is a document: */
-        printf("%c (%"PRIu64") ", (docinfo->deleted ? 'x' : '*'),
+        printf("%c (%" PRIu64 ") ", (docinfo->deleted ? 'x' : '*'),
                (uint64_t)docinfo->size);
         if (mode == DumpBySequence) {
-            printf("#%"PRIu64" ", docinfo->db_seq);
+            printf("#%" PRIu64 " ", docinfo->db_seq);
         }
         printsb(&docinfo->id);
 

@@ -74,8 +74,9 @@ static void close_view_group_file(view_group_info_t *info);
 static int read_record(FILE *f, arena *a, sized_buf *k, sized_buf *v,
                                                         uint8_t *op);
 
-int view_btree_cmp(const sized_buf *key1, const sized_buf *key2);
-
+extern "C" {
+    int view_btree_cmp(const sized_buf *key1, const sized_buf *key2);
+}
 static couchstore_error_t update_btree(const char *source_file,
                                        tree_file *dest_file,
                                        const node_pointer *root,
@@ -219,7 +220,7 @@ view_group_info_t *couchstore_read_view_group_info(FILE *in_stream,
         info->type = VIEW_INDEX_TYPE_SPATIAL;
         break;
     default:
-        fprintf(stderr, "Invalid view file type: %"PRIu64"\n", type);
+        fprintf(stderr, "Invalid view file type: %" PRIu64 "\n", type);
         goto out_error;
     }
 
@@ -709,14 +710,14 @@ static file_merger_error_t build_btree_record_callback(void *buf, void *ctx)
     ret = mr_push_item(k, v, build_ctx->modify_result);
 
     if (ret != COUCHSTORE_SUCCESS) {
-        return ret;
+        return static_cast<file_merger_error_t>(ret);
     }
 
     if (build_ctx->modify_result->count == 0) {
         arena_free_all(build_ctx->transient_arena);
     }
 
-    return ret;
+    return static_cast<file_merger_error_t>(ret);
 }
 
 
@@ -1603,7 +1604,7 @@ static couchstore_error_t compact_view_fetchcb(couchfile_lookup_request *rq,
     v_c = arena_copy_buf(ctx->transient_arena, v);
     ret = mr_push_item(k_c, v_c, ctx->mr);
     if (ret != COUCHSTORE_SUCCESS) {
-        return ret;
+        return static_cast<couchstore_error_t>(ret);
     }
 
     if (stats) {
@@ -1937,14 +1938,14 @@ static file_merger_error_t build_spatial_record_callback(void *buf, void *ctx)
     ret = spatial_push_item(k, v, build_ctx->modify_result);
 
     if (ret != COUCHSTORE_SUCCESS) {
-        return ret;
+        return static_cast<file_merger_error_t>(ret);
     }
 
     if (build_ctx->modify_result->count == 0) {
         arena_free_all(build_ctx->transient_arena);
     }
 
-    return ret;
+    return static_cast<file_merger_error_t>(ret);
 }
 
 
@@ -2085,7 +2086,7 @@ static couchstore_error_t compact_spatial_fetchcb(couchfile_lookup_request *rq,
     v_c = arena_copy_buf(ctx->transient_arena, v);
     ret = spatial_push_item(k_c, v_c, ctx->mr);
     if (ret != COUCHSTORE_SUCCESS) {
-        return ret;
+        return static_cast<couchstore_error_t>(ret);
     }
 
     if (stats) {

@@ -530,7 +530,7 @@ view_reducer_ctx_t *make_view_reducer_ctx(const char *functions[],
 
     priv->builtin_error = VIEW_REDUCER_SUCCESS;
     priv->mapreduce_error = MAPREDUCE_SUCCESS;
-    ctx->private = priv;
+    ctx->priv = priv;
     *error_msg = NULL;
 
     return ctx;
@@ -561,7 +561,7 @@ void free_view_reducer_ctx(view_reducer_ctx_t *ctx)
         return;
     }
 
-    priv = (reducer_private_t *) ctx->private;
+    priv = (reducer_private_t *) ctx->priv;
     for (i = 0; i < priv->num_reducers; ++i) {
         mapreduce_free_context(priv->reducer_contexts[i].mapreduce_ctx);
     }
@@ -575,7 +575,7 @@ void free_view_reducer_ctx(view_reducer_ctx_t *ctx)
 
 static void add_error_message(view_reducer_ctx_t *red_ctx, int rereduce)
 {
-   reducer_private_t *priv = (reducer_private_t *) red_ctx->private;
+   reducer_private_t *priv = (reducer_private_t *) red_ctx->priv;
    char *error_msg;
 
    if (red_ctx->error != NULL) {
@@ -626,7 +626,7 @@ couchstore_error_t view_btree_reduce(char *dst,
                                      void *ctx)
 {
     view_reducer_ctx_t *red_ctx = (view_reducer_ctx_t *) ctx;
-    reducer_private_t *priv = (reducer_private_t *) red_ctx->private;
+    reducer_private_t *priv = (reducer_private_t *) red_ctx->priv;
     unsigned i;
     reducer_fn_t reducer;
     view_btree_reduction_t *red = NULL;
@@ -754,7 +754,7 @@ couchstore_error_t view_btree_rereduce(char *dst,
                                        void *ctx)
 {
     view_reducer_ctx_t *red_ctx = (view_reducer_ctx_t *) ctx;
-    reducer_private_t *priv = (reducer_private_t *) red_ctx->private;
+    reducer_private_t *priv = (reducer_private_t *) red_ctx->priv;
     unsigned i;
     reducer_fn_t reducer;
     view_btree_reduction_t *red = NULL;
