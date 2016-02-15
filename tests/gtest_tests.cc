@@ -884,9 +884,15 @@ TEST_F(CouchstoreTest, crc_upgrade2) {
     ASSERT_EQ(0, remove(target.c_str()));
 }
 
-INSTANTIATE_TEST_CASE_P(InstantiationName,
+INSTANTIATE_TEST_CASE_P(DocTest,
                         CouchstoreDoctest,
-                        ::testing::Combine(::testing::Bool(), ::testing::Values(4, 69, 666, 4090)));
+                        ::testing::Combine(::testing::Bool(), ::testing::Values(4, 69, 666, 4090)),
+                        [] (const ::testing::TestParamInfo<std::tuple<bool, int>>& info) {
+                            std::stringstream fmt;
+                            fmt << ((std::get<0>(info.param))?"Small":"Large")
+                                << "x" << std::get<1>(info.param);
+                            return fmt.str();
+                        });
 
 int main(int argc, char ** argv)
 {
