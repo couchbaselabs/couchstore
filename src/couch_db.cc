@@ -269,6 +269,7 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
     Db *db;
     int openflags;
     bool buffered = true;
+    cs_off_t pos;
 
     /* Sanity check input parameters */
     if ((flags & COUCHSTORE_OPEN_FLAG_RDONLY) &&
@@ -298,11 +299,12 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
     error_pass(tree_file_open(&db->file, filename, openflags, CRC_UNKNOWN, ops,
                               buffered));
 
-    if ((db->file.pos = db->file.ops->goto_eof(&db->file.lastError, db->file.handle)) == 0) {
+    pos = db->file.ops->goto_eof(&db->file.lastError, db->file.handle);
+    db->file.pos = pos;
+    if (pos == 0) {
         /* This is an empty file. Create a new fileheader unless the
          * user wanted a read-only version of the file
          */
-
 
         if (flags & COUCHSTORE_OPEN_FLAG_RDONLY) {
             error_pass(COUCHSTORE_ERROR_NO_HEADER);
@@ -317,7 +319,7 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
 
             error_pass(create_header(db));
         }
-    } else {
+    } else if (pos > 0) {
         error_pass(find_header(db, db->file.pos - 2));
 
         if (db->header.disk_version <= COUCH_DISK_VERSION_11) {
@@ -332,6 +334,8 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
             errcode = COUCHSTORE_ERROR_INVALID_ARGUMENTS;
             goto cleanup;
         }
+    } else {
+        error_pass(static_cast<couchstore_error_t>(db->file.pos));
     }
 
     *pDb = db;

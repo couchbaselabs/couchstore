@@ -94,8 +94,7 @@ TEST_F(FileOpsErrorInjectionTest, dbopen_fileopen_fail) {
     EXPECT_EQ(COUCHSTORE_ERROR_OPEN_FILE, open_db(COUCHSTORE_OPEN_FLAG_CREATE));
 }
 
-/* MB-18086 MB-18087 Test disabled until bug fixed in subsequent patch */
-TEST_F(FileOpsErrorInjectionTest, DISABLED_dbopen_filegoto_eof_fail) {
+TEST_F(FileOpsErrorInjectionTest, dbopen_filegoto_eof_fail) {
     EXPECT_CALL(ops, goto_eof(_, _)).WillOnce(Return(-1));
     EXPECT_CALL(ops, pread(_, _, _, _, _)).Times(0);
     EXPECT_EQ(COUCHSTORE_ERROR_OPEN_FILE, open_db(COUCHSTORE_OPEN_FLAG_CREATE));

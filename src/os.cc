@@ -164,6 +164,7 @@ cs_off_t PosixFileOps::goto_eof(couchstore_error_info_t* errinfo,
     cs_off_t rv = lseek(fd, 0, SEEK_END);
     if (rv < 0) {
         save_errno(errinfo);
+        rv = static_cast<cs_off_t>(COUCHSTORE_ERROR_READ);
     }
     return rv;
 }
