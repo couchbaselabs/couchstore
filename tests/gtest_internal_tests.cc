@@ -184,11 +184,7 @@ TEST_P(CommitWrite, fail) {
     }
 }
 INSTANTIATE_TEST_CASE_P(Parameterised, CommitWrite,
-                        /* MB-18320 Tests 0, 1 disabled until
-                           bug fixed in subsequent patch
-                        ::testing::Range(0, 4), */
-
-                        ::testing::Values(2, 3),
+                        ::testing::Range(0, 4),
                         ::testing::PrintToStringParamName());
 
 typedef ParameterisedFileOpsErrorInjectionTest SaveDocWrite;
@@ -494,10 +490,5 @@ TEST_P(CompactTargetWrite, fail) {
     }
 }
 INSTANTIATE_TEST_CASE_P(Parameterised, CompactTargetWrite,
-
-                        /* MB-18319 Tests 2, 3 disabled until
-                           bug fixed in subsequent patch
-                        ::testing::Range(0, 6), */
-
-                        ::testing::Values(0, 1, 4, 5, 6),
+                        ::testing::Range(0, 6),
                         ::testing::PrintToStringParamName());
