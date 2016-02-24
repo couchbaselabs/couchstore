@@ -223,11 +223,12 @@ couchstore_error_t precommit(Db *db)
                                           idrootsize, localrootsize);
 
     //Extend file size to where end of header will land before we do first sync
-    db_write_buf(&db->file, &zerobyte, NULL, NULL);
+    couchstore_error_t errcode = static_cast<couchstore_error_t>(
+        db_write_buf(&db->file, &zerobyte, NULL, NULL));
 
-    couchstore_error_t errcode = db->file.ops->sync(&db->file.lastError,
-                                                    db->file.handle);
-
+    if (errcode == COUCHSTORE_SUCCESS) {
+        errcode = db->file.ops->sync(&db->file.lastError, db->file.handle);
+    }
     // Move cursor back to where it was
     db->file.pos = curpos;
     return errcode;
