@@ -119,6 +119,7 @@ static cs_off_t couch_goto_eof(couchstore_error_info_t *errinfo,
     cs_off_t rv = lseek(fd, 0, SEEK_END);
     if (rv < 0) {
         save_errno(errinfo);
+        rv = (cs_off_t)(COUCHSTORE_ERROR_READ);
     }
     return rv;
 }
