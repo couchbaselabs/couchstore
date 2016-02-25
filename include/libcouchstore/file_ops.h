@@ -79,9 +79,11 @@ public:
      * Close file associated with this handle.
      *
      * @param handle file handle to close
+     * @return COUCHSTORE_SUCCESS upon success, COUCHSTORE_ERROR_FILE_CLOSE if
+     *         there was an error.
      */
-    virtual void close(couchstore_error_info_t* errinfo,
-                       couch_file_handle handle) = 0;
+    virtual couchstore_error_t close(couchstore_error_info_t* errinfo,
+                                     couch_file_handle handle) = 0;
 
     /**
      * Read a chunk of data from a given offset in the file.
@@ -149,8 +151,7 @@ public:
      *
      * @param handle file handle to be released
      */
-    virtual void destructor(couchstore_error_info_t* errinfo,
-                            couch_file_handle handle) = 0;
+    virtual void destructor(couch_file_handle handle) = 0;
 };
 
 #else

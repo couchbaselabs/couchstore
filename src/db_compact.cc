@@ -94,7 +94,8 @@ cleanup:
     delete_arena(ctx.transient_arena);
     delete_arena(ctx.persistent_arena);
     if (target != NULL) {
-        couchstore_close_db(target);
+        couchstore_close_file(target);
+        couchstore_free_db(target);
         if (errcode != COUCHSTORE_SUCCESS) {
             remove(target_filename);
         }

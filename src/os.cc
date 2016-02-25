@@ -51,8 +51,8 @@ public:
     couchstore_error_t open(couchstore_error_info_t* errinfo,
                             couch_file_handle* handle, const char* path,
                             int oflag) override;
-    void close(couchstore_error_info_t* errinfo,
-               couch_file_handle handle) override;
+    couchstore_error_t close(couchstore_error_info_t* errinfo,
+                             couch_file_handle handle) override;
     ssize_t pread(couchstore_error_info_t* errinfo,
                   couch_file_handle handle, void* buf, size_t nbytes,
                   cs_off_t offset) override;
@@ -67,8 +67,7 @@ public:
                               couch_file_handle handle, cs_off_t offset,
                               cs_off_t len,
                               couchstore_file_advice_t advice) override;
-    void destructor(couchstore_error_info_t* errinfo,
-                    couch_file_handle handle) override;
+    void destructor(couch_file_handle handle) override;
 };
 
 ssize_t PosixFileOps::pread(couchstore_error_info_t* errinfo,
@@ -140,11 +139,12 @@ couchstore_error_t PosixFileOps::open(couchstore_error_info_t* errinfo,
     return COUCHSTORE_SUCCESS;
 }
 
-void PosixFileOps::close(couchstore_error_info_t* errinfo,
-                         couch_file_handle handle)
+couchstore_error_t PosixFileOps::close(couchstore_error_info_t* errinfo,
+                                       couch_file_handle handle)
 {
     int fd = handle_to_fd(handle);
     int rv = 0;
+    couchstore_error_t error = COUCHSTORE_SUCCESS;
 
     if (fd != -1) {
         do {
@@ -154,7 +154,9 @@ void PosixFileOps::close(couchstore_error_info_t* errinfo,
     }
     if (rv < 0) {
         save_errno(errinfo);
+        error = COUCHSTORE_ERROR_FILE_CLOSE;
     }
+    return error;
 }
 
 cs_off_t PosixFileOps::goto_eof(couchstore_error_info_t* errinfo,
@@ -201,12 +203,10 @@ couch_file_handle PosixFileOps::constructor(couchstore_error_info_t* errinfo)
     return fd_to_handle(-1);
 }
 
-void PosixFileOps::destructor(couchstore_error_info_t* errinfo,
-                              couch_file_handle handle)
+void PosixFileOps::destructor(couch_file_handle handle)
 {
     /* nothing to do here */
     (void)handle;
-    (void)errinfo;
 }
 
 couchstore_error_t PosixFileOps::advise(couchstore_error_info_t* errinfo,

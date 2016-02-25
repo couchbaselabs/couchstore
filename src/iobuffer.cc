@@ -91,8 +91,8 @@ public:
     couchstore_error_t open(couchstore_error_info_t* errinfo,
                             couch_file_handle* handle, const char* path,
                             int oflag) override;
-    void close(couchstore_error_info_t* errinfo,
-               couch_file_handle handle) override;
+    couchstore_error_t close(couchstore_error_info_t* errinfo,
+                             couch_file_handle handle) override;
     ssize_t pread(couchstore_error_info_t* errinfo,
                   couch_file_handle handle, void* buf, size_t nbytes,
                   cs_off_t offset) override;
@@ -107,8 +107,7 @@ public:
                               couch_file_handle handle, cs_off_t offset,
                               cs_off_t len,
                               couchstore_file_advice_t advice) override;
-    void destructor(couchstore_error_info_t* errinfo,
-                    couch_file_handle handle) override;
+    void destructor(couch_file_handle handle) override;
 
     couch_file_handle constructor(couchstore_error_info_t *errinfo,
                                   FileOpsInterface* raw_ops, bool readOnly);
@@ -253,14 +252,13 @@ static file_buffer* find_buffer(buffered_file_handle* h, cs_off_t offset) {
 //////// FILE API:
 
 
-void BufferedFileOps::destructor(couchstore_error_info_t* errinfo,
-                                 couch_file_handle handle)
+void BufferedFileOps::destructor(couch_file_handle handle)
 {
     buffered_file_handle *h = (buffered_file_handle*)handle;
     if (!h) {
         return;
     }
-    h->raw_ops->destructor(errinfo, h->raw_ops_handle);
+    h->raw_ops->destructor(h->raw_ops_handle);
 
     free_buffer(h->write_buffer);
     file_buffer* buffer, *next;
@@ -284,7 +282,7 @@ couch_file_handle BufferedFileOps::constructor(couchstore_error_info_t* errinfo,
         h->first_buffer = new_buffer(h, READ_BUFFER_CAPACITY);
 
         if (!h->write_buffer || !h->first_buffer) {
-            destructor(errinfo, (couch_file_handle)h);
+            destructor(reinterpret_cast<couch_file_handle>(h));
             h = NULL;
         }
     }
@@ -305,15 +303,15 @@ couchstore_error_t BufferedFileOps::open(couchstore_error_info_t* errinfo,
     return h->raw_ops->open(errinfo, &h->raw_ops_handle, path, oflag);
 }
 
-void BufferedFileOps::close(couchstore_error_info_t* errinfo,
+couchstore_error_t BufferedFileOps::close(couchstore_error_info_t* errinfo,
                             couch_file_handle handle)
 {
     buffered_file_handle *h = (buffered_file_handle*)handle;
     if (!h) {
-        return;
+        return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
     }
     flush_buffer(errinfo, h->write_buffer);
-    h->raw_ops->close(errinfo, h->raw_ops_handle);
+    return h->raw_ops->close(errinfo, h->raw_ops_handle);
 }
 
 ssize_t BufferedFileOps::pread(couchstore_error_info_t* errinfo,

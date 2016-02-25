@@ -147,7 +147,8 @@ TEST_P(CouchstoreDoctest, save_docs)
                                                             count,
                                                             0));
     ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_commit(db));
-    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
     db = nullptr;
 
     ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_open_db(filePath.c_str(), 0, &db));
@@ -265,7 +266,8 @@ TEST_F(CouchstoreTest, save_doc)
     }
 
     ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_commit(db));
-    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
     db = nullptr;
 
     /* Check that sequence numbers got filled in */
@@ -307,7 +309,8 @@ TEST_F(CouchstoreTest, compressed_doc_body)
                                   COMPRESS_DOC_BODIES));
 
     ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_commit(db));
-    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
     db = nullptr;
 
     /* Read back */
@@ -323,7 +326,8 @@ TEST_F(CouchstoreTest, dump_empty_db)
     Documents documents(0);
 
     ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_open_db(filePath.c_str(), COUCHSTORE_OPEN_FLAG_CREATE, &db));
-    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
     db = nullptr;
 
     ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_open_db(filePath.c_str(), 0, &db));
@@ -353,7 +357,8 @@ TEST_F(CouchstoreTest, local_docs)
     lDocWrite.deleted = 0;
     ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_save_local_document(db, &lDocWrite));
     ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_commit(db));
-    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
     db = nullptr;
     ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_open_db(filePath.c_str(), 0, &db));
     ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_open_local_document(db, "_local/testlocal", 16, &lDocRead));
@@ -399,7 +404,8 @@ TEST_F(CouchstoreTest, changes_no_dups)
                                                             numdocs/2,
                                                             0));
     ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_commit(db));
-    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
     db = nullptr;
 
     for (size_t ii = 0; ii < numdocs/2; ii++) {
@@ -443,7 +449,8 @@ TEST_F(CouchstoreTest, mb5086)
                                                            documents.getDocInfo(0),
                                                            0));
     ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_commit(db));
-    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
     ASSERT_EQ(0, remove("mb5085.couch"));
     db = nullptr; // we've closed and deleted the test-case's file
 }
@@ -472,7 +479,8 @@ TEST_F(CouchstoreTest, mb11104)
     }
 
     ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_commit(db));
-    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
     db = nullptr;
     ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_open_db(filePath.c_str(), 0, &db));
 
@@ -597,7 +605,8 @@ TEST_F(CouchstoreTest, huge_revseq)
     ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_docinfo_by_id(db, "hi", 2, &i2));
     EXPECT_EQ(i2->rev_seq, 5294967296ull);
     couchstore_free_docinfo(i2);
-    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
     ASSERT_EQ(0, remove("bigrevseq.couch"));
     db = nullptr; // mark as null, as we've cleaned up
 }
@@ -622,7 +631,8 @@ TEST_F(CouchstoreTest, legacy_crc_flags) {
 
     EXPECT_EQ(CRC32, db->file.crc_mode);
 
-    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
     db = nullptr;
 
     // Open the now existing file and we should be allowed if ask for legacy-crc
@@ -634,7 +644,8 @@ TEST_F(CouchstoreTest, legacy_crc_flags) {
 
     EXPECT_EQ(CRC32, db->file.crc_mode);
 
-    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
     db = nullptr;
 
     // Open the now existing file and we should be allowed, legacy crc will be auto-selected
@@ -646,7 +657,8 @@ TEST_F(CouchstoreTest, legacy_crc_flags) {
     EXPECT_EQ(CRC32, db->file.crc_mode);
 
     // Close and delete.
-    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
     db = nullptr;
 
     ASSERT_EQ(0, remove(filePath.c_str()));
@@ -661,7 +673,8 @@ TEST_F(CouchstoreTest, legacy_crc_flags) {
     EXPECT_EQ(CRC32C, db->file.crc_mode);
     EXPECT_GE(uint64_t(COUCH_DISK_VERSION_12), db->header.disk_version);
 
-    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
     db = nullptr;
 
     // Open it again and we should not be allowed.
@@ -697,7 +710,8 @@ TEST_F(CouchstoreTest, no_crc_upgrade) {
                                                             0));
 
     ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_commit(db));
-    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
     db = nullptr;
 
     // re-open, we're going to compact the file
@@ -718,7 +732,8 @@ TEST_F(CouchstoreTest, no_crc_upgrade) {
                                                            nullptr,
                                                            couchstore_get_default_file_ops()));
 
-    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
     db = nullptr;
 
     // Open target...
@@ -729,7 +744,8 @@ TEST_F(CouchstoreTest, no_crc_upgrade) {
 
     EXPECT_EQ(CRC32, db->file.crc_mode); // new file still uses old CRC
     EXPECT_LE(db->header.disk_version, uint64_t(COUCH_DISK_VERSION_11)); // compacted file still 11 or less
-    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
     db = nullptr;
     ASSERT_EQ(0, remove(target.c_str()));
 }
@@ -757,7 +773,8 @@ TEST_F(CouchstoreTest, crc_upgrade) {
                                                             0));
 
     ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_commit(db));
-    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
     db = nullptr;
 
     // re-open, we're going to compact the file
@@ -776,7 +793,8 @@ TEST_F(CouchstoreTest, crc_upgrade) {
                                                            nullptr,
                                                            couchstore_get_default_file_ops()));
 
-    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
     db = nullptr;
 
     // Open target...
@@ -788,7 +806,8 @@ TEST_F(CouchstoreTest, crc_upgrade) {
     // File now with CRC32-C
     EXPECT_EQ(CRC32C, db->file.crc_mode);
     EXPECT_GE(db->header.disk_version, uint64_t(COUCH_DISK_VERSION_12)); // upgraded to 12
-    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
     db = nullptr;
     ASSERT_EQ(0, remove(target.c_str()));
 }
@@ -825,7 +844,8 @@ TEST_F(CouchstoreTest, crc_upgrade2) {
                                                            nullptr,
                                                            couchstore_get_default_file_ops()));
 
-    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
     db = nullptr;
 
     // Open target...
@@ -848,7 +868,8 @@ TEST_F(CouchstoreTest, crc_upgrade2) {
     EXPECT_EQ(docCount, size_t(documents.getCallbacks()));
     EXPECT_EQ(0, documents.getDeleted());
 
-    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_db(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
     db = nullptr;
     ASSERT_EQ(0, remove(target.c_str()));
 }

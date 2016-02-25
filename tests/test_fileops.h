@@ -45,8 +45,8 @@ public:
     MOCK_METHOD4(open, couchstore_error_t(couchstore_error_info_t* errinfo,
                                           couch_file_handle* handle,
                                           const char* path, int oflag));
-    MOCK_METHOD2(close, void(couchstore_error_info_t* errinfo,
-                             couch_file_handle handle));
+    MOCK_METHOD2(close, couchstore_error_t(couchstore_error_info_t* errinfo,
+                                           couch_file_handle handle));
     MOCK_METHOD5(pread, ssize_t(couchstore_error_info_t* errinfo,
                                 couch_file_handle handle, void* buf,
                                 size_t nbytes, cs_off_t offset));
@@ -61,8 +61,7 @@ public:
                                             couch_file_handle handle,
                                             cs_off_t offset, cs_off_t len,
                                             couchstore_file_advice_t advice));
-    MOCK_METHOD2(destructor, void(couchstore_error_info_t* errinfo,
-                                  couch_file_handle handle));
+    MOCK_METHOD1(destructor, void(couch_file_handle handle));
 
     void DelegateToFake();
 
@@ -84,8 +83,8 @@ public:
     couchstore_error_t open(couchstore_error_info_t* errinfo,
                             couch_file_handle* handle, const char* path,
                             int oflag) override;
-    void close(couchstore_error_info_t* errinfo,
-               couch_file_handle handle) override;
+    couchstore_error_t close(couchstore_error_info_t* errinfo,
+                             couch_file_handle handle) override;
     ssize_t pread(couchstore_error_info_t* errinfo,
                   couch_file_handle handle, void* buf, size_t nbytes,
                   cs_off_t offset) override;
@@ -100,8 +99,7 @@ public:
                               couch_file_handle handle, cs_off_t offset,
                               cs_off_t len,
                               couchstore_file_advice_t advice) override;
-    void destructor(couchstore_error_info_t* errinfo,
-                    couch_file_handle handle) override;
+    void destructor(couch_file_handle handle) override;
 protected:
     std::unique_ptr<FileOpsInterface> wrapped_ops;
 };

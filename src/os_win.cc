@@ -58,8 +58,8 @@ public:
     couchstore_error_t open(couchstore_error_info_t* errinfo,
                             couch_file_handle* handle, const char* path,
                             int oflag) override;
-    void close(couchstore_error_info_t* errinfo,
-               couch_file_handle handle) override;
+    couchstore_error_t close(couchstore_error_info_t* errinfo,
+                             couch_file_handle handle) override;
     ssize_t pread(couchstore_error_info_t* errinfo,
                   couch_file_handle handle, void* buf, size_t nbytes,
                   cs_off_t offset) override;
@@ -74,8 +74,7 @@ public:
                               couch_file_handle handle, cs_off_t offset,
                               cs_off_t len,
                               couchstore_file_advice_t advice) override;
-    void destructor(couchstore_error_info_t* errinfo,
-                    couch_file_handle handle) override;
+    void destructor(couch_file_handle handle) override;
 };
 
 ssize_t WindowsFileOps::pread(couchstore_error_info_t* errinfo,
@@ -155,11 +154,15 @@ couchstore_error_t WindowsFileOps::open(couchstore_error_info_t *errinfo,
     return COUCHSTORE_SUCCESS;
 }
 
-void WindowsFileOps::close(couchstore_error_info_t* errinfo,
-                           couch_file_handle handle)
+couchstore_error_t WindowsFileOps::close(couchstore_error_info_t* errinfo,
+                                         couch_file_handle handle)
 {
     HANDLE file = handle_to_win(handle);
-    CloseHandle(handle);
+    if(!CloseHandle(handle)) {
+        save_windows_error(errinfo);
+        return COUCHSTORE_ERROR_FILE_CLOSE;
+    }
+    return COUCHSTORE_SUCCESS;
 }
 
 cs_off_t WindowsFileOps::goto_eof(couchstore_error_info_t* errinfo,
@@ -196,8 +199,7 @@ couch_file_handle WindowsFileOps::constructor(couchstore_error_info_t* errinfo)
     return win_to_handle(INVALID_HANDLE_VALUE);
 }
 
-void WindowsFileOps::destructor(couchstore_error_info_t* errinfo,
-                                couch_file_handle handle)
+void WindowsFileOps::destructor(couch_file_handle handle)
 {
     /* nothing to do here */
     (void)handle;

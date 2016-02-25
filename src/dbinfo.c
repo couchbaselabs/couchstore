@@ -82,7 +82,8 @@ next_header:
             goto next_header;
         }
     } else {
-        couchstore_close_db(db);
+        couchstore_close_file(db);
+        couchstore_free_db(db);
     }
 
     return 0;

@@ -36,7 +36,7 @@ void MockOps::DelegateToFake() {
             .WillByDefault(Invoke(wrapped_ops.get(), &FileOpsInterface::sync));
     ON_CALL(*this, constructor(_))
             .WillByDefault(Invoke(wrapped_ops.get(), &FileOpsInterface::constructor));
-    ON_CALL(*this, destructor(_, _))
+    ON_CALL(*this, destructor(_))
             .WillByDefault(Invoke(wrapped_ops.get(), &FileOpsInterface::destructor));
     ON_CALL(*this, open(_, _, _, _))
             .WillByDefault(Invoke(wrapped_ops.get(), &FileOpsInterface::open));
@@ -65,10 +65,10 @@ couchstore_error_t LogOps::open(couchstore_error_info_t* errinfo,
     return wrapped_ops->open(errinfo, handle, path, oflag);
 }
 
-void LogOps::close(couchstore_error_info_t* errinfo,
-                   couch_file_handle handle) {
+couchstore_error_t LogOps::close(couchstore_error_info_t* errinfo,
+                                 couch_file_handle handle) {
     std::cerr << "@close(" << errinfo << ", " << handle << ")" << std::endl;
-    wrapped_ops->close(errinfo, handle);
+    return wrapped_ops->close(errinfo, handle);
 }
 
 ssize_t LogOps::pread(couchstore_error_info_t* errinfo,
@@ -108,8 +108,7 @@ couchstore_error_t LogOps::advise(couchstore_error_info_t* errinfo,
     return wrapped_ops->advise(errinfo, handle, offset, len, advice);
 }
 
-void LogOps::destructor(couchstore_error_info_t* errinfo,
-                        couch_file_handle handle) {
+void LogOps::destructor(couch_file_handle handle) {
     std::cerr << "@destructor(" << handle << ")" << std::endl;
-    wrapped_ops->destructor(errinfo, handle);
+    wrapped_ops->destructor(handle);
 }

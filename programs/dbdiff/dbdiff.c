@@ -291,7 +291,8 @@ int main(int argc, char **argv)
             fprintf(stderr, "Failed to open \"%s\": %s\n",
                     argv[optind + ii], couchstore_strerror(err));
             if (ii == 1) {
-                couchstore_close_db(dbs[0]);
+                couchstore_close_file(dbs[0]);
+                couchstore_free_db(dbs[0]);
             }
             exit(EXIT_FAILURE);
         }
@@ -299,7 +300,8 @@ int main(int argc, char **argv)
 
     difference = diff(dbs);
     for (ii = 0; ii < 2; ++ii) {
-        couchstore_close_db(dbs[ii]);
+        couchstore_close_file(dbs[ii]);
+        couchstore_free_db(dbs[ii]);
     }
 
     if (difference == 0) {

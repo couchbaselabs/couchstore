@@ -589,7 +589,8 @@ cleanup:
     if (root != newroot) {
         free(newroot);
     }
-    couchstore_close_db(db);
+    couchstore_close_file(db);
+    couchstore_free_db(db);
     cb_assert(errcode == 0);
 }
 
@@ -630,7 +631,8 @@ void test_all_purge_items()
 cleanup:
     free(root);
     free(newroot);
-    couchstore_close_db(db);
+    couchstore_close_file(db);
+    couchstore_free_db(db);
     cb_assert(errcode == 0);
 }
 
@@ -673,7 +675,8 @@ void test_partial_purge_items()
 cleanup:
     free(root);
     free(newroot);
-    couchstore_close_db(db);
+    couchstore_close_file(db);
+    couchstore_free_db(db);
     cb_assert(errcode == 0);
 }
 
@@ -719,7 +722,8 @@ void test_partial_purge_items2()
 cleanup:
     free(root);
     free(newroot);
-    couchstore_close_db(db);
+    couchstore_close_file(db);
+    couchstore_free_db(db);
     cb_assert(errcode == 0);
 }
 
@@ -762,7 +766,8 @@ void test_partial_purge_with_stop()
 cleanup:
     free(root);
     free(newroot);
-    couchstore_close_db(db);
+    couchstore_close_file(db);
+    couchstore_free_db(db);
     cb_assert(errcode == 0);
 }
 
@@ -843,7 +848,8 @@ cleanup:
     free(keys);
     free(acts);
     free(arr);
-    couchstore_close_db(db);
+    couchstore_close_file(db);
+    couchstore_free_db(db);
     cb_assert(errcode == 0);
 }
 
@@ -883,6 +889,7 @@ void test_only_single_leafnode()
 cleanup:
     free(root);
     free(newroot);
-    couchstore_close_db(db);
+    couchstore_close_file(db);
+    couchstore_free_db(db);
     cb_assert(errcode == 0);
 }

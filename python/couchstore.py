@@ -257,7 +257,8 @@ class CouchStore(object):
     def close(self):
         """Closes the CouchStore."""
         if hasattr(self, "_as_parameter_"):
-            _lib.couchstore_close_db(self)
+            _lib.couchstore_close_file(self)
+            _lib.couchstore_free_db(self)
             del self._as_parameter_
 
     def __str__(self):

@@ -441,7 +441,8 @@ static int process_vbucket_file(const char *file, int *total)
             errcode = couchstore_print_local_docs(db, &count);
             break;
     }
-    (void)couchstore_close_db(db);
+    couchstore_close_file(db);
+    couchstore_free_db(db);
 
     if (errcode < 0) {
         fprintf(stderr, "Failed to dump database \"%s\": %s\n",

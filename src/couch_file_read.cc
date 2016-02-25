@@ -52,7 +52,7 @@ cleanup:
         free((char *) file->path);
         file->path = NULL;
         if (file->ops) {
-            file->ops->destructor(&file->lastError, file->handle);
+            file->ops->destructor(file->handle);
             file->ops = NULL;
             file->handle = NULL;
         }
@@ -60,13 +60,15 @@ cleanup:
     return errcode;
 }
 
-void tree_file_close(tree_file* file)
+couchstore_error_t tree_file_close(tree_file* file)
 {
+    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     if (file->ops) {
-        file->ops->close(&file->lastError, file->handle);
-        file->ops->destructor(&file->lastError, file->handle);
+        errcode = file->ops->close(&file->lastError, file->handle);
+        file->ops->destructor(file->handle);
     }
     free((char*)file->path);
+    return errcode;
 }
 
 /** Read bytes from the database file, skipping over the header-detection bytes at every block

@@ -462,8 +462,8 @@ void couchstore_free_view_group_info(view_group_info_t *info)
 static void close_view_group_file(view_group_info_t *info)
 {
     if (info->file.ops != NULL) {
-        info->file.ops->close(NULL, info->file.handle);
-        info->file.ops->destructor(NULL, info->file.handle);
+        info->file.ops->close(&info->file.lastError, info->file.handle);
+        info->file.ops->destructor(info->file.handle);
         info->file.ops = NULL;
         info->file.handle = NULL;
     }

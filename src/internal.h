@@ -97,7 +97,7 @@ extern "C" {
                                       bool buffered);
     /** Closes a tree_file.
         @param file  Pointer to open tree_file. Does not free this pointer! */
-    void tree_file_close(tree_file* file);
+    couchstore_error_t tree_file_close(tree_file* file);
 
     /** Reads a chunk from the file at a given position.
         @param file The tree_file to read from

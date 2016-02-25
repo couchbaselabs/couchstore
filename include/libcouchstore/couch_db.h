@@ -86,29 +86,30 @@ extern "C" {
                                              Db **db);
 
     /**
-     * Close an open database and free all allocated resources.
+     * Release all resources held by the database handle after the file
+     * has been closed.
+     *
+     * This should be called *after* couchstore_close_file(db).
      *
      * @param db Pointer to the database handle to free.
      * @return COUCHSTORE_SUCCESS upon success
      */
     LIBCOUCHSTORE_API
-    couchstore_error_t couchstore_close_db(Db *db);
+    couchstore_error_t couchstore_free_db(Db* db);
 
 
     /**
-     * Drop the file handle associated with this database handle. The file can
-     * be reopened later on this handle and this handle will see the same
-     * snapshot of the database as before.
+     * Close the file handle associated with this database handle.
      *
-     * The file handle can be reacquired with couchstore_reopen_file. While the
-     * file handle is not held, any operations that would read or write from
-     * the file will return COUCHSTORE_ERROR_FILE_CLOSED.
+     * This does not free the resources held by the database handle. These
+     * resources should be released by subsequently calling
+     * couchstore_free_db(db).
      *
      * @param db Pointer to the database handle to drop the file from.
      * @return COUCHSTORE_SUCCESS upon success
      */
     LIBCOUCHSTORE_API
-    couchstore_error_t couchstore_drop_file(Db *db);
+    couchstore_error_t couchstore_close_file(Db* db);
 
     /**
      * Rewind a db handle to the next-oldest header still present in the file.

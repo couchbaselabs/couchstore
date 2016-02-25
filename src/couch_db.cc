@@ -343,21 +343,22 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
 
 cleanup:
     if(errcode != COUCHSTORE_SUCCESS) {
-        couchstore_close_db(db);
+        couchstore_close_file(db);
+        couchstore_free_db(db);
     }
 
     return errcode;
 }
 
 LIBCOUCHSTORE_API
-couchstore_error_t couchstore_drop_file(Db *db)
+couchstore_error_t couchstore_close_file(Db* db)
 {
     if(db->dropped) {
         return COUCHSTORE_SUCCESS;
     }
-    tree_file_close(&db->file);
+    couchstore_error_t error = tree_file_close(&db->file);
     db->dropped = 1;
-    return COUCHSTORE_SUCCESS;
+    return error;
 }
 
 LIBCOUCHSTORE_API
@@ -380,21 +381,22 @@ couchstore_error_t couchstore_rewind_db_header(Db *db)
 cleanup:
     // if we failed, free the handle and return an error
     if(errcode != COUCHSTORE_SUCCESS) {
-        couchstore_close_db(db);
+        couchstore_close_file(db);
+        couchstore_free_db(db);
         errcode = COUCHSTORE_ERROR_DB_NO_LONGER_VALID;
     }
     return errcode;
 }
 
 LIBCOUCHSTORE_API
-couchstore_error_t couchstore_close_db(Db *db)
+couchstore_error_t couchstore_free_db(Db* db)
 {
     if(!db) {
         return COUCHSTORE_SUCCESS;
     }
 
     if(!db->dropped) {
-        tree_file_close(&db->file);
+        return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
     }
 
     free(db->header.by_id_root);

@@ -126,8 +126,9 @@ extern "C" {
     static int couch_close(lua_State *ls)
     {
         Db *db = getDb(ls);
-
-        if (couchstore_close_db(db) != COUCHSTORE_SUCCESS) {
+        couchstore_error_t err = couchstore_close_file(db);
+        couchstore_free_db(db);
+        if (err != COUCHSTORE_SUCCESS) {
             lua_pushstring(ls, "error closing database");
             lua_error(ls);
             return 1;

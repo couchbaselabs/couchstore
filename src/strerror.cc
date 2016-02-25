@@ -35,6 +35,8 @@ const char *couchstore_strerror(couchstore_error_t errcode)
         return "cannot do this operation when file is closed";
     case COUCHSTORE_ERROR_DB_NO_LONGER_VALID:
         return "this db handle could have its file reopened and must be closed";
+    case COUCHSTORE_ERROR_FILE_CLOSE:
+        return "error closing file";
     default:
         return NULL;
     }

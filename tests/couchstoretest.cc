@@ -43,7 +43,8 @@ CouchstoreTest::~CouchstoreTest() {
 
 void CouchstoreTest::clean_up() {
     if (db) {
-        couchstore_close_db(db);
+        couchstore_close_file(db);
+        couchstore_free_db(db);
         db = nullptr;
     }
     remove(filePath.c_str());

@@ -126,18 +126,14 @@ INSTANTIATE_TEST_CASE_P(Parameterised, NewOpenWrite,
                         ::testing::Range(0, 2),
                         ::testing::PrintToStringParamName());
 
-/* MB-18054 Test disabled until bug fixed in subsequent patch */
-//TEST_F(FileOpsErrorInjectionTest, dbdropfile_fileclose_fail) {
-//    ASSERT_EQ(COUCHSTORE_SUCCESS, open_db(COUCHSTORE_OPEN_FLAG_CREATE));
-//    const size_t docCount = 1;
-//    Documents documents(docCount);
-//    documents.generateDocs();
-//    {
-//        InSequence s;
-//        EXPECT_CALL(ops, close(_, _)).WillOnce(Return(COUCHSTORE_ERROR_WRITE));
-//        EXPECT_EQ(COUCHSTORE_ERROR_WRITE, couchstore_drop_file(db));
-//    }
-//}
+TEST_F(FileOpsErrorInjectionTest, dbdropfile_fileclose_fail) {
+    ASSERT_EQ(COUCHSTORE_SUCCESS, open_db(COUCHSTORE_OPEN_FLAG_CREATE));
+    {
+        InSequence s;
+        EXPECT_CALL(ops, close(_, _)).WillOnce(Return(COUCHSTORE_ERROR_WRITE));
+        EXPECT_EQ(COUCHSTORE_ERROR_WRITE, couchstore_close_file(db));
+    }
+}
 
 typedef ParameterisedFileOpsErrorInjectionTest SaveDocsWrite;
 TEST_P(SaveDocsWrite, fail) {
