@@ -495,21 +495,17 @@ static void test_timeout(void)
 
 void map_tests(void)
 {
-    int i;
-
     fprintf(stderr, "Running map tests\n");
 
     mapreduce_set_timeout(1);
     test_timeout();
 
-    for (i = 0; i < 100; ++i) {
-        test_bad_syntax_functions();
-        test_runtime_exception();
-        test_runtime_error();
-        test_map_no_emit();
-        test_map_single_emit();
-        test_map_multiple_emits();
-    }
+    test_bad_syntax_functions();
+    test_runtime_exception();
+    test_runtime_error();
+    test_map_no_emit();
+    test_map_single_emit();
+    test_map_multiple_emits();
 
     test_timeout();
 }
