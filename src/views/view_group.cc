@@ -477,7 +477,7 @@ couchstore_error_t open_view_group_file(const char *path,
                                                tree_file *file)
 {
     couchstore_error_t ret;
-    FileOpsInterface* file_ops = couchstore_get_default_file_ops();
+    const couch_file_ops *file_ops = couchstore_get_default_file_ops();
     int flags = 0;
 
     if ((open_flags & COUCHSTORE_OPEN_FLAG_RDONLY) &&

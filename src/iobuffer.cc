@@ -1,19 +1,11 @@
 /* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
-/*
- *     Copyright 2016 Couchbase, Inc
- *
- *   Licensed under the Apache License, Version 2.0 (the "License");
- *   you may not use this file except in compliance with the License.
- *   You may obtain a copy of the License at
- *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *
- *   Unless required by applicable law or agreed to in writing, software
- *   distributed under the License is distributed on an "AS IS" BASIS,
- *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *   See the License for the specific language governing permissions and
- *   limitations under the License.
- */
+//
+//  iobuffer.c
+//  couchstore
+//
+//  Created by Jens Alfke on 4/12/12.
+//  Copyright (c) 2012 Couchbase, Inc. All rights reserved.
+//
 
 #include "config.h"
 #include "iobuffer.h"
@@ -52,7 +44,7 @@ typedef struct file_buffer {
 
 // How I interpret a couch_file_handle:
 typedef struct buffered_file_handle {
-    FileOpsInterface* raw_ops;
+    const couch_file_ops* raw_ops;
     couch_file_handle raw_ops_handle;
     unsigned nbuffers;
     file_buffer* write_buffer;
@@ -83,36 +75,6 @@ static void free_buffer(file_buffer* buf) {
     free(buf);
 }
 
-class BufferedFileOps : public FileOpsInterface {
-public:
-    BufferedFileOps() {}
-
-    couch_file_handle constructor(couchstore_error_info_t* errinfo) override ;
-    couchstore_error_t open(couchstore_error_info_t* errinfo,
-                            couch_file_handle* handle, const char* path,
-                            int oflag) override;
-    void close(couchstore_error_info_t* errinfo,
-               couch_file_handle handle) override;
-    ssize_t pread(couchstore_error_info_t* errinfo,
-                  couch_file_handle handle, void* buf, size_t nbytes,
-                  cs_off_t offset) override;
-    ssize_t pwrite(couchstore_error_info_t* errinfo,
-                   couch_file_handle handle, const void* buf,
-                   size_t nbytes, cs_off_t offset) override;
-    cs_off_t goto_eof(couchstore_error_info_t* errinfo,
-                      couch_file_handle handle) override;
-    couchstore_error_t sync(couchstore_error_info_t* errinfo,
-                            couch_file_handle handle) override;
-    couchstore_error_t advise(couchstore_error_info_t* errinfo,
-                              couch_file_handle handle, cs_off_t offset,
-                              cs_off_t len,
-                              couchstore_file_advice_t advice) override;
-    void destructor(couchstore_error_info_t* errinfo,
-                    couch_file_handle handle) override;
-
-    couch_file_handle constructor(couchstore_error_info_t *errinfo,
-                                  FileOpsInterface* raw_ops, bool readOnly);
-};
 
 //////// BUFFER WRITES:
 
@@ -253,8 +215,8 @@ static file_buffer* find_buffer(buffered_file_handle* h, cs_off_t offset) {
 //////// FILE API:
 
 
-void BufferedFileOps::destructor(couchstore_error_info_t* errinfo,
-                                 couch_file_handle handle)
+static void buffered_destructor(couchstore_error_info_t *errinfo,
+                                couch_file_handle handle)
 {
     buffered_file_handle *h = (buffered_file_handle*)handle;
     if (!h) {
@@ -271,42 +233,44 @@ void BufferedFileOps::destructor(couchstore_error_info_t* errinfo,
     free(h);
 }
 
-couch_file_handle BufferedFileOps::constructor(couchstore_error_info_t* errinfo,
-                                               FileOpsInterface* raw_ops,
-                                               bool readOnly)
+static couch_file_handle buffered_constructor_with_raw_ops(couchstore_error_info_t *errinfo,
+                                                           const couch_file_ops* raw_ops,
+                                                           bool readOnly)
 {
     buffered_file_handle *h = static_cast<buffered_file_handle*>(malloc(sizeof(buffered_file_handle)));
     if (h) {
         h->raw_ops = raw_ops;
-        h->raw_ops_handle = raw_ops->constructor(errinfo);
+        h->raw_ops_handle = raw_ops->constructor(errinfo, raw_ops->cookie);
         h->nbuffers = 1;
         h->write_buffer = new_buffer(h, readOnly ? 0 : WRITE_BUFFER_CAPACITY);
         h->first_buffer = new_buffer(h, READ_BUFFER_CAPACITY);
 
         if (!h->write_buffer || !h->first_buffer) {
-            destructor(errinfo, (couch_file_handle)h);
+            buffered_destructor(errinfo, (couch_file_handle)h);
             h = NULL;
         }
     }
     return (couch_file_handle) h;
 }
 
-couch_file_handle BufferedFileOps::constructor(couchstore_error_info_t* errinfo)
+static couch_file_handle buffered_constructor(couchstore_error_info_t *errinfo,
+                                              void* cookie)
 {
-    return constructor(errinfo, couchstore_get_default_file_ops(), false);
+    (void) cookie;
+    return buffered_constructor_with_raw_ops(errinfo, couchstore_get_default_file_ops(), false);
 }
 
-couchstore_error_t BufferedFileOps::open(couchstore_error_info_t* errinfo,
-                                         couch_file_handle* handle,
-                                         const char* path,
-                                         int oflag)
+static couchstore_error_t buffered_open(couchstore_error_info_t *errinfo,
+                                        couch_file_handle* handle,
+                                        const char *path,
+                                        int oflag)
 {
     buffered_file_handle *h = (buffered_file_handle*)*handle;
     return h->raw_ops->open(errinfo, &h->raw_ops_handle, path, oflag);
 }
 
-void BufferedFileOps::close(couchstore_error_info_t* errinfo,
-                            couch_file_handle handle)
+static void buffered_close(couchstore_error_info_t *errinfo,
+                           couch_file_handle handle)
 {
     buffered_file_handle *h = (buffered_file_handle*)handle;
     if (!h) {
@@ -316,11 +280,11 @@ void BufferedFileOps::close(couchstore_error_info_t* errinfo,
     h->raw_ops->close(errinfo, h->raw_ops_handle);
 }
 
-ssize_t BufferedFileOps::pread(couchstore_error_info_t* errinfo,
-                               couch_file_handle handle,
-                               void *buf,
-                               size_t nbyte,
-                               cs_off_t offset)
+static ssize_t buffered_pread(couchstore_error_info_t *errinfo,
+                              couch_file_handle handle,
+                              void *buf,
+                              size_t nbyte,
+                              cs_off_t offset)
 {
 #if LOG_BUFFER
     //fprintf(stderr, "r");
@@ -365,11 +329,11 @@ ssize_t BufferedFileOps::pread(couchstore_error_info_t* errinfo,
     return total_read;
 }
 
-ssize_t BufferedFileOps::pwrite(couchstore_error_info_t* errinfo,
-                                couch_file_handle handle,
-                                const void* buf,
-                                size_t nbyte,
-                                cs_off_t offset)
+static ssize_t buffered_pwrite(couchstore_error_info_t *errinfo,
+                               couch_file_handle handle,
+                               const void *buf,
+                               size_t nbyte,
+                               cs_off_t offset)
 {
 #if LOG_BUFFER
     //fprintf(stderr, "w");
@@ -418,15 +382,15 @@ ssize_t BufferedFileOps::pwrite(couchstore_error_info_t* errinfo,
     return nbyte_written;
 }
 
-cs_off_t BufferedFileOps::goto_eof(couchstore_error_info_t* errinfo,
+static cs_off_t buffered_goto_eof(couchstore_error_info_t *errinfo,
                                   couch_file_handle handle)
 {
     buffered_file_handle *h = (buffered_file_handle*)handle;
     return h->raw_ops->goto_eof(errinfo, h->raw_ops_handle);
 }
 
-couchstore_error_t BufferedFileOps::sync(couchstore_error_info_t* errinfo,
-                                         couch_file_handle handle)
+static couchstore_error_t buffered_sync(couchstore_error_info_t *errinfo,
+                                        couch_file_handle handle)
 {
     buffered_file_handle *h = (buffered_file_handle*)handle;
     couchstore_error_t err = flush_buffer(errinfo, h->write_buffer);
@@ -436,24 +400,36 @@ couchstore_error_t BufferedFileOps::sync(couchstore_error_info_t* errinfo,
     return err;
 }
 
-couchstore_error_t BufferedFileOps::advise(couchstore_error_info_t* errinfo,
-                                           couch_file_handle handle,
-                                           cs_off_t offs,
-                                           cs_off_t len,
-                                           couchstore_file_advice_t adv)
+static couchstore_error_t buffered_advise(couchstore_error_info_t *errinfo,
+                                          couch_file_handle handle,
+                                          cs_off_t offs,
+                                          cs_off_t len,
+                                          couchstore_file_advice_t adv)
 {
     buffered_file_handle *h = (buffered_file_handle*)handle;
     return h->raw_ops->advise(errinfo, h->raw_ops_handle, offs, len, adv);
 }
 
-static BufferedFileOps ops;
+static const couch_file_ops ops = {
+    (uint64_t)5,
+    buffered_constructor,
+    buffered_open,
+    buffered_close,
+    buffered_pread,
+    buffered_pwrite,
+    buffered_goto_eof,
+    buffered_sync,
+    buffered_advise,
+    buffered_destructor,
+    NULL
+};
 
-FileOpsInterface* couch_get_buffered_file_ops(couchstore_error_info_t* errinfo,
-                                              FileOpsInterface* raw_ops,
-                                              couch_file_handle* handle,
-                                              bool readOnly)
+const couch_file_ops *couch_get_buffered_file_ops(couchstore_error_info_t *errinfo,
+                                                  const couch_file_ops* raw_ops,
+                                                  couch_file_handle* handle,
+                                                  bool readOnly)
 {
-    *handle = ops.constructor(errinfo, raw_ops, readOnly);
+    *handle = buffered_constructor_with_raw_ops(errinfo, raw_ops, readOnly);
 
     if (*handle) {
         return &ops;

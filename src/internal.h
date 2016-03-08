@@ -40,7 +40,7 @@ extern "C" {
      /* Structure representing an open file; "superclass" of Db */
     typedef struct _treefile {
         uint64_t pos;
-        FileOpsInterface* ops;
+        const couch_file_ops *ops;
         couch_file_handle handle;
         const char* path;
         couchstore_error_info_t lastError;
@@ -72,7 +72,7 @@ extern "C" {
         void *userdata;
     };
 
-    FileOpsInterface* couch_get_default_file_ops(void);
+    const couch_file_ops *couch_get_default_file_ops(void);
 
     /** Opens or creates a tree_file.
         @param file  Pointer to tree_file struct to initialize.
@@ -84,7 +84,7 @@ extern "C" {
                                       const char *filename,
                                       int openflags,
                                       crc_mode_e crc_mode,
-                                      FileOpsInterface* ops);
+                                      const couch_file_ops *ops);
     /** Closes a tree_file.
         @param file  Pointer to open tree_file. Does not free this pointer! */
     void tree_file_close(tree_file* file);

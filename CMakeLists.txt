@@ -35,9 +35,9 @@ CHECK_SYMBOL_EXISTS(fdatasync "unistd.h" HAVE_FDATASYNC)
 CHECK_SYMBOL_EXISTS(qsort_r "stdlib.h" HAVE_QSORT_R)
 
 IF (WIN32)
-  SET(COUCHSTORE_FILE_OPS "src/os_win.cc")
+  SET(COUCHSTORE_FILE_OPS "src/os_win.c")
 ELSE(WIN32)
-  SET(COUCHSTORE_FILE_OPS "src/os.cc")
+  SET(COUCHSTORE_FILE_OPS "src/os.c")
 ENDIF(WIN32)
 
 SET(COUCHSTORE_SOURCES src/arena.cc src/bitfield.c src/btree_modify.cc

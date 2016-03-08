@@ -35,7 +35,7 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
                                             couchstore_compact_hook hook,
                                             couchstore_docinfo_hook dhook,
                                             void* hook_ctx,
-                                            FileOpsInterface* ops)
+                                            const couch_file_ops *ops)
 {
     Db* target = NULL;
     char tmpFile[PATH_MAX]; // keep this on the stack for duration of the call
