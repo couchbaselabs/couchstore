@@ -602,37 +602,6 @@ TEST_F(CouchstoreTest, huge_revseq)
     db = nullptr; // mark as null, as we've cleaned up
 }
 
-TEST_F(CouchstoreTest, dropped_handle)
-{
-    Doc* rd;
-    Documents documents(1);
-    documents.setDoc(0, "test", "foo");
-
-    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_open_db(filePath.c_str(), COUCHSTORE_OPEN_FLAG_CREATE, &db));
-    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_save_document(db,
-                                                           documents.getDoc(0),
-                                                           documents.getDocInfo(0),
-                                                           0));
-    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_commit(db));
-
-#ifndef _MSC_VER
-    /*
-    * This currently doesn't work windows. The reopen path
-    * fails with a read error
-    */
-    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_drop_file(db));
-    ASSERT_EQ(COUCHSTORE_ERROR_FILE_CLOSED, couchstore_save_document(db,
-                                                                     documents.getDoc(0),
-                                                                     documents.getDocInfo(0),
-                                                                     0));
-
-    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_reopen_file(db, filePath.c_str(), 0));
-
-    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_open_document(db, "test", 4, &rd, 0));
-    couchstore_free_document(rd);
-#endif
-}
-
 // Create a new-file(s) and check crc is crc32-c
 TEST_F(CouchstoreTest, crc32c) {
     ASSERT_EQ(COUCHSTORE_SUCCESS,

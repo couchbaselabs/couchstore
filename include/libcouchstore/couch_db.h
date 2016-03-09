@@ -102,26 +102,6 @@ extern "C" {
     couchstore_error_t couchstore_drop_file(Db *db);
 
     /**
-     * Reattach a database handle to a file. The file passed in *must* be the
-     * same as the file previously attached to this handle, at least up to the
-     * position the file was at when the file was dropped.
-     *
-     * @param db The database handle to reattach the file to.
-     * @param filename The name of the file containing the database
-     * @param flags Additional flags for how the database should
-     *              be opened. See couchstore_open_flags_* for the
-     *              available flags.
-     *
-     * @return COUCHSTORE_SUCCESS upon success, COUCHSTORE_DB_NO_LONGER_VALID if
-     * it could not be guaranteed that the handle would see the same snapshot
-     * as before.
-     */
-    LIBCOUCHSTORE_API
-    couchstore_error_t couchstore_reopen_file(Db* db,
-                                              const char* filename,
-                                              couchstore_open_flags flags);
-
-    /**
      * Rewind a db handle to the next-oldest header still present in the file.
      * If there is no next-oldest header, the db handle will be *closed*, and
      * COUCHSTORE_DB_NO_LONGER_VALID will be returned.

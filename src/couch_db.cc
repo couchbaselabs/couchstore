@@ -350,39 +350,6 @@ couchstore_error_t couchstore_drop_file(Db *db)
 }
 
 LIBCOUCHSTORE_API
-couchstore_error_t couchstore_reopen_file(Db* db, const char* filename, couchstore_open_flags flags)
-{
-    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
-    if(!db->dropped) {
-        return COUCHSTORE_SUCCESS;
-    }
-    db_header previous = db->header;
-    int openflags = 0;
-    if(flags & COUCHSTORE_OPEN_FLAG_RDONLY) {
-        openflags = O_RDONLY;
-    } else {
-        openflags = O_RDWR;
-    }
-
-    error_pass(tree_file_open(&db->file,
-                              filename,
-                              openflags,
-                              db->file.crc_mode,
-                              db->file.ops));
-    error_pass(find_header_at_pos(db, previous.position));
-    free(previous.by_id_root);
-    free(previous.by_seq_root);
-    free(previous.local_docs_root);
-
-    // Assume we've got the same file if we find a header with the
-    // same update_seq at the old position.
-    error_unless(previous.update_seq == db->header.update_seq, COUCHSTORE_ERROR_DB_NO_LONGER_VALID);
-    db->dropped = 0;
-cleanup:
-    return errcode;
-}
-
-LIBCOUCHSTORE_API
 couchstore_error_t couchstore_rewind_db_header(Db *db)
 {
     couchstore_error_t errcode;
