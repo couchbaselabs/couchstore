@@ -1686,7 +1686,8 @@ static void test_view_btree_large_reducer(void)
                          dst_file,
                          O_CREAT | O_RDWR,
                          CRC32,
-                         couchstore_get_default_file_ops());
+                         couchstore_get_default_file_ops(),
+                         /*buffered*/ true);
 
     cb_assert(ret == COUCHSTORE_SUCCESS);
     mr = new_btree_modres(persistent_arena,

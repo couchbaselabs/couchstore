@@ -17,13 +17,13 @@ couchstore_error_t tree_file_open(tree_file* file,
                                   const char *filename,
                                   int openflags,
                                   crc_mode_e crc_mode,
-                                  FileOpsInterface* ops)
+                                  FileOpsInterface* ops,
+                                  bool buffered)
 {
     if(filename == nullptr || file == nullptr || ops == nullptr) {
         return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
     }
 
-    bool readOnly = (openflags == O_RDONLY);
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
 
     memset(file, 0, sizeof(*file));
@@ -33,8 +33,15 @@ couchstore_error_t tree_file_open(tree_file* file,
     file->path = (const char *) strdup(filename);
     error_unless(file->path, COUCHSTORE_ERROR_ALLOC_FAIL);
 
-    file->ops = couch_get_buffered_file_ops(&file->lastError, ops, &file->handle,
-                                            readOnly);
+    if (buffered) {
+        bool readOnly = (openflags == O_RDONLY);
+        file->ops = couch_get_buffered_file_ops(&file->lastError, ops,
+                                                &file->handle, readOnly);
+    } else {
+        file->ops = ops;
+        file->handle = file->ops->constructor(&file->lastError);
+    }
+
     error_unless(file->ops, COUCHSTORE_ERROR_ALLOC_FAIL);
 
     error_pass(file->ops->open(&file->lastError, &file->handle,

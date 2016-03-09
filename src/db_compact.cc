@@ -54,6 +54,10 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
         open_flags |= COUCHSTORE_OPEN_WITH_LEGACY_CRC;
     }
 
+    if (flags & COUCHSTORE_COMPACT_FLAG_UNBUFFERED) {
+        open_flags |= COUCHSTORE_OPEN_FLAG_UNBUFFERED;
+    }
+
     error_pass(couchstore_open_db_ex(target_filename, open_flags, ops, &target));
 
     ctx.target = target;

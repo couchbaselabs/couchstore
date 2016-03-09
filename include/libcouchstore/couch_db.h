@@ -33,7 +33,16 @@ extern "C" {
          * When excluded the correct CRC is automatically chosen for existing files.
          * When excluded the latest file version is always used for new files.
          */
-        COUCHSTORE_OPEN_WITH_LEGACY_CRC = 4
+        COUCHSTORE_OPEN_WITH_LEGACY_CRC = 4,
+        /*
+         * Open the database file without using an IO buffer
+         *
+         * This prevents the FileOps that are used in from being
+         * wrapped by the buffered file operations. This will
+         * *usually* result in performance degradation and is
+         * primarily intended for testing purposes.
+         */
+        COUCHSTORE_OPEN_FLAG_UNBUFFERED = 8,
     };
 
 
@@ -627,6 +636,16 @@ extern "C" {
          * changes the CRC function used.
          */
         COUCHSTORE_COMPACT_FLAG_UPGRADE_DB = 2,
+
+        /*
+         * Open the target database file without using an IO buffer
+         *
+         * This prevents the FileOps that are used in from being
+         * wrapped by the buffered file operations. This will
+         * *usually* result in performance degradation and is
+         * primarily intended for testing purposes.
+         */
+         COUCHSTORE_COMPACT_FLAG_UNBUFFERED = 4,
     };
 
     /**

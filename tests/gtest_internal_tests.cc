@@ -110,3 +110,16 @@ TEST_F(CouchstoreInternalTest, commit_alignment) {
     EXPECT_EQ(precommit_size,
               db->file.ops->goto_eof(&errinfo, db->file.handle));
 }
+
+/**
+ * Tests whether the unbuffered file ops flag actually
+ * prevents the buffered file operations from being used.
+ */
+TEST_F(CouchstoreInternalTest, unbuffered_fileops) {
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_open_db_ex(filePath.c_str(),
+                                    COUCHSTORE_OPEN_FLAG_CREATE | COUCHSTORE_OPEN_FLAG_UNBUFFERED,
+                                    couchstore_get_default_file_ops(),
+                                    &db));
+    EXPECT_EQ(db->file.ops, couchstore_get_default_file_ops());
+}

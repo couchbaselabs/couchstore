@@ -267,6 +267,7 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     Db *db;
     int openflags;
+    bool buffered = true;
 
     /* Sanity check input parameters */
     if ((flags & COUCHSTORE_OPEN_FLAG_RDONLY) &&
@@ -288,8 +289,13 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
         openflags |= O_CREAT;
     }
 
+    if (flags & COUCHSTORE_OPEN_FLAG_UNBUFFERED) {
+        buffered = false;
+    }
+
     // open with CRC unknown, CRC will be selected when header is read/or not found.
-    error_pass(tree_file_open(&db->file, filename, openflags, CRC_UNKNOWN, ops));
+    error_pass(tree_file_open(&db->file, filename, openflags, CRC_UNKNOWN, ops,
+                              buffered));
 
     if ((db->file.pos = db->file.ops->goto_eof(&db->file.lastError, db->file.handle)) == 0) {
         /* This is an empty file. Create a new fileheader unless the

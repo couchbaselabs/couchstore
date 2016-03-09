@@ -79,12 +79,15 @@ extern "C" {
         @param filename  Path to the file
         @param flags  POSIX open-mode flags
         @param crc_mode CRC the file should use.
-        @param ops  File I/O operations to use */
+        @param ops  File I/O operations to use
+        @param buffered Should the file operations be
+               wrapped by an IO buffer */
     couchstore_error_t tree_file_open(tree_file* file,
                                       const char *filename,
                                       int openflags,
                                       crc_mode_e crc_mode,
-                                      FileOpsInterface* ops);
+                                      FileOpsInterface* ops,
+                                      bool buffered);
     /** Closes a tree_file.
         @param file  Pointer to open tree_file. Does not free this pointer! */
     void tree_file_close(tree_file* file);
