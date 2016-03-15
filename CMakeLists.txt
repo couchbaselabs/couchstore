@@ -234,6 +234,36 @@ TARGET_LINK_LIBRARIES(couchstore_internal_gtest
         ${COUCHSTORE_LIBRARIES})
 
 ADD_TEST(couchstore-internal-gtest couchstore_internal_gtest)
+
+# This is an object library and can be used for verifying
+# FileOpsInterface implementations that wrap other FileOps
+# propogate errors correctly.
+#
+# Example usage can be found in tests/wrapped_fileops_test.cc
+ADD_LIBRARY(couchstore_wrapped_fileops_test_framework OBJECT
+        tests/test_fileops.cc
+        ${COUCHSTORE_FILE_OPS})
+SET_TARGET_PROPERTIES(couchstore_wrapped_fileops_test_framework PROPERTIES
+        COMPILE_FLAGS "-DLIBCOUCHSTORE_NO_VISIBILITY=1 -DTESTAPP=1")
+TARGET_INCLUDE_DIRECTORIES(couchstore_wrapped_fileops_test_framework
+        PRIVATE
+        ${gmock_SOURCE_DIR}/include
+        ${gtest_SOURCE_DIR}/include)
+
+ADD_EXECUTABLE(couchstore_wrapped_fileops_test
+        src/iobuffer.cc
+        tests/wrapped_fileops_test.cc
+        $<TARGET_OBJECTS:couchstore_wrapped_fileops_test_framework>
+        )
+SET_TARGET_PROPERTIES(couchstore_wrapped_fileops_test PROPERTIES
+        COMPILE_FLAGS "-DLIBCOUCHSTORE_NO_VISIBILITY=1 -DTESTAPP=1")
+TARGET_LINK_LIBRARIES(couchstore_wrapped_fileops_test
+        gtest
+        gtest_main
+        gmock)
+
+ADD_TEST(couchstore-wrapped_fileops-test couchstore_wrapped_fileops_test)
+
 ADD_SUBDIRECTORY(programs)
 
 ENABLE_CODE_COVERAGE_REPORT()

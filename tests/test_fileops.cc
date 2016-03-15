@@ -44,6 +44,8 @@ void MockOps::DelegateToFake() {
             .WillByDefault(Invoke(wrapped_ops.get(), &FileOpsInterface::close));
     ON_CALL(*this, goto_eof(_, _))
             .WillByDefault(Invoke(wrapped_ops.get(), &FileOpsInterface::goto_eof));
+    ON_CALL(*this, advise(_, _, _, _, _))
+        .WillByDefault(Invoke(wrapped_ops.get(), &FileOpsInterface::advise));
 
 }
 

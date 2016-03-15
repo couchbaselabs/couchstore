@@ -83,36 +83,6 @@ static void free_buffer(file_buffer* buf) {
     free(buf);
 }
 
-class BufferedFileOps : public FileOpsInterface {
-public:
-    BufferedFileOps() {}
-
-    couch_file_handle constructor(couchstore_error_info_t* errinfo) override ;
-    couchstore_error_t open(couchstore_error_info_t* errinfo,
-                            couch_file_handle* handle, const char* path,
-                            int oflag) override;
-    couchstore_error_t close(couchstore_error_info_t* errinfo,
-                             couch_file_handle handle) override;
-    ssize_t pread(couchstore_error_info_t* errinfo,
-                  couch_file_handle handle, void* buf, size_t nbytes,
-                  cs_off_t offset) override;
-    ssize_t pwrite(couchstore_error_info_t* errinfo,
-                   couch_file_handle handle, const void* buf,
-                   size_t nbytes, cs_off_t offset) override;
-    cs_off_t goto_eof(couchstore_error_info_t* errinfo,
-                      couch_file_handle handle) override;
-    couchstore_error_t sync(couchstore_error_info_t* errinfo,
-                            couch_file_handle handle) override;
-    couchstore_error_t advise(couchstore_error_info_t* errinfo,
-                              couch_file_handle handle, cs_off_t offset,
-                              cs_off_t len,
-                              couchstore_file_advice_t advice) override;
-    void destructor(couch_file_handle handle) override;
-
-    couch_file_handle constructor(couchstore_error_info_t *errinfo,
-                                  FileOpsInterface* raw_ops, bool readOnly);
-};
-
 //////// BUFFER WRITES:
 
 

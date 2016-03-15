@@ -56,6 +56,10 @@ public:
      * before opening a file.  This method is optional and
      * doesn't need to do anything at all; it can just return NULL
      * if there isn't anything to do.
+     *
+     * Note: No error checking is done on the result of this call
+     * so any failure should be handled accordingly (e.g. error
+     * when calling the `open` method).
      */
     virtual couch_file_handle constructor(couchstore_error_info_t* errinfo) = 0;
 
