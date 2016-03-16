@@ -20,12 +20,19 @@ except ImportError:
         sys.path.insert(0, cb_path)
 
 # Load the couchstore library and customize return types:
-_lib_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))[:-6]
-osx_path = os.path.join(_lib_dir + 'libcouchstore.dylib')
-for lib in ('libcouchstore.so',      # Linux
-            osx_path,                # Mac OS
+_lib_dir = [
+    # cbbackup / cbrestore
+    os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))[:-6],
+    # couchstore python tests - uses the LD_LIBRARY_PATH set
+    # via CMakeLists.txt to explicitly identify the path on OSX
+    os.environ.get('LD_LIBRARY_PATH', '.')
+    ]
+osx_path = [os.path.join(path, 'libcouchstore.dylib') for path in _lib_dir]
+
+for lib in ['libcouchstore.so',      # Linux
             'couchstore.dll',        # Windows
-            'libcouchstore-1.dll'):  # Windows (pre-CMake)
+            'libcouchstore-1.dll'    # Windows (pre-CMake)
+            ] + osx_path:            # Mac OS
     try:
         _lib = ctypes.CDLL(lib)
         break

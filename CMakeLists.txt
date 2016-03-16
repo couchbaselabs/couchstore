@@ -160,14 +160,9 @@ MACRO (M_ADD_PYTHON_TEST name pyfile)
     "LD_LIBRARY_PATH=${CMAKE_CURRENT_BINARY_DIR}")
 ENDMACRO()
 
-# Skip python tests on OS X. To fix MB-16454 we implemented a workaround to
-# deal with linking issues in OS X 10.11 where we had to hardcode the path
-# to libcouchbase from the python library.
-IF (NOT APPLE)
-    M_ADD_PYTHON_TEST(couchstore-purge ${CMAKE_CURRENT_SOURCE_DIR}/tests/purge.py)
-    M_ADD_PYTHON_TEST(couchstore-rewind ${CMAKE_CURRENT_SOURCE_DIR}/tests/rewind.py)
-    M_ADD_PYTHON_TEST(couchstore-changecount ${CMAKE_CURRENT_SOURCE_DIR}/tests/changecount.py)
-ENDIF (NOT APPLE)
+M_ADD_PYTHON_TEST(couchstore-purge ${CMAKE_CURRENT_SOURCE_DIR}/tests/purge.py)
+M_ADD_PYTHON_TEST(couchstore-rewind ${CMAKE_CURRENT_SOURCE_DIR}/tests/rewind.py)
+M_ADD_PYTHON_TEST(couchstore-changecount ${CMAKE_CURRENT_SOURCE_DIR}/tests/changecount.py)
 
 ADD_EXECUTABLE(couchstore_testapp
                tests/testapp.c
