@@ -261,6 +261,9 @@ static couchstore_error_t compact_seq_tree(Db* source, Db* target, compact_ctx *
 
     errcode = btree_lookup(&srcfold, source->header.by_seq_root->pointer);
     if (errcode == COUCHSTORE_SUCCESS) {
+        if(target->header.by_seq_root != nullptr) {
+            free(target->header.by_seq_root);
+        }
         target->header.by_seq_root = complete_new_btree(ctx->target_mr, &errcode);
     }
 cleanup:

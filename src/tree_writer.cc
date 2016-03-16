@@ -181,6 +181,9 @@ couchstore_error_t TreeWriterWrite(TreeWriter* writer,
     }
 
     // Finish up the tree:
+    if(*out_root != nullptr) {
+        free(*out_root);
+    }
     *out_root = complete_new_btree(target_mr, &errcode);
 
 cleanup:
