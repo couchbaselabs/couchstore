@@ -234,3 +234,5 @@ TARGET_LINK_LIBRARIES(couchstore_internal_gtest
 
 ADD_TEST(couchstore-internal-gtest couchstore_internal_gtest)
 ADD_SUBDIRECTORY(programs)
+
+ENABLE_CODE_COVERAGE_REPORT()
