@@ -118,5 +118,13 @@ int main(int argc, char** argv)
     }
 
     printf("Compacted %s -> %s\n", argv[argp - 1], argv[argp]);
+
+    errcode = couchstore_close_file(source);
+    couchstore_free_db(source);
+    if(errcode)
+    {
+        exit_error(errcode);
+    }
+
     return 0;
 }

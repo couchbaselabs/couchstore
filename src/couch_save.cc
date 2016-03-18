@@ -249,8 +249,8 @@ static couchstore_error_t update_indexes(Db *db,
 
     new_seq_root = modify_btree(&seqrq, db->header.by_seq_root, &errcode);
     if (errcode != COUCHSTORE_SUCCESS) {
-        fatbuf_free(actbuf);
-        return errcode;
+        free(new_id_root);
+        error_pass(errcode);
     }
 
     if (db->header.by_id_root != new_id_root) {
