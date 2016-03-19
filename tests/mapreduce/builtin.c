@@ -18,7 +18,7 @@
  * the License.
  **/
 
-#include "mapreduce_tests.h"
+#include "src/views/mapreduce/mapreduce.h"
 #include <string.h>
 
 
@@ -153,11 +153,15 @@ static void test_date_to_array_function(void)
     mapreduce_free_context(context);
 }
 
-void builtin_tests(void)
+int main(void)
 {
     fprintf(stderr, "Running mapreduce builtin tests\n");
+    initV8();
 
     test_sum_function();
     test_b64decode_function();
     test_date_to_array_function();
+
+    deinitV8();
+    return 0;
 }

@@ -24,7 +24,6 @@
 #include <string.h>
 #include "macros.h"
 #include "../src/file_merger.h"
-#include "file_tests.h"
 
 #define N_FILES 4
 #define MAX_RECORDS_PER_FILE 10000
@@ -149,13 +148,13 @@ static void check_deduped_file(const char *file_path, int *expected_set, int len
 }
 
 
-void file_deduper_tests(void)
+int main(void)
 {
     const char *source_files[N_FILES] = {
-        "sorted_file_1.tmp",
-        "sorted_file_2.tmp",
-        "sorted_file_3.tmp",
-        "sorted_file_4.tmp"
+        "deduper_sorted_file_1.tmp",
+        "deduper_sorted_file_2.tmp",
+        "deduper_sorted_file_3.tmp",
+        "deduper_sorted_file_4.tmp"
     };
     const char *dest_file = "merged_file.tmp";
     unsigned i, j;
@@ -203,4 +202,5 @@ void file_deduper_tests(void)
 
     fprintf(stderr, "Running file deduper tests passed\n\n");
     free(expected_result);
+    return 0;
 }

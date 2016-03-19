@@ -24,7 +24,6 @@
 #include <string.h>
 #include "macros.h"
 #include "../src/file_sorter.h"
-#include "file_tests.h"
 
 #define UNSORTED_FILE_PATH "unsorted_file.data"
 #define SORT_TMP_DIR       "."
@@ -278,7 +277,7 @@ static int int_cmp(const void *a, const void *b)
 }
 
 
-void file_sorter_tests(void)
+int main(void)
 {
     const unsigned temp_files[] = {
         2, 3, 4, 5, 6, 7, 8, 9, 10
@@ -340,4 +339,5 @@ void file_sorter_tests(void)
     test_file_sort(sizeof(int) * 50, 10, check_sorted_callback, 1);
 
     fprintf(stderr, "File sorter tests passed\n\n");
+    return 0;
 }

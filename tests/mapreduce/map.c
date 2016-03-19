@@ -18,7 +18,7 @@
  * the License.
  **/
 
-#include "mapreduce_tests.h"
+#include "src/views/mapreduce/mapreduce.h"
 #include <string.h>
 
 #if __STDC_VERSION__ >=199901L
@@ -493,9 +493,10 @@ static void test_timeout(void)
     mapreduce_free_context(context);
 }
 
-void map_tests(void)
+int main(void)
 {
     fprintf(stderr, "Running map tests\n");
+    initV8();
 
     mapreduce_set_timeout(1);
     test_timeout();
@@ -508,4 +509,7 @@ void map_tests(void)
     test_map_multiple_emits();
 
     test_timeout();
+
+    deinitV8();
+    return 0;
 }

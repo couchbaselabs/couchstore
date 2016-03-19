@@ -18,7 +18,8 @@
  * the License.
  **/
 
-#include "mapreduce_tests.h"
+#include "src/views/mapreduce/mapreduce.h"
+#include <stdlib.h>
 #include <string.h>
 
 #if __STDC_VERSION__ >=199901L
@@ -403,9 +404,10 @@ static void free_json_list(mapreduce_json_list_t *list)
     free(list);
 }
 
-void reduce_tests(void)
+int main(void)
 {
     fprintf(stderr, "Running reduce tests\n");
+    initV8();
 
     mapreduce_set_timeout(1);
     test_timeout();
@@ -417,4 +419,6 @@ void reduce_tests(void)
     test_reduce_and_rereduce_success();
 
     test_timeout();
+    deinitV8();
+    return 0;
 }

@@ -15,21 +15,14 @@
  *   limitations under the License.
  */
 
-#include "file_tests.h"
-
 extern void initV8();
 extern void deinitV8();
-extern void mapreduce_tests();
 extern void view_tests();
 extern void purge_tests();
 
 int main() {
     initV8();
-    file_merger_tests();
-    file_deduper_tests();
-    file_sorter_tests();
 
-    mapreduce_tests();
     view_tests();
     purge_tests();
     deinitV8();

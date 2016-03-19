@@ -23,7 +23,6 @@
 #include <stdlib.h>
 #include "macros.h"
 #include "../src/file_merger.h"
-#include "file_tests.h"
 
 #define N_FILES 4
 #define MAX_RECORDS_PER_FILE 100
@@ -110,13 +109,13 @@ static unsigned long check_file_sorted(const char *file_path)
 }
 
 
-void file_merger_tests(void)
+int main(void)
 {
     const char *source_files[N_FILES] = {
-        "sorted_file_1.tmp",
-        "sorted_file_2.tmp",
-        "sorted_file_3.tmp",
-        "sorted_file_4.tmp"
+        "merger_sorted_file_1.tmp",
+        "merger_sorted_file_2.tmp",
+        "merger_sorted_file_3.tmp",
+        "merger_sorted_file_4.tmp"
     };
     const char *dest_file = "merged_file.tmp";
     const int batches[N_FILES][MAX_RECORDS_PER_FILE] = {
@@ -171,4 +170,5 @@ void file_merger_tests(void)
     remove(dest_file);
 
     fprintf(stderr, "Running file merger tests passed\n\n");
+    return 0;
 }

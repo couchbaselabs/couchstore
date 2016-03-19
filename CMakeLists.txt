@@ -60,6 +60,9 @@ SET(COUCHSTORE_SOURCES src/arena.cc src/bitfield.c src/btree_modify.cc
             src/views/compaction.c src/quicksort.c ${COUCHSTORE_FILE_OPS})
 SET(COUCHSTORE_LIBRARIES ${V8_LIBRARIES} ${ICU_LIBRARIES} ${SNAPPY_LIBRARIES} platform)
 
+SET(COUCHSTORE_GTEST_LIBRARIES gtest gtest_main gmock)
+SET(COUCHSTORE_GTEST_INCLUDES ${gtest_SOURCE_DIR}/include ${gmock_SOURCE_DIR}/include)
+
 ADD_LIBRARY(couchstore SHARED ${COUCHSTORE_SOURCES})
 SET_TARGET_PROPERTIES(couchstore PROPERTIES COMPILE_FLAGS "-DLIBCOUCHSTORE_INTERNAL=1 -DLIBMAPREDUCE_INTERNAL=1")
 TARGET_LINK_LIBRARIES(couchstore ${COUCHSTORE_LIBRARIES})
@@ -165,15 +168,47 @@ M_ADD_PYTHON_TEST(couchstore-purge ${CMAKE_CURRENT_SOURCE_DIR}/tests/purge.py)
 M_ADD_PYTHON_TEST(couchstore-rewind ${CMAKE_CURRENT_SOURCE_DIR}/tests/rewind.py)
 M_ADD_PYTHON_TEST(couchstore-changecount ${CMAKE_CURRENT_SOURCE_DIR}/tests/changecount.py)
 
+MACRO (M_MAKE_LEGACY_TEST name)
+    ADD_EXECUTABLE(${name} ${ARGN})
+    SET_TARGET_PROPERTIES(${name} PROPERTIES
+            COMPILE_FLAGS "-DLIBCOUCHSTORE_NO_VISIBILITY=1 -DTESTAPP=1")
+    TARGET_LINK_LIBRARIES(${name} couchstore)
+ENDMACRO()
+
+M_MAKE_LEGACY_TEST(couchstore_file-deduper-test
+        src/file_merger.cc
+        tests/file_deduper_tests.c)
+
+M_MAKE_LEGACY_TEST(couchstore_file-merger-test
+        src/file_merger.cc
+        tests/file_merger_tests.c)
+
+M_MAKE_LEGACY_TEST(couchstore_file-sorter-test
+        src/file_merger.cc
+        src/file_name_utils.c
+        src/file_sorter.cc
+        src/quicksort.c
+        tests/file_sorter_tests.c)
+
+SET(MAP_REDUCE_SOURCES
+        src/views/mapreduce/mapreduce.cc
+        src/views/mapreduce/mapreduce_c.cc
+        ${CMAKE_CURRENT_BINARY_DIR}/src/views/mapreduce/jsfunctions/jsfunctions_data.cc)
+
+M_MAKE_LEGACY_TEST(couchstore_mapreduce-builtin-test
+        ${MAP_REDUCE_SOURCES}
+        tests/mapreduce/builtin.c)
+
+M_MAKE_LEGACY_TEST(couchstore_mapreduce-map-test
+        ${MAP_REDUCE_SOURCES}
+        tests/mapreduce/map.c)
+
+M_MAKE_LEGACY_TEST(couchstore_mapreduce-reduce-test
+        ${MAP_REDUCE_SOURCES}
+        tests/mapreduce/reduce.c)
+
 ADD_EXECUTABLE(couchstore_testapp
                tests/testapp.c
-               tests/file_merger_tests.c
-               tests/file_sorter_tests.c
-               tests/file_deduper_tests.c
-               tests/mapreduce/tests.c
-               tests/mapreduce/map.c
-               tests/mapreduce/reduce.c
-               tests/mapreduce/builtin.c
                tests/views/tests.c
                tests/views/collate_json_test.c
                tests/views/index_headers.c
@@ -189,10 +224,9 @@ ADD_EXECUTABLE(couchstore_testapp
                tests/btree_purge/tests.c
                tests/btree_purge/purge.c
                ${COUCHSTORE_SOURCES})
-TARGET_LINK_LIBRARIES(couchstore_testapp ${COUCHSTORE_LIBRARIES})
 SET_TARGET_PROPERTIES(couchstore_testapp PROPERTIES
-                      COMPILE_FLAGS "-DLIBCOUCHSTORE_NO_VISIBILITY=1 -DTESTAPP=1")
-ADD_TEST(couchstore-testapp couchstore_testapp)
+        COMPILE_FLAGS "-DLIBCOUCHSTORE_NO_VISIBILITY=1 -DTESTAPP=1")
+TARGET_LINK_LIBRARIES(couchstore_testapp ${COUCHSTORE_LIBRARIES})
 
 ADD_EXECUTABLE(couchstore_gtest
                tests/couchstoretest.cc
@@ -201,20 +235,10 @@ ADD_EXECUTABLE(couchstore_gtest
                tests/test_fileops.cc
                src/node_types.cc
                ${COUCHSTORE_FILE_OPS})
-
-
 SET_TARGET_PROPERTIES(couchstore_gtest PROPERTIES
                       COMPILE_FLAGS "-DLIBCOUCHSTORE_NO_VISIBILITY=1 -DTESTAPP=1")
-TARGET_INCLUDE_DIRECTORIES(couchstore_gtest PUBLIC ${gtest_SOURCE_DIR}/include ${gmock_SOURCE_DIR}/include)
-
-TARGET_LINK_LIBRARIES(couchstore_gtest
-  gtest
-  gtest_main
-  gmock
-  couchstore
-  ${COUCHSTORE_LIBRARIES})
-
-ADD_TEST(couchstore-gtest couchstore_gtest)
+TARGET_INCLUDE_DIRECTORIES(couchstore_gtest PRIVATE ${COUCHSTORE_GTEST_INCLUDES})
+TARGET_LINK_LIBRARIES(couchstore_gtest couchstore ${COUCHSTORE_GTEST_LIBRARIES})
 
 ADD_EXECUTABLE(couchstore_internal_gtest
         tests/couchstoretest.cc
@@ -223,18 +247,12 @@ ADD_EXECUTABLE(couchstore_internal_gtest
         tests/test_fileops.cc
         ${COUCHSTORE_SOURCES}
         )
-
 SET_TARGET_PROPERTIES(couchstore_internal_gtest PROPERTIES
         COMPILE_FLAGS "-DLIBCOUCHSTORE_NO_VISIBILITY=1 -DTESTAPP=1")
-TARGET_INCLUDE_DIRECTORIES(couchstore_internal_gtest PUBLIC ${gtest_SOURCE_DIR}/include ${gmock_SOURCE_DIR}/include)
-
+TARGET_INCLUDE_DIRECTORIES(couchstore_internal_gtest PRIVATE ${COUCHSTORE_GTEST_INCLUDES})
 TARGET_LINK_LIBRARIES(couchstore_internal_gtest
-        gtest
-        gtest_main
-        gmock
+        ${COUCHSTORE_GTEST_LIBRARIES}
         ${COUCHSTORE_LIBRARIES})
-
-ADD_TEST(couchstore-internal-gtest couchstore_internal_gtest)
 
 # This is an object library and can be used for verifying
 # FileOpsInterface implementations that wrap other FileOps
@@ -248,8 +266,7 @@ SET_TARGET_PROPERTIES(couchstore_wrapped_fileops_test_framework PROPERTIES
         COMPILE_FLAGS "-DLIBCOUCHSTORE_NO_VISIBILITY=1 -DTESTAPP=1")
 TARGET_INCLUDE_DIRECTORIES(couchstore_wrapped_fileops_test_framework
         PRIVATE
-        ${gmock_SOURCE_DIR}/include
-        ${gtest_SOURCE_DIR}/include)
+        ${COUCHSTORE_GTEST_INCLUDES})
 
 ADD_EXECUTABLE(couchstore_wrapped_fileops_test
         src/iobuffer.cc
@@ -258,12 +275,20 @@ ADD_EXECUTABLE(couchstore_wrapped_fileops_test
         )
 SET_TARGET_PROPERTIES(couchstore_wrapped_fileops_test PROPERTIES
         COMPILE_FLAGS "-DLIBCOUCHSTORE_NO_VISIBILITY=1 -DTESTAPP=1")
-TARGET_LINK_LIBRARIES(couchstore_wrapped_fileops_test
-        gtest
-        gtest_main
-        gmock)
+TARGET_LINK_LIBRARIES(couchstore_wrapped_fileops_test ${COUCHSTORE_GTEST_LIBRARIES})
 
+ADD_TEST(couchstore-file-deduper-test couchstore_file-deduper-test)
+ADD_TEST(couchstore-file-merge-test couchstore_file-merger-test)
+ADD_TEST(couchstore-file-sorter-test couchstore_file-sorter-test)
+ADD_TEST(couchstore-gtest couchstore_gtest)
+ADD_TEST(couchstore-internal-gtest couchstore_internal_gtest)
+ADD_TEST(couchstore-mapreduce-builtin-test couchstore_mapreduce-builtin-test)
+ADD_TEST(couchstore-mapreduce-map-test couchstore_mapreduce-map-test)
+ADD_TEST(couchstore-mapreduce-reduce-test couchstore_mapreduce-reduce-test)
+ADD_TEST(couchstore-testapp couchstore_testapp)
 ADD_TEST(couchstore-wrapped_fileops-test couchstore_wrapped_fileops_test)
+
+
 
 ADD_SUBDIRECTORY(programs)
 ADD_SUBDIRECTORY(src/views/mapreduce/jsfunctions)
