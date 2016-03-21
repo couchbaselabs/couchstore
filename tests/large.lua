@@ -29,11 +29,15 @@ function make_val(size)
    return table.concat(chars)
 end
 
+local testsample = make_val(40000)
+
 function test_big_bulk(dbname)
    print "Making data set..."
    local t = {}
    for i = 0, 40000, 5 do
-      table.insert(t, {"k" .. i, make_val(i), 1})
+      local k = "k" .. i
+      local v = testsample:sub(i)
+      t[#t + 1] =  {k, v, 1 }
    end
 
    print "Saving data set..."
@@ -58,8 +62,8 @@ function test_big_sequential(dbname)
    local t = {}
    for i = 0, 40000, 5 do
       local k = "k" .. i
-      local v = make_val(i)
-      table.insert(t, {k, v, 1})
+      local v = testsample:sub(i)
+      t[#t + 1] =  {k, v, 1 }
       db:save(k, v, 1)
    end
 
