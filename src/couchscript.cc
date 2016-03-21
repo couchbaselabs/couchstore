@@ -32,6 +32,13 @@ extern "C" {
 #include <lauxlib.h>
 }
 
+#define CHECK_NULL(db) \
+    if(db == nullptr) { \
+        lua_pushstring(ls, "The db instance is closed"); \
+        lua_error(ls); \
+        return 1; \
+    }
+
 typedef union {
     struct {
         uint64_t cas;
@@ -119,25 +126,33 @@ extern "C" {
     {
         Db **d = static_cast<Db **>(luaL_checkudata(ls, 1, "couch"));
         assert(d);
-        assert(*d);
         return *d;
+    }
+
+    static void nullDb(lua_State *ls)
+    {
+        Db **d = static_cast<Db **>(luaL_checkudata(ls, 1, "couch"));
+        *d = nullptr;
     }
 
     static int couch_close(lua_State *ls)
     {
         Db *db = getDb(ls);
+        CHECK_NULL(db)
 
         if (couchstore_close_db(db) != COUCHSTORE_SUCCESS) {
             lua_pushstring(ls, "error closing database");
             lua_error(ls);
             return 1;
         }
+        nullDb(ls);
         return 0;
     }
 
     static int couch_commit(lua_State *ls)
     {
         Db *db = getDb(ls);
+        CHECK_NULL(db)
 
         if (couchstore_commit(db) != COUCHSTORE_SUCCESS) {
             lua_pushstring(ls, "error committing");
@@ -156,7 +171,8 @@ extern "C" {
         }
 
         Db *db = getDb(ls);
-        assert(db);
+        CHECK_NULL(db)
+
         Doc *doc(NULL);
         lua_remove(ls, 1);
         DocInfo *docinfo = getDocInfo(ls);
@@ -191,6 +207,7 @@ extern "C" {
         Doc *doc;
         DocInfo *docinfo;
         Db *db = getDb(ls);
+        CHECK_NULL(db)
 
         size_t klen;
         const char *key = luaL_checklstring(ls, 2, &klen);
@@ -236,6 +253,7 @@ extern "C" {
         }
 
         Db *db = getDb(ls);
+        CHECK_NULL(db)
 
         int64_t arg = static_cast<int64_t>(luaL_checknumber(ls, 2));
         cs_off_t location(0);
@@ -285,6 +303,7 @@ extern "C" {
         }
 
         Db *db = getDb(ls);
+        CHECK_NULL(db)
 
         int rc = couchstore_save_document(db, &doc, &docinfo, 0);
         if (rc < 0) {
@@ -406,6 +425,7 @@ extern "C" {
         }
 
         Db *db = getDb(ls);
+        CHECK_NULL(db)
 
         int rc = couchstore_save_documents(db, bs.docs, bs.infos,
                                            bs.size, COMPRESS_DOC_BODIES);
@@ -467,6 +487,7 @@ extern "C" {
         docinfo.rev_meta.buf = revbuf.bytes;
 
         Db *db = getDb(ls);
+        CHECK_NULL(db)
 
         int rc = couchstore_save_document(db, &doc, &docinfo,
                                           COMPRESS_DOC_BODIES);
@@ -496,6 +517,7 @@ extern "C" {
         doc.deleted = 0;
 
         Db *db = getDb(ls);
+        CHECK_NULL(db)
 
         int rc = couchstore_save_local_document(db, &doc);
         if (rc < 0) {
@@ -523,6 +545,7 @@ extern "C" {
         doc.deleted = 1;
 
         Db *db = getDb(ls);
+        CHECK_NULL(db)
 
         int rc = couchstore_save_local_document(db, &doc);
         if (rc < 0) {
@@ -547,6 +570,7 @@ extern "C" {
 
         LocalDoc *doc;
         Db *db = getDb(ls);
+        CHECK_NULL(db)
 
         size_t klen;
         // Should be const :/
@@ -617,6 +641,7 @@ extern "C" {
         }
 
         Db *db = getDb(ls);
+        CHECK_NULL(db)
 
         uint64_t since((uint64_t)luaL_checknumber(ls, 2));
         couchstore_docinfos_options options((uint64_t)luaL_checknumber(ls, 3));
@@ -644,6 +669,15 @@ extern "C" {
         return 0;
     }
 
+    static int couch_gc(lua_State *ls) {
+        Db *db = getDb(ls);
+        if(db != nullptr) {
+            couchstore_close_db(db);
+            nullDb(ls);
+        }
+        return 1;
+    }
+
     static const luaL_Reg couch_funcs[] = {
         {"open", couch_open},
         {NULL, NULL}
@@ -662,6 +696,7 @@ extern "C" {
         {"commit", couch_commit},
         {"close", couch_close},
         {"truncate", couch_truncate},
+        {"__gc", couch_gc},
         {NULL, NULL}
     };
 
