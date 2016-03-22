@@ -65,6 +65,8 @@ public:
 
     void DelegateToFake();
 
+    FileOpsInterface* get_wrapped();
+
 protected:
     std::unique_ptr<FileOpsInterface> wrapped_ops;
 };

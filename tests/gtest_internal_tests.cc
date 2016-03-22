@@ -130,7 +130,14 @@ TEST_F(FileOpsErrorInjectionTest, dbdropfile_fileclose_fail) {
     ASSERT_EQ(COUCHSTORE_SUCCESS, open_db(COUCHSTORE_OPEN_FLAG_CREATE));
     {
         InSequence s;
-        EXPECT_CALL(ops, close(_, _)).WillOnce(Return(COUCHSTORE_ERROR_WRITE));
+        EXPECT_CALL(ops, close(_, _)).WillOnce(Invoke(
+            [this](couchstore_error_info_t* errinfo, couch_file_handle handle) {
+            // We need to actually close the file otherwise we'll get
+            // a file handle leak and Windows won't be able to reopen
+            // a file with the same name.
+            ops.get_wrapped()->close(errinfo, handle);
+            return COUCHSTORE_ERROR_WRITE;
+        }));
         EXPECT_EQ(COUCHSTORE_ERROR_WRITE, couchstore_close_file(db));
     }
 }

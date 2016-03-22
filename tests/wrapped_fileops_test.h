@@ -79,6 +79,8 @@ WrappedOpsTest<T>::WrappedOpsTest()
 
 template <class T>
 WrappedOpsTest<T>::~WrappedOpsTest() {
+    testing::Mock::VerifyAndClearExpectations(this->mock_ops);
+    this->ops.close(&this->errinfo, this->handle);
     this->ops.destructor(this->handle);
     remove(file_path.c_str());
 }

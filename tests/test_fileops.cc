@@ -27,6 +27,10 @@ MockOps::~MockOps() {
 using ::testing::Invoke;
 using ::testing::_;
 
+FileOpsInterface* MockOps::get_wrapped() {
+    return wrapped_ops.get();
+}
+
 void MockOps::DelegateToFake() {
     ON_CALL(*this, pwrite(_, _, _, _, _))
             .WillByDefault(Invoke(wrapped_ops.get(), &FileOpsInterface::pwrite));
