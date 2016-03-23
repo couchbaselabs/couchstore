@@ -420,7 +420,7 @@ static couchstore_error_t modify_node(couchfile_modify_request *rq,
 
     if (nptr) {
         if ((nodebuflen = pread_compressed(rq->file, nptr->pointer, (char **) &nodebuf)) < 0) {
-            error_pass(COUCHSTORE_ERROR_READ);
+            error_pass(static_cast<couchstore_error_t>(nodebuflen));
         }
     }
 
@@ -776,7 +776,7 @@ static couchstore_error_t purge_node(couchfile_modify_request *rq,
     }
 
     if ((nodebuflen = pread_compressed(rq->file, nptr->pointer, (char **) &nodebuf)) < 0) {
-        error_pass(COUCHSTORE_ERROR_READ);
+        error_pass(static_cast<couchstore_error_t>(nodebuflen));
     }
 
     local_result = make_modres(dst->arena, rq);

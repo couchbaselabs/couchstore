@@ -490,7 +490,7 @@ static couchstore_error_t find_view_header_at_pos(view_group_info_t *info,
     ssize_t readsize = info->file.ops->pread(&info->file.lastError,
                                             info->file.handle,
                                             &buf, 1, pos);
-    error_unless(readsize == 1, COUCHSTORE_ERROR_READ);
+    error_unless(readsize == 1, (couchstore_error_t) readsize);
     if (buf == 0) {
         return COUCHSTORE_ERROR_NO_HEADER;
     } else if (buf != 1) {
