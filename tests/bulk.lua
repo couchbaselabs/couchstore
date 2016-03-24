@@ -54,3 +54,4 @@ end
 
 testlib.run_test("Explicit bulk test", test_explicit)
 testlib.run_test("Big bulk test", large_txn_bulk_test)
+return testlib.fail_count()

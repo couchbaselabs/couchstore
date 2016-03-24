@@ -67,3 +67,4 @@ end
 
 testlib.run_test("Filter deletes", test_filter_deletes)
 testlib.run_test("Filter mutations", test_filter_mutations)
+return testlib.fail_count()

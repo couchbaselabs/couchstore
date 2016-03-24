@@ -855,6 +855,13 @@ int main(int argc, char **argv)
     int rv(luaL_dofile(ls, argv[1]));
     if (rv != 0) {
         std::cerr << "Error running stuff:  " << lua_tostring(ls, -1) << std::endl;
+        return rv;
     }
-    return rv;
+
+    int top = lua_gettop(ls);
+    int rc = 1;
+    if (top && lua_isnumber(ls, top)) {
+        rc = static_cast<int>(lua_tonumber(ls, top));
+    }
+    return rc;
 }

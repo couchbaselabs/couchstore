@@ -64,3 +64,4 @@ end
 
 testlib.run_test("Deletion dropping test", compaction_test)
 os.remove(outfile)
+return testlib.fail_count()

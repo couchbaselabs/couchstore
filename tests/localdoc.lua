@@ -47,3 +47,4 @@ function localtest(dbname)
 end
 
 testlib.run_test("Local doc test", localtest)
+return testlib.fail_count()

@@ -77,3 +77,4 @@ end
 
 testlib.run_test("Simple truncation test", simpletrunc)
 testlib.run_test("Various mangling of headers", header_mangling)
+return testlib.fail_count()

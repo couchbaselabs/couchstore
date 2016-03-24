@@ -18,3 +18,4 @@ function bigdb(dbname)
 end
 
 testlib.run_test("A Big Database", bigdb)
+return testlib.fail_count()
