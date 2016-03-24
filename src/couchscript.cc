@@ -863,5 +863,6 @@ int main(int argc, char **argv)
     if (top && lua_isnumber(ls, top)) {
         rc = static_cast<int>(lua_tonumber(ls, top));
     }
+    lua_close(ls);
     return rc;
 }
