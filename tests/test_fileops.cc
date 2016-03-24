@@ -58,60 +58,70 @@ LogOps::LogOps(FileOpsInterface* ops) : wrapped_ops(ops) {}
 LogOps::~LogOps() {}
 
 couch_file_handle LogOps::constructor(couchstore_error_info_t* errinfo) {
-    std::cerr << "@constructor(" << errinfo << ")" << std::endl;
-    return wrapped_ops->constructor(errinfo);
+    auto rv = wrapped_ops->constructor(errinfo);
+    std::cerr << "@constructor(" << errinfo << ") -> " << rv << std::endl;
+    return rv;
 }
 
 couchstore_error_t LogOps::open(couchstore_error_info_t* errinfo,
                                 couch_file_handle* handle, const char* path,
                                 int oflag) {
+    auto rv = wrapped_ops->open(errinfo, handle, path, oflag);
     std::cerr << "@open(" << errinfo << ", " << handle << ", " << path << ", "
-              << oflag << ")" << std::endl;
-
-    return wrapped_ops->open(errinfo, handle, path, oflag);
+              << oflag << ") -> " << rv << std::endl;
+    return rv;
 }
 
 couchstore_error_t LogOps::close(couchstore_error_info_t* errinfo,
                                  couch_file_handle handle) {
-    std::cerr << "@close(" << errinfo << ", " << handle << ")" << std::endl;
-    return wrapped_ops->close(errinfo, handle);
+    auto rv = wrapped_ops->close(errinfo, handle);
+    std::cerr << "@close(" << errinfo << ", " << handle << ") -> "
+              << rv << std::endl;
+    return rv;
 }
 
 ssize_t LogOps::pread(couchstore_error_info_t* errinfo,
                       couch_file_handle handle, void* buf, size_t nbytes,
                       cs_off_t offset) {
+    auto rv = wrapped_ops->pread(errinfo, handle, buf, nbytes, offset);
     std::cerr << "@pread(" << errinfo << ", " << handle << ", " << buf << ", "
-              << nbytes << ", " << offset << ")" << std::endl;
-    return wrapped_ops->pread(errinfo, handle, buf, nbytes, offset);
+              << nbytes << ", " << offset << ") -> " << rv << std::endl;
+    return rv;
 }
 
 ssize_t LogOps::pwrite(couchstore_error_info_t* errinfo,
                        couch_file_handle handle, const void* buf, size_t nbytes,
                        cs_off_t offset) {
+    auto rv = wrapped_ops->pwrite(errinfo, handle, buf, nbytes, offset);
     std::cerr << "@pwrite(" << errinfo << ", " << handle << ", " << buf << ", "
-              << nbytes << ", " << offset << ")" << std::endl;
-    return wrapped_ops->pwrite(errinfo, handle, buf, nbytes, offset);
+              << nbytes << ", " << offset << ") -> " << rv << std::endl;
+    return rv;
 }
 
 cs_off_t LogOps::goto_eof(couchstore_error_info_t* errinfo,
                           couch_file_handle handle) {
-    std::cerr << "@goto_eof(" << errinfo << ", " << handle << ")" << std::endl;
-    return wrapped_ops->goto_eof(errinfo, handle);
+    auto rv = wrapped_ops->goto_eof(errinfo, handle);
+    std::cerr << "@goto_eof(" << errinfo << ", " << handle << ") -> "
+              << rv << std::endl;
+    return rv;
 }
 
 couchstore_error_t LogOps::sync(couchstore_error_info_t* errinfo,
                                 couch_file_handle handle) {
-    std::cerr << "@sync(" << errinfo << ", " << handle << ")" << std::endl;
-    return wrapped_ops->sync(errinfo, handle);
+    auto rv = wrapped_ops->sync(errinfo, handle);
+    std::cerr << "@sync(" << errinfo << ", " << handle << ") -> "
+              << rv << std::endl;
+    return rv;
 }
 
 couchstore_error_t LogOps::advise(couchstore_error_info_t* errinfo,
                                   couch_file_handle handle, cs_off_t offset,
                                   cs_off_t len,
                                   couchstore_file_advice_t advice) {
+    auto rv = wrapped_ops->advise(errinfo, handle, offset, len, advice);
     std::cerr << "@advise(" << errinfo << ", " << handle << ", " << offset
-              << ", " << len << ", " << advice << ")" << std::endl;
-    return wrapped_ops->advise(errinfo, handle, offset, len, advice);
+              << ", " << len << ", " << advice << ") -> " << rv << std::endl;
+    return rv;
 }
 
 void LogOps::destructor(couch_file_handle handle) {
