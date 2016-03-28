@@ -51,6 +51,7 @@ SET(COUCHSTORE_SOURCES src/arena.cc src/bitfield.c src/btree_modify.cc
             src/views/file_merger.c src/views/file_sorter.c
             src/views/index_header.c src/views/keys.c
             src/views/mapreduce/mapreduce.cc
+            ${CMAKE_CURRENT_BINARY_DIR}/src/views/mapreduce/jsfunctions/jsfunctions_data.cc
             src/views/mapreduce/mapreduce_c.cc src/views/reducers.c
             src/views/reductions.c src/views/sorted_list.c
             src/views/spatial.c src/views/spatial_modify.c
@@ -265,5 +266,6 @@ TARGET_LINK_LIBRARIES(couchstore_wrapped_fileops_test
 ADD_TEST(couchstore-wrapped_fileops-test couchstore_wrapped_fileops_test)
 
 ADD_SUBDIRECTORY(programs)
+ADD_SUBDIRECTORY(src/views/mapreduce/jsfunctions)
 
 ENABLE_CODE_COVERAGE_REPORT()
