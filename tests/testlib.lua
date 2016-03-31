@@ -1,5 +1,5 @@
 local M = {}
-
+local failures = 0
 
 -- Verify a doc with the given key exists with the given value in the
 -- given database.
@@ -54,7 +54,12 @@ function M.run_test(name, fun)
       print(name .. ": PASS")
    else
       print(name .. ": FAIL (" .. result .. ")")
+      failures = failures + 1
    end
+end
+
+function M.fail_count()
+   return failures
 end
 
 return M

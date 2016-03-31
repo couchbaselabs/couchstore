@@ -81,3 +81,4 @@ end
 
 testlib.run_test("Big item test bulk", test_big_bulk)
 testlib.run_test("Big item test sequential", test_big_sequential)
+return testlib.fail_count()
