@@ -131,7 +131,7 @@ static const int data[] = {
     515, 314, 1052, 665, 1158, 238, 43, 161, 486, 854, 659, 42, 603, 146
 };
 
-static int *sorted_data;
+static int sorted_data[sizeof(data) / sizeof(data[0])];
 
 
 static int read_record(FILE *f, void **buffer, void *ctx)
@@ -298,8 +298,6 @@ int main(void)
 
     fprintf(stderr, "Running file sorter tests...\n");
 
-    sorted_data = (int *) malloc(sizeof(data));
-    cb_assert(sorted_data != NULL);
     memcpy(sorted_data, data, sizeof(data));
     qsort(sorted_data, nrecords, sizeof(int), int_cmp);
 
