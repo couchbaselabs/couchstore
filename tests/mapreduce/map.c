@@ -496,7 +496,7 @@ static void test_timeout(void)
 int main(void)
 {
     fprintf(stderr, "Running map tests\n");
-    initV8();
+    mapreduce_init();
 
     mapreduce_set_timeout(1);
     test_timeout();
@@ -510,6 +510,6 @@ int main(void)
 
     test_timeout();
 
-    deinitV8();
+    mapreduce_deinit();
     return 0;
 }

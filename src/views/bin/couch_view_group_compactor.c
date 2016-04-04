@@ -135,14 +135,14 @@ int main(int argc, char *argv[])
         goto out;
     }
 
-    initV8();
+    mapreduce_init();
     ret = couchstore_compact_view_group(group_info,
                                         target_file,
                                         &header_buf,
                                         &stats,
                                         &header_outbuf,
                                         &error_info);
-    deinitV8();
+    mapreduce_deinit();
 
     if (ret != COUCHSTORE_SUCCESS) {
         if (error_info.error_msg != NULL && error_info.view_name != NULL) {

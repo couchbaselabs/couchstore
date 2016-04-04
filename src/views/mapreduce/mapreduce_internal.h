@@ -33,6 +33,7 @@
 #include <stdint.h>
 #include <time.h>
 #include <include/v8.h>
+#include <atomic>
 
 
 class MapReduceError;
@@ -63,7 +64,7 @@ typedef struct {
     ArrayBufferAllocator        *bufAllocator;
     function_vector_t           *functions;
     kv_list_int_t               *kvs;
-    volatile time_t             taskStartTime;
+    std::atomic<time_t>         taskStartTime;
 } mapreduce_ctx_t;
 
 

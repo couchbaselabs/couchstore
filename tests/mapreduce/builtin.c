@@ -156,12 +156,12 @@ static void test_date_to_array_function(void)
 int main(void)
 {
     fprintf(stderr, "Running mapreduce builtin tests\n");
-    initV8();
+    mapreduce_init();
 
     test_sum_function();
     test_b64decode_function();
     test_date_to_array_function();
 
-    deinitV8();
+    mapreduce_deinit();
     return 0;
 }

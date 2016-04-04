@@ -152,7 +152,7 @@ int main(int argc, char *argv[])
         goto out;
     }
 
-    initV8();
+    mapreduce_init();
     ret = couchstore_update_view_group(group_info,
                                       source_files[0],
                                       (const char **) &source_files[1],
@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
                                       &header_outbuf,
                                       &error_info);
 
-    deinitV8();
+    mapreduce_deinit();
 
     if (ret != COUCHSTORE_SUCCESS) {
         if (error_info.error_msg != NULL && error_info.view_name != NULL) {

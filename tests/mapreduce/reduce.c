@@ -407,7 +407,7 @@ static void free_json_list(mapreduce_json_list_t *list)
 int main(void)
 {
     fprintf(stderr, "Running reduce tests\n");
-    initV8();
+    mapreduce_init();
 
     mapreduce_set_timeout(1);
     test_timeout();
@@ -419,6 +419,6 @@ int main(void)
     test_reduce_and_rereduce_success();
 
     test_timeout();
-    deinitV8();
+    mapreduce_deinit();
     return 0;
 }

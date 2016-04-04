@@ -15,16 +15,17 @@
  *   limitations under the License.
  */
 
-extern void initV8();
-extern void deinitV8();
+extern void mapreduce_init();
+extern void mapreduce_deinit();
 extern void view_tests();
 extern void purge_tests();
 
 int main() {
-    initV8();
+    mapreduce_init();
 
     view_tests();
     purge_tests();
-    deinitV8();
+
+    mapreduce_deinit();
     return 0;
 }

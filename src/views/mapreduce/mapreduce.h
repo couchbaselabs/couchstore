@@ -93,6 +93,30 @@ extern "C" {
     void deinitV8();
 
     /**
+     * All mapreduce initialization are done in this function.
+     **/
+    LIBCOUCHSTORE_API
+    void mapreduce_init();
+
+    /**
+     * All mapreduce deinitialization are done in this function.
+     **/
+    LIBCOUCHSTORE_API
+    void mapreduce_deinit();
+
+    /**
+     * Creates terminator thread to kill long running map reduce tasks.
+     **/
+    LIBCOUCHSTORE_API
+    void init_terminator_thread();
+
+    /**
+     * Destroys terminator thread at the end of the process.
+     **/
+    LIBCOUCHSTORE_API
+    void deinit_terminator_thread();
+
+    /**
      * If return value other than MAPREDUCE_SUCCESS, error_msg might be
      * assigned an error message, for which the caller is responsible to
      * deallocate via mapreduce_free_error_msg().
