@@ -17,14 +17,14 @@
 
 #include "file_tests.h"
 
-extern void initV8();
-extern void deinitV8();
+extern void mapreduce_init();
+extern void mapreduce_deinit();
 extern void mapreduce_tests();
 extern void view_tests();
 extern void purge_tests();
 
 int main() {
-    initV8();
+    mapreduce_init();
     file_merger_tests();
     file_deduper_tests();
     file_sorter_tests();
@@ -32,6 +32,6 @@ int main() {
     mapreduce_tests();
     view_tests();
     purge_tests();
-    deinitV8();
+    mapreduce_deinit();
     return 0;
 }

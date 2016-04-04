@@ -25,19 +25,15 @@
 #include <map>
 #include <cstring>
 #include <assert.h>
-
-#if defined(WIN32) || defined(_WIN32)
-#define doSleep(Secs) Sleep(Secs * 1000)
-#else
-#include <unistd.h>
-#define doSleep(Secs) sleep(Secs)
-#endif
+#include <condition_variable>
 
 static const char *MEM_ALLOC_ERROR_MSG = "memory allocation failure";
 
 static cb_thread_t terminator_thread;
-static bool terminator_thread_created = false;
-static volatile unsigned int terminator_timeout = 5;
+static std::condition_variable cv;
+static std::mutex  cvMutex;
+static std::atomic<int> terminator_timeout;
+static std::atomic<bool> shutdown_terminator;
 
 static std::map<uintptr_t, mapreduce_ctx_t *> ctx_registry;
 
@@ -337,7 +333,9 @@ void mapreduce_free_error_msg(char *error_msg)
 LIBMAPREDUCE_API
 void mapreduce_set_timeout(unsigned int seconds)
 {
+    std::lock_guard<std::mutex> lk(cvMutex);
     terminator_timeout = seconds;
+    cv.notify_one();
 }
 
 
@@ -405,20 +403,48 @@ static void copy_error_msg(const std::string &msg, char **to)
     }
 }
 
+LIBCOUCHSTORE_API
+void init_terminator_thread()
+{
+    shutdown_terminator = false;
+    // Default 5 seconds for mapreduce tasks
+    terminator_timeout = 5;
+    int ret = cb_create_thread(&terminator_thread, terminator_loop, NULL, 0);
+    if (ret != 0) {
+        std::cerr << "Error creating terminator thread: " << ret << std::endl;
+        exit(1);
+    }
+}
+
+LIBCOUCHSTORE_API
+void deinit_terminator_thread()
+{
+    // There is no conditional wait on this shared variable. Hence no mutex.
+    shutdown_terminator = true;
+    // Wake the thread up to shutdown
+    cv.notify_one();
+    cb_join_thread(terminator_thread);
+}
+
+
+LIBCOUCHSTORE_API
+void mapreduce_init()
+{
+    initV8();
+    init_terminator_thread();
+}
+
+LIBCOUCHSTORE_API
+void mapreduce_deinit()
+{
+    deinit_terminator_thread();
+    deinitV8();
+}
 
 static void register_ctx(mapreduce_ctx_t *ctx)
 {
     uintptr_t key = reinterpret_cast<uintptr_t>(ctx);
     registryMutex.lock();
-
-    if (!terminator_thread_created) {
-        int ret = cb_create_thread(&terminator_thread, terminator_loop, NULL, 1);
-        if (ret != 0) {
-            std::cerr << "Error creating terminator thread: " << ret << std::endl;
-            exit(1);
-        }
-        terminator_thread_created = true;
-    }
 
     ctx_registry[key] = ctx;
     registryMutex.unlock();
@@ -440,7 +466,7 @@ static void terminator_loop(void *)
     std::map<uintptr_t, mapreduce_ctx_t *>::iterator it;
     time_t now;
 
-    while (true) {
+    while (!shutdown_terminator) {
         registryMutex.lock();
         now = time(NULL);
         for (it = ctx_registry.begin(); it != ctx_registry.end(); ++it) {
@@ -454,6 +480,7 @@ static void terminator_loop(void *)
         }
 
         registryMutex.unlock();
-        doSleep(terminator_timeout);
+        std::unique_lock<std::mutex> lk(cvMutex);
+        cv.wait_for(lk, std::chrono::seconds(terminator_timeout));
     }
 }
