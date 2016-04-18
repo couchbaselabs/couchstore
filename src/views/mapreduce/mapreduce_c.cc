@@ -26,10 +26,11 @@
 #include <cstring>
 #include <assert.h>
 #include <condition_variable>
+#include <thread>
 
 static const char *MEM_ALLOC_ERROR_MSG = "memory allocation failure";
 
-static cb_thread_t terminator_thread;
+static std::thread terminator_thread;
 static std::condition_variable cv;
 static std::mutex  cvMutex;
 static std::atomic<int> terminator_timeout;
@@ -39,20 +40,16 @@ static std::map<uintptr_t, mapreduce_ctx_t *> ctx_registry;
 
 class RegistryMutex {
 public:
-    RegistryMutex() {
-        cb_mutex_initialize(&mutex);
-    }
-    ~RegistryMutex() {
-        cb_mutex_destroy(&mutex);
-    }
+    RegistryMutex() {}
+    ~RegistryMutex() {}
     void lock() {
-        cb_mutex_enter(&mutex);
+        mutex.lock();
     }
     void unlock() {
-        cb_mutex_exit(&mutex);
+        mutex.unlock();
     }
 private:
-    cb_mutex_t mutex;
+    std::mutex mutex;
 };
 
 static RegistryMutex registryMutex;
@@ -71,7 +68,7 @@ static void copy_error_msg(const std::string &msg, char **to);
 
 static void register_ctx(mapreduce_ctx_t *ctx);
 static void unregister_ctx(mapreduce_ctx_t *ctx);
-static void terminator_loop(void *);
+static void terminator_loop();
 
 
 LIBMAPREDUCE_API
@@ -409,9 +406,11 @@ void init_terminator_thread()
     shutdown_terminator = false;
     // Default 5 seconds for mapreduce tasks
     terminator_timeout = 5;
-    int ret = cb_create_thread(&terminator_thread, terminator_loop, NULL, 0);
-    if (ret != 0) {
-        std::cerr << "Error creating terminator thread: " << ret << std::endl;
+    try {
+        terminator_thread = std::thread(terminator_loop);
+    }
+    catch (...) {
+        std::cerr << "Error creating terminator thread: " << std::endl;
         exit(1);
     }
 }
@@ -423,7 +422,7 @@ void deinit_terminator_thread()
     shutdown_terminator = true;
     // Wake the thread up to shutdown
     cv.notify_one();
-    cb_join_thread(terminator_thread);
+    terminator_thread.join();
 }
 
 
@@ -461,7 +460,7 @@ static void unregister_ctx(mapreduce_ctx_t *ctx)
 }
 
 
-static void terminator_loop(void *)
+static void terminator_loop()
 {
     std::map<uintptr_t, mapreduce_ctx_t *>::iterator it;
     time_t now;
