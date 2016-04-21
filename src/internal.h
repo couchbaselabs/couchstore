@@ -79,6 +79,7 @@ extern "C" {
      * Useful for assuming that a FileOpsInterface object
      * is heap-allocated.
      */
+    LIBCOUCHSTORE_API
     FileOpsInterface* create_default_file_ops(void);
 
     /** Opens or creates a tree_file.

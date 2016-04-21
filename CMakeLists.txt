@@ -277,6 +277,12 @@ SET_TARGET_PROPERTIES(couchstore_wrapped_fileops_test PROPERTIES
         COMPILE_FLAGS "-DLIBCOUCHSTORE_NO_VISIBILITY=1 -DTESTAPP=1")
 TARGET_LINK_LIBRARIES(couchstore_wrapped_fileops_test ${COUCHSTORE_GTEST_LIBRARIES})
 
+ADD_LIBRARY(couchstore_test_fileops OBJECT
+        tests/test_fileops.cc)
+TARGET_INCLUDE_DIRECTORIES(couchstore_test_fileops
+        PRIVATE
+        ${COUCHSTORE_GTEST_INCLUDES})
+
 ADD_TEST(couchstore-file-deduper-test couchstore_file-deduper-test)
 ADD_TEST(couchstore-file-merge-test couchstore_file-merger-test)
 ADD_TEST(couchstore-file-sorter-test couchstore_file-sorter-test)
