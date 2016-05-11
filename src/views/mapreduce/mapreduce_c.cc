@@ -19,14 +19,15 @@
 /**
  * Implementation of all exported (public) functions, pure C.
  **/
+#include <condition_variable>
+#include <cstring>
+#include <iostream>
+#include <platform/cbassert.h>
+#include <thread>
+#include <unordered_set>
+
 #include "mapreduce.h"
 #include "mapreduce_internal.h"
-#include <iostream>
-#include <map>
-#include <cstring>
-#include <assert.h>
-#include <condition_variable>
-#include <thread>
 
 static const char *MEM_ALLOC_ERROR_MSG = "memory allocation failure";
 
@@ -36,7 +37,7 @@ static std::mutex  cvMutex;
 static std::atomic<int> terminator_timeout;
 static std::atomic<bool> shutdown_terminator;
 
-static std::map<uintptr_t, mapreduce_ctx_t *> ctx_registry;
+static std::unordered_set<mapreduce_ctx_t *> ctx_registry;
 
 class RegistryMutex {
 public:
@@ -117,7 +118,7 @@ mapreduce_error_t mapreduce_map(void *context,
         return MAPREDUCE_ALLOC_ERROR;
     }
 
-    assert((*result)->length == num_funs);
+    cb_assert((*result)->length == num_funs);
     return MAPREDUCE_SUCCESS;
 }
 
@@ -146,7 +147,7 @@ mapreduce_error_t mapreduce_reduce_all(void *context,
         size_t sz = list.size();
         json_results_list_t::iterator it = list.begin();
 
-        assert(sz == ctx->functions->size());
+        cb_assert(sz == ctx->functions->size());
 
         *result = (mapreduce_json_list_t *) malloc(sizeof(**result));
         if (*result == NULL) {
@@ -442,35 +443,29 @@ void mapreduce_deinit()
 
 static void register_ctx(mapreduce_ctx_t *ctx)
 {
-    uintptr_t key = reinterpret_cast<uintptr_t>(ctx);
     registryMutex.lock();
-
-    ctx_registry[key] = ctx;
+    bool inserted = ctx_registry.insert(ctx).second;
     registryMutex.unlock();
+    cb_assert(inserted == true);
 }
 
 
 static void unregister_ctx(mapreduce_ctx_t *ctx)
 {
-    uintptr_t key = reinterpret_cast<uintptr_t>(ctx);
-
     registryMutex.lock();
-    ctx_registry.erase(key);
+    ctx_registry.erase(ctx);
     registryMutex.unlock();
 }
 
 
 static void terminator_loop()
 {
-    std::map<uintptr_t, mapreduce_ctx_t *>::iterator it;
     time_t now;
 
     while (!shutdown_terminator) {
         registryMutex.lock();
         now = time(NULL);
-        for (it = ctx_registry.begin(); it != ctx_registry.end(); ++it) {
-            mapreduce_ctx_t *ctx = (*it).second;
-
+        for (mapreduce_ctx_t *ctx : ctx_registry) {
             if (ctx->taskStartTime >= 0) {
                 if (ctx->taskStartTime + terminator_timeout < now) {
                     terminateTask(ctx);
