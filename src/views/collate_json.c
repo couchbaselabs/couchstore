@@ -4,13 +4,13 @@
 
 #include "config.h"
 #include "collate_json.h"
-#include <assert.h>
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <platform/cbassert.h>
 #include <unicode/ucol.h>
 #include <unicode/ucasemap.h>
 #include <unicode/ucnv.h>
@@ -183,7 +183,7 @@ static const char* createStringFromJSON(const char** in, size_t *length, bool *f
                 c = ConvertJSONEscape(&str);
             *dst++ = c;
         }
-        assert(dst - buf == (int)*length);
+        cb_assert(dst - buf == (int)*length);
         start = buf;
         *freeWhenDone = true;
     }
@@ -359,7 +359,7 @@ static double readNumber(const char* start, const char* end, char** endOfNumber)
     size_t len;
     char* str;
 
-    assert(end > start);
+    cb_assert(end > start);
     len = end - start;
     str = (len < sizeof(buf)) ? buf : malloc(len + 1);
     if (!str)

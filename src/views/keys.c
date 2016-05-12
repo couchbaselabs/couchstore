@@ -3,6 +3,7 @@
 #include "keys.h"
 #include "../bitfield.h"
 #include <stdlib.h>
+#include <platform/cbassert.h>
 
 
 #define dec_uint16(b) (decode_raw16(*((raw_16 *) b)))
@@ -25,7 +26,7 @@ couchstore_error_t decode_view_btree_key(const char *bytes,
     k->json_key.buf = NULL;
     k->doc_id.buf = NULL;
 
-    assert(len >= 2);
+    cb_assert(len >= 2);
     sz = dec_uint16(bytes);
 
     bytes += 2;
@@ -38,7 +39,7 @@ couchstore_error_t decode_view_btree_key(const char *bytes,
         goto alloc_error;
     }
 
-    assert(len >= sz);
+    cb_assert(len >= sz);
     memcpy(k->json_key.buf, bytes, sz);
     bytes += sz;
 
@@ -126,7 +127,7 @@ couchstore_error_t decode_view_id_btree_key(const char *bytes,
 
     k->doc_id.buf = NULL;
 
-    assert(len >= 2);
+    cb_assert(len >= 2);
     k->partition = dec_uint16(bytes);
     bytes += 2;
     len -= 2;

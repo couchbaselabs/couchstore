@@ -24,12 +24,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
-#include <assert.h>
 #include "bitmap.h"
 #include "keys.h"
 #include "reductions.h"
 #include "values.h"
 #include "reducers.h"
+#include <platform/cbassert.h>
 #include "../couch_btree.h"
 
 typedef enum {
@@ -243,7 +243,7 @@ static couchstore_error_t builtin_sum_reducer(const mapreduce_json_list_t *keys,
     }
 
     size = sprintf(red, DOUBLE_FMT, sum);
-    assert(size > 0);
+    cb_assert(size > 0);
     buf->buf = (char *) malloc(size);
     if (buf->buf == NULL) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -283,7 +283,7 @@ static couchstore_error_t builtin_count_reducer(const mapreduce_json_list_t *key
     }
 
     size = sprintf(red, "%"PRIu64, count);
-    assert(size > 0);
+    cb_assert(size > 0);
     buf->buf = (char *) malloc(size);
     if (buf->buf == NULL) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -377,7 +377,7 @@ static couchstore_error_t builtin_stats_reducer(const mapreduce_json_list_t *key
     }
 
     size = sprint_stats(red, s.sum, s.count, s.min, s.max, s.sumsqr);
-    assert(size > 0);
+    cb_assert(size > 0);
     buf->buf = (char *) malloc(size);
     if (buf->buf == NULL) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -432,7 +432,7 @@ static couchstore_error_t js_reducer(const mapreduce_json_list_t *keys,
             priv->mapreduce_error = ret;
             return COUCHSTORE_ERROR_REDUCER_FAILURE;
         }
-        assert(results->length == 1);
+        cb_assert(results->length == 1);
         buf->buf = (char *) malloc(results->values[0].length);
         if (buf->buf == NULL) {
             mapreduce_free_json_list(results);
@@ -586,30 +586,30 @@ static void add_error_message(view_reducer_ctx_t *red_ctx, int rereduce)
    if (priv->builtin_error != VIEW_REDUCER_SUCCESS) {
        const char *base_msg = builtin_reducer_error_msg[priv->builtin_error];
 
-       assert(priv->mapreduce_error == MAPREDUCE_SUCCESS);
+       cb_assert(priv->mapreduce_error == MAPREDUCE_SUCCESS);
        if (!rereduce && (priv->error_key != NULL)) {
            error_msg = (char *) malloc(strlen(base_msg) + 12 + strlen(priv->error_key));
-           assert(error_msg != NULL);
+           cb_assert(error_msg != NULL);
            sprintf(error_msg, "%s (key %s)", base_msg, priv->error_key);
        } else {
            error_msg = strdup(base_msg);
-           assert(error_msg != NULL);
+           cb_assert(error_msg != NULL);
        }
        if (priv->error_key != NULL) {
            free((void *) priv->error_key);
            priv->error_key = NULL;
        }
    } else {
-       assert(priv->mapreduce_error != MAPREDUCE_SUCCESS);
+       cb_assert(priv->mapreduce_error != MAPREDUCE_SUCCESS);
        if (priv->error_msg != NULL) {
            error_msg = priv->error_msg;
        } else {
            if (priv->mapreduce_error == MAPREDUCE_TIMEOUT) {
                error_msg = strdup("function timeout");
-               assert(error_msg != NULL);
+               cb_assert(error_msg != NULL);
            } else {
                error_msg = malloc(64);
-               assert(error_msg != NULL);
+               cb_assert(error_msg != NULL);
                sprintf(error_msg, "mapreduce error: %d", priv->mapreduce_error);
            }
        }
@@ -791,7 +791,7 @@ couchstore_error_t view_btree_rereduce(char *dst,
         }
 
         union_bitmaps(&red->partitions_bitmap, &r->partitions_bitmap);
-        assert(r->num_values == priv->num_reducers);
+        cb_assert(r->num_values == priv->num_reducers);
         red->kv_count += r->kv_count;
         reductions[c] = r;
     }

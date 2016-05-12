@@ -275,7 +275,7 @@ ADD_EXECUTABLE(couchstore_wrapped_fileops_test
         )
 SET_TARGET_PROPERTIES(couchstore_wrapped_fileops_test PROPERTIES
         COMPILE_FLAGS "-DLIBCOUCHSTORE_NO_VISIBILITY=1 -DTESTAPP=1")
-TARGET_LINK_LIBRARIES(couchstore_wrapped_fileops_test ${COUCHSTORE_GTEST_LIBRARIES})
+TARGET_LINK_LIBRARIES(couchstore_wrapped_fileops_test ${COUCHSTORE_GTEST_LIBRARIES} platform)
 
 ADD_LIBRARY(couchstore_test_fileops OBJECT
         tests/test_fileops.cc)

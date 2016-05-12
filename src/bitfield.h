@@ -3,7 +3,6 @@
 
 #include "config.h"
 #include "internal.h"
-#include <assert.h>
 #include <string.h>
 
 #ifdef __cplusplus

@@ -5,6 +5,7 @@
 #include "../couch_btree.h"
 #include <stdlib.h>
 #include <string.h>
+#include <platform/cbassert.h>
 
 #define BITMASK_BYTE_SIZE      (1024 / CHAR_BIT)
 
@@ -32,12 +33,12 @@ couchstore_error_t decode_view_btree_reduction(const char *bytes,
         goto alloc_error;
     }
 
-    assert(len >= 5);
+    cb_assert(len >= 5);
     r->kv_count = dec_uint40(bytes);
     bytes += 5;
     len -= 5;
 
-    assert(len >= BITMASK_BYTE_SIZE);
+    cb_assert(len >= BITMASK_BYTE_SIZE);
     memcpy(&r->partitions_bitmap, bytes, BITMASK_BYTE_SIZE);
     bytes += BITMASK_BYTE_SIZE;
     len -= BITMASK_BYTE_SIZE;
@@ -48,12 +49,12 @@ couchstore_error_t decode_view_btree_reduction(const char *bytes,
     r->num_values = 0;
     while (len > 0) {
 
-        assert(len >= 2);
+        cb_assert(len >= 2);
         sz = dec_uint16(bs);
         bs += 2;
         len -= 2;
 
-        assert(len >= sz);
+        cb_assert(len >= sz);
         bs += sz;
         len -= sz;
         r->num_values++;

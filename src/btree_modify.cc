@@ -1,9 +1,9 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include "config.h"
-#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include <platform/cbassert.h>
 
 #include "couch_btree.h"
 #include "util.h"
@@ -257,7 +257,7 @@ static couchstore_error_t flush_mr_partial(couchfile_modify_result *res, size_t 
         if (errcode != COUCHSTORE_SUCCESS) {
             return errcode;
         }
-        assert(reducesize <= sizeof(reducebuf));
+        cb_assert(reducesize <= sizeof(reducebuf));
     }
 
     if (res->node_type == KP_NODE && res->rq->rereduce) {
@@ -265,7 +265,7 @@ static couchstore_error_t flush_mr_partial(couchfile_modify_result *res, size_t 
         if (errcode != COUCHSTORE_SUCCESS) {
             return errcode;
         }
-        assert(reducesize <= sizeof(reducebuf));
+        cb_assert(reducesize <= sizeof(reducebuf));
     }
 
     node_pointer *ptr = (node_pointer *) arena_alloc(res->arena, sizeof(node_pointer) + final_key.size + reducesize);

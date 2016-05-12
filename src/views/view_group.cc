@@ -19,7 +19,6 @@
  **/
 
 #include "config.h"
-#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include "view_group.h"
@@ -34,6 +33,7 @@
 #include "../couch_btree.h"
 #include "../internal.h"
 #include "../util.h"
+#include <platform/cbassert.h>
 
 #define VIEW_KV_CHUNK_THRESHOLD (7 * 1024)
 #define VIEW_KP_CHUNK_THRESHOLD (6 * 1024)
@@ -540,7 +540,7 @@ couchstore_error_t couchstore_build_view_group(view_group_info_t *info,
     if (ret != COUCHSTORE_SUCCESS) {
         goto out;
     }
-    assert(info->num_btrees == header->num_views);
+    cb_assert(info->num_btrees == header->num_views);
 
     ret = open_view_group_file(dst_file,
                                COUCHSTORE_OPEN_FLAG_CREATE,
@@ -908,7 +908,7 @@ couchstore_error_t write_view_group_header(tree_file *file,
         goto out;
     }
 
-    assert(p >= 0);
+    cb_assert(p >= 0);
     *pos = (uint64_t) p;
 
 out:
@@ -1108,7 +1108,7 @@ couchstore_error_t couchstore_cleanup_view_group(view_group_info_t *info,
     if (ret != COUCHSTORE_SUCCESS) {
         goto cleanup;
     }
-    assert(info->num_btrees == header->num_views);
+    cb_assert(info->num_btrees == header->num_views);
 
     /* Setup purger context */
     purge_ctx.count = 0;
@@ -1462,7 +1462,7 @@ couchstore_error_t couchstore_update_view_group(view_group_info_t *info,
      * get removed, hence the number of trees in `info` don't match the number
      * in the header */
     if (info->type != VIEW_INDEX_TYPE_SPATIAL) {
-        assert(info->num_btrees == header->num_views);
+        cb_assert(info->num_btrees == header->num_views);
     }
 
     /* Setup purger context */
@@ -1824,7 +1824,7 @@ couchstore_error_t couchstore_compact_view_group(view_group_info_t *info,
         goto cleanup;
     }
 
-    assert(info->num_btrees == header->num_views);
+    cb_assert(info->num_btrees == header->num_views);
 
     ret = open_view_group_file(info->filepath,
                                COUCHSTORE_OPEN_FLAG_RDONLY,

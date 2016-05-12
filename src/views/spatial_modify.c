@@ -1,6 +1,5 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include "config.h"
-#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
@@ -11,6 +10,7 @@
 #include "node_types.h"
 #include "../util.h"
 #include "spatial.h"
+#include <platform/cbassert.h>
 
 /* NOTE vmx 2014-07-21: spatial_modify.c uses a lot of code from
  * btree_modify.cc. The difference is the different handling of the reduce.
@@ -108,7 +108,7 @@ couchstore_error_t spatial_push_item(sized_buf *k,
     {
         itm = make_nodelist(dst->arena_transient, 0);
     } else {
-        assert(dst->arena != NULL);
+        cb_assert(dst->arena != NULL);
         itm = make_nodelist(dst->arena, 0);
     }
     if (itm == NULL) {
@@ -217,7 +217,7 @@ static couchstore_error_t flush_spatial_partial(couchfile_modify_result *res,
         if (errcode != COUCHSTORE_SUCCESS) {
             return errcode;
         }
-        assert(reducesize <= sizeof(reducebuf));
+        cb_assert(reducesize <= sizeof(reducebuf));
     }
 
     if (res->node_type == KP_NODE && res->rq->rereduce) {
@@ -227,7 +227,7 @@ static couchstore_error_t flush_spatial_partial(couchfile_modify_result *res,
         if (errcode != COUCHSTORE_SUCCESS) {
             return errcode;
         }
-        assert(reducesize <= sizeof(reducebuf));
+        cb_assert(reducesize <= sizeof(reducebuf));
     }
 
     /* `reducesize` one time for the key, one time for the actual reduce */

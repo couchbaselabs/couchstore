@@ -1,15 +1,14 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include "config.h"
-#include <iostream>
-#include <cassert>
 #include <errno.h>
+#include <iostream>
 #include <string.h>
 #include <sysexits.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sstream>
 #include <string>
-
+#include <platform/cbassert.h>
 #include <libcouchstore/couch_db.h>
 #include "internal.h"
 
@@ -58,7 +57,7 @@ extern "C" {
     static void push_db(lua_State *ls, Db *db)
     {
         Db **d = static_cast<Db **>(lua_newuserdata(ls, sizeof(Db *)));
-        assert(d);
+        cb_assert(d);
         *d = db;
 
         luaL_getmetatable(ls, "couch");
@@ -68,9 +67,9 @@ extern "C" {
     static void push_docinfo(lua_State *ls, DocInfo *docinfo)
     {
         DocInfo **di = static_cast<DocInfo **>(lua_newuserdata(ls, sizeof(DocInfo *)));
-        assert(di);
+        cb_assert(di);
         *di = docinfo;
-        assert(*di);
+        cb_assert(*di);
 
         luaL_getmetatable(ls, "docinfo");
         lua_setmetatable(ls, -2);
@@ -79,8 +78,8 @@ extern "C" {
     static DocInfo *getDocInfo(lua_State *ls)
     {
         DocInfo **d = static_cast<DocInfo **>(luaL_checkudata(ls, 1, "docinfo"));
-        assert(d);
-        assert(*d);
+        cb_assert(d);
+        cb_assert(*d);
         return *d;
     }
 
@@ -125,7 +124,7 @@ extern "C" {
     static Db *getDb(lua_State *ls)
     {
         Db **d = static_cast<Db **>(luaL_checkudata(ls, 1, "couch"));
-        assert(d);
+        cb_assert(d);
         return *d;
     }
 
@@ -178,7 +177,7 @@ extern "C" {
         Doc *doc(NULL);
         lua_remove(ls, 1);
         DocInfo *docinfo = getDocInfo(ls);
-        assert(docinfo);
+        cb_assert(docinfo);
 
         int rc = couchstore_open_doc_with_docinfo(db, docinfo, &doc, 0);
         if (rc < 0) {
@@ -325,14 +324,14 @@ extern "C" {
         BulkData(unsigned n) : size(n),
             docs(static_cast<Doc **>(calloc(size, sizeof(Doc *)))),
             infos(static_cast<DocInfo **>(calloc(size, sizeof(DocInfo *)))) {
-            assert(docs);
-            assert(infos);
+            cb_assert(docs);
+            cb_assert(infos);
 
             for (unsigned i = 0; i < size; ++i) {
                 docs[i] = static_cast<Doc *>(calloc(1, sizeof(Doc)));
-                assert(docs[i]);
+                cb_assert(docs[i]);
                 infos[i] = static_cast<DocInfo *>(calloc(1, sizeof(DocInfo)));
-                assert(infos[i]);
+                cb_assert(infos[i]);
             }
         }
 
@@ -373,9 +372,9 @@ extern "C" {
 
             if (n > 2) {
                 Doc *doc(bs.docs[offset]);
-                assert(doc);
+                cb_assert(doc);
                 DocInfo *docinfo(bs.infos[offset]);
-                assert(docinfo);
+                cb_assert(docinfo);
                 ++offset;
                 revbuf_t revbuf;
                 memset(&revbuf, 0, sizeof(revbuf));
@@ -599,7 +598,7 @@ extern "C" {
     {
     public:
         ChangesState(lua_State *s, const char *f) : ls(s), fun_name(f) {
-            assert(lua_isfunction(ls, -1));
+            cb_assert(lua_isfunction(ls, -1));
             lua_setfield(ls, LUA_REGISTRYINDEX, fun_name);
         }
 

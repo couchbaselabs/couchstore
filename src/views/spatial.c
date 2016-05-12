@@ -20,10 +20,10 @@
 
 #include <stdlib.h>
 #include <limits.h>
-#include <assert.h>
 #include "spatial.h"
 #include "../bitfield.h"
 #include "../couch_btree.h"
+#include <platform/cbassert.h>
 
 
 #define BYTE_PER_COORD sizeof(uint32_t)
@@ -206,7 +206,7 @@ unsigned char *interleave_uint32s(uint32_t *numbers, uint16_t num)
     uint16_t j, bitmap_size;
     unsigned char *bitmap = NULL;
 
-    assert(num < 16384);
+    cb_assert(num < 16384);
 
     /* bitmap_size in bits (hence the `*8`) */
     bitmap_size = (sizeof(uint32_t) * num * 8);
@@ -247,7 +247,7 @@ STATIC couchstore_error_t encode_spatial_key(const sized_mbb_t *mbb,
     memcpy(key, &num, 2);
     key += 2;
 
-    assert(mbb->num * sizeof(double) <= nkey);
+    cb_assert(mbb->num * sizeof(double) <= nkey);
     memcpy(key, mbb->mbb, mbb->num * sizeof(double));
 
     return COUCHSTORE_SUCCESS;
@@ -259,7 +259,7 @@ STATIC couchstore_error_t expand_mbb(sized_mbb_t *original,
                                      sized_mbb_t *expander) {
     int i;
 
-    assert(original->num == expander->num);
+    cb_assert(original->num == expander->num);
 
     for (i = 0; i < original->num; ++i) {
         if (i % 2 == 0) {

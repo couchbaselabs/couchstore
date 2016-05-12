@@ -19,8 +19,8 @@
  **/
 
 #include <stdlib.h>
-#include <assert.h>
 #include <string.h>
+#include <platform/cbassert.h>
 #include "sorted_list.h"
 
 
@@ -140,7 +140,7 @@ void sorted_list_remove(void *list, const void *elem)
         cmp = l->cmp_fun(n->element, elem);
         if (cmp == 0) {
             if (prev == NULL) {
-                assert(n == l->head);
+                cb_assert(n == l->head);
                 l->head = n->next;
             } else {
                 prev->next = n->next;

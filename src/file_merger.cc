@@ -21,8 +21,8 @@
 
 #include "file_merger.h"
 #include <stdlib.h>
-#include <assert.h>
 #include <string.h>
+#include <platform/cbassert.h>
 
 
 typedef struct {
@@ -203,8 +203,8 @@ static file_merger_error_t do_merge_files(file_merger_ctx_t *ctx)
          * duplicated record came from and add them to the sort vector.
          */
         sorted_vector_pop(&ctx->sorted_vector, &records, &n);
-        assert(records != NULL);
-        assert(n != 0);
+        cb_assert(records != NULL);
+        cb_assert(n != 0);
 
         if (ctx->feed_record) {
             ret = (*ctx->feed_record)(records[0]->data, ctx->user_ctx);
@@ -213,7 +213,7 @@ static file_merger_error_t do_merge_files(file_merger_ctx_t *ctx)
                 return ret;
             }
         } else {
-            assert(ctx->dest_file != NULL);
+            cb_assert(ctx->dest_file != NULL);
         }
 
         if (ctx->dest_file) {

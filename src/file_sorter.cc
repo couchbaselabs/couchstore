@@ -20,8 +20,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
 #include <string.h>
+#include <platform/cbassert.h>
 #include "file_sorter.h"
 #include "file_name_utils.h"
 #include "quicksort.h"
@@ -533,7 +533,7 @@ static file_sorter_error_t do_sort_file(file_sort_ctx_t *ctx)
             }
 
             pick_merge_files(ctx, &start, &end, &next_level);
-            assert(next_level > 1);
+            cb_assert(next_level > 1);
             ret = merge_tmp_files(ctx, start, end, next_level);
             if (ret != FILE_SORTER_SUCCESS) {
                 goto failure;
@@ -561,7 +561,7 @@ static file_sorter_error_t do_sort_file(file_sort_ctx_t *ctx)
         goto failure;
     }
 
-    assert(ctx->active_tmp_files > 0);
+    cb_assert(ctx->active_tmp_files > 0);
 
     if (!ctx->skip_writeback && remove(ctx->source_file) != 0) {
         ret = FILE_SORTER_ERROR_DELETE_FILE;
@@ -650,9 +650,9 @@ static tmp_file_t *create_tmp_file(file_sort_ctx_t *ctx)
 {
     unsigned i = ctx->active_tmp_files;
 
-    assert(ctx->active_tmp_files < ctx->num_tmp_files);
-    assert(ctx->tmp_files[i].name == NULL);
-    assert(ctx->tmp_files[i].level == 0);
+    cb_assert(ctx->active_tmp_files < ctx->num_tmp_files);
+    cb_assert(ctx->tmp_files[i].name == NULL);
+    cb_assert(ctx->tmp_files[i].level == 0);
 
     ctx->tmp_files[i].name = sorter_tmp_file_path(ctx->tmp_dir,
         ctx->tmp_file_prefix);
@@ -709,11 +709,11 @@ static void pick_merge_files(file_sort_ctx_t *ctx,
 
     for (i = 0; i < ctx->active_tmp_files; i = j) {
         level = ctx->tmp_files[i].level;
-        assert(level > 0);
+        cb_assert(level > 0);
         j = i + 1;
 
         while (j < ctx->active_tmp_files) {
-            assert(ctx->tmp_files[j].level > 0);
+            cb_assert(ctx->tmp_files[j].level > 0);
             if (ctx->tmp_files[j].level != level) {
                 break;
             }
@@ -729,8 +729,8 @@ static void pick_merge_files(file_sort_ctx_t *ctx,
     }
 
     /* All files have a different level. */
-    assert(ctx->active_tmp_files == ctx->num_tmp_files);
-    assert(ctx->active_tmp_files >= 2);
+    cb_assert(ctx->active_tmp_files == ctx->num_tmp_files);
+    cb_assert(ctx->active_tmp_files >= 2);
     *start = 0;
     *end = 2;
     *next_level = ctx->tmp_files[0].level + ctx->tmp_files[1].level;
@@ -755,7 +755,7 @@ static file_sorter_error_t merge_tmp_files(file_sort_ctx_t *ctx,
     }
     for (i = start; i < end; ++i) {
         files[i - start] = ctx->tmp_files[i].name;
-        assert(files[i - start] != NULL);
+        cb_assert(files[i - start] != NULL);
     }
 
     if (next_level == 0) {

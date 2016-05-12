@@ -15,10 +15,10 @@
  *   limitations under the License.
  */
 #include "config.h"
-#include <assert.h>
 #include <sys/types.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <platform/cbassert.h>
 
 #include "internal.h"
 
@@ -148,7 +148,7 @@ couchstore_error_t PosixFileOps::close(couchstore_error_info_t* errinfo,
 
     if (fd != -1) {
         do {
-            assert(fd >= 3);
+            cb_assert(fd >= 3);
             rv = ::close(fd);
         } while (rv == -1 && errno == EINTR);
     }

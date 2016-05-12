@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <platform/cbassert.h>
 
 #define dec_uint16(b) (decode_raw16(*((raw_16 *) b)))
 #define dec_raw24(b) (decode_raw24(*((raw_24 *) b)))
@@ -30,7 +31,7 @@ couchstore_error_t decode_view_btree_value(const char *bytes,
 
     v->values = NULL;
 
-    assert(len >= 2);
+    cb_assert(len >= 2);
     v->partition = dec_uint16(bytes);
     bytes += 2;
     len -= 2;
@@ -47,12 +48,12 @@ couchstore_error_t decode_view_btree_value(const char *bytes,
     v->num_values = 0;
     while (len > 0) {
 
-        assert(len >= 3);
+        cb_assert(len >= 3);
         sz = dec_raw24(bs);
         bs += 3;
         len -= 3;
 
-        assert(len >= sz);
+        cb_assert(len >= sz);
         bs += sz;
         len -= sz;
         v->num_values++;
@@ -180,7 +181,7 @@ couchstore_error_t decode_view_id_btree_value(const char *bytes,
 
     v->view_keys_map = NULL;
 
-    assert(len >= 2);
+    cb_assert(len >= 2);
     v->partition = dec_uint16(bytes);
     bytes += 2;
     len -= 2;
@@ -197,23 +198,23 @@ couchstore_error_t decode_view_id_btree_value(const char *bytes,
     v->num_view_keys_map = 0;
     while (len > 0) {
 
-        assert(len >= 1);
+        cb_assert(len >= 1);
         bs += 1; /* view_id */
         len -= 1;
 
-        assert(len >= 2);
+        cb_assert(len >= 2);
         num_keys = dec_uint16(bs);
         bs +=2;
         len -= 2;
 
         for (j = 0; j < num_keys; ++j) {
 
-            assert(len >= 2);
+            cb_assert(len >= 2);
             sz = dec_uint16(bs);
             bs += 2;
             len -= 2;
 
-            assert(len >= sz);
+            cb_assert(len >= sz);
             bs += sz;
             len -= sz;
         }

@@ -9,9 +9,9 @@
 #include "arena.h"
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <platform/cbassert.h>
 
 #define ALIGNMENT 4                 // Byte alignment of blocks; must be a power of 2
 #define PAGE_SIZE 4096              // Chunk allocation will be rounded to a multiple of this
@@ -89,7 +89,6 @@ arena* new_arena(size_t chunk_size)
 void delete_arena(arena* a)
 {
 #ifdef DEBUG
-    //assert(a->nblocks == 0);
     size_t total_allocated = 0;
 #endif
     arena_chunk* chunk = a->cur_chunk;
@@ -145,8 +144,8 @@ void arena_free(arena* a, void* block)
                 break;
             }
         }
-        assert(chunk);
-        assert(a->blocks_allocated > 0);
+        cb_assert(chunk);
+        cb_assert(a->blocks_allocated > 0);
         --a->blocks_allocated;
     }
 #else
@@ -168,7 +167,7 @@ void arena_free_from_mark(arena *a, const arena_position *mark)
         free(chunk);
         chunk = a->cur_chunk;
     }
-    assert(chunk != NULL || mark == NULL);   // If this fails, mark was bogus
+    cb_assert(chunk != NULL || mark == NULL);   // If this fails, mark was bogus
 
     a->next_block = static_cast<char*>((void*)mark);
     a->end = static_cast<char*>(chunk ? chunk_end(chunk) : NULL);
