@@ -1483,9 +1483,14 @@ couchstore_error_t couchstore_update_view_group(view_group_info_t *info,
         ret = (couchstore_error_t) sort_view_ids_ops_file(id_records_file, tmp_dir);
         if (ret != COUCHSTORE_SUCCESS) {
             char error_msg[1024];
-            snprintf(error_msg, sizeof(error_msg),
-                    "Error sorting records file: %s", id_records_file);
-            error_info->error_msg = strdup(error_msg);
+            int nw = snprintf(error_msg, sizeof(error_msg),
+                              "Error sorting records file: %s",
+                              id_records_file);
+            if (nw > 0 && nw < sizeof(error_msg)) {
+                error_info->error_msg = strdup(error_msg);
+            } else {
+                error_info->error_msg = strdup("Error sorting records file");
+            }
             error_info->idx_type = "MAPREDUCE";
             error_info->view_name = (const char *) strdup("id_btree");
             goto cleanup;
@@ -1516,10 +1521,16 @@ couchstore_error_t couchstore_update_view_group(view_group_info_t *info,
         if (!is_sorted) {
             ret = (couchstore_error_t) sort_view_kvs_ops_file(kv_records_files[i], tmp_dir);
             if (ret != COUCHSTORE_SUCCESS) {
+                const char* errmsg = "Error sorting records file";
                 char error_msg[1024];
-                snprintf(error_msg, sizeof(error_msg),
-                        "Error sorting records file: %s", kv_records_files[i]);
-                set_error_info(&info->view_infos.btree[i], error_msg, ret,
+                int nw = snprintf(error_msg, sizeof(error_msg),
+                                  "Error sorting records file: %s",
+                                  kv_records_files[i]);
+
+                if (nw > 0 && nw < sizeof(error_msg)) {
+                    errmsg = error_msg;
+                }
+                set_error_info(&info->view_infos.btree[i], errmsg, ret,
                                error_info);
                 goto cleanup;
             }
@@ -1957,8 +1968,6 @@ static couchstore_error_t build_view_spatial(const char *source_file,
 {
     couchstore_error_t ret;
     compare_info cmp;
-    char buf[64];
-    size_t len = 0;
 
     /* cmp.compare is only needed when you read a b-tree node or modify a
      * b-tree node (btree_modify:modify_node()). We don't do either in the
@@ -1977,10 +1986,16 @@ static couchstore_error_t build_view_spatial(const char *source_file,
                         out_root);
 
     if (ret != COUCHSTORE_SUCCESS) {
-        len = snprintf(buf, sizeof(buf), "ret = %d", ret);
-        buf[len] = '\0';
-        if (len) {
-            error_info->error_msg = (const char *) strdup(buf);
+        const int buffsize = 64;
+        char* buf = malloc(buffsize);
+        if (buf != NULL) {
+            int len = snprintf(buf, buffsize, "ret = %d", ret);
+            if (len > 0 && len < buffsize) {
+                error_info->error_msg = buf;
+            } else {
+                error_info->error_msg = strdup("Failed to build error message");
+                free(buf);
+            }
         }
     }
 

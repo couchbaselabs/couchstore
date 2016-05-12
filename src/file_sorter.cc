@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <strings.h>
 #include "file_sorter.h"
 #include "file_name_utils.h"
 #include "quicksort.h"
@@ -863,14 +864,15 @@ cleanup:
     return (file_sorter_error_t) ret;
 }
 
-int sorter_random_name(char *tmpl, int totlen, int suffixlen) {
+static int sorter_random_name(char *tmpl, int totlen, int suffixlen) {
     static unsigned int value = 0;
     tmpl = tmpl + totlen - suffixlen;
-#ifdef WINDOWS
-    _snprintf(tmpl, suffixlen, ".%d", value);
-#else
-    snprintf(tmpl, suffixlen, ".%d", value);
-#endif
+
+    int nw = snprintf(tmpl, suffixlen, ".%d", value);
+    if (nw < 0 || nw >= suffixlen) {
+        return -1;
+    }
+
     if (++value > 2 << 18) {
         value = 0;
     }
@@ -894,7 +896,10 @@ char *sorter_tmp_file_path(const char *tmp_dir, const char *prefix) {
      * convert forward slashes to back slashes. */
     file_path[tmp_dir_len] = '/';
     memcpy(file_path + tmp_dir_len + 1, prefix, prefix_len);
-    sorter_random_name(file_path, total_len - 1, sizeof(SORTER_TMP_FILE_SUFFIX)
-        - 1);
+    if (sorter_random_name(file_path, total_len - 1,
+                           sizeof(SORTER_TMP_FILE_SUFFIX) - 1) < 0) {
+        return NULL;
+    }
+
     return file_path;
 }
