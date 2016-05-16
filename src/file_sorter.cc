@@ -898,6 +898,7 @@ char *sorter_tmp_file_path(const char *tmp_dir, const char *prefix) {
     memcpy(file_path + tmp_dir_len + 1, prefix, prefix_len);
     if (sorter_random_name(file_path, total_len - 1,
                            sizeof(SORTER_TMP_FILE_SUFFIX) - 1) < 0) {
+        free(file_path);
         return NULL;
     }
 
