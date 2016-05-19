@@ -46,7 +46,7 @@ SET(COUCHSTORE_SOURCES src/arena.cc src/bitfield.c src/btree_modify.cc
             src/db_compact.cc src/file_merger.cc src/file_name_utils.c
             src/file_sorter.cc src/iobuffer.cc src/llmsort.cc
             src/mergesort.cc src/node_types.cc src/reduces.cc
-            src/rfc1321/md5c.c src/strerror.cc src/tree_writer.cc
+            src/strerror.cc src/tree_writer.cc
             src/util.cc src/views/bitmap.c src/views/collate_json.c
             src/views/file_merger.c src/views/file_sorter.c
             src/views/index_header.c src/views/keys.c

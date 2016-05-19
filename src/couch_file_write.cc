@@ -7,8 +7,6 @@
 #include <snappy.h>
 #include <libcouchstore/couch_db.h>
 
-#include "rfc1321/global.h"
-#include "rfc1321/md5.h"
 #include "internal.h"
 #include "crc32.h"
 #include "util.h"
