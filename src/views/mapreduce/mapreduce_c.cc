@@ -466,11 +466,13 @@ static void terminator_loop()
         registryMutex.lock();
         now = time(NULL);
         for (mapreduce_ctx_t *ctx : ctx_registry) {
+            ctx->exitMutex.lock();
             if (ctx->taskStartTime >= 0) {
                 if (ctx->taskStartTime + terminator_timeout < now) {
                     terminateTask(ctx);
                 }
             }
+            ctx->exitMutex.unlock();
         }
 
         registryMutex.unlock();

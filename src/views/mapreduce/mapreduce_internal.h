@@ -24,16 +24,17 @@
 #define _MAPREDUCE_INTERNAL_H
 
 #include "mapreduce.h"
-#include <iostream>
-#include <string>
-#include <list>
-#include <vector>
-#include <string.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <time.h>
-#include <include/v8.h>
 #include <atomic>
+#include <iostream>
+#include <list>
+#include <mutex>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string>
+#include <string.h>
+#include <time.h>
+#include <vector>
+#include <include/v8.h>
 
 
 class MapReduceError;
@@ -65,6 +66,7 @@ typedef struct {
     function_vector_t           *functions;
     kv_list_int_t               *kvs;
     std::atomic<time_t>         taskStartTime;
+    std::mutex                  exitMutex;
 } mapreduce_ctx_t;
 
 

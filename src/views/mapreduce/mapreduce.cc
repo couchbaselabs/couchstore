@@ -404,7 +404,7 @@ mapreduce_json_t runRereduce(mapreduce_ctx_t *ctx,
 void terminateTask(mapreduce_ctx_t *ctx)
 {
     V8::TerminateExecution(ctx->isolate);
-    taskFinished(ctx);
+    ctx->taskStartTime = -1;
 }
 
 
@@ -605,7 +605,9 @@ static inline void taskStarted(mapreduce_ctx_t *ctx)
 
 static inline void taskFinished(mapreduce_ctx_t *ctx)
 {
+    ctx->exitMutex.lock();
     ctx->taskStartTime = -1;
+    ctx->exitMutex.unlock();
 }
 
 
