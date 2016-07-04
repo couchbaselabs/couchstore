@@ -25,7 +25,6 @@
 #include "../view_group.h"
 #include "../util.h"
 #include "util.h"
-#include "../mapreduce/mapreduce.h"
 
 #define BUF_SIZE 8192
 #define MAX(a,b) ((a) > (b) ? a : b)
@@ -135,14 +134,12 @@ int main(int argc, char *argv[])
         goto out;
     }
 
-    mapreduce_init();
     ret = couchstore_compact_view_group(group_info,
                                         target_file,
                                         &header_buf,
                                         &stats,
                                         &header_outbuf,
                                         &error_info);
-    mapreduce_deinit();
 
     if (ret != COUCHSTORE_SUCCESS) {
         if (error_info.error_msg != NULL && error_info.view_name != NULL) {
