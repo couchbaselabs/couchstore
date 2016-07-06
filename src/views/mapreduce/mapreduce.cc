@@ -59,6 +59,10 @@ void initV8()
     v8platform = platform::CreateDefaultPlatform();
     V8::InitializePlatform(v8platform);
     V8::Initialize();
+}
+
+void initStartupData()
+{
     startupData = V8::CreateSnapshotDataBlob((char *)jsFunction_src);
 }
 
@@ -67,6 +71,10 @@ void deinitV8()
     V8::Dispose();
     V8::ShutdownPlatform();
     delete v8platform;
+}
+
+void deinitStartupData()
+{
     delete[] startupData.data;
 }
 

@@ -26,6 +26,7 @@
 #include "../util.h"
 #include "util.h"
 #include "../file_sorter.h"
+#include "../mapreduce/mapreduce.h"
 
 #define BUF_SIZE 8192
 
@@ -122,6 +123,7 @@ int main(int argc, char *argv[])
         goto out;
     }
 
+    mapreduce_init();
     ret = couchstore_build_view_group(group_info,
                                       source_files[0],
                                       (const char **) &source_files[1],
@@ -130,6 +132,7 @@ int main(int argc, char *argv[])
                                       &header_pos,
                                       &error_info);
 
+    mapreduce_deinit();
     if (ret != COUCHSTORE_SUCCESS) {
         if (error_info.error_msg != NULL && error_info.view_name != NULL) {
             fprintf(stderr,

@@ -825,7 +825,7 @@ static couchstore_error_t build_view_btree(const char *source_file,
 
     cmp.compare = view_btree_cmp;
     if (info->num_reducers > 0) {
-        mapreduce_init();
+        initStartupData();
     }
     red_ctx = make_view_reducer_ctx(info->reducers,
                                     info->num_reducers,
@@ -847,7 +847,7 @@ static couchstore_error_t build_view_btree(const char *source_file,
                       out_root);
 
     if (info->num_reducers > 0) {
-        mapreduce_deinit();
+        deinitStartupData();
     }
     if (ret != COUCHSTORE_SUCCESS) {
         set_error_info(info, red_ctx->error, ret, error_info);
@@ -1042,7 +1042,7 @@ static couchstore_error_t cleanup_view_btree(tree_file *file,
 
     cmp.compare = view_btree_cmp;
     if (info->num_reducers > 0) {
-        mapreduce_init();
+        initStartupData();
     }
     red_ctx = make_view_reducer_ctx(info->reducers,
                                     info->num_reducers,
@@ -1065,7 +1065,7 @@ static couchstore_error_t cleanup_view_btree(tree_file *file,
                         out_root);
 
     if (info->num_reducers > 0) {
-        mapreduce_deinit();
+        deinitStartupData();
     }
     if (ret != COUCHSTORE_SUCCESS) {
         const char *error_msg = NULL;
@@ -1400,7 +1400,7 @@ static couchstore_error_t update_view_btree(const char *source_file,
 
     cmp.compare = view_btree_cmp;
     if (info->num_reducers > 0) {
-        mapreduce_init();
+        initStartupData();
     }
     red_ctx = make_view_reducer_ctx(info->reducers,
                                     info->num_reducers,
@@ -1427,7 +1427,7 @@ static couchstore_error_t update_view_btree(const char *source_file,
                       out_root);
 
     if (info->num_reducers > 0) {
-        mapreduce_deinit();
+        deinitStartupData();
     }
     if (ret != COUCHSTORE_SUCCESS) {
         set_error_info(info, red_ctx->error, ret, error_info);
@@ -1769,7 +1769,7 @@ static couchstore_error_t compact_view_btree(tree_file *source,
 
     cmp.compare = view_btree_cmp;
     if (info->num_reducers > 0) {
-        mapreduce_init();
+        initStartupData();
     }
     red_ctx = make_view_reducer_ctx(info->reducers,
                                     info->num_reducers,
@@ -1793,7 +1793,7 @@ static couchstore_error_t compact_view_btree(tree_file *source,
                         out_root);
 
     if (info->num_reducers > 0) {
-        mapreduce_deinit();
+        deinitStartupData();
     }
     if (ret != COUCHSTORE_SUCCESS) {
         set_error_info(info, red_ctx->error, ret, error_info);
