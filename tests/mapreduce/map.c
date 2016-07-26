@@ -497,7 +497,6 @@ int main(void)
 {
     fprintf(stderr, "Running map tests\n");
     mapreduce_init();
-    initStartupData();
 
     mapreduce_set_timeout(1);
     test_timeout();
@@ -511,7 +510,6 @@ int main(void)
 
     test_timeout();
 
-    deinitStartupData();
     mapreduce_deinit();
     return 0;
 }

@@ -157,13 +157,11 @@ int main(void)
 {
     fprintf(stderr, "Running mapreduce builtin tests\n");
     mapreduce_init();
-    initStartupData();
 
     test_sum_function();
     test_b64decode_function();
     test_date_to_array_function();
 
-    deinitStartupData();
     mapreduce_deinit();
     return 0;
 }

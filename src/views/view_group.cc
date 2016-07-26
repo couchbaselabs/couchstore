@@ -34,7 +34,6 @@
 #include "../internal.h"
 #include "../util.h"
 #include <platform/cbassert.h>
-#include "mapreduce/mapreduce.h"
 
 #define VIEW_KV_CHUNK_THRESHOLD (7 * 1024)
 #define VIEW_KP_CHUNK_THRESHOLD (6 * 1024)
@@ -824,9 +823,6 @@ static couchstore_error_t build_view_btree(const char *source_file,
     char *error_msg = NULL;
 
     cmp.compare = view_btree_cmp;
-    if (info->num_reducers > 0) {
-        initStartupData();
-    }
     red_ctx = make_view_reducer_ctx(info->reducers,
                                     info->num_reducers,
                                     &error_msg);
@@ -846,9 +842,6 @@ static couchstore_error_t build_view_btree(const char *source_file,
                       red_ctx,
                       out_root);
 
-    if (info->num_reducers > 0) {
-        deinitStartupData();
-    }
     if (ret != COUCHSTORE_SUCCESS) {
         set_error_info(info, red_ctx->error, ret, error_info);
     }
@@ -1041,9 +1034,6 @@ static couchstore_error_t cleanup_view_btree(tree_file *file,
     char *error_msg = NULL;
 
     cmp.compare = view_btree_cmp;
-    if (info->num_reducers > 0) {
-        initStartupData();
-    }
     red_ctx = make_view_reducer_ctx(info->reducers,
                                     info->num_reducers,
                                     &error_msg);
@@ -1064,9 +1054,6 @@ static couchstore_error_t cleanup_view_btree(tree_file *file,
                         red_ctx,
                         out_root);
 
-    if (info->num_reducers > 0) {
-        deinitStartupData();
-    }
     if (ret != COUCHSTORE_SUCCESS) {
         const char *error_msg = NULL;
         if (red_ctx->error != NULL) {
@@ -1399,9 +1386,6 @@ static couchstore_error_t update_view_btree(const char *source_file,
     char *error_msg = NULL;
 
     cmp.compare = view_btree_cmp;
-    if (info->num_reducers > 0) {
-        initStartupData();
-    }
     red_ctx = make_view_reducer_ctx(info->reducers,
                                     info->num_reducers,
                                     &error_msg);
@@ -1426,9 +1410,6 @@ static couchstore_error_t update_view_btree(const char *source_file,
                       removed,
                       out_root);
 
-    if (info->num_reducers > 0) {
-        deinitStartupData();
-    }
     if (ret != COUCHSTORE_SUCCESS) {
         set_error_info(info, red_ctx->error, ret, error_info);
     }
@@ -1768,9 +1749,6 @@ static couchstore_error_t compact_view_btree(tree_file *source,
     char *error_msg = NULL;
 
     cmp.compare = view_btree_cmp;
-    if (info->num_reducers > 0) {
-        initStartupData();
-    }
     red_ctx = make_view_reducer_ctx(info->reducers,
                                     info->num_reducers,
                                     &error_msg);
@@ -1792,9 +1770,6 @@ static couchstore_error_t compact_view_btree(tree_file *source,
                         stats,
                         out_root);
 
-    if (info->num_reducers > 0) {
-        deinitStartupData();
-    }
     if (ret != COUCHSTORE_SUCCESS) {
         set_error_info(info, red_ctx->error, ret, error_info);
     }

@@ -17,19 +17,15 @@
 
 extern void mapreduce_init();
 extern void mapreduce_deinit();
-extern void initStartupData();
-extern void deinitStartupData();
 extern void view_tests();
 extern void purge_tests();
 
 int main() {
     mapreduce_init();
-    initStartupData();
 
     view_tests();
     purge_tests();
 
-    deinitStartupData();
     mapreduce_deinit();
     return 0;
 }

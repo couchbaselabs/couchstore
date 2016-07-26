@@ -93,19 +93,6 @@ extern "C" {
     void deinitV8();
 
     /**
-     * This API is to be called once per process to initialize
-     * startup data blob for builtin JavaScript functions.
-     * This is called if there are reduce functions defined.
-     **/
-    LIBCOUCHSTORE_API
-    void initStartupData();
-
-    /** This destroys V8 startup data blob
-     **/
-    LIBCOUCHSTORE_API
-    void deinitStartupData();
-
-    /**
      * All mapreduce initialization are done in this function.
      **/
     LIBCOUCHSTORE_API
