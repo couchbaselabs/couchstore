@@ -8,6 +8,8 @@
 //
 
 #include "node_types.h"
+
+#include <platform/cb_malloc.h>
 #include <stdlib.h>
 
 size_t read_kv(const void *buf, sized_buf *key, sized_buf *value)
@@ -46,7 +48,7 @@ node_pointer *read_root(void *buf, int size)
     uint64_t subtreesize = decode_raw48(raw->subtreesize);
     int redsize = size - sizeof(*raw);
 
-    ptr = (node_pointer *) malloc(sizeof(node_pointer) + redsize);
+    ptr = (node_pointer *) cb_malloc(sizeof(node_pointer) + redsize);
     if (redsize > 0) {
         buf = (char *) memcpy(ptr + 1, raw + 1, redsize);
     } else {

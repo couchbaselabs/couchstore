@@ -20,6 +20,7 @@
 
 #include "view_tests.h"
 
+#include <platform/cb_malloc.h>
 
 static index_header_t *test_index_header_decoding_v1(const char *header_bin,
                                                      size_t header_bin_size)
@@ -373,8 +374,8 @@ void test_index_headers_v1(void)
 
     free_index_header(header);
     free_index_header(header2);
-    free(header_bin2);
-    free(header_bin3);
+    cb_free(header_bin2);
+    cb_free(header_bin3);
 }
 
 
@@ -434,6 +435,6 @@ void test_index_headers_v2(void)
 
     free_index_header(header);
     free_index_header(header2);
-    free(header_bin2);
-    free(header_bin3);
+    cb_free(header_bin2);
+    cb_free(header_bin3);
 }

@@ -1,5 +1,7 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include "config.h"
+
+#include <platform/cb_malloc.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -130,7 +132,7 @@ couchstore_error_t db_write_buf_compressed(tree_file *file, const sized_buf *buf
     sized_buf to_write;
     size_t max_size = snappy::MaxCompressedLength(buf->size);
 
-    char* compressbuf = static_cast<char *>(malloc(max_size));
+    char* compressbuf = static_cast<char *>(cb_malloc(max_size));
     to_write.buf = compressbuf;
     to_write.size = max_size;
     error_unless(to_write.buf, COUCHSTORE_ERROR_ALLOC_FAIL);
@@ -139,6 +141,6 @@ couchstore_error_t db_write_buf_compressed(tree_file *file, const sized_buf *buf
 
     error_pass(static_cast<couchstore_error_t>(db_write_buf(file, &to_write, pos, disk_size)));
 cleanup:
-    free(compressbuf);
+    cb_free(compressbuf);
     return errcode;
 }

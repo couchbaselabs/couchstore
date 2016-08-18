@@ -22,6 +22,7 @@
 #define _VIEW_SPATIAL_TESTS_H
 
 #include "config.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>

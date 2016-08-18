@@ -19,6 +19,8 @@
  **/
 
 #include "config.h"
+
+#include <platform/cb_malloc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "macros.h"
@@ -31,7 +33,7 @@
 
 static int read_record(FILE *f, void **buffer, void *ctx)
 {
-    int *rec = (int *) malloc(sizeof(int));
+    int *rec = (int *) cb_malloc(sizeof(int));
     (void) ctx;
 
     if (rec == NULL) {
@@ -39,7 +41,7 @@ static int read_record(FILE *f, void **buffer, void *ctx)
     }
 
     if (fread(rec, sizeof(int), 1, f) != 1) {
-        free(rec);
+        cb_free(rec);
         if (feof(f)) {
             return 0;
         } else {
@@ -74,7 +76,7 @@ static void free_record(void *rec, void *ctx)
 {
    (void) ctx;
 
-   free(rec);
+   cb_free(rec);
 }
 
 static unsigned long check_file_sorted(const char *file_path)

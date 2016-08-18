@@ -19,6 +19,8 @@
  **/
 
 #include "config.h"
+
+#include <platform/cb_malloc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -36,7 +38,7 @@ typedef struct {
 
 static int read_record(FILE *f, void **buffer, void *ctx)
 {
-    test_record_t *rec = (test_record_t *) malloc(sizeof(test_record_t));
+    test_record_t *rec = (test_record_t *) cb_malloc(sizeof(test_record_t));
     (void) ctx;
 
     if (rec == NULL) {
@@ -44,7 +46,7 @@ static int read_record(FILE *f, void **buffer, void *ctx)
     }
 
     if (fread(rec, sizeof(test_record_t), 1, f) != 1) {
-        free(rec);
+        cb_free(rec);
         if (feof(f)) {
             return 0;
         } else {
@@ -86,7 +88,7 @@ static void free_record(void *rec, void *ctx)
 {
    (void) ctx;
 
-   free(rec);
+   cb_free(rec);
 }
 
 static size_t dedup_records(file_merger_record_t **records, size_t n, void *ctx)
@@ -164,7 +166,7 @@ void file_deduper_tests(void)
     int key;
     int multiples[] = {5, 10, 20, 40};
     int max_arr_size = 40 * MAX_RECORDS_PER_FILE + 1;
-    int *expected_result = calloc(40 * MAX_RECORDS_PER_FILE + 1, sizeof(int));
+    int *expected_result = cb_calloc(40 * MAX_RECORDS_PER_FILE + 1, sizeof(int));
     cb_assert(expected_result != NULL);
 
     fprintf(stderr, "\nRunning file deduper tests...\n");
@@ -202,5 +204,5 @@ void file_deduper_tests(void)
     remove(dest_file);
 
     fprintf(stderr, "Running file deduper tests passed\n\n");
-    free(expected_result);
+    cb_free(expected_result);
 }

@@ -7,9 +7,11 @@
 //
 #include "config.h"
 #include "arena.h"
+
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <platform/cb_malloc.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -56,7 +58,7 @@ static void* add_chunk(arena* a, size_t size)
         chunk_size = size;  // make sure the new chunk is big enough to fit 'size' bytes
     }
     arena_chunk* chunk;
-    chunk = static_cast<arena_chunk*>(malloc(sizeof(arena_chunk) + chunk_size));
+    chunk = static_cast<arena_chunk*>(cb_malloc(sizeof(arena_chunk) + chunk_size));
     if (!chunk) {
         return NULL;
     }
@@ -73,7 +75,7 @@ static void* add_chunk(arena* a, size_t size)
 
 arena* new_arena(size_t chunk_size)
 {
-    arena* a = static_cast<arena*>(calloc(1, sizeof(arena)));
+    arena* a = static_cast<arena*>(cb_calloc(1, sizeof(arena)));
     if (a) {
         if (chunk_size == 0) {
             chunk_size = DEFAULT_CHUNK_SIZE;
@@ -99,14 +101,14 @@ void delete_arena(arena* a)
 #endif
         void* to_free = chunk;
         chunk = chunk->prev_chunk;
-        free(to_free);
+        cb_free(to_free);
     }
 #if LOG_STATS
     fprintf(stderr, "delete_arena: %zd bytes malloced for %zd bytes of data in %d blocks (%.0f%%)\n",
             total_allocated, a->bytes_allocated, a->blocks_allocated,
             a->bytes_allocated*100.0/total_allocated);
 #endif
-    free(a);
+    cb_free(a);
 }
 
 void* arena_alloc_unaligned(arena* a, size_t size)
@@ -165,7 +167,7 @@ void arena_free_from_mark(arena *a, const arena_position *mark)
     arena_chunk* chunk = a->cur_chunk;
     while (chunk && ((void*)mark < chunk_start(chunk) || (void*)mark > chunk_end(chunk))) {
         a->cur_chunk = chunk->prev_chunk;
-        free(chunk);
+        cb_free(chunk);
         chunk = a->cur_chunk;
     }
     assert(chunk != NULL || mark == NULL);   // If this fails, mark was bogus

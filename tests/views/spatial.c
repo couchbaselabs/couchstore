@@ -20,6 +20,7 @@
 
 #include "spatial_tests.h"
 
+#include <platform/cb_malloc.h>
 
 /* Convert a binary number encoded as string to an uint32 */
 static uint32_t b2u(const char *binary)
@@ -46,7 +47,7 @@ static unsigned char *b2c(const char *binary, size_t size)
     int i = 0;
     /* The offset is on the input string, hence it is in bits */
     size_t offset = size*8 - strlen(binary);
-    unsigned char *result = (unsigned char *)calloc(
+    unsigned char *result = (unsigned char *)cb_calloc(
         size, sizeof(unsigned char));
 
     for(i = 0; *binary != '\0'; i++, binary++) {
@@ -74,8 +75,8 @@ static int interleaving(uint32_t numbers[],
 
     ret = memcmp((void *)interleaved, expected_bin, size_numbers) == 0;
 
-    free(interleaved);
-    free(expected_bin);
+    cb_free(interleaved);
+    cb_free(expected_bin);
 
     return ret;
 }
@@ -89,48 +90,48 @@ void test_interleaving()
     fprintf(stderr, "Running spatial interleaving tests\n");
 
     numbers_size = 2 * sizeof(uint32_t);
-    numbers = (uint32_t *)malloc(numbers_size);
+    numbers = (uint32_t *)cb_malloc(numbers_size);
     numbers[0] = b2u("111111000000");
     numbers[1] = b2u("000000111111");
     cb_assert(interleaving(numbers, numbers_size, "101010101010010101010101"));
-    free(numbers);
+    cb_free(numbers);
 
     numbers_size = 3 * sizeof(uint32_t);
-    numbers = (uint32_t *)malloc(numbers_size);
+    numbers = (uint32_t *)cb_malloc(numbers_size);
     numbers[0] = b2u("1101");
     numbers[1] = b2u("0101");
     numbers[2] = b2u("1111");
     cb_assert(interleaving(numbers, numbers_size, "101111001111"));
-    free(numbers);
+    cb_free(numbers);
 
     numbers_size = 4 * sizeof(uint32_t);
-    numbers = (uint32_t *)malloc(numbers_size);
+    numbers = (uint32_t *)cb_malloc(numbers_size);
     numbers[0] = b2u("0000");
     numbers[1] = b2u("1111");
     numbers[2] = b2u("1111");
     numbers[3] = b2u("0000");
     cb_assert(interleaving(numbers, numbers_size, "0110011001100110"));
-    free(numbers);
+    cb_free(numbers);
 
     numbers_size = 5 * sizeof(uint32_t);
-    numbers = (uint32_t *)malloc(numbers_size);
+    numbers = (uint32_t *)cb_malloc(numbers_size);
     numbers[0] = b2u("11");
     numbers[1] = b2u("01");
     numbers[2] = b2u("11");
     numbers[3] = b2u("00");
     numbers[4] = b2u("10");
     cb_assert(interleaving(numbers, numbers_size, "1010111100"));
-    free(numbers);
+    cb_free(numbers);
 
     numbers_size = 2 * sizeof(uint32_t);
-    numbers = (uint32_t *)malloc(numbers_size);
+    numbers = (uint32_t *)cb_malloc(numbers_size);
     numbers[0] = b2u("11111111111111111111111111111111");
     numbers[1] = b2u("00000000000000000000000000000000");
     cb_assert(interleaving(numbers, numbers_size, "1010101010101010101010101010101010101010101010101010101010101010"));
-    free(numbers);
+    cb_free(numbers);
 
     numbers_size = 12 * sizeof(uint32_t);
-    numbers = (uint32_t *)malloc(numbers_size);
+    numbers = (uint32_t *)cb_malloc(numbers_size);
     numbers[0] = b2u("11");
     numbers[1] = b2u("00");
     numbers[2] = b2u("11");
@@ -144,7 +145,7 @@ void test_interleaving()
     numbers[10] = b2u("00");
     numbers[11] = b2u("00");
     cb_assert(interleaving(numbers, numbers_size, "101100111000101100111000"));
-    free(numbers);
+    cb_free(numbers);
 }
 
 
@@ -189,13 +190,13 @@ void test_spatial_center()
     cb_assert(center[1] == 30.83);
     cb_assert(center[2] == 77.05);
     cb_assert(center[3] == 7.8);
-    free(center);
+    cb_free(center);
 
     mbb_struct.mbb = mbb2;
     mbb_struct.num = sizeof(mbb2)/sizeof(double);
     center = spatial_center(&mbb_struct);
     cb_assert(center[0] == 12.5);
-    free(center);
+    cb_free(center);
 }
 
 
@@ -218,7 +219,7 @@ void test_spatial_scale_point()
     cb_assert(scaled[3] == 0);
 
     free_spatial_scale_factor(sf);
-    free(scaled);
+    cb_free(scaled);
 }
 
 
@@ -230,7 +231,7 @@ static int cmp_bytes(const unsigned char *bitmap,
     unsigned char *tmp = b2c(expected, size);
 
     result = memcmp(bitmap, tmp, size) == 0;
-    free(tmp);
+    cb_free(tmp);
 
     return result;
 }
@@ -268,8 +269,8 @@ void test_set_bit_sized()
     set_bit_sized(bitmap2, size, 12);
     cb_assert(cmp_bytes(bitmap2, "0011000010001001", size));
 
-    free(bitmap);
-    free(bitmap2);
+    cb_free(bitmap);
+    cb_free(bitmap2);
 }
 
 

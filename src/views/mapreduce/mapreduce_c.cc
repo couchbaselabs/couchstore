@@ -26,6 +26,7 @@
 #include <cstring>
 #include <assert.h>
 #include <condition_variable>
+#include <platform/cb_malloc.h>
 #include <thread>
 
 static const char *MEM_ALLOC_ERROR_MSG = "memory allocation failure";
@@ -89,17 +90,17 @@ mapreduce_error_t mapreduce_map(void *context,
 {
     mapreduce_ctx_t *ctx = (mapreduce_ctx_t *) context;
 
-    *result = (mapreduce_map_result_list_t *) malloc(sizeof(**result));
+    *result = (mapreduce_map_result_list_t *) cb_malloc(sizeof(**result));
     if (*result == NULL) {
         return MAPREDUCE_ALLOC_ERROR;
     }
 
     int num_funs = ctx->functions->size();
     size_t sz = sizeof(mapreduce_map_result_t) * num_funs;
-    (*result)->list = (mapreduce_map_result_t *) malloc(sz);
+    (*result)->list = (mapreduce_map_result_t *) cb_malloc(sz);
 
     if ((*result)->list == NULL) {
-        free(*result);
+        cb_free(*result);
         *result = NULL;
         return MAPREDUCE_ALLOC_ERROR;
     }
@@ -148,20 +149,20 @@ mapreduce_error_t mapreduce_reduce_all(void *context,
 
         assert(sz == ctx->functions->size());
 
-        *result = (mapreduce_json_list_t *) malloc(sizeof(**result));
+        *result = (mapreduce_json_list_t *) cb_malloc(sizeof(**result));
         if (*result == NULL) {
             for ( ; it != list.end(); ++it) {
-                free((*it).json);
+                cb_free((*it).json);
             }
             throw std::bad_alloc();
         }
 
         (*result)->length = sz;
-        (*result)->values = (mapreduce_json_t *) malloc(sizeof(mapreduce_json_t) * sz);
+        (*result)->values = (mapreduce_json_t *) cb_malloc(sizeof(mapreduce_json_t) * sz);
         if ((*result)->values == NULL) {
-            free(*result);
+            cb_free(*result);
             for ( ; it != list.end(); ++it) {
-                free((*it).json);
+                cb_free((*it).json);
             }
             throw std::bad_alloc();
         }
@@ -196,9 +197,9 @@ mapreduce_error_t mapreduce_reduce(void *context,
     try {
         mapreduce_json_t red = runReduce(ctx, reduceFunNum, *keys, *values);
 
-        *result = (mapreduce_json_t *) malloc(sizeof(**result));
+        *result = (mapreduce_json_t *) cb_malloc(sizeof(**result));
         if (*result == NULL) {
-            free(red.json);
+            cb_free(red.json);
             throw std::bad_alloc();
         }
         **result = red;
@@ -229,9 +230,9 @@ mapreduce_error_t mapreduce_rereduce(void *context,
     try {
         mapreduce_json_t red = runRereduce(ctx, reduceFunNum, *reductions);
 
-        *result = (mapreduce_json_t *) malloc(sizeof(**result));
+        *result = (mapreduce_json_t *) cb_malloc(sizeof(**result));
         if (*result == NULL) {
-            free(red.json);
+            cb_free(red.json);
             throw std::bad_alloc();
         }
         **result = red;
@@ -267,8 +268,8 @@ LIBMAPREDUCE_API
 void mapreduce_free_json(mapreduce_json_t *value)
 {
     if (value != NULL) {
-        free(value->json);
-        free(value);
+        cb_free(value->json);
+        cb_free(value);
     }
 }
 
@@ -278,10 +279,10 @@ void mapreduce_free_json_list(mapreduce_json_list_t *list)
 {
     if (list != NULL) {
         for (int i = 0; i < list->length; ++i) {
-            free(list->values[i].json);
+            cb_free(list->values[i].json);
         }
-        free(list->values);
-        free(list);
+        cb_free(list->values);
+        cb_free(list);
     }
 }
 
@@ -303,27 +304,27 @@ void mapreduce_free_map_result_list(mapreduce_map_result_list_t *list)
 
                 for (int j = 0; j < kvs.length; ++j) {
                     mapreduce_kv_t kv = kvs.kvs[j];
-                    free(kv.key.json);
-                    free(kv.value.json);
+                    cb_free(kv.key.json);
+                    cb_free(kv.value.json);
                 }
-                free(kvs.kvs);
+                cb_free(kvs.kvs);
             }
             break;
         default:
-            free(mr.result.error_msg);
+            cb_free(mr.result.error_msg);
             break;
         }
     }
 
-    free(list->list);
-    free(list);
+    cb_free(list->list);
+    cb_free(list);
 }
 
 
 LIBMAPREDUCE_API
 void mapreduce_free_error_msg(char *error_msg)
 {
-    free(error_msg);
+    cb_free(error_msg);
 }
 
 
@@ -392,7 +393,7 @@ static void copy_error_msg(const std::string &msg, char **to)
     if (to != NULL) {
         size_t len = msg.length();
 
-        *to = (char *) malloc(len + 1);
+        *to = (char *) cb_malloc(len + 1);
         if (*to != NULL) {
             msg.copy(*to, len);
             (*to)[len] = '\0';

@@ -9,6 +9,7 @@
 #include "node_types.h"
 #include "util.h"
 
+#include <platform/cb_malloc.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -218,7 +219,7 @@ static couchstore_error_t compact_seq_fetchcb(couchfile_lookup_request *rq,
 
         bpWithDeleted = (bpWithDeleted & BP_DELETED_FLAG) | new_bp;  //Preserve high bit
         encode_raw48(bpWithDeleted, &rawSeq->bp);
-        free(item.buf);
+        cb_free(item.buf);
         error_pass(static_cast<couchstore_error_t>(err));
     }
 
@@ -264,7 +265,7 @@ static couchstore_error_t compact_seq_tree(Db* source, Db* target, compact_ctx *
     errcode = btree_lookup(&srcfold, source->header.by_seq_root->pointer);
     if (errcode == COUCHSTORE_SUCCESS) {
         if(target->header.by_seq_root != nullptr) {
-            free(target->header.by_seq_root);
+            cb_free(target->header.by_seq_root);
         }
         target->header.by_seq_root = complete_new_btree(ctx->target_mr, &errcode);
     }

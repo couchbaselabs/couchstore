@@ -1,8 +1,11 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
 #include "reductions.h"
+
 #include "../bitfield.h"
 #include "../couch_btree.h"
+
+#include <platform/cb_malloc.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -27,7 +30,7 @@ couchstore_error_t decode_view_btree_reduction(const char *bytes,
     const char *bs;
     size_t length;
 
-    r = (view_btree_reduction_t *) malloc(sizeof(view_btree_reduction_t));
+    r = (view_btree_reduction_t *) cb_malloc(sizeof(view_btree_reduction_t));
     if (r == NULL) {
         goto alloc_error;
     }
@@ -66,7 +69,7 @@ couchstore_error_t decode_view_btree_reduction(const char *bytes,
     }
 
     if (r->num_values > 0) {
-        r->reduce_values = (sized_buf *) malloc(r->num_values * sizeof(sized_buf));
+        r->reduce_values = (sized_buf *) cb_malloc(r->num_values * sizeof(sized_buf));
         if (r->reduce_values == NULL) {
             goto alloc_error;
         }
@@ -87,7 +90,7 @@ couchstore_error_t decode_view_btree_reduction(const char *bytes,
         len -= 2;
 
         r->reduce_values[i].size = sz;
-        r->reduce_values[i].buf = (char *) malloc(sz);
+        r->reduce_values[i].buf = (char *) cb_malloc(sz);
 
         if (r->reduce_values[i].buf == NULL) {
             goto alloc_error;
@@ -159,12 +162,12 @@ void free_view_btree_reduction(view_btree_reduction_t *reduction)
 
     if (reduction->reduce_values != NULL){
         for (i = 0; i < reduction->num_values; ++i) {
-            free(reduction->reduce_values[i].buf);
+            cb_free(reduction->reduce_values[i].buf);
         }
-        free(reduction->reduce_values);
+        cb_free(reduction->reduce_values);
     }
 
-    free(reduction);
+    cb_free(reduction);
 }
 
 
@@ -173,7 +176,7 @@ couchstore_error_t decode_view_id_btree_reduction(const char *bytes,
 {
     view_id_btree_reduction_t *r = NULL;
 
-    r = (view_id_btree_reduction_t *) malloc(sizeof(view_id_btree_reduction_t));
+    r = (view_id_btree_reduction_t *) cb_malloc(sizeof(view_id_btree_reduction_t));
     if (r == NULL) {
         goto alloc_error;
     }
@@ -225,7 +228,7 @@ void free_view_id_btree_reduction(view_id_btree_reduction_t *reduction)
         return;
     }
 
-    free(reduction);
+    cb_free(reduction);
 }
 
 static void enc_uint16(uint16_t u, char **buf)

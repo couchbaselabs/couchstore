@@ -1,6 +1,8 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include "config.h"
+
 #include <assert.h>
+#include <platform/cb_malloc.h>
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
@@ -175,7 +177,7 @@ static couchstore_error_t flush_spatial_partial(couchfile_modify_result *res,
 
     /* nodebuf/writebuf is very short-lived and can be large, so use regular
      * malloc heap for it: */
-    nodebuf = (char *) malloc(res->node_len + 1);
+    nodebuf = (char *) cb_malloc(res->node_len + 1);
     if (nodebuf == NULL) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
@@ -204,7 +206,7 @@ static couchstore_error_t flush_spatial_partial(couchfile_modify_result *res,
 
     errcode = (couchstore_error_t) db_write_buf_compressed(
         res->rq->file, &writebuf, &diskpos, &disk_size);
-    free(nodebuf);  /* here endeth the nodebuf. */
+    cb_free(nodebuf);  /* here endeth the nodebuf. */
     if (errcode != COUCHSTORE_SUCCESS) {
         return errcode;
     }

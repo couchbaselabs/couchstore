@@ -1,6 +1,8 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include "config.h"
+
 #include <assert.h>
+#include <platform/cb_malloc.h>
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
@@ -218,7 +220,7 @@ static couchstore_error_t flush_mr_partial(couchfile_modify_result *res, size_t 
     }
 
     // nodebuf/writebuf is very short-lived and can be large, so use regular malloc heap for it:
-    nodebuf = static_cast<char*>(malloc(res->node_len + 1));
+    nodebuf = static_cast<char*>(cb_malloc(res->node_len + 1));
     if (!nodebuf) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
@@ -247,7 +249,7 @@ static couchstore_error_t flush_mr_partial(couchfile_modify_result *res, size_t 
     writebuf.size = dst - nodebuf;
 
     errcode = static_cast<couchstore_error_t>(db_write_buf_compressed(res->rq->file, &writebuf, &diskpos, &disk_size));
-    free(nodebuf);  // here endeth the nodebuf.
+    cb_free(nodebuf);  // here endeth the nodebuf.
     if (errcode != COUCHSTORE_SUCCESS) {
         return errcode;
     }
@@ -603,7 +605,7 @@ static couchstore_error_t modify_node(couchfile_modify_request *rq,
     }
 cleanup:
     if (nodebuf) {
-        free(nodebuf);
+        cb_free(nodebuf);
     }
 
     return errcode;
@@ -658,7 +660,7 @@ node_pointer* copy_node_pointer(node_pointer* ptr)
         return NULL;
     }
     node_pointer* ret_ptr;
-    ret_ptr = static_cast<node_pointer*>(malloc(sizeof(node_pointer) + ptr->key.size + ptr->reduce_value.size));
+    ret_ptr = static_cast<node_pointer*>(cb_malloc(sizeof(node_pointer) + ptr->key.size + ptr->reduce_value.size));
     if (!ret_ptr) {
         return NULL;
     }
@@ -823,7 +825,7 @@ static couchstore_error_t purge_node(couchfile_modify_request *rq,
     }
 
 cleanup:
-    free(nodebuf);
+    cb_free(nodebuf);
     return errcode;
 }
 

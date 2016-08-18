@@ -28,6 +28,7 @@
 #include <string>
 #include <list>
 #include <vector>
+#include <platform/cb_malloc.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -50,11 +51,11 @@ public:
     }
 
     virtual void* AllocateUninitialized(size_t length) {
-        return malloc(length);
+        return cb_malloc(length);
     }
 
     virtual void Free(void* data, size_t) {
-        free(data);
+        cb_free(data);
     }
 };
 

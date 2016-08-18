@@ -20,6 +20,7 @@
 
 #include "config.h"
 #include <libcouchstore/couch_db.h>
+#include <platform/cb_malloc.h>
 #include <stdlib.h>
 #include <string.h>
 #include "../macros.h"
@@ -453,11 +454,11 @@ static node_pointer *insert_items(tree_file *file, node_pointer *root,
     int *arr1, *arr2;
     sized_buf *keys, *vals;
 
-    arr1 = (int *) calloc(n, sizeof(int));
-    arr2 = (int *) calloc(n, sizeof(int));
-    keys = (sized_buf *) calloc(n, sizeof(sized_buf));
-    vals = (sized_buf *) calloc(n, sizeof(sized_buf));
-    acts = (couchfile_modify_action *) calloc(n, sizeof(couchfile_modify_action));
+    arr1 = (int *) cb_calloc(n, sizeof(int));
+    arr2 = (int *) cb_calloc(n, sizeof(int));
+    keys = (sized_buf *) cb_calloc(n, sizeof(sized_buf));
+    vals = (sized_buf *) cb_calloc(n, sizeof(sized_buf));
+    acts = (couchfile_modify_action *) cb_calloc(n, sizeof(couchfile_modify_action));
 
     for (i = 0; i < n; i++) {
         arr1[i] = i + 1;
@@ -485,11 +486,11 @@ static node_pointer *insert_items(tree_file *file, node_pointer *root,
     rq.kp_chunk_threshold = 6 * 1024;
 
     nroot = modify_btree(&rq, root, &errcode);
-    free(arr1);
-    free(arr2);
-    free(keys);
-    free(vals);
-    free(acts);
+    cb_free(arr1);
+    cb_free(arr2);
+    cb_free(keys);
+    cb_free(vals);
+    cb_free(acts);
 
     cb_assert(errcode == 0);
 
@@ -585,9 +586,9 @@ void test_no_purge_items()
     fprintf(stderr, "Btree has same values after guided purge\n");
 
 cleanup:
-    free(root);
+    cb_free(root);
     if (root != newroot) {
-        free(newroot);
+        cb_free(newroot);
     }
     couchstore_close_db(db);
     cb_assert(errcode == 0);
@@ -628,8 +629,8 @@ void test_all_purge_items()
     fprintf(stderr, "Btree is empty after guided purge\n");
 
 cleanup:
-    free(root);
-    free(newroot);
+    cb_free(root);
+    cb_free(newroot);
     couchstore_close_db(db);
     cb_assert(errcode == 0);
 }
@@ -671,8 +672,8 @@ void test_partial_purge_items()
     fprintf(stderr, "Btree has no odd values after guided purge\n");
 
 cleanup:
-    free(root);
-    free(newroot);
+    cb_free(root);
+    cb_free(newroot);
     couchstore_close_db(db);
     cb_assert(errcode == 0);
 }
@@ -717,8 +718,8 @@ void test_partial_purge_items2()
     fprintf(stderr, "Btree has only values within the range {0, 31} and keys are sorted\n");
 
 cleanup:
-    free(root);
-    free(newroot);
+    cb_free(root);
+    cb_free(newroot);
     couchstore_close_db(db);
     cb_assert(errcode == 0);
 }
@@ -760,8 +761,8 @@ void test_partial_purge_with_stop()
     fprintf(stderr, "Btree does not contain first 4 odd values after guided purge\n");
 
 cleanup:
-    free(root);
-    free(newroot);
+    cb_free(root);
+    cb_free(newroot);
     couchstore_close_db(db);
     cb_assert(errcode == 0);
 }
@@ -795,9 +796,9 @@ void test_add_remove_purge()
                     evenodd_purge_kp, evenodd_purge_kv, (void *) &purge_count);
 
     /* Add few add and remove actions in the modify request */
-    arr = (int *) calloc(6, sizeof(int));
-    keys = (sized_buf *) calloc(6, sizeof(sized_buf));
-    acts = (couchfile_modify_action *) calloc(6, sizeof(couchfile_modify_action));
+    arr = (int *) cb_calloc(6, sizeof(int));
+    keys = (sized_buf *) cb_calloc(6, sizeof(sized_buf));
+    acts = (couchfile_modify_action *) cb_calloc(6, sizeof(couchfile_modify_action));
 
     arr[0] = 2;
     arr[1] = 4;
@@ -838,11 +839,11 @@ void test_add_remove_purge()
     fprintf(stderr, "Keys 4,10,200000 are not in tree after guided purge\n");
 
 cleanup:
-    free(root);
-    free(newroot);
-    free(keys);
-    free(acts);
-    free(arr);
+    cb_free(root);
+    cb_free(newroot);
+    cb_free(keys);
+    cb_free(acts);
+    cb_free(arr);
     couchstore_close_db(db);
     cb_assert(errcode == 0);
 }
@@ -881,8 +882,8 @@ void test_only_single_leafnode()
     fprintf(stderr, "Btree is empty after guided purge\n");
 
 cleanup:
-    free(root);
-    free(newroot);
+    cb_free(root);
+    cb_free(newroot);
     couchstore_close_db(db);
     cb_assert(errcode == 0);
 }

@@ -1,5 +1,7 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include "config.h"
+
+#include <platform/cb_malloc.h>
 #include <string.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -186,7 +188,7 @@ static couchstore_error_t update_indexes(Db *db,
 
     // Sort the array indexes of ids[] by ascending id. Since we can't pass context info to qsort,
     // actually sort an array of pointers to the elements of ids[], rather than the array indexes.
-    sorted_ids = static_cast<const sized_buf**>(malloc(numdocs * sizeof(sized_buf*)));
+    sorted_ids = static_cast<const sized_buf**>(cb_malloc(numdocs * sizeof(sized_buf*)));
     error_unless(sorted_ids, COUCHSTORE_ERROR_ALLOC_FAIL);
     for (ii = 0; ii < numdocs; ++ii) {
         sorted_ids[ii] = &ids[ii];
@@ -249,22 +251,22 @@ static couchstore_error_t update_indexes(Db *db,
 
     new_seq_root = modify_btree(&seqrq, db->header.by_seq_root, &errcode);
     if (errcode != COUCHSTORE_SUCCESS) {
-        free(new_id_root);
+        cb_free(new_id_root);
         error_pass(errcode);
     }
 
     if (db->header.by_id_root != new_id_root) {
-        free(db->header.by_id_root);
+        cb_free(db->header.by_id_root);
         db->header.by_id_root = new_id_root;
     }
 
     if (db->header.by_seq_root != new_seq_root) {
-        free(db->header.by_seq_root);
+        cb_free(db->header.by_seq_root);
         db->header.by_seq_root = new_seq_root;
     }
 
 cleanup:
-    free(sorted_ids);
+    cb_free(sorted_ids);
     fatbuf_free(actbuf);
     return errcode;
 }

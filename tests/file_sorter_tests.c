@@ -19,6 +19,8 @@
  **/
 
 #include "config.h"
+
+#include <platform/cb_malloc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -137,7 +139,7 @@ static int *sorted_data;
 
 static int read_record(FILE *f, void **buffer, void *ctx)
 {
-    int *rec = (int *) malloc(sizeof(int));
+    int *rec = (int *) cb_malloc(sizeof(int));
     (void) ctx;
 
     if (rec == NULL) {
@@ -145,7 +147,7 @@ static int read_record(FILE *f, void **buffer, void *ctx)
     }
 
     if (fread(rec, sizeof(int), 1, f) != 1) {
-        free(rec);
+        cb_free(rec);
         if (feof(f)) {
             return 0;
         } else {
@@ -180,7 +182,7 @@ static void free_record(void *rec, void *ctx)
 {
    (void) ctx;
 
-   free(rec);
+   cb_free(rec);
 }
 
 static int check_file_sorted(const char *file_path)
@@ -299,7 +301,7 @@ void file_sorter_tests(void)
 
     fprintf(stderr, "Running file sorter tests...\n");
 
-    sorted_data = (int *) malloc(sizeof(data));
+    sorted_data = (int *) cb_malloc(sizeof(data));
     cb_assert(sorted_data != NULL);
     memcpy(sorted_data, data, sizeof(data));
     qsort(sorted_data, nrecords, sizeof(int), int_cmp);

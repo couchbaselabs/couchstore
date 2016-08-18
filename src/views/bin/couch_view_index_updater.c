@@ -19,6 +19,8 @@
  **/
 
 #include "config.h"
+
+#include <platform/cb_malloc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -70,7 +72,7 @@ int main(int argc, char *argv[])
         goto out;
     }
 
-    tmp_dir = strdup(buf);
+    tmp_dir = cb_strdup(buf);
     if (tmp_dir == NULL) {
         fprintf(stderr, "Memory allocation failure\n");
         ret = COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -93,7 +95,7 @@ int main(int argc, char *argv[])
         is_sorted = 1;
     }
 
-    source_files = (char **) calloc(group_info->num_btrees + 1, sizeof(char *));
+    source_files = (char **) cb_calloc(group_info->num_btrees + 1, sizeof(char *));
     if (source_files == NULL) {
         fprintf(stderr, "Memory allocation failure\n");
         ret = COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -112,7 +114,7 @@ int main(int argc, char *argv[])
             goto out;
         }
 
-        source_files[i] = strdup(buf);
+        source_files[i] = cb_strdup(buf);
         if (source_files[i] == NULL) {
             fprintf(stderr, "Memory allocation failure\n");
             ret = COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -133,7 +135,7 @@ int main(int argc, char *argv[])
         goto out;
     }
 
-    header_buf.buf = malloc(header_buf.size);
+    header_buf.buf = cb_malloc(header_buf.size);
     if (header_buf.buf == NULL) {
             fprintf(stderr, "Memory allocation failure\n");
             ret = COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -196,17 +198,17 @@ int main(int argc, char *argv[])
 out:
     if (source_files != NULL) {
         for (i = 0; i <= group_info->num_btrees; ++i) {
-            free(source_files[i]);
+            cb_free(source_files[i]);
         }
-        free(source_files);
+        cb_free(source_files);
     }
 
     couchstore_free_view_group_info(group_info);
-    free((void *) error_info.error_msg);
-    free((void *) error_info.view_name);
-    free((void *) header_buf.buf);
-    free((void *) header_outbuf.buf);
-    free(tmp_dir);
+    cb_free((void *) error_info.error_msg);
+    cb_free((void *) error_info.view_name);
+    cb_free((void *) header_buf.buf);
+    cb_free((void *) header_outbuf.buf);
+    cb_free(tmp_dir);
 
     ret = (ret < 0) ? (100 + ret) : ret;
     _exit(ret);

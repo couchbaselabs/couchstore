@@ -2,6 +2,8 @@
 #include "config.h"
 #include "node_types.h"
 #include "util.h"
+
+#include <platform/cb_malloc.h>
 #include <stdlib.h>
 
 #ifdef DEBUG
@@ -40,7 +42,7 @@ int seq_cmp(const sized_buf *k1, const sized_buf *k2)
 
 fatbuf *fatbuf_alloc(size_t bytes)
 {
-    fatbuf *fb = (fatbuf *) malloc(sizeof(fatbuf) + bytes);
+    fatbuf *fb = (fatbuf *) cb_malloc(sizeof(fatbuf) + bytes);
 #ifdef DEBUG
     memset(fb->buf, 0x44, bytes);
 #endif
@@ -70,7 +72,7 @@ void *fatbuf_get(fatbuf *fb, size_t bytes)
 
 void fatbuf_free(fatbuf *fb)
 {
-    free(fb);
+    cb_free(fb);
 }
 
 #ifdef DEBUG

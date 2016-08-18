@@ -19,9 +19,12 @@
  **/
 
 #include "config.h"
+
 #include <assert.h>
+#include <platform/cb_malloc.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "view_group.h"
 #include "reducers.h"
 #include "reductions.h"
@@ -200,7 +203,7 @@ view_group_info_t *couchstore_read_view_group_info(FILE *in_stream,
     couchstore_error_t ret;
     uint64_t type;
 
-    info = (view_group_info_t *) calloc(1, sizeof(*info));
+    info = (view_group_info_t *) cb_calloc(1, sizeof(*info));
     if (info == NULL) {
         fprintf(error_stream, "Memory allocation failure\n");
         goto out_error;
@@ -227,7 +230,7 @@ view_group_info_t *couchstore_read_view_group_info(FILE *in_stream,
         fprintf(stderr, "Error reading source index file path\n");
         goto out_error;
     }
-    dup = strdup(buf);
+    dup = cb_strdup(buf);
     if (dup == NULL) {
         fprintf(error_stream, "Memory allocation failure\n");
         goto out_error;
@@ -283,7 +286,7 @@ static couchstore_error_t read_btree_info(view_group_info_t *info,
     couchstore_error_t ret;
 
     info->view_infos.btree = (view_btree_info_t *)
-        calloc(info->num_btrees, sizeof(view_btree_info_t));
+        cb_calloc(info->num_btrees, sizeof(view_btree_info_t));
     if (info->view_infos.btree == NULL) {
         fprintf(error_stream, "Memory allocation failure on btree infos\n");
         info->num_btrees = 0;
@@ -305,7 +308,7 @@ static couchstore_error_t read_btree_info(view_group_info_t *info,
             return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
         }
 
-        bti->names = (const char **) calloc(bti->num_reducers, sizeof(char *));
+        bti->names = (const char **) cb_calloc(bti->num_reducers, sizeof(char *));
         if (bti->names == NULL) {
             fprintf(error_stream,
                     "Memory allocation failure on btree %d reducer names\n",
@@ -314,12 +317,12 @@ static couchstore_error_t read_btree_info(view_group_info_t *info,
             return COUCHSTORE_ERROR_ALLOC_FAIL;
         }
 
-        bti->reducers = (const char **) calloc(bti->num_reducers, sizeof(char *));
+        bti->reducers = (const char **) cb_calloc(bti->num_reducers, sizeof(char *));
         if (bti->reducers == NULL) {
             fprintf(error_stream,
                     "Memory allocation failure on btree %d reducers\n", i);
             bti->num_reducers = 0;
-            free(bti->names);
+            cb_free(bti->names);
             return COUCHSTORE_ERROR_ALLOC_FAIL;
         }
 
@@ -329,7 +332,7 @@ static couchstore_error_t read_btree_info(view_group_info_t *info,
                         "Error reading btree %d view %d name\n", i, j);
                 return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
             }
-            dup = strdup(buf);
+            dup = cb_strdup(buf);
             if (dup == NULL) {
                 fprintf(error_stream,
                         "Memory allocation failure on btree %d "
@@ -349,7 +352,7 @@ static couchstore_error_t read_btree_info(view_group_info_t *info,
                 return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
             }
 
-            dup = (char *) malloc(reduce_len + 1);
+            dup = (char *) cb_malloc(reduce_len + 1);
             if (dup == NULL) {
                 fprintf(error_stream,
                         "Memory allocation failure on btree %d "
@@ -360,7 +363,7 @@ static couchstore_error_t read_btree_info(view_group_info_t *info,
             if (fread(dup, reduce_len, 1, in_stream) != 1) {
                 fprintf(error_stream,
                         "Error reading btree %d view %d reducer\n", i, j);
-                free(dup);
+                cb_free(dup);
                 return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
             }
             dup[reduce_len] = '\0';
@@ -381,7 +384,7 @@ static couchstore_error_t read_spatial_info(view_group_info_t *info,
     couchstore_error_t ret;
 
     info->view_infos.spatial = (view_spatial_info_t *)
-        calloc(info->num_btrees, sizeof(view_spatial_info_t));
+        cb_calloc(info->num_btrees, sizeof(view_spatial_info_t));
     if (info->view_infos.spatial == NULL) {
         fprintf(error_stream, "Memory allocation failure on spatial infos\n");
         info->num_btrees = 0;
@@ -404,7 +407,7 @@ static couchstore_error_t read_spatial_info(view_group_info_t *info,
             continue;
         }
 
-        si->mbb = (double *) calloc(si->dimension * 2, sizeof(double));
+        si->mbb = (double *) cb_calloc(si->dimension * 2, sizeof(double));
         if (si->mbb == NULL) {
             fprintf(error_stream,
                     "Memory allocation failure on spatial view %d\n", i);
@@ -438,23 +441,23 @@ void couchstore_free_view_group_info(view_group_info_t *info)
             view_btree_info_t vi = info->view_infos.btree[i];
 
             for (j = 0; j < vi.num_reducers; ++j) {
-                free((void *) vi.names[j]);
-                free((void *) vi.reducers[j]);
+                cb_free((void *) vi.names[j]);
+                cb_free((void *) vi.reducers[j]);
             }
-            free(vi.names);
-            free(vi.reducers);
+            cb_free(vi.names);
+            cb_free(vi.reducers);
         }
-        free(info->view_infos.btree);
+        cb_free(info->view_infos.btree);
         break;
     case VIEW_INDEX_TYPE_SPATIAL:
         for (i = 0; i < info->num_btrees; ++i) {
-            free((void *) info->view_infos.spatial[i].mbb);
+            cb_free((void *) info->view_infos.spatial[i].mbb);
         }
-        free(info->view_infos.spatial);
+        cb_free(info->view_infos.spatial);
         break;
     }
-    free((void *) info->filepath);
-    free(info);
+    cb_free((void *) info->filepath);
+    cb_free(info);
 }
 
 
@@ -466,7 +469,7 @@ static void close_view_group_file(view_group_info_t *info)
         info->file.ops = NULL;
         info->file.handle = NULL;
     }
-    free((void *) info->file.path);
+    cb_free((void *) info->file.path);
     info->file.path = NULL;
 }
 
@@ -522,7 +525,7 @@ couchstore_error_t couchstore_build_view_group(view_group_info_t *info,
     index_file.ops = NULL;
     index_file.path = NULL;
 
-    view_roots = (node_pointer **) calloc(
+    view_roots = (node_pointer **) cb_calloc(
         info->num_btrees, sizeof(node_pointer *));
     if (view_roots == NULL) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -553,7 +556,7 @@ couchstore_error_t couchstore_build_view_group(view_group_info_t *info,
         goto out;
     }
 
-    free(header->id_btree_state);
+    cb_free(header->id_btree_state);
     header->id_btree_state = id_root;
     id_root = NULL;
 
@@ -580,7 +583,7 @@ couchstore_error_t couchstore_build_view_group(view_group_info_t *info,
             goto out;
         }
 
-        free(header->view_states[i]);
+        cb_free(header->view_states[i]);
         header->view_states[i] = view_roots[i];
         view_roots[i] = NULL;
     }
@@ -596,12 +599,12 @@ out:
     free_index_header(header);
     close_view_group_file(info);
     tree_file_close(&index_file);
-    free(id_root);
+    cb_free(id_root);
     if (view_roots != NULL) {
         for (i = 0; i < info->num_btrees; ++i) {
-            free(view_roots[i]);
+            cb_free(view_roots[i]);
         }
-        free(view_roots);
+        cb_free(view_roots);
     }
 
     return ret;
@@ -827,7 +830,7 @@ static couchstore_error_t build_view_btree(const char *source_file,
                                     &error_msg);
     if (red_ctx == NULL) {
         set_error_info(info, (const char *) error_msg, ret, error_info);
-        free(error_msg);
+        cb_free(error_msg);
         return COUCHSTORE_ERROR_REDUCER_FAILURE;
     }
 
@@ -880,7 +883,7 @@ couchstore_error_t read_view_group_header(view_group_info_t *info,
     }
 
     ret = decode_index_header(header_buf, (size_t) header_len, header);
-    free(header_buf);
+    cb_free(header_buf);
 
     return ret;
 }
@@ -911,7 +914,7 @@ couchstore_error_t write_view_group_header(tree_file *file,
     *pos = (uint64_t) p;
 
 out:
-    free(buf.buf);
+    cb_free(buf.buf);
 
     return ret;
 }
@@ -1038,7 +1041,7 @@ static couchstore_error_t cleanup_view_btree(tree_file *file,
                                     &error_msg);
     if (red_ctx == NULL) {
         set_error_info(info, (const char *) error_msg, ret, error_info);
-        free (error_msg);
+        cb_free(error_msg);
         return COUCHSTORE_ERROR_REDUCER_FAILURE;
     }
 
@@ -1089,7 +1092,7 @@ couchstore_error_t couchstore_cleanup_view_group(view_group_info_t *info,
     index_file.ops = NULL;
     index_file.path = NULL;
 
-    view_roots = (node_pointer **) calloc(
+    view_roots = (node_pointer **) cb_calloc(
         info->num_btrees, sizeof(node_pointer *));
     if (view_roots == NULL) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -1132,7 +1135,7 @@ couchstore_error_t couchstore_cleanup_view_group(view_group_info_t *info,
     }
 
     if (header->id_btree_state != id_root) {
-        free(header->id_btree_state);
+        cb_free(header->id_btree_state);
     }
 
     header->id_btree_state = id_root;
@@ -1153,7 +1156,7 @@ couchstore_error_t couchstore_cleanup_view_group(view_group_info_t *info,
         }
 
         if (header->view_states[i] != view_roots[i]) {
-            free(header->view_states[i]);
+            cb_free(header->view_states[i]);
         }
 
         header->view_states[i] = view_roots[i];
@@ -1179,12 +1182,12 @@ cleanup:
     free_index_header(header);
     close_view_group_file(info);
     tree_file_close(&index_file);
-    free(id_root);
+    cb_free(id_root);
     if (view_roots != NULL) {
         for (i = 0; i < info->num_btrees; ++i) {
-            free(view_roots[i]);
+            cb_free(view_roots[i]);
         }
-        free(view_roots);
+        cb_free(view_roots);
     }
 
     return ret;
@@ -1226,7 +1229,7 @@ static couchstore_error_t update_btree(const char *source_file,
     }
 
 
-    actions = (couchfile_modify_action *) calloc(
+    actions = (couchfile_modify_action *) cb_calloc(
                                             max_actions,
                                             sizeof(couchfile_modify_action));
     if (actions == NULL) {
@@ -1234,13 +1237,13 @@ static couchstore_error_t update_btree(const char *source_file,
         goto cleanup;
     }
 
-    keybufs = (sized_buf *) calloc(max_actions, sizeof(sized_buf));
+    keybufs = (sized_buf *) cb_calloc(max_actions, sizeof(sized_buf));
     if (keybufs == NULL) {
         ret = COUCHSTORE_ERROR_ALLOC_FAIL;
         goto cleanup;
     }
 
-    valbufs = (sized_buf *) calloc(max_actions, sizeof(sized_buf));
+    valbufs = (sized_buf *) cb_calloc(max_actions, sizeof(sized_buf));
     if (valbufs == NULL) {
         ret = COUCHSTORE_ERROR_ALLOC_FAIL;
         goto cleanup;
@@ -1320,9 +1323,9 @@ flush:
     *out_root = newroot;
 
 cleanup:
-    free(actions);
-    free(keybufs);
-    free(valbufs);
+    cb_free(actions);
+    cb_free(keybufs);
+    cb_free(valbufs);
 
     if (f != NULL) {
         fclose(f);
@@ -1390,7 +1393,7 @@ static couchstore_error_t update_view_btree(const char *source_file,
                                     &error_msg);
     if (red_ctx == NULL) {
         set_error_info(info, (const char *) error_msg, ret, error_info);
-        free(error_msg);
+        cb_free(error_msg);
         return COUCHSTORE_ERROR_REDUCER_FAILURE;
     }
 
@@ -1449,7 +1452,7 @@ couchstore_error_t couchstore_update_view_group(view_group_info_t *info,
     error_info->view_name = NULL;
     error_info->error_msg = NULL;
 
-    view_roots = (node_pointer **) calloc(info->num_btrees,
+    view_roots = (node_pointer **) cb_calloc(info->num_btrees,
                                           sizeof(node_pointer *));
     if (view_roots == NULL) {
         ret = COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -1487,12 +1490,12 @@ couchstore_error_t couchstore_update_view_group(view_group_info_t *info,
                               "Error sorting records file: %s",
                               id_records_file);
             if (nw > 0 && nw < sizeof(error_msg)) {
-                error_info->error_msg = strdup(error_msg);
+                error_info->error_msg = cb_strdup(error_msg);
             } else {
-                error_info->error_msg = strdup("Error sorting records file");
+                error_info->error_msg = cb_strdup("Error sorting records file");
             }
             error_info->idx_type = "MAPREDUCE";
-            error_info->view_name = (const char *) strdup("id_btree");
+            error_info->view_name = (const char *) cb_strdup("id_btree");
             goto cleanup;
         }
     }
@@ -1510,7 +1513,7 @@ couchstore_error_t couchstore_update_view_group(view_group_info_t *info,
 
 
     if (header->id_btree_state != id_root) {
-        free(header->id_btree_state);
+        cb_free(header->id_btree_state);
     }
 
     header->id_btree_state = id_root;
@@ -1552,7 +1555,7 @@ couchstore_error_t couchstore_update_view_group(view_group_info_t *info,
         }
 
         if (header->view_states[i] != view_roots[i]) {
-            free(header->view_states[i]);
+            cb_free(header->view_states[i]);
         }
 
         header->view_states[i] = view_roots[i];
@@ -1576,12 +1579,12 @@ cleanup:
     free_index_header(header);
     close_view_group_file(info);
     tree_file_close(&index_file);
-    free(id_root);
+    cb_free(id_root);
     if (view_roots != NULL) {
         for (i = 0; i < info->num_btrees; ++i) {
-            free(view_roots[i]);
+            cb_free(view_roots[i]);
         }
-        free(view_roots);
+        cb_free(view_roots);
     }
 
     return ret;
@@ -1764,7 +1767,7 @@ static couchstore_error_t compact_view_btree(tree_file *source,
                                     &error_msg);
     if (red_ctx == NULL) {
         set_error_info(info, (const char *) error_msg, ret, error_info);
-        free(error_msg);
+        cb_free(error_msg);
         return COUCHSTORE_ERROR_REDUCER_FAILURE;
     }
 
@@ -1827,7 +1830,7 @@ couchstore_error_t couchstore_compact_view_group(view_group_info_t *info,
         filterbm = &header->cleanup_bitmask;
     }
 
-    view_roots = (node_pointer **) calloc(info->num_btrees,
+    view_roots = (node_pointer **) cb_calloc(info->num_btrees,
                                           sizeof(node_pointer *));
     if (view_roots == NULL) {
         ret = COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -1863,7 +1866,7 @@ couchstore_error_t couchstore_compact_view_group(view_group_info_t *info,
         goto cleanup;
     }
 
-    free(header->id_btree_state);
+    cb_free(header->id_btree_state);
     header->id_btree_state = id_root;
     id_root = NULL;
 
@@ -1894,7 +1897,7 @@ couchstore_error_t couchstore_compact_view_group(view_group_info_t *info,
             goto cleanup;
         }
 
-        free(header->view_states[i]);
+        cb_free(header->view_states[i]);
         header->view_states[i] = view_roots[i];
         view_roots[i] = NULL;
     }
@@ -1912,12 +1915,12 @@ cleanup:
     close_view_group_file(info);
     tree_file_close(&index_file);
     tree_file_close(&compact_file);
-    free(id_root);
+    cb_free(id_root);
     if (view_roots != NULL) {
         for (i = 0; i < info->num_btrees; ++i) {
-            free(view_roots[i]);
+            cb_free(view_roots[i]);
         }
-        free(view_roots);
+        cb_free(view_roots);
     }
 
     return ret;
@@ -1987,14 +1990,14 @@ static couchstore_error_t build_view_spatial(const char *source_file,
 
     if (ret != COUCHSTORE_SUCCESS) {
         const int buffsize = 64;
-        char* buf = malloc(buffsize);
+        char* buf = cb_malloc(buffsize);
         if (buf != NULL) {
             int len = snprintf(buf, buffsize, "ret = %d", ret);
             if (len > 0 && len < buffsize) {
                 error_info->error_msg = buf;
             } else {
-                error_info->error_msg = strdup("Failed to build error message");
-                free(buf);
+                error_info->error_msg = cb_strdup("Failed to build error message");
+                cb_free(buf);
             }
         }
     }

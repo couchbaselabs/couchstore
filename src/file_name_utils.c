@@ -31,6 +31,8 @@
 #endif
 
 #include "file_name_utils.h"
+
+#include <platform/cb_malloc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -52,7 +54,7 @@ char *tmp_file_path(const char *tmp_dir, const char *prefix)
     tmp_dir_len = strlen(tmp_dir);
     prefix_len = strlen(prefix);
     total_len = tmp_dir_len + 1 + prefix_len + sizeof(TMP_FILE_SUFFIX);
-    file_path = (char *) malloc(total_len);
+    file_path = (char *) cb_malloc(total_len);
 
     if (file_path == NULL) {
         return NULL;
@@ -70,13 +72,13 @@ char *tmp_file_path(const char *tmp_dir, const char *prefix)
 #ifdef WINDOWS
     err = _mktemp_s(file_path, total_len);
     if (err != 0) {
-        free(file_path);
+        cb_free(file_path);
         return NULL;
     }
 #else
     fd = mkstemp(file_path);
     if (fd == -1) {
-        free(file_path);
+        cb_free(file_path);
         return NULL;
     }
     close(fd);
@@ -103,7 +105,7 @@ char *file_basename(const char *path)
     fname = basename((char *) path);
 #endif
 
-    ret = (char *) malloc(strlen(fname) + 1);
+    ret = (char *) cb_malloc(strlen(fname) + 1);
     if (ret != NULL) {
         strcpy(ret, fname);
     }

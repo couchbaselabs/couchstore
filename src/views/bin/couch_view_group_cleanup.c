@@ -21,6 +21,8 @@
 #include "config.h"
 #include "../view_group.h"
 #include "../util.h"
+
+#include <platform/cb_malloc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -86,8 +88,8 @@ int main(int argc, char *argv[])
 
 out:
     couchstore_free_view_group_info(group_info);
-    free((void *) error_info.error_msg);
-    free((void *) error_info.view_name);
+    cb_free((void *) error_info.error_msg);
+    cb_free((void *) error_info.view_name);
 
     ret = (ret < 0) ? (100 + ret) : ret;
     _exit(ret);

@@ -2,6 +2,8 @@
 
 #include "keys.h"
 #include "../bitfield.h"
+
+#include <platform/cb_malloc.h>
 #include <stdlib.h>
 
 
@@ -17,7 +19,7 @@ couchstore_error_t decode_view_btree_key(const char *bytes,
     view_btree_key_t *k = NULL;
     uint16_t sz;
 
-    k = (view_btree_key_t *) malloc(sizeof(view_btree_key_t));
+    k = (view_btree_key_t *) cb_malloc(sizeof(view_btree_key_t));
     if (k == NULL) {
         goto alloc_error;
     }
@@ -32,7 +34,7 @@ couchstore_error_t decode_view_btree_key(const char *bytes,
     len -= 2;
 
     k->json_key.size = sz;
-    k->json_key.buf = (char *) malloc(sz);
+    k->json_key.buf = (char *) cb_malloc(sz);
 
     if (k->json_key.buf == NULL) {
         goto alloc_error;
@@ -46,7 +48,7 @@ couchstore_error_t decode_view_btree_key(const char *bytes,
 
     k->doc_id.size = len;
 
-    k->doc_id.buf = (char *) malloc(len);
+    k->doc_id.buf = (char *) cb_malloc(len);
 
 
     if (k->doc_id.buf == NULL) {
@@ -76,7 +78,7 @@ couchstore_error_t encode_view_btree_key(const view_btree_key_t *key,
     sz += key->json_key.size;
     sz += key->doc_id.size;
 
-    b = buf = (char *) malloc(sz);
+    b = buf = (char *) cb_malloc(sz);
     if (buf == NULL) {
         goto alloc_error;
     }
@@ -94,7 +96,7 @@ couchstore_error_t encode_view_btree_key(const view_btree_key_t *key,
     return COUCHSTORE_SUCCESS;
 
  alloc_error:
-    free(buf);
+    cb_free(buf);
     *buffer = NULL;
     *buffer_size = 0;
     return COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -107,9 +109,9 @@ void free_view_btree_key(view_btree_key_t *key)
         return;
     }
 
-    free(key->json_key.buf);
-    free(key->doc_id.buf);
-    free(key);
+    cb_free(key->json_key.buf);
+    cb_free(key->doc_id.buf);
+    cb_free(key);
 }
 
 
@@ -119,7 +121,7 @@ couchstore_error_t decode_view_id_btree_key(const char *bytes,
 {
     view_id_btree_key_t *k = NULL;
 
-    k = (view_id_btree_key_t *) malloc(sizeof(view_id_btree_key_t));
+    k = (view_id_btree_key_t *) cb_malloc(sizeof(view_id_btree_key_t));
     if (k == NULL) {
         goto alloc_error;
     }
@@ -133,7 +135,7 @@ couchstore_error_t decode_view_id_btree_key(const char *bytes,
 
     k->doc_id.size = len;
 
-    k->doc_id.buf = (char *) malloc(len);
+    k->doc_id.buf = (char *) cb_malloc(len);
 
     if (k->doc_id.buf == NULL) {
         goto alloc_error;
@@ -161,7 +163,7 @@ couchstore_error_t encode_view_id_btree_key(const view_id_btree_key_t *key,
     sz += 2;             /* uint16_t */
     sz += key->doc_id.size;
 
-    b = buf = (char *) malloc(sz);
+    b = buf = (char *) cb_malloc(sz);
     if (buf == NULL) {
         goto alloc_error;
     }
@@ -177,7 +179,7 @@ couchstore_error_t encode_view_id_btree_key(const view_id_btree_key_t *key,
     return COUCHSTORE_SUCCESS;
 
  alloc_error:
-    free(buf);
+    cb_free(buf);
     *buffer = NULL;
     *buffer_size = 0;
     return COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -190,8 +192,8 @@ void free_view_id_btree_key(view_id_btree_key_t *key)
         return;
     }
 
-    free(key->doc_id.buf);
-    free(key);
+    cb_free(key->doc_id.buf);
+    cb_free(key);
 }
 
 static void enc_uint16(uint16_t u, char **buf)

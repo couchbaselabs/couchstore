@@ -19,6 +19,8 @@
  **/
 
 #include "config.h"
+
+#include <platform/cb_malloc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -73,7 +75,7 @@ int main(int argc, char *argv[])
         goto out;
     }
 
-    target_file = strdup(buf);
+    target_file = cb_strdup(buf);
     if (target_file == NULL) {
         fprintf(stderr, "Memory allocation failure\n");
         ret = COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -110,7 +112,7 @@ int main(int argc, char *argv[])
     }
 
     header_buf.size = (size_t)header_size;
-    header_buf.buf = malloc(header_buf.size);
+    header_buf.buf = cb_malloc(header_buf.size);
     if (header_buf.buf == NULL) {
         fprintf(stderr, "Memory allocation failure\n");
         ret = COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -163,11 +165,11 @@ int main(int argc, char *argv[])
 
 out:
     couchstore_free_view_group_info(group_info);
-    free((void *) error_info.error_msg);
-    free((void *) error_info.view_name);
-    free((void *) header_buf.buf);
-    free((void *) header_outbuf.buf);
-    free(target_file);
+    cb_free((void *) error_info.error_msg);
+    cb_free((void *) error_info.view_name);
+    cb_free((void *) header_buf.buf);
+    cb_free((void *) header_outbuf.buf);
+    cb_free(target_file);
 
     ret = (ret < 0) ? (100 + ret) : ret;
     _exit(ret);

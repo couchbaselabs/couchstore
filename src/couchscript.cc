@@ -1,8 +1,10 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include "config.h"
+
 #include <iostream>
 #include <cassert>
 #include <errno.h>
+#include <platform/cb_malloc.h>
 #include <string.h>
 #include <sysexits.h>
 #include <stdlib.h>
@@ -321,26 +323,26 @@ extern "C" {
     {
     public:
         BulkData(unsigned n) : size(n),
-            docs(static_cast<Doc **>(calloc(size, sizeof(Doc *)))),
-            infos(static_cast<DocInfo **>(calloc(size, sizeof(DocInfo *)))) {
+            docs(static_cast<Doc **>(cb_calloc(size, sizeof(Doc *)))),
+            infos(static_cast<DocInfo **>(cb_calloc(size, sizeof(DocInfo *)))) {
             assert(docs);
             assert(infos);
 
             for (unsigned i = 0; i < size; ++i) {
-                docs[i] = static_cast<Doc *>(calloc(1, sizeof(Doc)));
+                docs[i] = static_cast<Doc *>(cb_calloc(1, sizeof(Doc)));
                 assert(docs[i]);
-                infos[i] = static_cast<DocInfo *>(calloc(1, sizeof(DocInfo)));
+                infos[i] = static_cast<DocInfo *>(cb_calloc(1, sizeof(DocInfo)));
                 assert(infos[i]);
             }
         }
 
         ~BulkData() {
             for (unsigned i = 0; i < size; ++i) {
-                free(docs[i]);
-                free(infos[i]);
+                cb_free(docs[i]);
+                cb_free(infos[i]);
             }
-            free(docs);
-            free(infos);
+            cb_free(docs);
+            cb_free(infos);
         }
 
         unsigned size;

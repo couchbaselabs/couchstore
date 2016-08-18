@@ -10,6 +10,8 @@
 #include "config.h"
 #include "iobuffer.h"
 #include "internal.h"
+
+#include <platform/cb_malloc.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -53,7 +55,7 @@ typedef struct buffered_file_handle {
 
 
 static file_buffer* new_buffer(buffered_file_handle* owner, size_t capacity) {
-    file_buffer *buf = static_cast<file_buffer*>(malloc(sizeof(file_buffer) + capacity));
+    file_buffer *buf = static_cast<file_buffer*>(cb_malloc(sizeof(file_buffer) + capacity));
     if (buf) {
         buf->prev = buf->next = NULL;
         buf->owner = owner;
@@ -72,7 +74,7 @@ static void free_buffer(file_buffer* buf) {
 #if LOG_BUFFER
     fprintf(stderr, "BUFFER: %p freed\n", buf);
 #endif
-    free(buf);
+    cb_free(buf);
 }
 
 
@@ -230,14 +232,14 @@ static void buffered_destructor(couchstore_error_info_t *errinfo,
         next = buffer->next;
         free_buffer(buffer);
     }
-    free(h);
+    cb_free(h);
 }
 
 static couch_file_handle buffered_constructor_with_raw_ops(couchstore_error_info_t *errinfo,
                                                            const couch_file_ops* raw_ops,
                                                            bool readOnly)
 {
-    buffered_file_handle *h = static_cast<buffered_file_handle*>(malloc(sizeof(buffered_file_handle)));
+    buffered_file_handle *h = static_cast<buffered_file_handle*>(cb_malloc(sizeof(buffered_file_handle)));
     if (h) {
         h->raw_ops = raw_ops;
         h->raw_ops_handle = raw_ops->constructor(errinfo, raw_ops->cookie);

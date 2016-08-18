@@ -1,6 +1,8 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include "config.h"
+
 #include <fcntl.h>
+#include <platform/cb_malloc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -36,7 +38,7 @@ couchstore_error_t tree_file_open(tree_file* file,
 
     file->crc_mode = crc_mode;
 
-    file->path = (const char *) strdup(filename);
+    file->path = (const char *) cb_strdup(filename);
     error_unless(file->path, COUCHSTORE_ERROR_ALLOC_FAIL);
 
     file->ops = couch_get_buffered_file_ops(&file->lastError, ops, &file->handle,
@@ -48,7 +50,7 @@ couchstore_error_t tree_file_open(tree_file* file,
 
 cleanup:
     if (errcode != COUCHSTORE_SUCCESS) {
-        free((char *) file->path);
+        cb_free((char *) file->path);
         file->path = NULL;
         if (file->ops) {
             file->ops->destructor(&file->lastError, file->handle);
@@ -65,7 +67,7 @@ void tree_file_close(tree_file* file)
         file->ops->close(&file->lastError, file->handle);
         file->ops->destructor(&file->lastError, file->handle);
     }
-    free((char*)file->path);
+    cb_free((char*)file->path);
 }
 
 /** Read bytes from the database file, skipping over the header-detection bytes at every block
@@ -128,7 +130,7 @@ static int pread_bin_internal(tree_file *file,
     }
     info.crc32 = ntohl(info.crc32);
 
-    uint8_t* buf = static_cast<uint8_t*>(malloc(info.chunk_len));
+    uint8_t* buf = static_cast<uint8_t*>(cb_malloc(info.chunk_len));
     if (!buf) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
@@ -139,7 +141,7 @@ static int pread_bin_internal(tree_file *file,
     }
 
     if (err < 0) {
-        free(buf);
+        cb_free(buf);
         return err;
     }
 
@@ -171,23 +173,23 @@ int pread_compressed(tree_file *file, cs_off_t pos, char **ret_ptr)
 
     if (!snappy::GetUncompressedLength(compressed_buf, len, &uncompressed_len)) {
         //should be compressed but snappy doesn't see it as valid.
-        free(compressed_buf);
+        cb_free(compressed_buf);
         return COUCHSTORE_ERROR_CORRUPT;
     }
 
-    new_buf = static_cast<char *>(malloc(uncompressed_len));
+    new_buf = static_cast<char *>(cb_malloc(uncompressed_len));
     if (!new_buf) {
-        free(compressed_buf);
+        cb_free(compressed_buf);
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
 
     if (!snappy::RawUncompress(compressed_buf, len, new_buf)) {
-        free(compressed_buf);
-        free(new_buf);
+        cb_free(compressed_buf);
+        cb_free(new_buf);
         return COUCHSTORE_ERROR_CORRUPT;
     }
 
-    free(compressed_buf);
+    cb_free(compressed_buf);
     *ret_ptr = new_buf;
     return static_cast<int>(uncompressed_len);
 }

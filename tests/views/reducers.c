@@ -3,6 +3,8 @@
 #include "view_tests.h"
 #include "../src/couch_btree.h"
 #include "../src/views/mapreduce/mapreduce.h"
+
+#include <platform/cb_malloc.h>
 #include <string.h>
 #include <inttypes.h>
 
@@ -18,8 +20,8 @@ static void free_node_list(nodelist *nl)
     tmp = nl;
     while (tmp != NULL ){
         nl = nl->next;
-        free(tmp->pointer);
-        free(tmp);
+        cb_free(tmp->pointer);
+        cb_free(tmp);
         tmp = nl;
     }
 }
@@ -29,19 +31,19 @@ static void free_id_value(view_id_btree_value_t *value)
     unsigned i;
 
     for (i = 0; i < value->num_view_keys_map; ++i) {
-        free(value->view_keys_map[i].json_keys);
+        cb_free(value->view_keys_map[i].json_keys);
     }
-    free(value->view_keys_map);
+    cb_free(value->view_keys_map);
 }
 
 static void free_view_value(view_btree_value_t *value)
 {
-    free(value->values);
+    cb_free(value->values);
 }
 
 static void free_view_reduction(view_btree_reduction_t *red)
 {
-    free(red->reduce_values);
+    cb_free(red->reduce_values);
 }
 
 static void test_view_id_btree_reducer(void)
@@ -86,12 +88,12 @@ static void test_view_id_btree_reducer(void)
 
     data1.partition = 67;
     data1.num_view_keys_map = 2;
-    data1.view_keys_map = (view_keys_mapping_t *) malloc(sizeof(view_keys_mapping_t) * 2);
+    data1.view_keys_map = (view_keys_mapping_t *) cb_malloc(sizeof(view_keys_mapping_t) * 2);
     cb_assert(data1.view_keys_map != NULL);
 
     data1.view_keys_map[0].view_id = 0;
     data1.view_keys_map[0].num_keys = 2;
-    data1.view_keys_map[0].json_keys = (sized_buf *) malloc(sizeof(sized_buf) * 2);
+    data1.view_keys_map[0].json_keys = (sized_buf *) cb_malloc(sizeof(sized_buf) * 2);
     cb_assert(data1.view_keys_map[0].json_keys != NULL);
     data1.view_keys_map[0].json_keys[0].buf = "-321";
     data1.view_keys_map[0].json_keys[0].size = sizeof("-321") - 1;
@@ -100,7 +102,7 @@ static void test_view_id_btree_reducer(void)
 
     data1.view_keys_map[1].view_id = 1;
     data1.view_keys_map[1].num_keys = 1;
-    data1.view_keys_map[1].json_keys = (sized_buf *) malloc(sizeof(sized_buf) * 1);
+    data1.view_keys_map[1].json_keys = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     data1.view_keys_map[1].json_keys[0].buf = "[5,6,7]";
     data1.view_keys_map[1].json_keys[0].size = sizeof("[5,6,7]") - 1;
 
@@ -114,19 +116,19 @@ static void test_view_id_btree_reducer(void)
 
     data2.partition = 57;
     data2.num_view_keys_map = 2;
-    data2.view_keys_map = (view_keys_mapping_t *) malloc(sizeof(view_keys_mapping_t) * 2);
+    data2.view_keys_map = (view_keys_mapping_t *) cb_malloc(sizeof(view_keys_mapping_t) * 2);
     cb_assert(data2.view_keys_map != NULL);
 
     data2.view_keys_map[0].view_id = 0;
     data2.view_keys_map[0].num_keys = 1;
-    data2.view_keys_map[0].json_keys = (sized_buf *) malloc(sizeof(sized_buf) * 1);
+    data2.view_keys_map[0].json_keys = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     cb_assert(data2.view_keys_map[0].json_keys != NULL);
     data2.view_keys_map[0].json_keys[0].buf = "\"abc\"";
     data2.view_keys_map[0].json_keys[0].size = sizeof("\"abc\"") - 1;
 
     data2.view_keys_map[1].view_id = 1;
     data2.view_keys_map[1].num_keys = 1;
-    data2.view_keys_map[1].json_keys = (sized_buf *) malloc(sizeof(sized_buf) * 1);
+    data2.view_keys_map[1].json_keys = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     data2.view_keys_map[1].json_keys[0].buf = "\"qwerty\"";
     data2.view_keys_map[1].json_keys[0].size = sizeof("\"qwerty\"") - 1;
 
@@ -145,7 +147,7 @@ static void test_view_id_btree_reducer(void)
     set_bit(&reduction2.partitions_bitmap, 77);
     cb_assert(encode_view_id_btree_reduction(&reduction2, reduction_bin2, &reduction_bin2_size) == COUCHSTORE_SUCCESS);
 
-    nl = (nodelist *) malloc(sizeof(nodelist));
+    nl = (nodelist *) cb_malloc(sizeof(nodelist));
     cb_assert(nl != NULL);
 
     count++;
@@ -156,7 +158,7 @@ static void test_view_id_btree_reducer(void)
     nl->pointer = NULL;
     nl->next = NULL;
 
-    np = (node_pointer *) malloc(sizeof(node_pointer));
+    np = (node_pointer *) cb_malloc(sizeof(node_pointer));
     cb_assert(np != NULL);
     np->key.buf = key_bin1;
     np->key.size = key_bin1_size;
@@ -166,7 +168,7 @@ static void test_view_id_btree_reducer(void)
     np->subtreesize = 3;
     nl->pointer = np;
 
-    nl2 = (nodelist *) malloc(sizeof(nodelist));
+    nl2 = (nodelist *) cb_malloc(sizeof(nodelist));
     cb_assert(nl2 != NULL);
 
     count++;
@@ -192,7 +194,7 @@ static void test_view_id_btree_reducer(void)
 
     free_view_id_btree_reduction(r);
 
-    np2 = (node_pointer *) malloc(sizeof(node_pointer));
+    np2 = (node_pointer *) cb_malloc(sizeof(node_pointer));
     cb_assert(np2 != NULL);
     np2->key.buf = key_bin2;
     np2->key.size = key_bin2_size;
@@ -216,10 +218,10 @@ static void test_view_id_btree_reducer(void)
 
     free_view_id_btree_reduction(r);
     free_node_list(nl);
-    free(key_bin1);
-    free(key_bin2);
-    free(data_bin1);
-    free(data_bin2);
+    cb_free(key_bin1);
+    cb_free(key_bin2);
+    cb_free(data_bin1);
+    cb_free(data_bin2);
 }
 
 static void test_view_btree_sum_reducer(void)
@@ -282,7 +284,7 @@ static void test_view_btree_sum_reducer(void)
 
     value1.partition = 7;
     value1.num_values = 2;
-    value1.values = (sized_buf *) malloc(sizeof(sized_buf) * 2);
+    value1.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 2);
     value1.values[0].buf = "100";
     value1.values[0].size = sizeof("100") - 1;
     value1.values[1].buf = "1";
@@ -291,19 +293,19 @@ static void test_view_btree_sum_reducer(void)
 
     value2.partition = 666;
     value2.num_values = 1;
-    value2.values = (sized_buf *) malloc(sizeof(sized_buf) * 1);
+    value2.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     value2.values[0].buf = "1000";
     value2.values[0].size = sizeof("1000") - 1;
     cb_assert(encode_view_btree_value(&value2, &value2_bin, &value2_bin_size) == COUCHSTORE_SUCCESS);
 
     value3.partition = 1023;
     value3.num_values = 1;
-    value3.values = (sized_buf *) malloc(sizeof(sized_buf) * 1);
+    value3.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     value3.values[0].buf = "5000.33";
     value3.values[0].size = sizeof("5000.33") - 1;
     cb_assert(encode_view_btree_value(&value3, &value3_bin, &value3_bin_size) == COUCHSTORE_SUCCESS);
 
-    nl = (nodelist *) malloc(sizeof(nodelist));
+    nl = (nodelist *) cb_malloc(sizeof(nodelist));
     cb_assert(nl != NULL);
     nl->data.buf = value1_bin;
     nl->data.size = value1_bin_size;
@@ -311,7 +313,7 @@ static void test_view_btree_sum_reducer(void)
     nl->key.size = key1_bin_size;
     nl->pointer = NULL;
 
-    nl2 = (nodelist *) malloc(sizeof(nodelist));
+    nl2 = (nodelist *) cb_malloc(sizeof(nodelist));
     cb_assert(nl2 != NULL);
     nl2->data.buf = value2_bin;
     nl2->data.size = value2_bin_size;
@@ -320,7 +322,7 @@ static void test_view_btree_sum_reducer(void)
     nl2->pointer = NULL;
     nl->next = nl2;
 
-    nl3 = (nodelist *) malloc(sizeof(nodelist));
+    nl3 = (nodelist *) cb_malloc(sizeof(nodelist));
     cb_assert(nl3 != NULL);
     nl3->data.buf = value3_bin;
     nl3->data.size = value3_bin_size;
@@ -351,7 +353,7 @@ static void test_view_btree_sum_reducer(void)
 
     value3.values[0].buf = "\"foobar\"";
     value3.values[0].size = sizeof("\"foobar\"") - 1;
-    free(value3_bin);
+    cb_free(value3_bin);
     cb_assert(encode_view_btree_value(&value3, &value3_bin, &value3_bin_size) == COUCHSTORE_SUCCESS);
 
     nl3->data.buf = value3_bin;
@@ -368,7 +370,7 @@ static void test_view_btree_sum_reducer(void)
     set_bit(&reduction1.partitions_bitmap, 10);
     set_bit(&reduction1.partitions_bitmap, 1011);
     reduction1.num_values = 1;
-    reduction1.reduce_values = (sized_buf *) malloc(sizeof(sized_buf) * 1);
+    reduction1.reduce_values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     cb_assert(reduction1.reduce_values != NULL);
     reduction1.reduce_values[0].buf = "4444.11";
     reduction1.reduce_values[0].size = sizeof("4444.11") - 1;
@@ -380,13 +382,13 @@ static void test_view_btree_sum_reducer(void)
     set_bit(&reduction2.partitions_bitmap, 777);
     set_bit(&reduction2.partitions_bitmap, 333);
     reduction2.num_values = 1;
-    reduction2.reduce_values = (sized_buf *) malloc(sizeof(sized_buf) * 1);
+    reduction2.reduce_values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     cb_assert(reduction2.reduce_values != NULL);
     reduction2.reduce_values[0].buf = "-100";
     reduction2.reduce_values[0].size = sizeof("-100") - 1;
     cb_assert(encode_view_btree_reduction(&reduction2, reduction2_bin, &reduction2_bin_size) == COUCHSTORE_SUCCESS);
 
-    np = (node_pointer *) malloc(sizeof(node_pointer));
+    np = (node_pointer *) cb_malloc(sizeof(node_pointer));
     cb_assert(np != NULL);
     np->key.buf = key1_bin;
     np->key.size = key1_bin_size;
@@ -396,7 +398,7 @@ static void test_view_btree_sum_reducer(void)
     np->subtreesize = 222;
     nl->pointer = np;
 
-    np2 = (node_pointer *) malloc(sizeof(node_pointer));
+    np2 = (node_pointer *) cb_malloc(sizeof(node_pointer));
     cb_assert(np2 != NULL);
     np2->key.buf = key2_bin;
     np2->key.size = key2_bin_size;
@@ -441,15 +443,15 @@ static void test_view_btree_sum_reducer(void)
     free_view_reduction(&reduction2);
     free_view_btree_reduction(red);
     free_view_reducer_ctx(ctx);
-    free(key1_bin);
-    free(key2_bin);
-    free(key3_bin);
+    cb_free(key1_bin);
+    cb_free(key2_bin);
+    cb_free(key3_bin);
     free_view_value(&value1);
     free_view_value(&value2);
     free_view_value(&value3);
-    free(value1_bin);
-    free(value2_bin);
-    free(value3_bin);
+    cb_free(value1_bin);
+    cb_free(value2_bin);
+    cb_free(value3_bin);
     free_node_list(nl);
 }
 
@@ -513,7 +515,7 @@ static void test_view_btree_count_reducer(void)
 
     value1.partition = 7;
     value1.num_values = 2;
-    value1.values = (sized_buf *) malloc(sizeof(sized_buf) * 2);
+    value1.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 2);
     value1.values[0].buf = "100";
     value1.values[0].size = sizeof("100") - 1;
     value1.values[1].buf = "1";
@@ -522,19 +524,19 @@ static void test_view_btree_count_reducer(void)
 
     value2.partition = 666;
     value2.num_values = 1;
-    value2.values = (sized_buf *) malloc(sizeof(sized_buf) * 1);
+    value2.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     value2.values[0].buf = "1000";
     value2.values[0].size = sizeof("1000") - 1;
     cb_assert(encode_view_btree_value(&value2, &value2_bin, &value2_bin_size) == COUCHSTORE_SUCCESS);
 
     value3.partition = 1023;
     value3.num_values = 1;
-    value3.values = (sized_buf *) malloc(sizeof(sized_buf) * 1);
+    value3.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     value3.values[0].buf = "5000.33";
     value3.values[0].size = sizeof("5000.33") - 1;
     cb_assert(encode_view_btree_value(&value3, &value3_bin, &value3_bin_size) == COUCHSTORE_SUCCESS);
 
-    nl = (nodelist *) malloc(sizeof(nodelist));
+    nl = (nodelist *) cb_malloc(sizeof(nodelist));
     cb_assert(nl != NULL);
     nl->data.buf = value1_bin;
     nl->data.size = value1_bin_size;
@@ -542,7 +544,7 @@ static void test_view_btree_count_reducer(void)
     nl->key.size = key1_bin_size;
     nl->pointer = NULL;
 
-    nl2 = (nodelist *) malloc(sizeof(nodelist));
+    nl2 = (nodelist *) cb_malloc(sizeof(nodelist));
     cb_assert(nl2 != NULL);
     nl2->data.buf = value2_bin;
     nl2->data.size = value2_bin_size;
@@ -551,7 +553,7 @@ static void test_view_btree_count_reducer(void)
     nl2->pointer = NULL;
     nl->next = nl2;
 
-    nl3 = (nodelist *) malloc(sizeof(nodelist));
+    nl3 = (nodelist *) cb_malloc(sizeof(nodelist));
     cb_assert(nl3 != NULL);
     nl3->data.buf = value3_bin;
     nl3->data.size = value3_bin_size;
@@ -583,7 +585,7 @@ static void test_view_btree_count_reducer(void)
     set_bit(&reduction1.partitions_bitmap, 10);
     set_bit(&reduction1.partitions_bitmap, 1011);
     reduction1.num_values = 1;
-    reduction1.reduce_values = (sized_buf *) malloc(sizeof(sized_buf) * 1);
+    reduction1.reduce_values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     cb_assert(reduction1.reduce_values != NULL);
     reduction1.reduce_values[0].buf = "4444";
     reduction1.reduce_values[0].size = sizeof("4444") - 1;
@@ -595,13 +597,13 @@ static void test_view_btree_count_reducer(void)
     set_bit(&reduction2.partitions_bitmap, 777);
     set_bit(&reduction2.partitions_bitmap, 333);
     reduction2.num_values = 1;
-    reduction2.reduce_values = (sized_buf *) malloc(sizeof(sized_buf) * 1);
+    reduction2.reduce_values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     cb_assert(reduction2.reduce_values != NULL);
     reduction2.reduce_values[0].buf = "100";
     reduction2.reduce_values[0].size = sizeof("100") - 1;
     cb_assert(encode_view_btree_reduction(&reduction2, reduction2_bin, &reduction2_bin_size) == COUCHSTORE_SUCCESS);
 
-    np = (node_pointer *) malloc(sizeof(node_pointer));
+    np = (node_pointer *) cb_malloc(sizeof(node_pointer));
     cb_assert(np != NULL);
     np->key.buf = key1_bin;
     np->key.size = key1_bin_size;
@@ -611,7 +613,7 @@ static void test_view_btree_count_reducer(void)
     np->subtreesize = 222;
     nl->pointer = np;
 
-    np2 = (node_pointer *) malloc(sizeof(node_pointer));
+    np2 = (node_pointer *) cb_malloc(sizeof(node_pointer));
     cb_assert(np2 != NULL);
     np2->key.buf = key2_bin;
     np2->key.size = key2_bin_size;
@@ -640,15 +642,15 @@ static void test_view_btree_count_reducer(void)
     free_view_reduction(&reduction2);
     free_view_btree_reduction(red);
     free_view_reducer_ctx(ctx);
-    free(key1_bin);
-    free(key2_bin);
-    free(key3_bin);
+    cb_free(key1_bin);
+    cb_free(key2_bin);
+    cb_free(key3_bin);
     free_view_value(&value1);
     free_view_value(&value2);
     free_view_value(&value3);
-    free(value1_bin);
-    free(value2_bin);
-    free(value3_bin);
+    cb_free(value1_bin);
+    cb_free(value2_bin);
+    cb_free(value3_bin);
     free_node_list(nl);
 }
 
@@ -721,7 +723,7 @@ static void test_view_btree_stats_reducer(void)
 
     value1.partition = 7;
     value1.num_values = 2;
-    value1.values = (sized_buf *) malloc(sizeof(sized_buf) * 2);
+    value1.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 2);
     value1.values[0].buf = "100";
     value1.values[0].size = sizeof("100") - 1;
     value1.values[1].buf = "1";
@@ -730,19 +732,19 @@ static void test_view_btree_stats_reducer(void)
 
     value2.partition = 666;
     value2.num_values = 1;
-    value2.values = (sized_buf *) malloc(sizeof(sized_buf) * 1);
+    value2.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     value2.values[0].buf = "1000";
     value2.values[0].size = sizeof("1000") - 1;
     cb_assert(encode_view_btree_value(&value2, &value2_bin, &value2_bin_size) == COUCHSTORE_SUCCESS);
 
     value3.partition = 1023;
     value3.num_values = 1;
-    value3.values = (sized_buf *) malloc(sizeof(sized_buf) * 1);
+    value3.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     value3.values[0].buf = "2000.50";
     value3.values[0].size = sizeof("2000.50") - 1;
     cb_assert(encode_view_btree_value(&value3, &value3_bin, &value3_bin_size) == COUCHSTORE_SUCCESS);
 
-    nl = (nodelist *) malloc(sizeof(nodelist));
+    nl = (nodelist *) cb_malloc(sizeof(nodelist));
     cb_assert(nl != NULL);
     nl->data.buf = value1_bin;
     nl->data.size = value1_bin_size;
@@ -750,7 +752,7 @@ static void test_view_btree_stats_reducer(void)
     nl->key.size = key1_bin_size;
     nl->pointer = NULL;
 
-    nl2 = (nodelist *) malloc(sizeof(nodelist));
+    nl2 = (nodelist *) cb_malloc(sizeof(nodelist));
     cb_assert(nl2 != NULL);
     nl2->data.buf = value2_bin;
     nl2->data.size = value2_bin_size;
@@ -759,7 +761,7 @@ static void test_view_btree_stats_reducer(void)
     nl2->pointer = NULL;
     nl->next = nl2;
 
-    nl3 = (nodelist *) malloc(sizeof(nodelist));
+    nl3 = (nodelist *) cb_malloc(sizeof(nodelist));
     cb_assert(nl3 != NULL);
     nl3->data.buf = value3_bin;
     nl3->data.size = value3_bin_size;
@@ -790,7 +792,7 @@ static void test_view_btree_stats_reducer(void)
     /* Test _stats reduce error */
     value3.values[0].buf = "\"foobar\"";
     value3.values[0].size = sizeof("\"foobar\"") - 1;
-    free(value3_bin);
+    cb_free(value3_bin);
     cb_assert(encode_view_btree_value(&value3, &value3_bin, &value3_bin_size) == COUCHSTORE_SUCCESS);
 
     nl3->data.buf = value3_bin;
@@ -807,7 +809,7 @@ static void test_view_btree_stats_reducer(void)
     set_bit(&reduction1.partitions_bitmap, 10);
     set_bit(&reduction1.partitions_bitmap, 1011);
     reduction1.num_values = 1;
-    reduction1.reduce_values = (sized_buf *) malloc(sizeof(sized_buf) * 1);
+    reduction1.reduce_values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     cb_assert(reduction1.reduce_values != NULL);
     reduction1.reduce_values[0].buf = "{\"sum\":3101.5,\"count\":4,\"min\":1,\"max\":2000.5,\"sumsqr\":5}";
     reduction1.reduce_values[0].size = strlen(reduction1.reduce_values[0].buf);
@@ -819,13 +821,13 @@ static void test_view_btree_stats_reducer(void)
     set_bit(&reduction2.partitions_bitmap, 777);
     set_bit(&reduction2.partitions_bitmap, 333);
     reduction2.num_values = 1;
-    reduction2.reduce_values = (sized_buf *) malloc(sizeof(sized_buf) * 1);
+    reduction2.reduce_values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     cb_assert(reduction2.reduce_values != NULL);
     reduction2.reduce_values[0].buf = "{\"sum\":7101.6,\"count\":4,\"min\":3,\"max\":1000.5,\"sumsqr\":10}";
     reduction2.reduce_values[0].size = strlen(reduction2.reduce_values[0].buf);
     cb_assert(encode_view_btree_reduction(&reduction2, reduction2_bin, &reduction2_bin_size) == COUCHSTORE_SUCCESS);
 
-    np = (node_pointer *) malloc(sizeof(node_pointer));
+    np = (node_pointer *) cb_malloc(sizeof(node_pointer));
     cb_assert(np != NULL);
     np->key.buf = key1_bin;
     np->key.size = key1_bin_size;
@@ -835,7 +837,7 @@ static void test_view_btree_stats_reducer(void)
     np->subtreesize = 222;
     nl->pointer = np;
 
-    np2 = (node_pointer *) malloc(sizeof(node_pointer));
+    np2 = (node_pointer *) cb_malloc(sizeof(node_pointer));
     cb_assert(np2 != NULL);
     np2->key.buf = key2_bin;
     np2->key.size = key2_bin_size;
@@ -864,15 +866,15 @@ static void test_view_btree_stats_reducer(void)
     free_view_reduction(&reduction2);
     free_view_btree_reduction(red);
     free_view_reducer_ctx(ctx);
-    free(key1_bin);
-    free(key2_bin);
-    free(key3_bin);
+    cb_free(key1_bin);
+    cb_free(key2_bin);
+    cb_free(key3_bin);
     free_view_value(&value1);
     free_view_value(&value2);
     free_view_value(&value3);
-    free(value1_bin);
-    free(value2_bin);
-    free(value3_bin);
+    cb_free(value1_bin);
+    cb_free(value2_bin);
+    cb_free(value3_bin);
     free_node_list(nl);
 }
 
@@ -942,7 +944,7 @@ static void test_view_btree_js_reducer(void)
 
     value1.partition = 7;
     value1.num_values = 2;
-    value1.values = (sized_buf *) malloc(sizeof(sized_buf) * 2);
+    value1.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 2);
     value1.values[0].buf = "100";
     value1.values[0].size = sizeof("100") - 1;
     value1.values[1].buf = "1";
@@ -951,19 +953,19 @@ static void test_view_btree_js_reducer(void)
 
     value2.partition = 666;
     value2.num_values = 1;
-    value2.values = (sized_buf *) malloc(sizeof(sized_buf) * 1);
+    value2.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     value2.values[0].buf = "1000";
     value2.values[0].size = sizeof("1000") - 1;
     cb_assert(encode_view_btree_value(&value2, &value2_bin, &value2_bin_size) == COUCHSTORE_SUCCESS);
 
     value3.partition = 1023;
     value3.num_values = 1;
-    value3.values = (sized_buf *) malloc(sizeof(sized_buf) * 1);
+    value3.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     value3.values[0].buf = "5000.33";
     value3.values[0].size = sizeof("5000.33") - 1;
     cb_assert(encode_view_btree_value(&value3, &value3_bin, &value3_bin_size) == COUCHSTORE_SUCCESS);
 
-    nl = (nodelist *) malloc(sizeof(nodelist));
+    nl = (nodelist *) cb_malloc(sizeof(nodelist));
     cb_assert(nl != NULL);
     nl->data.buf = value1_bin;
     nl->data.size = value1_bin_size;
@@ -971,7 +973,7 @@ static void test_view_btree_js_reducer(void)
     nl->key.size = key1_bin_size;
     nl->pointer = NULL;
 
-    nl2 = (nodelist *) malloc(sizeof(nodelist));
+    nl2 = (nodelist *) cb_malloc(sizeof(nodelist));
     cb_assert(nl2 != NULL);
     nl2->data.buf = value2_bin;
     nl2->data.size = value2_bin_size;
@@ -980,7 +982,7 @@ static void test_view_btree_js_reducer(void)
     nl2->pointer = NULL;
     nl->next = nl2;
 
-    nl3 = (nodelist *) malloc(sizeof(nodelist));
+    nl3 = (nodelist *) cb_malloc(sizeof(nodelist));
     cb_assert(nl3 != NULL);
     nl3->data.buf = value3_bin;
     nl3->data.size = value3_bin_size;
@@ -1009,7 +1011,7 @@ static void test_view_btree_js_reducer(void)
 
     /* Test JS reduce error */
 
-    free(value3_bin);
+    cb_free(value3_bin);
     value3.values[0].buf = "\"foobar\"";
     value3.values[0].size = sizeof("\"foobar\"") - 1;
     cb_assert(encode_view_btree_value(&value3, &value3_bin, &value3_bin_size) == COUCHSTORE_SUCCESS);
@@ -1028,7 +1030,7 @@ static void test_view_btree_js_reducer(void)
     set_bit(&reduction1.partitions_bitmap, 10);
     set_bit(&reduction1.partitions_bitmap, 1011);
     reduction1.num_values = 1;
-    reduction1.reduce_values = (sized_buf *) malloc(sizeof(sized_buf) * 1);
+    reduction1.reduce_values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     cb_assert(reduction1.reduce_values != NULL);
     reduction1.reduce_values[0].buf = "4444";
     reduction1.reduce_values[0].size = sizeof("4444") - 1;
@@ -1040,13 +1042,13 @@ static void test_view_btree_js_reducer(void)
     set_bit(&reduction2.partitions_bitmap, 777);
     set_bit(&reduction2.partitions_bitmap, 333);
     reduction2.num_values = 1;
-    reduction2.reduce_values = (sized_buf *) malloc(sizeof(sized_buf) * 1);
+    reduction2.reduce_values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     cb_assert(reduction2.reduce_values != NULL);
     reduction2.reduce_values[0].buf = "100";
     reduction2.reduce_values[0].size = sizeof("100") - 1;
     cb_assert(encode_view_btree_reduction(&reduction2, reduction2_bin, &reduction2_bin_size) == COUCHSTORE_SUCCESS);
 
-    np = (node_pointer *) malloc(sizeof(node_pointer));
+    np = (node_pointer *) cb_malloc(sizeof(node_pointer));
     cb_assert(np != NULL);
     np->key.buf = key1_bin;
     np->key.size = key1_bin_size;
@@ -1056,7 +1058,7 @@ static void test_view_btree_js_reducer(void)
     np->subtreesize = 222;
     nl->pointer = np;
 
-    np2 = (node_pointer *) malloc(sizeof(node_pointer));
+    np2 = (node_pointer *) cb_malloc(sizeof(node_pointer));
     cb_assert(np2 != NULL);
     np2->key.buf = key2_bin;
     np2->key.size = key2_bin_size;
@@ -1085,15 +1087,15 @@ static void test_view_btree_js_reducer(void)
     free_view_reduction(&reduction2);
     free_view_btree_reduction(red);
     free_view_reducer_ctx(ctx);
-    free(key1_bin);
-    free(key2_bin);
-    free(key3_bin);
+    cb_free(key1_bin);
+    cb_free(key2_bin);
+    cb_free(key3_bin);
     free_view_value(&value1);
     free_view_value(&value2);
     free_view_value(&value3);
-    free(value1_bin);
-    free(value2_bin);
-    free(value3_bin);
+    cb_free(value1_bin);
+    cb_free(value2_bin);
+    cb_free(value3_bin);
     free_node_list(nl);
 }
 
@@ -1165,7 +1167,7 @@ static void test_view_btree_multiple_reducers(void)
 
     value1.partition = 7;
     value1.num_values = 2;
-    value1.values = (sized_buf *) malloc(sizeof(sized_buf) * 2);
+    value1.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 2);
     value1.values[0].buf = "100";
     value1.values[0].size = sizeof("100") - 1;
     value1.values[1].buf = "1";
@@ -1174,19 +1176,19 @@ static void test_view_btree_multiple_reducers(void)
 
     value2.partition = 666;
     value2.num_values = 1;
-    value2.values = (sized_buf *) malloc(sizeof(sized_buf) * 1);
+    value2.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     value2.values[0].buf = "1000";
     value2.values[0].size = sizeof("1000") - 1;
     cb_assert(encode_view_btree_value(&value2, &value2_bin, &value2_bin_size) == COUCHSTORE_SUCCESS);
 
     value3.partition = 1023;
     value3.num_values = 1;
-    value3.values = (sized_buf *) malloc(sizeof(sized_buf) * 1);
+    value3.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     value3.values[0].buf = "5000.33";
     value3.values[0].size = sizeof("5000.33") - 1;
     cb_assert(encode_view_btree_value(&value3, &value3_bin, &value3_bin_size) == COUCHSTORE_SUCCESS);
 
-    nl = (nodelist *) malloc(sizeof(nodelist));
+    nl = (nodelist *) cb_malloc(sizeof(nodelist));
     cb_assert(nl != NULL);
     nl->data.buf = value1_bin;
     nl->data.size = value1_bin_size;
@@ -1194,7 +1196,7 @@ static void test_view_btree_multiple_reducers(void)
     nl->key.size = key1_bin_size;
     nl->pointer = NULL;
 
-    nl2 = (nodelist *) malloc(sizeof(nodelist));
+    nl2 = (nodelist *) cb_malloc(sizeof(nodelist));
     cb_assert(nl2 != NULL);
     nl2->data.buf = value2_bin;
     nl2->data.size = value2_bin_size;
@@ -1203,7 +1205,7 @@ static void test_view_btree_multiple_reducers(void)
     nl2->pointer = NULL;
     nl->next = nl2;
 
-    nl3 = (nodelist *) malloc(sizeof(nodelist));
+    nl3 = (nodelist *) cb_malloc(sizeof(nodelist));
     cb_assert(nl3 != NULL);
     nl3->data.buf = value3_bin;
     nl3->data.size = value3_bin_size;
@@ -1236,7 +1238,7 @@ static void test_view_btree_multiple_reducers(void)
 
     /* Test JS reduce error */
 
-    free(value3_bin);
+    cb_free(value3_bin);
     value3.values[0].buf = "\"foobar\"";
     value3.values[0].size = sizeof("\"foobar\"") - 1;
     cb_assert(encode_view_btree_value(&value3, &value3_bin, &value3_bin_size) == COUCHSTORE_SUCCESS);
@@ -1255,7 +1257,7 @@ static void test_view_btree_multiple_reducers(void)
     set_bit(&reduction1.partitions_bitmap, 10);
     set_bit(&reduction1.partitions_bitmap, 1011);
     reduction1.num_values = 3;
-    reduction1.reduce_values = (sized_buf *) malloc(sizeof(sized_buf) * 3);
+    reduction1.reduce_values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 3);
     cb_assert(reduction1.reduce_values != NULL);
     reduction1.reduce_values[0].buf = "4444";
     reduction1.reduce_values[0].size = sizeof("4444") - 1;
@@ -1271,7 +1273,7 @@ static void test_view_btree_multiple_reducers(void)
     set_bit(&reduction2.partitions_bitmap, 777);
     set_bit(&reduction2.partitions_bitmap, 333);
     reduction2.num_values = 3;
-    reduction2.reduce_values = (sized_buf *) malloc(sizeof(sized_buf) * 3);
+    reduction2.reduce_values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 3);
     cb_assert(reduction2.reduce_values != NULL);
     reduction2.reduce_values[0].buf = "100";
     reduction2.reduce_values[0].size = sizeof("100") - 1;
@@ -1281,7 +1283,7 @@ static void test_view_btree_multiple_reducers(void)
     reduction2.reduce_values[2].size = sizeof("100") - 1;
     cb_assert(encode_view_btree_reduction(&reduction2, reduction2_bin, &reduction2_bin_size) == COUCHSTORE_SUCCESS);
 
-    np = (node_pointer *) malloc(sizeof(node_pointer));
+    np = (node_pointer *) cb_malloc(sizeof(node_pointer));
     cb_assert(np != NULL);
     np->key.buf = key1_bin;
     np->key.size = key1_bin_size;
@@ -1291,7 +1293,7 @@ static void test_view_btree_multiple_reducers(void)
     np->subtreesize = 222;
     nl->pointer = np;
 
-    np2 = (node_pointer *) malloc(sizeof(node_pointer));
+    np2 = (node_pointer *) cb_malloc(sizeof(node_pointer));
     cb_assert(np2 != NULL);
     np2->key.buf = key2_bin;
     np2->key.size = key2_bin_size;
@@ -1324,15 +1326,15 @@ static void test_view_btree_multiple_reducers(void)
     free_view_reduction(&reduction2);
     free_view_btree_reduction(red);
     free_view_reducer_ctx(ctx);
-    free(key1_bin);
-    free(key2_bin);
-    free(key3_bin);
+    cb_free(key1_bin);
+    cb_free(key2_bin);
+    cb_free(key3_bin);
     free_view_value(&value1);
     free_view_value(&value2);
     free_view_value(&value3);
-    free(value1_bin);
-    free(value2_bin);
-    free(value3_bin);
+    cb_free(value1_bin);
+    cb_free(value2_bin);
+    cb_free(value3_bin);
     free_node_list(nl);
 }
 
@@ -1395,7 +1397,7 @@ static void test_view_btree_no_reducers(void)
 
     value1.partition = 7;
     value1.num_values = 2;
-    value1.values = (sized_buf *) malloc(sizeof(sized_buf) * 2);
+    value1.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 2);
     value1.values[0].buf = "100";
     value1.values[0].size = sizeof("100") - 1;
     value1.values[1].buf = "1";
@@ -1404,19 +1406,19 @@ static void test_view_btree_no_reducers(void)
 
     value2.partition = 666;
     value2.num_values = 1;
-    value2.values = (sized_buf *) malloc(sizeof(sized_buf) * 1);
+    value2.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     value2.values[0].buf = "1000";
     value2.values[0].size = sizeof("1000") - 1;
     cb_assert(encode_view_btree_value(&value2, &value2_bin, &value2_bin_size) == COUCHSTORE_SUCCESS);
 
     value3.partition = 1023;
     value3.num_values = 1;
-    value3.values = (sized_buf *) malloc(sizeof(sized_buf) * 1);
+    value3.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     value3.values[0].buf = "5000.33";
     value3.values[0].size = sizeof("5000.33") - 1;
     cb_assert(encode_view_btree_value(&value3, &value3_bin, &value3_bin_size) == COUCHSTORE_SUCCESS);
 
-    nl = (nodelist *) malloc(sizeof(nodelist));
+    nl = (nodelist *) cb_malloc(sizeof(nodelist));
     cb_assert(nl != NULL);
     nl->data.buf = value1_bin;
     nl->data.size = value1_bin_size;
@@ -1424,7 +1426,7 @@ static void test_view_btree_no_reducers(void)
     nl->key.size = key1_bin_size;
     nl->pointer = NULL;
 
-    nl2 = (nodelist *) malloc(sizeof(nodelist));
+    nl2 = (nodelist *) cb_malloc(sizeof(nodelist));
     cb_assert(nl2 != NULL);
     nl2->data.buf = value2_bin;
     nl2->data.size = value2_bin_size;
@@ -1433,7 +1435,7 @@ static void test_view_btree_no_reducers(void)
     nl2->pointer = NULL;
     nl->next = nl2;
 
-    nl3 = (nodelist *) malloc(sizeof(nodelist));
+    nl3 = (nodelist *) cb_malloc(sizeof(nodelist));
     cb_assert(nl3 != NULL);
     nl3->data.buf = value3_bin;
     nl3->data.size = value3_bin_size;
@@ -1478,7 +1480,7 @@ static void test_view_btree_no_reducers(void)
     reduction2.reduce_values = NULL;
     cb_assert(encode_view_btree_reduction(&reduction2, reduction2_bin, &reduction2_bin_size) == COUCHSTORE_SUCCESS);
 
-    np = (node_pointer *) malloc(sizeof(node_pointer));
+    np = (node_pointer *) cb_malloc(sizeof(node_pointer));
     cb_assert(np != NULL);
     np->key.buf = key1_bin;
     np->key.size = key1_bin_size;
@@ -1488,7 +1490,7 @@ static void test_view_btree_no_reducers(void)
     np->subtreesize = 222;
     nl->pointer = np;
 
-    np2 = (node_pointer *) malloc(sizeof(node_pointer));
+    np2 = (node_pointer *) cb_malloc(sizeof(node_pointer));
     cb_assert(np2 != NULL);
     np2->key.buf = key2_bin;
     np2->key.size = key2_bin_size;
@@ -1516,15 +1518,15 @@ static void test_view_btree_no_reducers(void)
     free_view_reduction(&reduction2);
     free_view_btree_reduction(red);
     free_view_reducer_ctx(ctx);
-    free(key1_bin);
-    free(key2_bin);
-    free(key3_bin);
+    cb_free(key1_bin);
+    cb_free(key2_bin);
+    cb_free(key3_bin);
     free_view_value(&value1);
     free_view_value(&value2);
     free_view_value(&value3);
-    free(value1_bin);
-    free(value2_bin);
-    free(value3_bin);
+    cb_free(value1_bin);
+    cb_free(value2_bin);
+    cb_free(value3_bin);
     free_node_list(nl);
 }
 
@@ -1589,25 +1591,25 @@ static void test_view_btree_large_reducer(void)
 
     value1.partition = 7;
     value1.num_values = 1;
-    value1.values = (sized_buf *) malloc(sizeof(sized_buf) * 1);
-    value1.values[0].buf = malloc(6000);
+    value1.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
+    value1.values[0].buf = cb_malloc(6000);
     value1.values[0].size = 6000;
     cb_assert(encode_view_btree_value(&value1, &value1_bin, &value1_bin_size)
         == COUCHSTORE_SUCCESS);
 
     value2.partition = 666;
     value2.num_values = 1;
-    value2.values = (sized_buf *) malloc(sizeof(sized_buf) * 1);
-    value2.values[0].buf = malloc(6000);
+    value2.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
+    value2.values[0].buf = cb_malloc(6000);
     value2.values[0].size = 6000;
     cb_assert(encode_view_btree_value(&value2, &value2_bin, &value2_bin_size)
         == COUCHSTORE_SUCCESS);
 
-    nl0 = (nodelist *) malloc(sizeof(nodelist));
+    nl0 = (nodelist *) cb_malloc(sizeof(nodelist));
     cb_assert(nl0 != NULL);
     nl0->pointer = NULL;
 
-    nl = (nodelist *) malloc(sizeof(nodelist));
+    nl = (nodelist *) cb_malloc(sizeof(nodelist));
     cb_assert(nl != NULL);
     nl->data.buf = value1_bin;
     nl->data.size = value1_bin_size;
@@ -1616,7 +1618,7 @@ static void test_view_btree_large_reducer(void)
     nl->pointer = NULL;
     nl0->next = nl;
 
-    nl2 = (nodelist *) malloc(sizeof(nodelist));
+    nl2 = (nodelist *) cb_malloc(sizeof(nodelist));
     cb_assert(nl2 != NULL);
     nl2->data.buf = value2_bin;
     nl2->data.size = value2_bin_size;
@@ -1631,7 +1633,7 @@ static void test_view_btree_large_reducer(void)
     set_bit(&reduction1.partitions_bitmap, 10);
     set_bit(&reduction1.partitions_bitmap, 1011);
     reduction1.num_values = 1;
-    reduction1.reduce_values = (sized_buf *) malloc(sizeof(sized_buf) * 1);
+    reduction1.reduce_values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     cb_assert(reduction1.reduce_values != NULL);
     reduction1.reduce_values[0].buf = "100";
     reduction1.reduce_values[0].size = 3;
@@ -1644,14 +1646,14 @@ static void test_view_btree_large_reducer(void)
     set_bit(&reduction2.partitions_bitmap, 777);
     set_bit(&reduction2.partitions_bitmap, 333);
     reduction2.num_values = 1;
-    reduction2.reduce_values = (sized_buf *) malloc(sizeof(sized_buf) * 1);
+    reduction2.reduce_values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     cb_assert(reduction2.reduce_values != NULL);
     reduction2.reduce_values[0].buf = "100";
     reduction2.reduce_values[0].size = 3;
     cb_assert(encode_view_btree_reduction(&reduction2, reduction2_bin, &reduction2_bin_size)
         == COUCHSTORE_SUCCESS);
 
-    np = (node_pointer *) malloc(sizeof(node_pointer));
+    np = (node_pointer *) cb_malloc(sizeof(node_pointer));
     cb_assert(np != NULL);
     np->key.buf = key1_bin;
     np->key.size = key1_bin_size;
@@ -1661,7 +1663,7 @@ static void test_view_btree_large_reducer(void)
     np->subtreesize = 222;
     nl->pointer = np;
 
-    np2 = (node_pointer *) malloc(sizeof(node_pointer));
+    np2 = (node_pointer *) cb_malloc(sizeof(node_pointer));
     cb_assert(np2 != NULL);
     np2->key.buf = key2_bin;
     np2->key.size = key2_bin_size;
@@ -1715,15 +1717,15 @@ static void test_view_btree_large_reducer(void)
     free_view_reduction(&reduction2);
     free_view_btree_reduction(red);
     free_view_reducer_ctx(ctx);
-    free(key1_bin);
-    free(key2_bin);
-    free(value1.values[0].buf);
-    free(value2.values[0].buf);
+    cb_free(key1_bin);
+    cb_free(key2_bin);
+    cb_free(value1.values[0].buf);
+    cb_free(value2.values[0].buf);
     free_view_value(&value1);
     free_view_value(&value2);
-    free(value1_bin);
-    free(value2_bin);
-    free(value3_bin);
+    cb_free(value1_bin);
+    cb_free(value2_bin);
+    cb_free(value3_bin);
     free_node_list(nl);
     free_node_list(nl0);
     delete_arena(persistent_arena);

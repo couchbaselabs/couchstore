@@ -2,6 +2,8 @@
 
 #include "view_tests.h"
 
+#include <platform/cb_malloc.h>
+
 
 static view_btree_key_t *test_view_btree_key_decoding(const char *key_bin, size_t len)
 {
@@ -111,11 +113,11 @@ void test_keys()
 
     free_view_btree_key(k);
     free_view_btree_key(k2);
-    free(k_bin2);
-    free(k_bin3);
+    cb_free(k_bin2);
+    cb_free(k_bin3);
 
     free_view_id_btree_key(id_btree_k);
     free_view_id_btree_key(id_btree_k2);
-    free(id_btree_k_bin2);
-    free(id_btree_k_bin3);
+    cb_free(id_btree_k_bin2);
+    cb_free(id_btree_k_bin3);
 }

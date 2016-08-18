@@ -1,5 +1,7 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include "config.h"
+
+#include <platform/cb_malloc.h>
 #include <string.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -9,6 +11,7 @@
 #include <inttypes.h>
 #include <libcouchstore/couch_db.h>
 #include <snappy-c.h>
+
 #include "couch_btree.h"
 #include "util.h"
 #include "bitfield.h"
@@ -242,7 +245,7 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
             if (datatype >= 0x02) {
                 size_t rlen;
                 snappy_uncompressed_length(doc->data.buf, doc->data.size, &rlen);
-                char *decbuf = (char *) malloc(rlen);
+                char *decbuf = (char *) cb_malloc(rlen);
                 size_t new_len;
                 snappy_uncompress(doc->data.buf, doc->data.size, decbuf, &new_len);
                 new_body.size = new_len;
@@ -272,7 +275,7 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
                 }
             }
             if (datatype >= 0x02) {
-                free (new_body.buf);
+                cb_free(new_body.buf);
             }
         }
     } else {
@@ -540,7 +543,7 @@ static int process_view_file(const char *file, int *total)
     char *header_buf = NULL;
     int header_len;
 
-    info = (view_group_info_t *)calloc(1, sizeof(view_group_info_t));
+    info = (view_group_info_t *)cb_calloc(1, sizeof(view_group_info_t));
     if (info == NULL) {
         fprintf(stderr, "Unable to allocate memory\n");
         return -1;
@@ -579,7 +582,7 @@ static int process_view_file(const char *file, int *total)
                 file, couchstore_strerror(errcode));
         return -1;
     }
-    free(header_buf);
+    cb_free(header_buf);
     printf("Num views: %d\n", header->num_views);
 
     for (int i = 0; i < header->num_views; ++i) {

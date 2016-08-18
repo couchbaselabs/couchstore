@@ -20,6 +20,7 @@
 
 #include <stdlib.h>
 #include <assert.h>
+#include <platform/cb_malloc.h>
 #include <string.h>
 #include "sorted_list.h"
 
@@ -42,7 +43,7 @@ typedef struct {
 
 void *sorted_list_create(sorted_list_cmp_t cmp_fun)
 {
-    sorted_list_t *list = (sorted_list_t *) malloc(sizeof(sorted_list_t));
+    sorted_list_t *list = (sorted_list_t *) cb_malloc(sizeof(sorted_list_t));
 
     if (list != NULL) {
         list->cmp_fun = cmp_fun;
@@ -62,13 +63,13 @@ int sorted_list_add(void *list, const void *elem, size_t elem_size)
     sorted_list_node_t *new_node;
     int cmp = 0;
 
-    new_node = (sorted_list_node_t *) malloc(sizeof(sorted_list_node_t));
+    new_node = (sorted_list_node_t *) cb_malloc(sizeof(sorted_list_node_t));
     if (new_node == NULL) {
         return -1;
     }
-    new_node->element = malloc(elem_size);
+    new_node->element = cb_malloc(elem_size);
     if (new_node->element == NULL) {
-        free(new_node);
+        cb_free(new_node);
         return -1;
     }
     memcpy(new_node->element, elem, elem_size);
@@ -97,8 +98,8 @@ int sorted_list_add(void *list, const void *elem, size_t elem_size)
 
     if (cmp == 0) {
         new_node->next = n->next;
-        free(n->element);
-        free(n);
+        cb_free(n->element);
+        cb_free(n);
     } else {
         l->length += 1;
         new_node->next = n;
@@ -146,8 +147,8 @@ void sorted_list_remove(void *list, const void *elem)
                 prev->next = n->next;
             }
             l->length -= 1;
-            free(n->element);
-            free(n);
+            cb_free(n->element);
+            cb_free(n);
             break;
         } else if (cmp > 0) {
             return;
@@ -168,10 +169,10 @@ void sorted_list_free(void *list)
         while (l->head != NULL) {
             n = l->head;
             l->head = l->head->next;
-            free(n->element);
-            free(n);
+            cb_free(n->element);
+            cb_free(n);
         }
-        free(list);
+        cb_free(list);
     }
 }
 
@@ -189,7 +190,7 @@ void *sorted_list_iterator(const void *list)
    const sorted_list_t *l = (const sorted_list_t *) list;
    sorted_list_iterator_t *it = NULL;
 
-   it = (sorted_list_iterator_t *) malloc(sizeof(*it));
+   it = (sorted_list_iterator_t *) cb_malloc(sizeof(*it));
    if (it != NULL) {
        it->current = l->head;
    }
@@ -214,5 +215,5 @@ void *sorted_list_next(void *iterator)
 
 void sorted_list_free_iterator(void *iterator)
 {
-    free(iterator);
+    cb_free(iterator);
 }

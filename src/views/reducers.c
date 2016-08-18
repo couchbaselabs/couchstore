@@ -20,6 +20,8 @@
  **/
 
 #include "../bitfield.h"
+
+#include <platform/cb_malloc.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -139,7 +141,7 @@ couchstore_error_t view_id_btree_reduce(char *dst,
     const nodelist *i;
 
     (void) ctx;
-    r = (view_id_btree_reduction_t *) malloc(sizeof(view_id_btree_reduction_t));
+    r = (view_id_btree_reduction_t *) cb_malloc(sizeof(view_id_btree_reduction_t));
     if (r == NULL) {
         errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
         goto alloc_error;
@@ -178,7 +180,7 @@ couchstore_error_t view_id_btree_rereduce(char *dst,
     const nodelist *i;
 
     (void) ctx;
-    r = (view_id_btree_reduction_t *) malloc(sizeof(view_id_btree_reduction_t));
+    r = (view_id_btree_reduction_t *) cb_malloc(sizeof(view_id_btree_reduction_t));
     if (r == NULL) {
         errcode = COUCHSTORE_ERROR_ALLOC_FAIL;
         goto alloc_error;
@@ -228,7 +230,7 @@ static couchstore_error_t builtin_sum_reducer(const mapreduce_json_list_t *keys,
             } else {
                 /* reduce */
                 mapreduce_json_t *key = &keys->values[i];
-                char *error_key = (char *) malloc(key->length + 1);
+                char *error_key = (char *) cb_malloc(key->length + 1);
 
                 if (error_key == NULL) {
                     return COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -244,7 +246,7 @@ static couchstore_error_t builtin_sum_reducer(const mapreduce_json_list_t *keys,
 
     size = sprintf(red, DOUBLE_FMT, sum);
     assert(size > 0);
-    buf->buf = (char *) malloc(size);
+    buf->buf = (char *) cb_malloc(size);
     if (buf->buf == NULL) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
@@ -284,7 +286,7 @@ static couchstore_error_t builtin_count_reducer(const mapreduce_json_list_t *key
 
     size = sprintf(red, "%"PRIu64, count);
     assert(size > 0);
-    buf->buf = (char *) malloc(size);
+    buf->buf = (char *) cb_malloc(size);
     if (buf->buf == NULL) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
@@ -312,7 +314,7 @@ static couchstore_error_t builtin_stats_reducer(const mapreduce_json_list_t *key
 
         if (keys == NULL) {
             /* rereduce */
-            char *value_buf = (char *) malloc(value->length + 1);
+            char *value_buf = (char *) cb_malloc(value->length + 1);
 
             if (value_buf == NULL) {
                 return COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -323,7 +325,7 @@ static couchstore_error_t builtin_stats_reducer(const mapreduce_json_list_t *key
             scanned = scan_stats(value_buf,
                                  reduced.sum, reduced.count, reduced.min,
                                  reduced.max, reduced.sumsqr);
-            free(value_buf);
+            cb_free(value_buf);
             if (scanned == 5) {
                 if (reduced.min < s.min || s.count == 0) {
                     s.min = reduced.min;
@@ -361,7 +363,7 @@ static couchstore_error_t builtin_stats_reducer(const mapreduce_json_list_t *key
                 } else {
                     /* reduce */
                     mapreduce_json_t *key = &keys->values[i];
-                    char *error_key = (char *) malloc(key->length + 1);
+                    char *error_key = (char *) cb_malloc(key->length + 1);
 
                     if (error_key == NULL) {
                         return COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -378,7 +380,7 @@ static couchstore_error_t builtin_stats_reducer(const mapreduce_json_list_t *key
 
     size = sprint_stats(red, s.sum, s.count, s.min, s.max, s.sumsqr);
     assert(size > 0);
-    buf->buf = (char *) malloc(size);
+    buf->buf = (char *) cb_malloc(size);
     if (buf->buf == NULL) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
@@ -408,16 +410,16 @@ static couchstore_error_t js_reducer(const mapreduce_json_list_t *keys,
             priv->mapreduce_error = ret;
             return COUCHSTORE_ERROR_REDUCER_FAILURE;
         }
-        buf->buf = (char *) malloc(result->length);
+        buf->buf = (char *) cb_malloc(result->length);
         if (buf->buf == NULL) {
-            free(result->json);
-            free(result);
+            cb_free(result->json);
+            cb_free(result);
             return COUCHSTORE_ERROR_ALLOC_FAIL;
         }
         buf->size = result->length;
         memcpy(buf->buf, result->json, result->length);
-        free(result->json);
-        free(result);
+        cb_free(result->json);
+        cb_free(result);
     } else {
         /* reduce */
         mapreduce_json_list_t *results = NULL;
@@ -433,7 +435,7 @@ static couchstore_error_t js_reducer(const mapreduce_json_list_t *keys,
             return COUCHSTORE_ERROR_REDUCER_FAILURE;
         }
         assert(results->length == 1);
-        buf->buf = (char *) malloc(results->values[0].length);
+        buf->buf = (char *) cb_malloc(results->values[0].length);
         if (buf->buf == NULL) {
             mapreduce_free_json_list(results);
             return COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -450,8 +452,8 @@ static couchstore_error_t js_reducer(const mapreduce_json_list_t *keys,
 static void free_key_excluding_elements(view_btree_key_t *key)
 {
     if (key != NULL) {
-        free(key->doc_id.buf);
-        free(key);
+        cb_free(key->doc_id.buf);
+        cb_free(key);
     }
 }
 
@@ -472,11 +474,11 @@ static void free_json_key_list(mapreduce_json_list_t *list)
 
     for (i = 0; i < list->length; ++i) {
         if (list->values[i].length != 0) {
-            free(list->values[i].json);
+            cb_free(list->values[i].json);
         }
     }
-    free(list->values);
-    free(list);
+    cb_free(list->values);
+    cb_free(list);
 }
 
 
@@ -485,20 +487,20 @@ view_reducer_ctx_t *make_view_reducer_ctx(const char *functions[],
                                           char **error_msg)
 {
     unsigned i;
-    reducer_private_t *priv = calloc(1, sizeof(*priv));
-    view_reducer_ctx_t *ctx = calloc(1, sizeof(*ctx));
+    reducer_private_t *priv = cb_calloc(1, sizeof(*priv));
+    view_reducer_ctx_t *ctx = cb_calloc(1, sizeof(*ctx));
 
     if (ctx == NULL || priv == NULL) {
         goto error;
     }
 
     priv->num_reducers = num_functions;
-    priv->reducers = calloc(num_functions, sizeof(reducer_fn_t));
+    priv->reducers = cb_calloc(num_functions, sizeof(reducer_fn_t));
     if (priv->reducers == NULL) {
         goto error;
     }
 
-    priv->reducer_contexts = calloc(num_functions, sizeof(reducer_ctx_t));
+    priv->reducer_contexts = cb_calloc(num_functions, sizeof(reducer_ctx_t));
     if (priv->reducer_contexts == NULL) {
         goto error;
     }
@@ -541,12 +543,12 @@ error:
             for (i = 0; i < num_functions; ++i) {
                 mapreduce_free_context(priv->reducer_contexts[i].mapreduce_ctx);
             }
-            free(priv->reducer_contexts);
+            cb_free(priv->reducer_contexts);
         }
-        free(priv->reducers);
-        free(priv);
+        cb_free(priv->reducers);
+        cb_free(priv);
     }
-    free(ctx);
+    cb_free(ctx);
 
     return NULL;
 }
@@ -565,11 +567,11 @@ void free_view_reducer_ctx(view_reducer_ctx_t *ctx)
     for (i = 0; i < priv->num_reducers; ++i) {
         mapreduce_free_context(priv->reducer_contexts[i].mapreduce_ctx);
     }
-    free(priv->reducer_contexts);
-    free(priv->reducers);
-    free(priv);
-    free((void *) ctx->error);
-    free(ctx);
+    cb_free(priv->reducer_contexts);
+    cb_free(priv->reducers);
+    cb_free(priv);
+    cb_free((void *) ctx->error);
+    cb_free(ctx);
 }
 
 
@@ -579,7 +581,7 @@ static void add_error_message(view_reducer_ctx_t *red_ctx, int rereduce)
    char *error_msg;
 
    if (red_ctx->error != NULL) {
-       free((void *) red_ctx->error);
+       cb_free((void *) red_ctx->error);
        red_ctx->error = NULL;
    }
 
@@ -588,15 +590,15 @@ static void add_error_message(view_reducer_ctx_t *red_ctx, int rereduce)
 
        assert(priv->mapreduce_error == MAPREDUCE_SUCCESS);
        if (!rereduce && (priv->error_key != NULL)) {
-           error_msg = (char *) malloc(strlen(base_msg) + 12 + strlen(priv->error_key));
+           error_msg = (char *) cb_malloc(strlen(base_msg) + 12 + strlen(priv->error_key));
            assert(error_msg != NULL);
            sprintf(error_msg, "%s (key %s)", base_msg, priv->error_key);
        } else {
-           error_msg = strdup(base_msg);
+           error_msg = cb_strdup(base_msg);
            assert(error_msg != NULL);
        }
        if (priv->error_key != NULL) {
-           free((void *) priv->error_key);
+           cb_free((void *) priv->error_key);
            priv->error_key = NULL;
        }
    } else {
@@ -605,10 +607,10 @@ static void add_error_message(view_reducer_ctx_t *red_ctx, int rereduce)
            error_msg = priv->error_msg;
        } else {
            if (priv->mapreduce_error == MAPREDUCE_TIMEOUT) {
-               error_msg = strdup("function timeout");
+               error_msg = cb_strdup("function timeout");
                assert(error_msg != NULL);
            } else {
-               error_msg = malloc(64);
+               error_msg = cb_malloc(64);
                assert(error_msg != NULL);
                sprintf(error_msg, "mapreduce error: %d", priv->mapreduce_error);
            }
@@ -642,10 +644,10 @@ couchstore_error_t view_btree_reduce(char *dst,
     cb_assert(count > 0);
     cb_assert(leaflist != NULL);
 
-    values = (view_btree_value_t **) calloc(count, sizeof(view_btree_value_t *));
-    red = (view_btree_reduction_t *) calloc(1, sizeof(*red));
-    key_list = (mapreduce_json_list_t *) calloc(1, sizeof(*key_list));
-    value_list = (mapreduce_json_list_t *) calloc(1, sizeof(*value_list));
+    values = (view_btree_value_t **) cb_calloc(count, sizeof(view_btree_value_t *));
+    red = (view_btree_reduction_t *) cb_calloc(1, sizeof(*red));
+    key_list = (mapreduce_json_list_t *) cb_calloc(1, sizeof(*key_list));
+    value_list = (mapreduce_json_list_t *) cb_calloc(1, sizeof(*value_list));
 
     if (values == NULL || red == NULL || key_list == NULL || value_list == NULL) {
         ret = COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -664,13 +666,13 @@ couchstore_error_t view_btree_reduce(char *dst,
         values[c] = v;
     }
 
-    value_list->values = (mapreduce_json_t *) calloc(red->kv_count,
+    value_list->values = (mapreduce_json_t *) cb_calloc(red->kv_count,
                                                      sizeof(mapreduce_json_t));
     if (value_list->values == NULL) {
         ret = COUCHSTORE_ERROR_ALLOC_FAIL;
         goto out;
     }
-    key_list->values = (mapreduce_json_t *) calloc(red->kv_count,
+    key_list->values = (mapreduce_json_t *) cb_calloc(red->kv_count,
                                                    sizeof(mapreduce_json_t));
     if (key_list->values == NULL) {
         ret = COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -698,7 +700,7 @@ couchstore_error_t view_btree_reduce(char *dst,
     }
 
     if (priv->num_reducers > 0) {
-        red->reduce_values = (sized_buf *) calloc(priv->num_reducers, sizeof(sized_buf));
+        red->reduce_values = (sized_buf *) cb_calloc(priv->num_reducers, sizeof(sized_buf));
         if (red->reduce_values == NULL) {
             ret = COUCHSTORE_ERROR_ALLOC_FAIL;
             goto out;
@@ -725,22 +727,22 @@ couchstore_error_t view_btree_reduce(char *dst,
     if (red != NULL) {
         if (red->reduce_values != NULL) {
             for (i = 0; i < red->num_values; ++i) {
-                free(red->reduce_values[i].buf);
+                cb_free(red->reduce_values[i].buf);
             }
-            free(red->reduce_values);
+            cb_free(red->reduce_values);
         }
-        free(red);
+        cb_free(red);
     }
     free_json_key_list(key_list);
     if (values != NULL) {
         for (c = 0; c < count; ++c) {
             free_view_btree_value(values[c]);
         }
-        free(values);
+        cb_free(values);
     }
     if (value_list != NULL) {
-        free(value_list->values);
-        free(value_list);
+        cb_free(value_list->values);
+        cb_free(value_list);
     }
 
     return ret;
@@ -764,8 +766,8 @@ couchstore_error_t view_btree_rereduce(char *dst,
     mapreduce_json_list_t *value_list = NULL;
     view_btree_reduction_t **reductions = NULL;
 
-    reductions = (view_btree_reduction_t **) calloc(count, sizeof(view_btree_reduction_t *));
-    red = (view_btree_reduction_t *) calloc(1, sizeof(*red));
+    reductions = (view_btree_reduction_t **) cb_calloc(count, sizeof(view_btree_reduction_t *));
+    red = (view_btree_reduction_t *) cb_calloc(1, sizeof(*red));
 
     if (reductions == NULL || red == NULL) {
         ret = COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -773,8 +775,8 @@ couchstore_error_t view_btree_rereduce(char *dst,
     }
 
     red->num_values = priv->num_reducers;
-    red->reduce_values = (sized_buf *) calloc(red->num_values, sizeof(sized_buf));
-    value_list = (mapreduce_json_list_t *) calloc(1, sizeof(*value_list));
+    red->reduce_values = (sized_buf *) cb_calloc(red->num_values, sizeof(sized_buf));
+    value_list = (mapreduce_json_list_t *) cb_calloc(1, sizeof(*value_list));
 
     if (red->reduce_values == NULL || value_list == NULL) {
         ret = COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -797,7 +799,7 @@ couchstore_error_t view_btree_rereduce(char *dst,
     }
 
     if (priv->num_reducers > 0) {
-        value_list->values = (mapreduce_json_t *) calloc(count,
+        value_list->values = (mapreduce_json_t *) cb_calloc(count,
                                                          sizeof(mapreduce_json_t));
         if (value_list->values == NULL) {
             ret = COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -833,21 +835,21 @@ couchstore_error_t view_btree_rereduce(char *dst,
     if (red != NULL) {
         if (red->reduce_values != NULL) {
             for (i = 0; i < red->num_values; ++i) {
-                free(red->reduce_values[i].buf);
+                cb_free(red->reduce_values[i].buf);
             }
-            free(red->reduce_values);
+            cb_free(red->reduce_values);
         }
-        free(red);
+        cb_free(red);
     }
     if (reductions != NULL) {
         for (c = 0; c < count; ++c) {
             free_view_btree_reduction(reductions[c]);
         }
-        free(reductions);
+        cb_free(reductions);
     }
     if (value_list != NULL) {
-        free(value_list->values);
-        free(value_list);
+        cb_free(value_list->values);
+        cb_free(value_list);
     }
 
     return ret;

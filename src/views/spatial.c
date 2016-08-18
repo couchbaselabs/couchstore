@@ -18,6 +18,7 @@
  * the License.
  **/
 
+#include <platform/cb_malloc.h>
 #include <stdlib.h>
 #include <limits.h>
 #include <assert.h>
@@ -82,12 +83,12 @@ int spatial_key_cmp(const sized_buf *key1, const sized_buf *key2,
 
     res = memcmp(mbbs_zcode[0], mbbs_zcode[1], sf->dim * BYTE_PER_COORD);
 
-    free(mbbs_center[0]);
-    free(mbbs_scaled[0]);
-    free(mbbs_zcode[0]);
-    free(mbbs_center[1]);
-    free(mbbs_scaled[1]);
-    free(mbbs_zcode[1]);
+    cb_free(mbbs_center[0]);
+    cb_free(mbbs_scaled[0]);
+    cb_free(mbbs_zcode[0]);
+    cb_free(mbbs_center[1]);
+    cb_free(mbbs_scaled[1]);
+    cb_free(mbbs_zcode[1]);
 
     return res;
 }
@@ -118,19 +119,19 @@ scale_factor_t *spatial_scale_factor(const double *mbb, uint16_t dim,
     double *offsets = NULL;
     double *scales = NULL;
 
-    sf = (scale_factor_t *)malloc(sizeof(scale_factor_t));
+    sf = (scale_factor_t *)cb_malloc(sizeof(scale_factor_t));
     if (sf == NULL) {
         return NULL;
     }
-    offsets = (double *)malloc(sizeof(double) * dim);
+    offsets = (double *)cb_malloc(sizeof(double) * dim);
     if (offsets == NULL) {
-        free(sf);
+        cb_free(sf);
         return NULL;
     }
-    scales = (double *)malloc(sizeof(double) * dim);
+    scales = (double *)cb_malloc(sizeof(double) * dim);
     if (scales == NULL) {
-        free(sf);
-        free(offsets);
+        cb_free(sf);
+        cb_free(offsets);
         return NULL;
     }
 
@@ -155,15 +156,15 @@ void free_spatial_scale_factor(scale_factor_t *sf)
     if (sf == NULL) {
         return;
     }
-    free(sf->offsets);
-    free(sf->scales);
-    free(sf);
+    cb_free(sf->offsets);
+    cb_free(sf->scales);
+    cb_free(sf);
 }
 
 
 double *spatial_center(const sized_mbb_t *mbb)
 {
-    double *center = (double *)calloc(mbb->num/2, sizeof(double));
+    double *center = (double *)cb_calloc(mbb->num/2, sizeof(double));
     uint32_t i;
     if (center == NULL) {
         return NULL;
@@ -179,7 +180,7 @@ double *spatial_center(const sized_mbb_t *mbb)
 uint32_t *spatial_scale_point(const double *point, const scale_factor_t *sf)
 {
     int i;
-    uint32_t *scaled = (uint32_t *)malloc(sizeof(uint32_t) * sf->dim);
+    uint32_t *scaled = (uint32_t *)cb_malloc(sizeof(uint32_t) * sf->dim);
     if (scaled == NULL) {
         return NULL;
     }
@@ -210,7 +211,7 @@ unsigned char *interleave_uint32s(uint32_t *numbers, uint16_t num)
 
     /* bitmap_size in bits (hence the `*8`) */
     bitmap_size = (sizeof(uint32_t) * num * 8);
-    bitmap = (unsigned char *)calloc(bitmap_size / 8, sizeof(unsigned char));
+    bitmap = (unsigned char *)cb_calloc(bitmap_size / 8, sizeof(unsigned char));
     if (bitmap == NULL) {
         return NULL;
     }

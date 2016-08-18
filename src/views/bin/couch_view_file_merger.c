@@ -19,6 +19,8 @@
  **/
 
 #include "config.h"
+
+#include <platform/cb_malloc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -94,28 +96,28 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    view_files = (char **) malloc(sizeof(char *) * num_files);
+    view_files = (char **) cb_malloc(sizeof(char *) * num_files);
     if (view_files == NULL) {
         fprintf(stderr, "Memory allocation failure.\n");
         exit(EXIT_FAILURE);
     }
 
     for (i = 0; i < num_files; ++i) {
-        view_files[i] = (char *) malloc(LINE_BUF_SIZE);
+        view_files[i] = (char *) cb_malloc(LINE_BUF_SIZE);
         if (view_files[i] == NULL) {
             for (j = 0; j < i; ++j) {
-                free(view_files[j]);
+                cb_free(view_files[j]);
             }
-            free(view_files);
+            cb_free(view_files);
             fprintf(stderr, "Memory allocation failure.\n");
             exit(EXIT_FAILURE);
         }
 
         if (couchstore_read_line(stdin, view_files[i], LINE_BUF_SIZE) != view_files[i]) {
             for (j = 0; j <= i; ++j) {
-                free(view_files[j]);
+                cb_free(view_files[j]);
             }
-            free(view_files);
+            cb_free(view_files);
             fprintf(stderr, "Error reading view file number %d.\n", (i + 1));
             exit(EXIT_FAILURE);
         }
@@ -173,9 +175,9 @@ int main(int argc, char *argv[])
 
  finished:
     for (i = 0; i < num_files; ++i) {
-        free(view_files[i]);
+        cb_free(view_files[i]);
     }
-    free(view_files);
+    cb_free(view_files);
 
     _exit(status);
 }
