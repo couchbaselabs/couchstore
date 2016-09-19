@@ -242,9 +242,6 @@ void set_error_info(const view_btree_info_t *info,
                     couchstore_error_t ret,
                     view_error_t *error_info)
 {
-    char buf[4096];
-    size_t len = 0;
-
     if (ret == COUCHSTORE_SUCCESS) {
         return;
     }
@@ -254,22 +251,32 @@ void set_error_info(const view_btree_info_t *info,
         error_info->idx_type = "MAPREDUCE";
     } else {
         /* TODO: add more human friendly messages for other error types */
-        switch (ret) {
+        const int buffersize = 128;
+        char* buf = malloc(buffersize);
+
+        if (buf != NULL) {
+            size_t len = 0;
+
+            switch (ret) {
             case COUCHSTORE_ERROR_REDUCTION_TOO_LARGE:
-                len = snprintf(buf, 4096, "(view %d) reduction too large, ret = %d",
-                        info->view_id,
-                        ret);
-                buf[len] = '\0';
+                len = snprintf(buf, buffersize,
+                               "(view %d) reduction too large, ret = %d",
+                               info->view_id,
+                               ret);
                 error_info->idx_type = "MAPREDUCE";
                 break;
 
             default:
-                len = snprintf(buf, 4096, "(view %d) failed, ret = %d", info->view_id, ret);
-                buf[len] = '\0';
-        }
+                len = snprintf(buf, buffersize, "(view %d) failed, ret = %d",
+                               info->view_id, ret);
+            }
 
-        if (len) {
-            error_info->error_msg = (const char *) strdup(buf);
+            if (len > 0 && len < buffersize) {
+                error_info->error_msg = buf;
+            } else {
+                free(buf);
+                error_info->error_msg = strdup("Failed to build error message");
+            }
         }
     }
 

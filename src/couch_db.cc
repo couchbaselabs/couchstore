@@ -1236,10 +1236,12 @@ LIBCOUCHSTORE_API
 couchstore_error_t couchstore_last_os_error(const Db *db,
                                             char* buf,
                                             size_t size) {
-    if (db == NULL) {
+    if (db == NULL || buf == nullptr || size == 0) {
         return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
     }
     const couchstore_error_info_t *err = &db->file.lastError;
+
+    int nw;
 
 #ifdef WIN32
     char* win_msg = NULL;
@@ -1250,11 +1252,19 @@ couchstore_error_t couchstore_last_os_error(const Db *db,
                    MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
                    (LPTSTR) &win_msg,
                    0, NULL);
-    _snprintf(buf, size, "WINAPI error = %d: '%s'", err->error, win_msg);
+    nw = _snprintf(buf, size, "WINAPI error = %d: '%s'", err->error, win_msg);
     LocalFree(win_msg);
 #else
-    snprintf(buf, size, "errno = %d: '%s'", err->error, strerror(err->error));
+    nw = snprintf(buf, size, "errno = %d: '%s'",
+                      err->error, strerror(err->error));
 #endif
+
+    if (nw < 0) {
+        return COUCHSTORE_ERROR_ALLOC_FAIL;
+    } if (nw >= size) {
+        /* Truncate the error message */
+        buf[size - 1] = '\0';
+    }
 
     return COUCHSTORE_SUCCESS;
 }
