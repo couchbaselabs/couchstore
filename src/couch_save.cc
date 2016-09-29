@@ -328,7 +328,7 @@ cleanup:
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_save_documents(Db *db,
                                              Doc* const docs[],
-                                             DocInfo *infos[],
+                                             DocInfo* const infos[],
                                              unsigned numdocs,
                                              couchstore_save_options options)
 {
