@@ -37,6 +37,7 @@ static bool oneKey = false;
 static bool noBody = false;
 static bool decodeVbucket = true;
 static bool decodeIndex = false;
+static bool iterate_headers = false;
 static sized_buf dumpKey;
 
 typedef struct {
@@ -410,6 +411,7 @@ static int process_vbucket_file(const char *file, int *total)
         printf("Dumping \"%s\":\n", file);
     }
 
+next_header:
     switch (mode) {
         case DumpBySequence:
             if (dumpTree) {
@@ -440,7 +442,15 @@ static int process_vbucket_file(const char *file, int *total)
             errcode = couchstore_print_local_docs(db, &count);
             break;
     }
-    (void)couchstore_close_db(db);
+
+    if (iterate_headers) {
+        if (couchstore_rewind_db_header(db) == COUCHSTORE_SUCCESS) {
+            printf("Dumping B-tree at %" PRIu64 ":\n", db->header.position);
+            goto next_header;
+        }
+    } else {
+        couchstore_close_db(db);
+    }
 
     if (errcode < 0) {
         fprintf(stderr, "Failed to dump database \"%s\": %s\n",
@@ -623,6 +633,8 @@ static void usage(void) {
     printf("\nAlternate modes:\n");
     printf("    --tree       show file b-tree structure instead of data\n");
     printf("    --local      dump local documents\n");
+    printf("    --iterate    iterate through all headers\n");
+
     exit(EXIT_FAILURE);
 }
 
@@ -666,6 +678,8 @@ int main(int argc, char **argv)
             ii++;
         } else if (strcmp(argv[ii], "--local") == 0) {
             mode = DumpLocals;
+        } else if (strcmp(argv[ii], "--iterate") == 0) {
+            iterate_headers = true;
         } else {
             usage();
         }
