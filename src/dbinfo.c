@@ -30,10 +30,6 @@ static void print_db_info(Db* db)
 {
     DbInfo info;
     couchstore_db_info(db, &info);
-    if (info.doc_count == 0) {
-        printf("   no documents\n");
-        return;
-    }
     printf("   doc count: %"PRIu64"\n", info.doc_count);
     printf("   deleted doc count: %"PRIu64"\n", info.deleted_count);
     printf("   data size: %s\n", size_str(info.space_used));
