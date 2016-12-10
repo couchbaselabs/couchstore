@@ -20,8 +20,10 @@
  **/
 
 #include "file_merger.h"
+
 #include <stdlib.h>
 #include <string.h>
+#include <platform/cb_malloc.h>
 #include <platform/cbassert.h>
 
 
@@ -33,7 +35,7 @@ typedef struct {
 #define FREE_RECORD(ctx, rec)                                \
     do {                                                     \
         (*(ctx)->free_record)((rec)->data, (ctx)->user_ctx); \
-        free((rec));                                         \
+        cb_free((rec));                                      \
     } while (0)
 
 struct file_merger_ctx_t;
@@ -115,7 +117,7 @@ file_merger_error_t merge_files(const char *source_files[],
         return FILE_MERGER_ERROR_OPEN_FILE;
     }
 
-    ctx.files = (FILE **) malloc(sizeof(FILE *) * num_files);
+    ctx.files = (FILE **) cb_malloc(sizeof(FILE *) * num_files);
 
     if (ctx.files == NULL) {
         sorted_vector_destroy(&ctx.sorted_vector);
@@ -130,7 +132,7 @@ file_merger_error_t merge_files(const char *source_files[],
             for (j = 0; j < i; ++j) {
                 fclose(ctx.files[j]);
             }
-            free(ctx.files);
+            cb_free(ctx.files);
             fclose(ctx.dest_file);
             sorted_vector_destroy(&ctx.sorted_vector);
 
@@ -145,7 +147,7 @@ file_merger_error_t merge_files(const char *source_files[],
             fclose(ctx.files[i]);
         }
     }
-    free(ctx.files);
+    cb_free(ctx.files);
     sorted_vector_destroy(&ctx.sorted_vector);
     if (ctx.dest_file) {
         fclose(ctx.dest_file);
@@ -174,7 +176,7 @@ static file_merger_error_t do_merge_files(file_merger_ctx_t *ctx)
             return (file_merger_error_t) record_len;
         } else {
             int rv;
-            record = (record_t *) malloc(sizeof(*record));
+            record = (record_t *) cb_malloc(sizeof(*record));
             if (record == NULL) {
                 return FILE_MERGER_ERROR_ALLOC;
             }
@@ -248,7 +250,7 @@ static file_merger_error_t do_merge_files(file_merger_ctx_t *ctx)
             }
         }
 
-        free(records);
+        cb_free(records);
     }
 
     return FILE_MERGER_SUCCESS;
@@ -260,7 +262,7 @@ static void free_all_records(file_merger_ctx_t *ctx, record_t **records,
     for (; offset < num; offset++) {
         FREE_RECORD(ctx, records[offset]);
     }
-    free(records);
+    cb_free(records);
 }
 
 
@@ -268,7 +270,7 @@ static int init_sorted_vector(sorted_vector_t *sorted_vector,
                               unsigned max_elements,
                               file_merger_ctx_t *ctx)
 {
-    sorted_vector->data = (record_t **) malloc(sizeof(record_t *) * max_elements);
+    sorted_vector->data = (record_t **) cb_malloc(sizeof(record_t *) * max_elements);
     if (sorted_vector->data == NULL) {
         return 0;
     }
@@ -288,7 +290,7 @@ static void sorted_vector_destroy(sorted_vector_t *sorted_vector)
         FREE_RECORD(sorted_vector->ctx, sorted_vector->data[i]);
     }
 
-    free(sorted_vector->data);
+    cb_free(sorted_vector->data);
 }
 
 
@@ -321,7 +323,7 @@ static void sorted_vector_pop(sorted_vector_t *sorted_vector,
         }
     }
 
-    *records = (record_t **) malloc(sizeof(record_t *) * i);
+    *records = (record_t **) cb_malloc(sizeof(record_t *) * i);
     memcpy(*records, sorted_vector->data, sizeof(record_t *) * i);
     *n = i;
 

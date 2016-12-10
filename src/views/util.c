@@ -18,9 +18,11 @@
  * the License.
  **/
 
+#include <platform/cb_malloc.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "util.h"
 #include "../util.h"
 #include "../bitfield.h"
@@ -107,7 +109,7 @@ int read_view_record(FILE *in, void **buf, void *ctx)
         vlen -= sizeof(op);
     }
 
-    rec = (view_file_merge_record_t *) malloc(sizeof(*rec) + klen + vlen);
+    rec = (view_file_merge_record_t *) cb_malloc(sizeof(*rec) + klen + vlen);
     if (rec == NULL) {
         return FILE_MERGER_ERROR_ALLOC;
     }
@@ -117,7 +119,7 @@ int read_view_record(FILE *in, void **buf, void *ctx)
     rec->vsize = vlen;
 
     if (fread(VIEW_RECORD_KEY(rec), klen + vlen, 1, in) != 1) {
-        free(rec);
+        cb_free(rec);
         return FILE_MERGER_ERROR_FILE_READ;
     }
 
@@ -194,7 +196,7 @@ size_t dedup_view_records_merger(file_merger_record_t **records, size_t len, voi
 void free_view_record(void *record, void *ctx)
 {
     (void) ctx;
-    free(record);
+    cb_free(record);
 }
 
 
@@ -247,12 +249,12 @@ void set_error_info(const view_btree_info_t *info,
     }
 
     if (red_error) {
-        error_info->error_msg = (const char *) strdup(red_error);
+        error_info->error_msg = (const char *) cb_strdup(red_error);
         error_info->idx_type = "MAPREDUCE";
     } else {
         /* TODO: add more human friendly messages for other error types */
         const int buffersize = 128;
-        char* buf = malloc(buffersize);
+        char* buf = cb_malloc(buffersize);
 
         if (buf != NULL) {
             size_t len = 0;
@@ -274,13 +276,13 @@ void set_error_info(const view_btree_info_t *info,
             if (len > 0 && len < buffersize) {
                 error_info->error_msg = buf;
             } else {
-                free(buf);
-                error_info->error_msg = strdup("Failed to build error message");
+                cb_free(buf);
+                error_info->error_msg = cb_strdup("Failed to build error message");
             }
         }
     }
 
     if (info->num_reducers) {
-        error_info->view_name = (const char *) strdup(info->names[0]);
+        error_info->view_name = (const char *) cb_strdup(info->names[0]);
     }
 }

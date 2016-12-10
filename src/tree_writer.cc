@@ -10,6 +10,7 @@
 #include "tree_writer.h"
 #include "util.h"
 
+#include <platform/cb_malloc.h>
 #include <stdlib.h>
 
 
@@ -44,7 +45,7 @@ couchstore_error_t TreeWriterOpen(char* unsortedFilePath,
                                   TreeWriter** out_writer)
 {
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
-    TreeWriter* writer = static_cast<TreeWriter*>(calloc(1, sizeof(TreeWriter)));
+    TreeWriter* writer = static_cast<TreeWriter*>(cb_calloc(1, sizeof(TreeWriter)));
     error_unless(writer, COUCHSTORE_ERROR_ALLOC_FAIL);
     if (unsortedFilePath) {
         // stash the temp file path into context for uniq tempfile construction
@@ -77,7 +78,7 @@ void TreeWriterFree(TreeWriter* writer)
         fclose(writer->file);
         remove(writer->path);
     }
-    free(writer);
+    cb_free(writer);
 }
 
 
@@ -182,7 +183,7 @@ couchstore_error_t TreeWriterWrite(TreeWriter* writer,
 
     // Finish up the tree:
     if(*out_root != nullptr) {
-        free(*out_root);
+        cb_free(*out_root);
     }
     *out_root = complete_new_btree(target_mr, &errcode);
 
@@ -262,14 +263,14 @@ static int compare_id_record(const void *r1, const void *r2, void *ctx)
 
 static char *alloc_record(void)
 {
-    return static_cast<char*>(malloc(ID_SORT_MAX_RECORD_SIZE));
+    return static_cast<char*>(cb_malloc(ID_SORT_MAX_RECORD_SIZE));
 }
 
 static char *duplicate_record(char *rec)
 {
     extsort_record *record = (extsort_record *) rec;
     size_t record_size = sizeof(extsort_record) + record->k.size + record->v.size;
-    extsort_record *new_record = (extsort_record *) malloc(record_size);
+    extsort_record *new_record = (extsort_record *) cb_malloc(record_size);
 
     if (new_record != NULL) {
         memcpy(new_record, record, record_size);
@@ -280,5 +281,5 @@ static char *duplicate_record(char *rec)
 
 static void free_record(char *rec)
 {
-    free(rec);
+    cb_free(rec);
 }

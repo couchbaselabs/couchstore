@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <platform/cb_malloc.h>
 #include <platform/cbassert.h>
 #include <strings.h>
 #include "file_sorter.h"
@@ -170,15 +171,15 @@ file_sorter_error_t sort_file(const char *source_file,
 
     ctx.f = fopen(source_file, "rb");
     if (ctx.f == NULL) {
-        free(ctx.tmp_file_prefix);
+        cb_free(ctx.tmp_file_prefix);
         return FILE_SORTER_ERROR_OPEN_FILE;
     }
 
-    ctx.tmp_files = (tmp_file_t *) malloc(sizeof(tmp_file_t) * num_tmp_files);
+    ctx.tmp_files = (tmp_file_t *) cb_malloc(sizeof(tmp_file_t) * num_tmp_files);
 
     if (ctx.tmp_files == NULL) {
         fclose(ctx.f);
-        free(ctx.tmp_file_prefix);
+        cb_free(ctx.tmp_file_prefix);
         return FILE_SORTER_ERROR_ALLOC;
     }
 
@@ -195,11 +196,11 @@ file_sorter_error_t sort_file(const char *source_file,
     for (i = 0; i < ctx.active_tmp_files; ++i) {
         if (ctx.tmp_files[i].name != NULL) {
             remove(ctx.tmp_files[i].name);
-            free(ctx.tmp_files[i].name);
+            cb_free(ctx.tmp_files[i].name);
         }
     }
-    free(ctx.tmp_files);
-    free(ctx.tmp_file_prefix);
+    cb_free(ctx.tmp_files);
+    cb_free(ctx.tmp_file_prefix);
 
     return ret;
 }
@@ -207,7 +208,7 @@ file_sorter_error_t sort_file(const char *source_file,
 
 static sort_job_t *create_sort_job(void **recs, size_t n, tmp_file_t *t)
 {
-    sort_job_t *job = (sort_job_t *) calloc(1, sizeof(sort_job_t));
+    sort_job_t *job = (sort_job_t *) cb_calloc(1, sizeof(sort_job_t));
     if (job) {
         job->records = recs;
         job->n = n;
@@ -227,8 +228,8 @@ static void free_sort_job(sort_job_t *job, parallel_sorter_t *sorter)
             (*sorter->ctx->free_record)(job->records[i], sorter->ctx->user_ctx);
         }
 
-        free(job->records);
-        free(job);
+        cb_free(job->records);
+        cb_free(job);
     }
 }
 
@@ -237,7 +238,7 @@ static parallel_sorter_t *create_parallel_sorter(size_t workers,
                                                  file_sort_ctx_t *ctx)
 {
     size_t i, j;
-    parallel_sorter_t *s = (parallel_sorter_t *) calloc(1, sizeof(parallel_sorter_t));
+    parallel_sorter_t *s = (parallel_sorter_t *) cb_calloc(1, sizeof(parallel_sorter_t));
     if (!s) {
         return NULL;
     }
@@ -251,7 +252,7 @@ static parallel_sorter_t *create_parallel_sorter(size_t workers,
     s->job = NULL;
     s->ctx = ctx;
 
-    s->threads = (cb_thread_t *) calloc(workers, sizeof(cb_thread_t));
+    s->threads = (cb_thread_t *) cb_calloc(workers, sizeof(cb_thread_t));
     if (!s->threads) {
         goto failure;
     }
@@ -276,8 +277,8 @@ static parallel_sorter_t *create_parallel_sorter(size_t workers,
 failure:
     cb_mutex_destroy(&s->mutex);
     cb_cond_destroy(&s->cond);
-    free(s->threads);
-    free(s);
+    cb_free(s->threads);
+    cb_free(s);
     return NULL;
 }
 
@@ -288,8 +289,8 @@ static void free_parallel_sorter(parallel_sorter_t *s)
         cb_mutex_destroy(&s->mutex);
         cb_cond_destroy(&s->cond);
         free_sort_job(s->job, s);
-        free(s->threads);
-        free(s);
+        cb_free(s->threads);
+        cb_free(s);
     }
 }
 
@@ -348,7 +349,7 @@ static void sort_worker(void *args)
  * @param s The sorter to add the job to
  * @param records an array of records to add. Ownership of this array
  *                is transferred to the sorter, and it will be responsible
- *                for later free()ing it.
+ *                for later cb_free()ing it.
  * @param n The number of elements in records.
  * @return FILE_SORTER_SUCCESS if the job is successfully added,
  *         otherwise the reason for the failure.
@@ -398,7 +399,7 @@ static void free_n_records(parallel_sorter_t *s, void **records, size_t n) {
     for (size_t i = 0; i < n; i++) {
         (*s->ctx->free_record)(records[i], s->ctx->user_ctx);
     }
-    free(records);
+    cb_free(records);
 }
 
 
@@ -458,16 +459,16 @@ static file_sorter_error_t do_sort_file(file_sort_ctx_t *ctx)
     // This records array acts as a buffer for the parallel sorter. One
     // batch of records will be passed on to sorter job which will then
     // be responsible to free the memory in case of failures of success.
-    void **records = (void **) calloc(record_count, sizeof(void *));
+    void **records = (void **) cb_calloc(record_count, sizeof(void *));
 
     if (records == NULL) {
-        free(records);
+        cb_free(records);
         return FILE_SORTER_ERROR_ALLOC;
     }
 
     sorter = create_parallel_sorter(NSORT_THREADS, ctx);
     if (sorter == NULL) {
-        free(records);
+        cb_free(records);
         return FILE_SORTER_ERROR_ALLOC;
     }
 
@@ -481,7 +482,7 @@ static file_sorter_error_t do_sort_file(file_sort_ctx_t *ctx)
            // If there's on error before a job got created, free the records
            // directly
            if (sorter->job == NULL) {
-               free(records);
+               cb_free(records);
            }
            goto failure;
         } else if (record_size == 0) {
@@ -489,7 +490,7 @@ static file_sorter_error_t do_sort_file(file_sort_ctx_t *ctx)
         }
 
         if (records == NULL) {
-            records = (void **) calloc(record_count, sizeof(void *));
+            records = (void **) cb_calloc(record_count, sizeof(void *));
             if (records == NULL) {
                 ret =  FILE_SORTER_ERROR_ALLOC;
                 goto failure;
@@ -499,7 +500,7 @@ static file_sorter_error_t do_sort_file(file_sort_ctx_t *ctx)
         records[i++] = record;
         if (i == record_count) {
             record_count += NSORT_RECORD_INCR;
-            records = (void **) realloc(records, record_count * sizeof(void *));
+            records = (void **) cb_realloc(records, record_count * sizeof(void *));
             if (records == NULL) {
                 ret =  FILE_SORTER_ERROR_ALLOC;
                 goto failure;
@@ -750,7 +751,7 @@ static file_sorter_error_t merge_tmp_files(file_sort_ctx_t *ctx,
     file_merger_feed_record_t feed_record = NULL;
 
     nfiles = end - start;
-    files = (const char **) malloc(sizeof(char *) * nfiles);
+    files = (const char **) cb_malloc(sizeof(char *) * nfiles);
     if (files == NULL) {
         return FILE_SORTER_ERROR_ALLOC;
     }
@@ -772,7 +773,7 @@ static file_sorter_error_t merge_tmp_files(file_sort_ctx_t *ctx,
         dest_tmp_file = sorter_tmp_file_path(ctx->tmp_dir,
             ctx->tmp_file_prefix);
         if (dest_tmp_file == NULL) {
-            free(files);
+            cb_free(files);
             return FILE_SORTER_ERROR_MK_TMP_FILE;
         }
     }
@@ -789,12 +790,12 @@ static file_sorter_error_t merge_tmp_files(file_sort_ctx_t *ctx,
                                             ctx->skip_writeback,
                                             ctx->user_ctx);
 
-    free(files);
+    cb_free(files);
 
     if (ret != FILE_SORTER_SUCCESS) {
         if (dest_tmp_file != NULL && dest_tmp_file != ctx->source_file) {
             remove(dest_tmp_file);
-            free(dest_tmp_file);
+            cb_free(dest_tmp_file);
         }
         return ret;
     }
@@ -802,11 +803,11 @@ static file_sorter_error_t merge_tmp_files(file_sort_ctx_t *ctx,
     for (i = start; i < end; ++i) {
         if (remove(ctx->tmp_files[i].name) != 0) {
             if (dest_tmp_file != ctx->source_file) {
-                free(dest_tmp_file);
+                cb_free(dest_tmp_file);
             }
             return FILE_SORTER_ERROR_DELETE_FILE;
         }
-        free(ctx->tmp_files[i].name);
+        cb_free(ctx->tmp_files[i].name);
         ctx->tmp_files[i].name = NULL;
         ctx->tmp_files[i].level = 0;
     }
@@ -885,7 +886,7 @@ char *sorter_tmp_file_path(const char *tmp_dir, const char *prefix) {
     tmp_dir_len = strlen(tmp_dir);
     prefix_len = strlen(prefix);
     total_len = tmp_dir_len + 1 + prefix_len + sizeof(SORTER_TMP_FILE_SUFFIX);
-    file_path = (char *) malloc(total_len);
+    file_path = (char *) cb_malloc(total_len);
 
     if (file_path == NULL) {
         return NULL;
@@ -898,7 +899,7 @@ char *sorter_tmp_file_path(const char *tmp_dir, const char *prefix) {
     memcpy(file_path + tmp_dir_len + 1, prefix, prefix_len);
     if (sorter_random_name(file_path, total_len - 1,
                            sizeof(SORTER_TMP_FILE_SUFFIX) - 1) < 0) {
-        free(file_path);
+        cb_free(file_path);
         return NULL;
     }
 

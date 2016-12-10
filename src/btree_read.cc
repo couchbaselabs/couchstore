@@ -1,5 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include "config.h"
+#include <platform/cb_malloc.h>
 #include <stdlib.h>
 #include "couch_btree.h"
 #include "util.h"
@@ -119,7 +120,7 @@ static couchstore_error_t btree_lookup_inner(couchfile_lookup_request *rq,
     }
 
 cleanup:
-    free(nodebuf);
+    cb_free(nodebuf);
 
     return errcode;
 }

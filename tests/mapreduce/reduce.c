@@ -19,6 +19,7 @@
  **/
 
 #include "src/views/mapreduce/mapreduce.h"
+#include <platform/cb_malloc.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -368,11 +369,11 @@ static void test_timeout(void)
 
 static mapreduce_json_list_t *all_keys(void)
 {
-    mapreduce_json_list_t *ret = (mapreduce_json_list_t *) malloc(sizeof(*ret));
+    mapreduce_json_list_t *ret = (mapreduce_json_list_t *) cb_malloc(sizeof(*ret));
 
     cb_assert(ret != NULL);
     ret->length = 4;
-    ret->values = (mapreduce_json_t *) malloc(sizeof(mapreduce_json_t) * ret->length);
+    ret->values = (mapreduce_json_t *) cb_malloc(sizeof(mapreduce_json_t) * ret->length);
     cb_assert(ret->values != NULL);
     ret->values[0] = key1;
     ret->values[1] = key2;
@@ -384,11 +385,11 @@ static mapreduce_json_list_t *all_keys(void)
 
 static mapreduce_json_list_t *all_values(void)
 {
-    mapreduce_json_list_t *ret = (mapreduce_json_list_t *) malloc(sizeof(*ret));
+    mapreduce_json_list_t *ret = (mapreduce_json_list_t *) cb_malloc(sizeof(*ret));
 
     cb_assert(ret != NULL);
     ret->length = 4;
-    ret->values = (mapreduce_json_t *) malloc(sizeof(mapreduce_json_t) * ret->length);
+    ret->values = (mapreduce_json_t *) cb_malloc(sizeof(mapreduce_json_t) * ret->length);
     cb_assert(ret->values != NULL);
     ret->values[0] = value1;
     ret->values[1] = value2;
@@ -400,8 +401,8 @@ static mapreduce_json_list_t *all_values(void)
 
 static void free_json_list(mapreduce_json_list_t *list)
 {
-    free(list->values);
-    free(list);
+    cb_free(list->values);
+    cb_free(list);
 }
 
 int main(void)

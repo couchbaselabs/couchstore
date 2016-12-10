@@ -19,6 +19,8 @@
  **/
 
 #include "config.h"
+
+#include <platform/cb_malloc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -70,14 +72,14 @@ int main(int argc, char *argv[])
         goto out;
     }
 
-    tmp_dir = strdup(buf);
+    tmp_dir = cb_strdup(buf);
     if (tmp_dir == NULL) {
         fprintf(stderr, "Memory allocation failure\n");
         ret = COUCHSTORE_ERROR_ALLOC_FAIL;
         goto out;
     }
 
-    source_files = (char **) calloc(group_info->num_btrees + 1, sizeof(char *));
+    source_files = (char **) cb_calloc(group_info->num_btrees + 1, sizeof(char *));
     if (source_files == NULL) {
         fprintf(stderr, "Memory allocation failure\n");
         ret = COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -90,7 +92,7 @@ int main(int argc, char *argv[])
         goto out;
     }
 
-    dest_file = strdup(buf);
+    dest_file = cb_strdup(buf);
     if (dest_file == NULL) {
         fprintf(stderr, "Memory allocation failure\n");
         ret = COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -109,7 +111,7 @@ int main(int argc, char *argv[])
             goto out;
         }
 
-        source_files[i] = strdup(buf);
+        source_files[i] = cb_strdup(buf);
         if (source_files[i] == NULL) {
             fprintf(stderr, "Memory allocation failure\n");
             ret = COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -147,15 +149,15 @@ int main(int argc, char *argv[])
 out:
     if (source_files != NULL) {
         for (i = 0; i <= group_info->num_btrees; ++i) {
-            free(source_files[i]);
+            cb_free(source_files[i]);
         }
-        free(source_files);
+        cb_free(source_files);
     }
-    free(tmp_dir);
-    free(dest_file);
+    cb_free(tmp_dir);
+    cb_free(dest_file);
     couchstore_free_view_group_info(group_info);
-    free((void *) error_info.error_msg);
-    free((void *) error_info.view_name);
+    cb_free((void *) error_info.error_msg);
+    cb_free((void *) error_info.view_name);
 
     ret = (ret < 0) ? (100 + ret) : ret;
     _exit(ret);

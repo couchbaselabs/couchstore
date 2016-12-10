@@ -19,7 +19,10 @@
  **/
 
 #include "index_header.h"
+
 #include "../bitfield.h"
+
+#include <platform/cb_malloc.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -63,7 +66,7 @@ couchstore_error_t decode_index_header(const char *bytes,
         return COUCHSTORE_ERROR_CORRUPT;
     }
 
-    b = uncomp = (char *) malloc(uncompLen);
+    b = uncomp = (char *) cb_malloc(uncompLen);
     if (b == NULL) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
@@ -72,7 +75,7 @@ couchstore_error_t decode_index_header(const char *bytes,
         goto alloc_error;
     }
 
-    h = (index_header_t *) malloc(sizeof(index_header_t));
+    h = (index_header_t *) cb_malloc(sizeof(index_header_t));
     if (h == NULL) {
         goto alloc_error;
     }
@@ -129,7 +132,7 @@ couchstore_error_t decode_index_header(const char *bytes,
     h->num_views = (uint8_t) b[0];
     b += 1;
 
-    h->view_states = (node_pointer **) malloc(sizeof(node_pointer *) * h->num_views);
+    h->view_states = (node_pointer **) cb_malloc(sizeof(node_pointer *) * h->num_views);
     if (h->view_states == NULL) {
         goto alloc_error;
     }
@@ -251,7 +254,7 @@ couchstore_error_t decode_index_header(const char *bytes,
             b += 2;
             pver.num_failover_log = dec_uint16(b);
             b += 2;
-            pver.failover_log = (failover_log_t *) malloc(
+            pver.failover_log = (failover_log_t *) cb_malloc(
                 sizeof(failover_log_t) * pver.num_failover_log);
 
             if (pver.failover_log == NULL) {
@@ -265,20 +268,20 @@ couchstore_error_t decode_index_header(const char *bytes,
                 b += 8;
             }
             if (sorted_list_add(h->part_versions, &pver, sizeof(pver)) != 0) {
-                free(pver.failover_log);
+                cb_free(pver.failover_log);
                 goto alloc_error;
             }
         }
     }
 
-    free(uncomp);
+    cb_free(uncomp);
     *header = h;
 
     return COUCHSTORE_SUCCESS;
 
  alloc_error:
     free_index_header(h);
-    free(uncomp);
+    cb_free(uncomp);
     return COUCHSTORE_ERROR_ALLOC_FAIL;
 }
 
@@ -354,7 +357,7 @@ couchstore_error_t encode_index_header(const index_header_t *header,
         sz += size_of_partition_versions(header->part_versions);
     }
 
-    b = buf = (char *) malloc(sz);
+    b = buf = (char *) cb_malloc(sz);
     if (buf == NULL) {
         goto alloc_error;
     }
@@ -413,7 +416,7 @@ couchstore_error_t encode_index_header(const index_header_t *header,
     }
 
     comp_size = snappy_max_compressed_length(sz);
-    comp = (char *) malloc(16 + comp_size);
+    comp = (char *) cb_malloc(16 + comp_size);
 
     if (comp == NULL) {
         goto alloc_error;
@@ -423,19 +426,19 @@ couchstore_error_t encode_index_header(const index_header_t *header,
 
     if (res != SNAPPY_OK) {
         /* TODO: a new error for couchstore_error_t */
-        free(comp);
+        cb_free(comp);
         goto alloc_error;
     }
 
     memcpy(comp, header->signature, 16);
     *buffer = comp;
     *buffer_size = 16 + comp_size;
-    free(buf);
+    cb_free(buf);
 
     return COUCHSTORE_SUCCESS;
 
  alloc_error:
-    free(buf);
+    cb_free(buf);
     *buffer = NULL;
     *buffer_size = 0;
     return COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -451,13 +454,13 @@ void free_index_header(index_header_t *header)
     }
 
     sorted_list_free(header->seqs);
-    free(header->id_btree_state);
+    cb_free(header->id_btree_state);
 
     if (header->view_states != NULL) {
         for (i = 0; i < header->num_views; ++i) {
-            free(header->view_states[i]);
+            cb_free(header->view_states[i]);
         }
-        free(header->view_states);
+        cb_free(header->view_states);
     }
 
     sorted_list_free(header->replicas_on_transfer);
@@ -469,7 +472,7 @@ void free_index_header(index_header_t *header)
         free_part_versions(header->part_versions);
     }
 
-    free(header);
+    cb_free(header);
 }
 
 static void free_part_versions(part_version_t *part_versions) {
@@ -477,7 +480,7 @@ static void free_part_versions(part_version_t *part_versions) {
     part_version_t *pver = NULL;
     pver = sorted_list_next(it);
     while (pver != NULL) {
-        free(pver->failover_log);
+        cb_free(pver->failover_log);
         pver = sorted_list_next(it);
     }
     sorted_list_free_iterator(it);

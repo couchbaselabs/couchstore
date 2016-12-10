@@ -3,8 +3,10 @@
 /* Reference: http://wiki.apache.org/couchdb/View_collation */
 
 #include "config.h"
+
 #include "collate_json.h"
 #include <ctype.h>
+#include <platform/cb_malloc.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -176,7 +178,7 @@ static const char* createStringFromJSON(const char** in, size_t *length, bool *f
     *freeWhenDone = false;
     if (escapes > 0) {
         *length -= escapes;
-        buf = malloc(*length);
+        buf = cb_malloc(*length);
         dst = buf;
         for (str = start; (c = *str) != '"'; ++str) {
             if (c == '\\')
@@ -297,11 +299,11 @@ static int compareUnicode(const char* str1, size_t len1,
         return compareUnicodeSlow(str1, len1, str2, len2);
     }
 
-    b1 = malloc(len1 * sizeof(UChar));
-    b2 = malloc(len2 * sizeof(UChar));
+    b1 = cb_malloc(len1 * sizeof(UChar));
+    b2 = cb_malloc(len2 * sizeof(UChar));
     if (b1 == NULL || b2 == NULL) {
-        free(b1);
-        free(b2);
+        cb_free(b1);
+        cb_free(b2);
         fprintf(stderr, "CouchStore CollateJSON: Couldn't allocate memory\n");
         return -2;
     }
@@ -311,14 +313,14 @@ static int compareUnicode(const char* str1, size_t len1,
 
     if (ret1 < 0 || ret2 < 0) {
         /* something went wrong with utf8->utf32 conversion */
-        free(b1);
-        free(b2);
+        cb_free(b1);
+        cb_free(b2);
         return compareUnicodeSlow(str1, len1, str2, len2);
     }
 
     result = ucol_strcoll(coll, b1, ret1, b2, ret2);
-    free(b1);
-    free(b2);
+    cb_free(b1);
+    cb_free(b2);
 
     if (result < 0) {
         return -1;
@@ -341,10 +343,10 @@ static int compareStringsUnicode(const char** in1, const char** in2)
     int result = compareUnicode(str1, len1, str2, len2);
 
     if (free1) {
-        free((char*)str1);
+        cb_free((char*)str1);
     }
     if (free2) {
-        free((char*)str2);
+        cb_free((char*)str2);
     }
     return result;
 }
@@ -361,7 +363,7 @@ static double readNumber(const char* start, const char* end, char** endOfNumber)
 
     cb_assert(end > start);
     len = end - start;
-    str = (len < sizeof(buf)) ? buf : malloc(len + 1);
+    str = (len < sizeof(buf)) ? buf : cb_malloc(len + 1);
     if (!str)
         return 0.0;
     memcpy(str, start, len);
@@ -370,7 +372,7 @@ static double readNumber(const char* start, const char* end, char** endOfNumber)
     result = strtod(str, &endInStr);
     *endOfNumber = (char*)start + (endInStr - str);
     if (len >= sizeof(buf))
-        free(str);
+        cb_free(str);
     return result;
 }
 

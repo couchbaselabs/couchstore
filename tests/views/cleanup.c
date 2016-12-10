@@ -21,6 +21,8 @@
 #include "view_tests.h"
 #include "../src/couch_btree.h"
 
+#include <platform/cb_malloc.h>
+
 static void test_view_id_btree_cleanup()
 {
     sized_buf valbuf;
@@ -39,11 +41,11 @@ static void test_view_id_btree_cleanup()
     /* Purge kv tests */
     data1.partition = 64;
     data1.num_view_keys_map = 1;
-    data1.view_keys_map = (view_keys_mapping_t *) malloc(sizeof(view_keys_mapping_t));
+    data1.view_keys_map = (view_keys_mapping_t *) cb_malloc(sizeof(view_keys_mapping_t));
     cb_assert(data1.view_keys_map != NULL);
     data1.view_keys_map[0].view_id = 0;
     data1.view_keys_map[0].num_keys = 1;
-    data1.view_keys_map[0].json_keys = (sized_buf *) malloc(sizeof(sized_buf));
+    data1.view_keys_map[0].json_keys = (sized_buf *) cb_malloc(sizeof(sized_buf));
     data1.view_keys_map[0].json_keys[0].buf = "100";
     data1.view_keys_map[0].json_keys[0].size = sizeof("100") - 1;
     cb_assert(encode_view_id_btree_value(&data1, &data_bin1, &data_bin1_size) == COUCHSTORE_SUCCESS);
@@ -52,7 +54,7 @@ static void test_view_id_btree_cleanup()
 
     cb_assert(view_id_btree_purge_kv(NULL, &valbuf, &purge_ctx) == PURGE_ITEM);
     cb_assert(purge_ctx.count == 1);
-    free(data_bin1);
+    cb_free(data_bin1);
     data1.partition = 32;
     cb_assert(encode_view_id_btree_value(&data1, &data_bin1, &data_bin1_size) == COUCHSTORE_SUCCESS);
     valbuf.buf = data_bin1;
@@ -60,9 +62,9 @@ static void test_view_id_btree_cleanup()
     purge_ctx.count = 0;
     cb_assert(view_id_btree_purge_kv(NULL, &valbuf, &purge_ctx) == PURGE_KEEP);
     cb_assert(purge_ctx.count == 0);
-    free(data_bin1);
-    free(data1.view_keys_map[0].json_keys);
-    free(data1.view_keys_map);
+    cb_free(data_bin1);
+    cb_free(data1.view_keys_map[0].json_keys);
+    cb_free(data1.view_keys_map);
 
     /* Purge kp tests */
     reduction1.kv_count = 11;
@@ -111,7 +113,7 @@ static void test_view_btree_cleanup()
     /* Purge KV tests */
     value1.partition = 64;
     value1.num_values = 2;
-    value1.values = (sized_buf *) malloc(sizeof(sized_buf) * 2);
+    value1.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 2);
     value1.values[0].buf = "100";
     value1.values[0].size = sizeof("100") - 1;
     value1.values[1].buf = "1";
@@ -124,7 +126,7 @@ static void test_view_btree_cleanup()
     cb_assert(view_btree_purge_kv(NULL, &valbuf, &purge_ctx) == PURGE_ITEM);
     cb_assert(purge_ctx.count == 2);
     purge_ctx.count = 0;
-    free(value_bin1);
+    cb_free(value_bin1);
 
     value1.partition = 100;
     cb_assert(encode_view_btree_value(&value1, &value_bin1, &value_bin1_size) == COUCHSTORE_SUCCESS);
@@ -133,13 +135,13 @@ static void test_view_btree_cleanup()
 
     cb_assert(view_btree_purge_kv(NULL, &valbuf, &purge_ctx) == PURGE_KEEP);
     cb_assert(purge_ctx.count == 0);
-    free(value_bin1);
-    free(value1.values);
+    cb_free(value_bin1);
+    cb_free(value1.values);
 
     /* Purge KP tests */
     reduction1.kv_count = 11;
     reduction1.num_values = 1;
-    reduction1.reduce_values = (sized_buf *) malloc(sizeof(sized_buf));
+    reduction1.reduce_values = (sized_buf *) cb_malloc(sizeof(sized_buf));
     reduction1.reduce_values[0].buf = "value";
     reduction1.reduce_values[0].size = sizeof("value") - 1;
     memset(&reduction1.partitions_bitmap, 0, sizeof(reduction1.partitions_bitmap));
@@ -167,7 +169,7 @@ static void test_view_btree_cleanup()
 
     cb_assert(view_btree_purge_kp(&np, &purge_ctx) == PURGE_PARTIAL);
     cb_assert(purge_ctx.count == 0);
-    free(reduction1.reduce_values);
+    cb_free(reduction1.reduce_values);
 }
 
 void cleanup_tests(void)

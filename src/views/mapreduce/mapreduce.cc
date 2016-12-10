@@ -20,6 +20,7 @@
 #include "mapreduce_internal.h"
 #include <iostream>
 #include <cstring>
+#include <platform/cb_malloc.h>
 #include <stdlib.h>
 // This is libv8_libplatform library which handles garbage collection for v8
 #include <include/libplatform/libplatform.h>
@@ -295,7 +296,7 @@ void mapDoc(mapreduce_ctx_t *ctx,
             mapResult.error = MAPREDUCE_SUCCESS;
             mapResult.result.kvs.length = kvs.size();
             size_t sz = sizeof(mapreduce_kv_t) * mapResult.result.kvs.length;
-            mapResult.result.kvs.kvs = (mapreduce_kv_t *) malloc(sz);
+            mapResult.result.kvs.kvs = (mapreduce_kv_t *) cb_malloc(sz);
             if (mapResult.result.kvs.kvs == NULL) {
                 freeKvListEntries(kvs);
                 throw std::bad_alloc();
@@ -315,7 +316,7 @@ void mapDoc(mapreduce_ctx_t *ctx,
             std::string exceptString = exceptionString(try_catch);
             size_t len = exceptString.length();
 
-            mapResult.result.error_msg = (char *) malloc(len + 1);
+            mapResult.result.error_msg = (char *) cb_malloc(len + 1);
             if (mapResult.result.error_msg == NULL) {
                 throw std::bad_alloc();
             }
@@ -483,8 +484,8 @@ static void freeKvListEntries(kv_list_int_t &kvs)
 
     for ( ; it != kvs.end(); ++it) {
         mapreduce_kv_t kv = *it;
-        free(kv.key.json);
-        free(kv.value.json);
+        cb_free(kv.key.json);
+        cb_free(kv.value.json);
     }
     kvs.clear();
 }
@@ -495,7 +496,7 @@ static void freeJsonListEntries(json_results_list_t &list)
     json_results_list_t::iterator it = list.begin();
 
     for ( ; it != list.end(); ++it) {
-        free((*it).json);
+        cb_free((*it).json);
     }
     list.clear();
 }
@@ -623,7 +624,7 @@ static inline mapreduce_json_t jsonStringify(const Handle<Value> &obj)
     if (!result->IsUndefined()) {
         Handle<String> str = Handle<String>::Cast(result);
         jsonResult.length = str->Utf8Length();
-        jsonResult.json = (char *) malloc(jsonResult.length);
+        jsonResult.json = (char *) cb_malloc(jsonResult.length);
         if (jsonResult.json == NULL) {
             throw std::bad_alloc();
         }
@@ -631,7 +632,7 @@ static inline mapreduce_json_t jsonStringify(const Handle<Value> &obj)
                        NULL, String::NO_NULL_TERMINATION);
     } else {
         jsonResult.length = sizeof("null") - 1;
-        jsonResult.json = (char *) malloc(jsonResult.length);
+        jsonResult.json = (char *) cb_malloc(jsonResult.length);
         if (jsonResult.json == NULL) {
             throw std::bad_alloc();
         }

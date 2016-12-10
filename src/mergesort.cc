@@ -8,6 +8,7 @@
 #include "internal.h"
 #include "mergesort.h"
 
+#include <platform/cb_malloc.h>
 #include <stdlib.h>
 #include <string.h>
 struct record_in_memory {
@@ -32,7 +33,7 @@ static void free_memory_blocks(struct record_in_memory *first,
     while (first != NULL) {
         struct record_in_memory *next = first->next;
         (*record_free)(first->record);
-        free(first);
+        cb_free(first);
         first = next;
     }
 }
@@ -137,7 +138,7 @@ int merge_sort(FILE *unsorted_file, FILE *sorted_file,
         while (1) {
             int record_size = (*read)(unsorted_file, record[0], pointer);
             if (record_size > 0) {
-                struct record_in_memory *p = (struct record_in_memory *) malloc(sizeof(*p));
+                struct record_in_memory *p = (struct record_in_memory *) cb_malloc(sizeof(*p));
                 if (p == NULL) {
                     releaseTmpFile(&source_tape[0]);
                     releaseTmpFile(&source_tape[1]);
@@ -150,7 +151,7 @@ int merge_sort(FILE *unsorted_file, FILE *sorted_file,
                 if (p->record == NULL) {
                     releaseTmpFile(&source_tape[0]);
                     releaseTmpFile(&source_tape[1]);
-                    free(p);
+                    cb_free(p);
                     (*record_free)(record[0]);
                     (*record_free)(record[1]);
                     free_memory_blocks(first, record_free);
@@ -182,7 +183,7 @@ int merge_sort(FILE *unsorted_file, FILE *sorted_file,
                     }
                     source_tape[destination].count++;
                     (*record_free)(first->record);
-                    free(first);
+                    cb_free(first);
                     first = next;
                 }
                 destination ^= 1;

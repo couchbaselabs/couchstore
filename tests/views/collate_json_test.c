@@ -5,6 +5,8 @@
 #include "../src/views/collate_json.h"
 #include "../macros.h"
 #include "view_tests.h"
+
+#include <platform/cb_malloc.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -14,8 +16,8 @@ static int collateStrs(const char* str1, const char* str2, CollateJSONMode mode)
     /* Be evil and put numeric garbage past the ends of str1 and str2, to make
        sure it doesn't confuse the numeric parsing in the collator: */
     size_t len1 = strlen(str1), len2 = strlen(str2);
-    char *padded1 = malloc(len1 + 3);
-    char *padded2 = malloc(len2 + 3);
+    char *padded1 = cb_malloc(len1 + 3);
+    char *padded2 = cb_malloc(len2 + 3);
     int ret;
     sized_buf buf1;
     sized_buf buf2;
@@ -33,8 +35,8 @@ static int collateStrs(const char* str1, const char* str2, CollateJSONMode mode)
     buf2.buf = padded2;
     buf2.size = len2;
     ret =  CollateJSON(&buf1, &buf2, mode);
-    free(padded1);
-    free(padded2);
+    cb_free(padded1);
+    cb_free(padded2);
     return ret;
 }
 
