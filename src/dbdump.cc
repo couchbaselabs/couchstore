@@ -2,6 +2,7 @@
 #include "config.h"
 
 #include <platform/cb_malloc.h>
+#include <platform/compress.h>
 #include <string.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -244,22 +245,29 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
                 printf("     could not read document body: %s\n", couchstore_strerror(docerr));
             }
         } else if (doc) {
+            cb::compression::Buffer inflated_body_buffer;
             sized_buf new_body;
+            bool inflate_error = false;
+
             if (datatype >= 0x02) {
-                size_t rlen;
-                snappy_uncompressed_length(doc->data.buf, doc->data.size, &rlen);
-                char *decbuf = (char *) cb_malloc(rlen);
-                size_t new_len;
-                snappy_uncompress(doc->data.buf, doc->data.size, decbuf, &new_len);
-                new_body.size = new_len;
-                new_body.buf = decbuf;
+                if (cb::compression::inflate(cb::compression::Algorithm::Snappy,
+                                             doc->data.buf, doc->data.size,
+                                             inflated_body_buffer)) {
+                    new_body = {inflated_body_buffer.data.get(),
+                                inflated_body_buffer.len};
+                } else {
+                    inflate_error = true;
+                    new_body = doc->data;
+                }
             } else {
                 new_body = doc->data;
             }
+
             if (dumpJson) {
                 printf("\"size\":%" PRIu64 ",", (uint64_t)new_body.size);
                 if (docinfo->content_meta & COUCH_DOC_IS_COMPRESSED) {
-                    printf("\"snappy\":true,\"body\":\"");
+                    printf("\"snappy\":true,\"display\":\"%s\",\"body\":\"",
+                           inflate_error ? "deflated" : "inflated");
                 } else {
                     printf("\"body\":\"");
                 }
@@ -267,18 +275,19 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
                 printf("\"}\n");
             } else {
                 printf("     size: %" PRIu64 "\n", (uint64_t)new_body.size);
-                printf("     data:%s",
-                       docinfo->content_meta & COUCH_DOC_IS_COMPRESSED ?
-                       " (snappy) " : " ");
+                printf("     data: ");
+
+                if (docinfo->content_meta & COUCH_DOC_IS_COMPRESSED) {
+                    printf("(snappy%s) ",
+                           inflate_error ? ", inflate error display deflated" : "");
+                }
+
                 if (dumpHex) {
                     printsbhexraw(&new_body);
                     printf("\n");
                 } else {
                     printsb(&new_body);
                 }
-            }
-            if (datatype >= 0x02) {
-                cb_free(new_body.buf);
             }
         }
     } else {
