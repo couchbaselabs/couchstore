@@ -33,7 +33,7 @@ static bool dumpTree = false;
 static bool dumpJson = false;
 static bool dumpHex = false;
 static bool oneKey = false;
-static bool noBody = false;
+static bool dumpBody = true;
 static bool decodeVbucket = true;
 static bool decodeIndex = false;
 static sized_buf dumpKey;
@@ -235,7 +235,7 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
         }
     }
 
-    if (!noBody) {
+    if (dumpBody) {
         docerr = couchstore_open_doc_with_docinfo(db, docinfo, &doc, DECOMPRESS_DOC_BODIES);
         if (docerr != COUCHSTORE_SUCCESS) {
             if (dumpJson) {
@@ -656,7 +656,7 @@ int main(int argc, char **argv)
         } else if (strcmp(argv[ii], "--hex-body") == 0) {
             dumpHex = true;
         } else if (strcmp(argv[ii], "--no-body") == 0) {
-            noBody = true;
+            dumpBody = false;
         } else if (strcmp(argv[ii], "--key") == 0) {
             if (argc < (ii + 1)) {
                 usage();
