@@ -1489,7 +1489,7 @@ couchstore_error_t couchstore_update_view_group(view_group_info_t *info,
             int nw = snprintf(error_msg, sizeof(error_msg),
                               "Error sorting records file: %s",
                               id_records_file);
-            if (nw > 0 && nw < sizeof(error_msg)) {
+            if (nw > 0 && size_t(nw) < sizeof(error_msg)) {
                 error_info->error_msg = cb_strdup(error_msg);
             } else {
                 error_info->error_msg = cb_strdup("Error sorting records file");
@@ -1530,7 +1530,7 @@ couchstore_error_t couchstore_update_view_group(view_group_info_t *info,
                                   "Error sorting records file: %s",
                                   kv_records_files[i]);
 
-                if (nw > 0 && nw < sizeof(error_msg)) {
+                if (nw > 0 && size_t(nw) < sizeof(error_msg)) {
                     errmsg = error_msg;
                 }
                 set_error_info(&info->view_infos.btree[i], errmsg, ret,

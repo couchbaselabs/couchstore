@@ -1262,7 +1262,7 @@ couchstore_error_t couchstore_last_os_error(const Db *db,
 
     if (nw < 0) {
         return COUCHSTORE_ERROR_ALLOC_FAIL;
-    } if (nw >= size) {
+    } if (size_t(nw) >= size) {
         /* Truncate the error message */
         buf[size - 1] = '\0';
     }
