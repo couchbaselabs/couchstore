@@ -1,6 +1,7 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include "config.h"
 
+#include <memcached/protocol_binary.h>
 #include <platform/cb_malloc.h>
 #include <platform/compress.h>
 #include <string.h>
@@ -124,6 +125,30 @@ static void printjquote(const sized_buf *sb)
     }
 }
 
+static void print_datatype_as_json(const std::string& datatype) {
+    printf("\"datatype_as_text\":[");
+
+    std::string::size_type start = 0;
+    std::string::size_type end;
+    bool need_comma = false;
+    while ((end = datatype.find(',', start)) != std::string::npos) {
+        auto token = datatype.substr(start, end - start);
+        if (need_comma) {
+            printf(",");
+        }
+        printf("\"%s\"", token.c_str());
+        start = end + 1;
+        need_comma = true;
+    }
+
+    if (need_comma) {
+        printf(",");
+    }
+    auto token = datatype.substr(start);
+    printf("\"%s\"", token.c_str());
+    printf("],");
+}
+
 static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
 {
     int *count = (int *) ctx;
@@ -186,6 +211,9 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
             }
             datatype = *((uint8_t *)(docinfo->rev_meta.buf + sizeof(CouchbaseRevMeta) +
                         sizeof(uint8_t)));
+            auto dt = protocol_binary_datatype_t(datatype);
+            const auto datatype_string = mcbp::datatype::to_string(dt);
+
             if (docinfo->rev_meta.size > sizeof(CouchbaseRevMeta) + 2) {
                 // 19 bytes of rev_meta indicates CouchbaseRevMeta along with
                 // flex_meta_code (1B) and datatype (1B), along with the conflict
@@ -198,22 +226,28 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
                     printf("\"cas\":\"%" PRIu64 "\",\"expiry\":%" PRIu32
                            ",\"flags\":%" PRIu32
                            ",\"datatype\":%d,\"conflict_resolution_mode\":%d,",
-                            cas, expiry, flags, datatype, conf_res_mode);
+                           cas, expiry, flags, datatype, conf_res_mode);
+                    print_datatype_as_json(datatype_string);
                 } else {
                     printf("     cas: %" PRIu64 ", expiry: %" PRIu32
                            ", flags: %" PRIu32 ", "
-                           "datatype: %d, conflict_resolution_mode: %d\n",
-                           cas, expiry, flags, datatype, conf_res_mode);
+                           "datatype: 0x%02x (%s), "
+                           "conflict_resolution_mode: %d\n",
+                           cas, expiry, flags, datatype,
+                           datatype_string.c_str(),
+                           conf_res_mode);
                 }
             } else {
                 if (dumpJson) {
                     printf("\"cas\":\"%" PRIu64 "\",\"expiry\":%" PRIu32
                            ",\"flags\":%" PRIu32 "," "\"datatype\":%d,",
-                            cas, expiry, flags, datatype);
+                           cas, expiry, flags, datatype);
+                    print_datatype_as_json(datatype_string);
                 } else {
                     printf("     cas: %" PRIu64 ", expiry: %" PRIu32
-                           ", flags: %" PRIu32 ", datatype: %d\n",
-                           cas, expiry, flags, datatype);
+                           ", flags: %" PRIu32 ", datatype: 0x%02x (%s)\n",
+                           cas, expiry, flags, datatype,
+                           datatype_string.c_str());
                 }
             }
         } else {
