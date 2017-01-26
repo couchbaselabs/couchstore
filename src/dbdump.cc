@@ -12,6 +12,9 @@
 #include <inttypes.h>
 #include <libcouchstore/couch_db.h>
 #include <snappy-c.h>
+#include <platform/sized_buffer.h>
+#include <xattr/utils.h>
+#include <xattr/blob.h>
 #include "couch_btree.h"
 #include "util.h"
 #include "bitfield.h"
@@ -278,17 +281,47 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
                 printf("     could not read document body: %s\n", couchstore_strerror(docerr));
             }
         } else if (doc) {
+            std::string xattrs;
+            sized_buf body = doc->data;
+
+            if (mcbp::datatype::is_xattr(datatype)) {
+                auto offset = cb::xattr::get_body_offset({doc->data.buf,
+                                                          doc->data.size});
+                cb::byte_buffer byte_buffer{reinterpret_cast<uint8_t*>(doc->data.buf),
+                                            offset};
+                cb::xattr::Blob blob(byte_buffer);
+                xattrs = to_string(blob.to_json(),false);
+                body = _sized_buf{doc->data.buf + offset, doc->data.size - offset};
+            }
+
             if (dumpJson) {
                 printf("\"size\":%" PRIu64 ",", (uint64_t)doc->data.size);
                 if (docinfo->content_meta & COUCH_DOC_IS_COMPRESSED) {
-                    printf("\"snappy\":true,\"display\":\"inflated\",\"body\":\"");
-                } else {
-                    printf("\"body\":\"");
+                    printf("\"snappy\":true,\"display\":\"inflated\",");
                 }
-                printjquote(&doc->data);
+
+                if (xattrs.size() > 0) {
+                    sized_buf xa{const_cast<char*>(xattrs.data()), xattrs.size()};
+                    printf("\"xattr\":\"");
+                    printjquote(&xa);
+                    printf("\",");
+                }
+
+                printf("\"body\":\"");
+                printjquote(&body);
                 printf("\"}\n");
             } else {
                 printf("     size: %" PRIu64 "\n", (uint64_t)doc->data.size);
+                if (xattrs.size() > 0) {
+                    printf("     xattrs: ");
+                    sized_buf xa{const_cast<char*>(xattrs.data()), xattrs.size()};
+                    if (dumpHex) {
+                        printsbhexraw(&xa);
+                        printf("\n");
+                    } else {
+                        printsb(&xa);
+                    }
+                }
                 printf("     data: ");
 
                 if (docinfo->content_meta & COUCH_DOC_IS_COMPRESSED) {
@@ -296,10 +329,10 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
                 }
 
                 if (dumpHex) {
-                    printsbhexraw(&doc->data);
+                    printsbhexraw(&body);
                     printf("\n");
                 } else {
-                    printsb(&doc->data);
+                    printsb(&body);
                 }
             }
         }
