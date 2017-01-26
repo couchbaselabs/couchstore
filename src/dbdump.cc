@@ -157,7 +157,8 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
     Doc *doc = NULL;
     uint64_t cas;
     uint32_t expiry, flags;
-    uint8_t datatype = 0x00, flex_code = 0x01, conf_res_mode = 0x00;
+    protocol_binary_datatype_t datatype = PROTOCOL_BINARY_RAW_BYTES;
+    uint8_t flex_code = 0x01;
     couchstore_error_t docerr;
     (*count)++;
 
@@ -213,43 +214,36 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
             }
             datatype = *((uint8_t *)(docinfo->rev_meta.buf + sizeof(CouchbaseRevMeta) +
                         sizeof(uint8_t)));
-            auto dt = protocol_binary_datatype_t(datatype);
-            const auto datatype_string = mcbp::datatype::to_string(dt);
+            const auto datatype_string = mcbp::datatype::to_string(datatype);
+
+            if (dumpJson) {
+                printf("\"cas\":\"%" PRIu64 "\",\"expiry\":%" PRIu32
+                       ",\"flags\":%" PRIu32 ",\"datatype\":%d,",
+                       cas, expiry, flags, datatype);
+                print_datatype_as_json(datatype_string);
+            } else {
+                printf("     cas: %" PRIu64 ", expiry: %" PRIu32
+                       ", flags: %" PRIu32 ", datatype: 0x%02x (%s)",
+                       cas, expiry, flags, datatype,
+                       datatype_string.c_str());
+            }
 
             if (docinfo->rev_meta.size > sizeof(CouchbaseRevMeta) + 2) {
                 // 19 bytes of rev_meta indicates CouchbaseRevMeta along with
                 // flex_meta_code (1B) and datatype (1B), along with the conflict
                 // resolution flag (1B).
-                conf_res_mode = *((uint8_t *)(docinfo->rev_meta.buf +
+                auto conf_res_mode = *((uint8_t *)(docinfo->rev_meta.buf +
                                   sizeof(CouchbaseRevMeta) + sizeof(uint8_t) +
                                   sizeof(uint8_t)));
 
                 if (dumpJson) {
-                    printf("\"cas\":\"%" PRIu64 "\",\"expiry\":%" PRIu32
-                           ",\"flags\":%" PRIu32
-                           ",\"datatype\":%d,\"conflict_resolution_mode\":%d,",
-                           cas, expiry, flags, datatype, conf_res_mode);
-                    print_datatype_as_json(datatype_string);
+                    printf("\"conflict_resolution_mode\":%d,", conf_res_mode);
                 } else {
-                    printf("     cas: %" PRIu64 ", expiry: %" PRIu32
-                           ", flags: %" PRIu32 ", "
-                           "datatype: 0x%02x (%s), "
-                           "conflict_resolution_mode: %d\n",
-                           cas, expiry, flags, datatype,
-                           datatype_string.c_str(),
-                           conf_res_mode);
+                    printf(", conflict_resolution_mode: %d\n", conf_res_mode);
                 }
             } else {
-                if (dumpJson) {
-                    printf("\"cas\":\"%" PRIu64 "\",\"expiry\":%" PRIu32
-                           ",\"flags\":%" PRIu32 "," "\"datatype\":%d,",
-                           cas, expiry, flags, datatype);
-                    print_datatype_as_json(datatype_string);
-                } else {
-                    printf("     cas: %" PRIu64 ", expiry: %" PRIu32
-                           ", flags: %" PRIu32 ", datatype: 0x%02x (%s)\n",
-                           cas, expiry, flags, datatype,
-                           datatype_string.c_str());
+                if (!dumpJson) {
+                    printf("\n");
                 }
             }
         } else {
