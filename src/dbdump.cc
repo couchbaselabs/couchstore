@@ -158,7 +158,6 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
     uint64_t cas;
     uint32_t expiry, flags;
     protocol_binary_datatype_t datatype = PROTOCOL_BINARY_RAW_BYTES;
-    uint8_t flex_code = 0x01;
     couchstore_error_t docerr;
     (*count)++;
 
@@ -206,7 +205,8 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
                 printf("     Error parsing the document: Possible corruption\n");
                 return 1;
             }
-            flex_code = *((uint8_t *)(docinfo->rev_meta.buf + sizeof(CouchbaseRevMeta)));
+            const auto flex_code = *((uint8_t*)(docinfo->rev_meta.buf +
+                                                sizeof(CouchbaseRevMeta)));
             if (flex_code < 0x01) {
                 printf("     Error: Flex code mismatch (bad code: %d)\n",
                        flex_code);
