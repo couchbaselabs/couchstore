@@ -9,10 +9,9 @@ import struct
 import sys
 
 BATCH_SIZE = 10000
-
+REV_META_PACK = ">QII"
 
 def insert(db, key, rev, value):
-    REV_META_PACK = ">QII"
     info = DocumentInfo(key)
     info.revSequence = rev
     # cas, exp, flags
@@ -42,6 +41,9 @@ def chunks(l, n):
 
 
 def main():
+    if len(sys.argv) != 3:
+        print "Usage: example1 <doc count> <file>"
+        exit(1)
     db = CouchStore(sys.argv[2], 'c')
     for batch in chunks(range(0, int(sys.argv[1])), BATCH_SIZE):
         insert_multi(db,
