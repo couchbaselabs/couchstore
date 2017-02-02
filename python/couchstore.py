@@ -240,7 +240,7 @@ class LocalDocs(object):
 class CouchStore(object):
     """Interface to a CouchStore database."""
 
-    def __init__(self, path, mode=None):
+    def __init__(self, path, mode=None, unbuffered=False):
         """Creates a CouchStore at a given path. The option mode parameter can
         be 'r' for read-only access, or 'c' to create the file if it doesn't
         already exist."""
@@ -250,6 +250,9 @@ class CouchStore(object):
             flags = 1  # CREATE
         else:
             flags = 0
+
+        if unbuffered:
+            flags |= 8 ## UNBUFFERED
 
         db = ctypes.c_void_p()
         _check(_lib.couchstore_open_db(path,
