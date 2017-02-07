@@ -29,9 +29,9 @@
 #endif
 
 
-#define MAX_READ_BUFFERS 8
+#define MAX_READ_BUFFERS 16
 #define WRITE_BUFFER_CAPACITY (128*1024)
-#define READ_BUFFER_CAPACITY (8*1024)
+#define READ_BUFFER_CAPACITY (4*1024)
 
 #ifdef min
 #undef min
