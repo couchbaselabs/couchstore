@@ -119,7 +119,14 @@ int main(void)
         "merger_sorted_file_3.tmp",
         "merger_sorted_file_4.tmp"
     };
-    const char *dest_file = "merged_file.tmp";
+    const char *pattern_const = "merged_file_XXXXXX";
+    char *pattern = cb_strdup(pattern_const);
+    cb_assert(pattern);
+
+    char *dest_file = cb_mktemp(pattern);
+    cb_assert(dest_file);
+    cb_assert(dest_file == pattern);
+
     const int batches[N_FILES][MAX_RECORDS_PER_FILE] = {
         {3, 5, 6, 14, 18, 19, 29, 30, 35, 38, 44, 45, 46, 51, 54, 57, 62, 65,
          75, 76, 81, 83, 91, 92, 95, 104, 105, 107},
@@ -170,6 +177,7 @@ int main(void)
         remove(source_files[i]);
     }
     remove(dest_file);
+    cb_free(pattern);
 
     fprintf(stderr, "Running file merger tests passed\n\n");
     return 0;

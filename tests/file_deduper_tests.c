@@ -158,7 +158,14 @@ int main(void)
         "deduper_sorted_file_3.tmp",
         "deduper_sorted_file_4.tmp"
     };
-    const char *dest_file = "merged_file.tmp";
+    const char *pattern_const = "deduped_file_XXXXXX";
+    char *pattern = cb_strdup(pattern_const);
+    cb_assert(pattern);
+
+    char *dest_file = cb_mktemp(pattern);
+    cb_assert(dest_file);
+    cb_assert(dest_file == pattern);
+
     unsigned i, j;
     file_merger_error_t ret;
     test_record_t rec;
@@ -201,6 +208,7 @@ int main(void)
         remove(source_files[i]);
     }
     remove(dest_file);
+    cb_free(pattern);
 
     fprintf(stderr, "Running file deduper tests passed\n\n");
     cb_free(expected_result);
