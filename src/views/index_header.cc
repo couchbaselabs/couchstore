@@ -291,12 +291,12 @@ static size_t size_of_partition_versions(part_version_t *part_versions) {
     size_t sz = 2;
     void *it = sorted_list_iterator(part_versions);
     part_version_t *pver = NULL;
-    pver = sorted_list_next(it);
+    pver = (part_version_t*)sorted_list_next(it);
     while (pver != NULL) {
         /* partition ID + number of failover logs */
         sz += 2 + 2;
         sz += pver->num_failover_log * 16;
-        pver = sorted_list_next(it);
+        pver = (part_version_t*)sorted_list_next(it);
     }
     sorted_list_free_iterator(it);
     return sz;
@@ -354,7 +354,7 @@ couchstore_error_t encode_index_header(const index_header_t *header,
     sz += sorted_list_size(header->unindexable_seqs) * (2 + 6);
     /* partition versions */
     if (header->version >= 2) {
-        sz += size_of_partition_versions(header->part_versions);
+        sz += size_of_partition_versions((part_version_t*)header->part_versions);
     }
 
     b = buf = (char *) cb_malloc(sz);
@@ -469,7 +469,7 @@ void free_index_header(index_header_t *header)
     sorted_list_free(header->pending_transition.unindexable);
     sorted_list_free(header->unindexable_seqs);
     if (header->version >= 2) {
-        free_part_versions(header->part_versions);
+        free_part_versions((part_version_t*)header->part_versions);
     }
 
     cb_free(header);
@@ -478,10 +478,10 @@ void free_index_header(index_header_t *header)
 static void free_part_versions(part_version_t *part_versions) {
     void *it = sorted_list_iterator(part_versions);
     part_version_t *pver = NULL;
-    pver = sorted_list_next(it);
+    pver = (part_version_t*)sorted_list_next(it);
     while (pver != NULL) {
         cb_free(pver->failover_log);
-        pver = sorted_list_next(it);
+        pver = (part_version_t*)sorted_list_next(it);
     }
     sorted_list_free_iterator(it);
     sorted_list_free(part_versions);
@@ -519,10 +519,10 @@ static void enc_seq_list(const void *list, char **buf)
     uint16_t *seq = NULL;
 
     enc_uint16((uint16_t) sorted_list_size(list), buf);
-    seq = sorted_list_next(it);
+    seq = (uint16_t*)sorted_list_next(it);
     while (seq != NULL) {
         enc_uint16(*seq, buf);
-        seq = sorted_list_next(it);
+        seq = (uint16_t*)sorted_list_next(it);
     }
     sorted_list_free_iterator(it);
 }
@@ -534,11 +534,11 @@ static void enc_part_seq_list(const void *list, char **buf)
     part_seq_t *pseq = NULL;
 
     enc_uint16((uint16_t) sorted_list_size(list), buf);
-    pseq = sorted_list_next(it);
+    pseq = (part_seq_t*)sorted_list_next(it);
     while (pseq != NULL) {
         enc_uint16(pseq->part_id, buf);
         enc_uint48(pseq->seq, buf);
-        pseq = sorted_list_next(it);
+        pseq = (part_seq_t*)sorted_list_next(it);
     }
     sorted_list_free_iterator(it);
 }
@@ -551,7 +551,7 @@ static void enc_part_versions_list(const void *list, char **buf)
     uint16_t i;
 
     enc_uint16((uint16_t) sorted_list_size(list), buf);
-    pver = sorted_list_next(it);
+    pver = (part_version_t*)sorted_list_next(it);
     while (pver != NULL) {
         enc_uint16(pver->part_id, buf);
         enc_uint16(pver->num_failover_log, buf);
@@ -560,7 +560,7 @@ static void enc_part_versions_list(const void *list, char **buf)
             *buf += 8;
             enc_uint64(pver->failover_log[i].seq, buf);
         }
-        pver = sorted_list_next(it);
+        pver = (part_version_t*)sorted_list_next(it);
     }
     sorted_list_free_iterator(it);
 }

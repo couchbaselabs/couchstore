@@ -14,6 +14,10 @@
 #include <stdlib.h>
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum CollateJSONMode {
     kCollateJSON_Unicode, /* Compare strings as Unicode (CouchDB's default) */
     kCollateJSON_Raw,     /* CouchDB's "raw" collation rules */
@@ -32,5 +36,9 @@ int CollateJSON(const sized_buf *buf1,
 
 /* not part of the API -- exposed for testing only (see collate_json_test.c) */
 char ConvertJSONEscape(const char **in);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

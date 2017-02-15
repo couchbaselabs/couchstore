@@ -30,8 +30,8 @@ static void print_db_info(Db* db)
 {
     DbInfo info;
     couchstore_db_info(db, &info);
-    printf("   doc count: %"PRIu64"\n", info.doc_count);
-    printf("   deleted doc count: %"PRIu64"\n", info.deleted_count);
+    printf("   doc count: %" PRIu64 "\n", info.doc_count);
+    printf("   deleted doc count: %" PRIu64 "\n", info.deleted_count);
     printf("   data size: %s\n", size_str(info.space_used));
 }
 
@@ -52,15 +52,15 @@ static int process_file(const char *file, int iterate_headers)
     }
 
 next_header:
-    printf("DB Info (%s) - header at %"PRIu64"\n", file, db->header.position);
-    printf("   file format version: %"PRIu64"\n", db->header.disk_version);
-    printf("   update_seq: %"PRIu64"\n", db->header.update_seq);
-    printf("   purge_seq: %"PRIu64"\n", db->header.purge_seq);
+    printf("DB Info (%s) - header at %" PRIu64 "\n", file, db->header.position);
+    printf("   file format version: %" PRIu64 "\n", db->header.disk_version);
+    printf("   update_seq: %" PRIu64 "\n", db->header.update_seq);
+    printf("   purge_seq: %" PRIu64 "\n", db->header.purge_seq);
 
     if (db->file.crc_mode < 3) {
         printf("   crc: %s\n", crc_strings[db->file.crc_mode]);
     } else {
-        printf("   crc: warning crc_mode is out of range %"PRIu32"\n",  db->file.crc_mode);
+        printf("   crc: warning crc_mode is out of range %" PRIu32 "\n",  db->file.crc_mode);
     }
 
     print_db_info(db);

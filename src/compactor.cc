@@ -77,7 +77,8 @@ int main(int argc, char** argv)
             hook = time_purge_hook;
             hook_ctx = &timepurge;
             timepurge.purge_before_ts = atoi(argv[argp-1]);
-            printf("Purging items before timestamp %"PRIu64"\n", timepurge.purge_before_ts);
+            printf("Purging items before timestamp %" PRIu64 "\n",
+                   timepurge.purge_before_ts);
         }
 
         if(!strcmp(argv[argp],"--purge-only-upto-seq")) {
@@ -86,7 +87,8 @@ int main(int argc, char** argv)
             }
             argp+=2;
             timepurge.purge_before_seq = (uint64_t)(atoll(argv[argp-1]));
-            printf("Purging items only up-to seq %"PRIu64"\n", timepurge.purge_before_seq);
+            printf("Purging items only up-to seq %" PRIu64 "\n",
+                   timepurge.purge_before_seq);
         }
 
         if(!strcmp(argv[argp],"--dropdeletes")) {

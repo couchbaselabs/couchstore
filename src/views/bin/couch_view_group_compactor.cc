@@ -35,7 +35,7 @@
 static void stats_updater(uint64_t freq, uint64_t inserted)
 {
     if (inserted % freq == 0) {
-        fprintf(stdout, "Stats = inserted : %"PRIu64"\n", freq);
+        fprintf(stdout, "Stats = inserted : %" PRIu64 "\n", freq);
     }
 }
 
@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
     view_group_info_t *group_info = NULL;
     char buf[BUF_SIZE];
     char *target_file = NULL;
-    int ret = COUCHSTORE_SUCCESS;
+    couchstore_error_t ret = COUCHSTORE_SUCCESS;
     sized_buf header_buf = {NULL, 0};
     sized_buf header_outbuf = {NULL, 0};
     uint64_t total_changes = 0;
@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
     }
 
     if (header_size > MAX_VIEW_HEADER_SIZE) {
-        fprintf(stderr, "View header is too large (%"PRIu64" bytes). "
+        fprintf(stderr, "View header is too large (%" PRIu64 " bytes). "
                 "Maximum size is %d bytes\n",
                 header_size, MAX_VIEW_HEADER_SIZE);
         ret = COUCHSTORE_ERROR_INVALID_ARGUMENTS;
@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
     }
 
     header_buf.size = (size_t)header_size;
-    header_buf.buf = cb_malloc(header_buf.size);
+    header_buf.buf = (char*)cb_malloc(header_buf.size);
     if (header_buf.buf == NULL) {
         fprintf(stderr, "Memory allocation failure\n");
         ret = COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
     stats.update_fun = stats_updater;
     stats.freq = MAX(total_changes / 100, 1);
 
-    ret = start_exit_listener(&exit_thread);
+    ret = (couchstore_error_t)start_exit_listener(&exit_thread);
     if (ret) {
         fprintf(stderr, "Error starting stdin exit listener thread\n");
         goto out;
@@ -161,7 +161,7 @@ int main(int argc, char *argv[])
     fwrite(header_outbuf.buf, header_outbuf.size, 1, stdout);
     fprintf(stdout, "\n");
 
-    fprintf(stdout, "Results = inserts : %"PRIu64"\n", stats.inserted);
+    fprintf(stdout, "Results = inserts : %" PRIu64 "\n", stats.inserted);
 
 out:
     couchstore_free_view_group_info(group_info);
@@ -171,7 +171,8 @@ out:
     cb_free((void *) header_outbuf.buf);
     cb_free(target_file);
 
-    ret = (ret < 0) ? (100 + ret) : ret;
-    _exit(ret);
+    int ret_int = (int)ret;
+    ret_int = (ret_int < 0) ? (100 + ret_int) : ret_int;
+    _exit(ret_int);
 }
 

@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
         goto out;
     }
 
-    fprintf(stdout, "PurgedCount %"PRIu64"\n", purge_count);
+    fprintf(stdout, "PurgedCount %" PRIu64 "\n", purge_count);
 
 out:
     couchstore_free_view_group_info(group_info);

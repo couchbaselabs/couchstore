@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
     char *tmp_dir = NULL;
     int i;
     int batch_size;
-    int ret = 2;
+    couchstore_error_t ret = (couchstore_error_t)2;
     int is_sorted = 0;
     view_group_update_stats_t stats;
     sized_buf header_buf = {NULL, 0};
@@ -135,7 +135,7 @@ int main(int argc, char *argv[])
         goto out;
     }
 
-    header_buf.buf = cb_malloc(header_buf.size);
+    header_buf.buf = (char*)cb_malloc(header_buf.size);
     if (header_buf.buf == NULL) {
             fprintf(stderr, "Memory allocation failure\n");
             ret = COUCHSTORE_ERROR_ALLOC_FAIL;
@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
         goto out;
     }
 
-    ret = start_exit_listener(&exit_thread);
+    ret = (couchstore_error_t)start_exit_listener(&exit_thread);
     if (ret) {
         fprintf(stderr, "Error starting stdin exit listener thread\n");
         goto out;
@@ -184,11 +184,11 @@ int main(int argc, char *argv[])
     fprintf(stdout, "\n");
 
     fprintf(stdout,"Results ="
-                   " id_inserts : %"PRIu64
-                   ", id_deletes : %"PRIu64
-                   ", kv_inserts : %"PRIu64
-                   ", kv_deletes : %"PRIu64
-                   ", cleanups : %"PRIu64"\n",
+                   " id_inserts : %" PRIu64
+                   ", id_deletes : %" PRIu64
+                   ", kv_inserts : %" PRIu64
+                   ", kv_deletes : %" PRIu64
+                   ", cleanups : %" PRIu64 "\n",
                    stats.ids_inserted,
                    stats.ids_removed,
                    stats.kvs_inserted,
@@ -210,6 +210,7 @@ out:
     cb_free((void *) header_outbuf.buf);
     cb_free(tmp_dir);
 
-    ret = (ret < 0) ? (100 + ret) : ret;
-    _exit(ret);
+    int ret_int = (int)ret;
+    ret_int = (ret_int < 0) ? (100 + ret_int) : ret_int;
+    _exit(ret_int);
 }

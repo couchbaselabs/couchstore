@@ -24,6 +24,10 @@
 #include "config.h"
 #include <stdio.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void test_no_purge_items(void);
 void test_all_purge_items(void);
 void test_partial_purge_items(void);
@@ -33,5 +37,9 @@ void test_add_remove_purge(void);
 
 void purge_tests(void);
 void test_only_single_leafnode(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

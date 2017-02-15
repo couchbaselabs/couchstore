@@ -230,7 +230,7 @@ uint64_t couchstore_read_int(FILE *in, char *buf, size_t size,
         return 0;
     }
 
-    if (sscanf(buf, "%"SCNu64, &val) != 1) {
+    if (sscanf(buf, "%" SCNu64, &val) != 1) {
         *ret = COUCHSTORE_ERROR_READ;
         return 0;
     }
@@ -254,7 +254,7 @@ void set_error_info(const view_btree_info_t *info,
     } else {
         /* TODO: add more human friendly messages for other error types */
         const int buffersize = 128;
-        char* buf = cb_malloc(buffersize);
+        char* buf = (char*)cb_malloc(buffersize);
 
         if (buf != NULL) {
             size_t len = 0;

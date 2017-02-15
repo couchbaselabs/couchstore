@@ -44,7 +44,7 @@ ELSE(WIN32)
   SET(COUCHSTORE_FILE_OPS "src/os.cc")
 ENDIF(WIN32)
 
-SET(COUCHSTORE_SOURCES src/arena.cc src/bitfield.c src/btree_modify.cc
+SET(COUCHSTORE_SOURCES src/arena.cc src/bitfield.cc src/btree_modify.cc
             src/btree_read.cc src/couch_db.cc src/couch_file_read.cc
             src/couch_file_write.cc src/couch_save.cc src/crc32.cc
             src/db_compact.cc src/file_merger.cc src/file_name_utils.c
@@ -52,15 +52,15 @@ SET(COUCHSTORE_SOURCES src/arena.cc src/bitfield.c src/btree_modify.cc
             src/mergesort.cc src/node_types.cc src/reduces.cc
             src/strerror.cc src/tree_writer.cc
             src/util.cc src/views/bitmap.c src/views/collate_json.c
-            src/views/file_merger.c src/views/file_sorter.c
-            src/views/index_header.c src/views/keys.c
+            src/views/file_merger.cc src/views/file_sorter.cc
+            src/views/index_header.cc src/views/keys.cc
             src/views/mapreduce/mapreduce.cc
-            src/views/mapreduce/mapreduce_c.cc src/views/reducers.c
-            src/views/reductions.c src/views/sorted_list.c
-            src/views/spatial.c src/views/spatial_modify.c
-            src/views/util.c src/views/values.c
-            src/views/view_group.cc src/views/purgers.c
-            src/views/compaction.c src/quicksort.c ${COUCHSTORE_FILE_OPS})
+            src/views/mapreduce/mapreduce_c.cc src/views/reducers.cc
+            src/views/reductions.cc src/views/sorted_list.c
+            src/views/spatial.cc src/views/spatial_modify.cc
+            src/views/util.cc src/views/values.cc
+            src/views/view_group.cc src/views/purgers.cc
+            src/views/compaction.cc src/quicksort.c ${COUCHSTORE_FILE_OPS})
 SET(COUCHSTORE_LIBRARIES ${V8_LIBRARIES} ${ICU_LIBRARIES} ${SNAPPY_LIBRARIES} platform)
 
 SET(COUCHSTORE_GTEST_LIBRARIES gtest gtest_main gmock)
@@ -74,25 +74,25 @@ ADD_EXECUTABLE(couch_dbdump src/dbdump.cc ${COUCHSTORE_SOURCES})
 SET_TARGET_PROPERTIES(couch_dbdump PROPERTIES COMPILE_FLAGS "-DLIBCOUCHSTORE_NO_VISIBILITY=1")
 TARGET_LINK_LIBRARIES(couch_dbdump ${COUCHSTORE_LIBRARIES} xattr)
 
-ADD_EXECUTABLE(couch_dbinfo src/dbinfo.c)
+ADD_EXECUTABLE(couch_dbinfo src/dbinfo.cc)
 TARGET_LINK_LIBRARIES(couch_dbinfo couchstore platform)
 
-ADD_EXECUTABLE(couch_compact src/compactor.c)
+ADD_EXECUTABLE(couch_compact src/compactor.cc)
 TARGET_LINK_LIBRARIES(couch_compact couchstore)
 
-ADD_EXECUTABLE(couch_view_file_merger src/views/bin/couch_view_file_merger.c src/views/bin/util.c)
+ADD_EXECUTABLE(couch_view_file_merger src/views/bin/couch_view_file_merger.cc src/views/bin/util.c)
 TARGET_LINK_LIBRARIES(couch_view_file_merger couchstore)
 
-ADD_EXECUTABLE(couch_view_index_builder src/views/bin/couch_view_index_builder.c src/views/bin/util.c)
+ADD_EXECUTABLE(couch_view_index_builder src/views/bin/couch_view_index_builder.cc src/views/bin/util.c)
 TARGET_LINK_LIBRARIES(couch_view_index_builder couchstore)
 
-ADD_EXECUTABLE(couch_view_group_cleanup src/views/bin/couch_view_group_cleanup.c src/views/bin/util.c)
+ADD_EXECUTABLE(couch_view_group_cleanup src/views/bin/couch_view_group_cleanup.cc src/views/bin/util.c)
 TARGET_LINK_LIBRARIES(couch_view_group_cleanup couchstore)
 
-ADD_EXECUTABLE(couch_view_index_updater src/views/bin/couch_view_index_updater.c src/views/bin/util.c)
+ADD_EXECUTABLE(couch_view_index_updater src/views/bin/couch_view_index_updater.cc src/views/bin/util.c)
 TARGET_LINK_LIBRARIES(couch_view_index_updater couchstore)
 
-ADD_EXECUTABLE(couch_view_group_compactor src/views/bin/couch_view_group_compactor.c src/views/bin/util.c)
+ADD_EXECUTABLE(couch_view_group_compactor src/views/bin/couch_view_group_compactor.cc src/views/bin/util.c)
 TARGET_LINK_LIBRARIES(couch_view_group_compactor couchstore)
 
 IF (INSTALL_HEADER_FILES)
@@ -211,20 +211,20 @@ M_MAKE_LEGACY_TEST(couchstore_mapreduce-reduce-test
 
 ADD_EXECUTABLE(couchstore_testapp
                tests/testapp.c
-               tests/views/tests.c
-               tests/views/collate_json_test.c
-               tests/views/index_headers.c
-               tests/views/bitmaps.c
-               tests/views/sorted_lists.c
-               tests/views/reductions.c
-               tests/views/keys.c
-               tests/views/values.c
-               tests/views/reducers.c
-               tests/views/cleanup.c
-               tests/views/spatial.c
+               tests/views/tests.cc
+               tests/views/collate_json_test.cc
+               tests/views/index_headers.cc
+               tests/views/bitmaps.cc
+               tests/views/sorted_lists.cc
+               tests/views/reductions.cc
+               tests/views/keys.cc
+               tests/views/values.cc
+               tests/views/reducers.cc
+               tests/views/cleanup.cc
+               tests/views/spatial.cc
                tests/btree_purge/purge_tests.h
-               tests/btree_purge/tests.c
-               tests/btree_purge/purge.c
+               tests/btree_purge/tests.cc
+               tests/btree_purge/purge.cc
                ${COUCHSTORE_SOURCES})
 SET_TARGET_PROPERTIES(couchstore_testapp PROPERTIES
         COMPILE_FLAGS "-DLIBCOUCHSTORE_NO_VISIBILITY=1 -DTESTAPP=1")

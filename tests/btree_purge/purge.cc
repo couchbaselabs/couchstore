@@ -367,7 +367,7 @@ static couchstore_error_t check_vals_callback(couchfile_lookup_request *rq,
                                                             const sized_buf *v)
 {
 
-    int *ctx = rq->callback_ctx;
+    int *ctx = (int *)rq->callback_ctx;
     int *num = (int *) k->buf;
     cb_assert(*num == ctx[1] && *num <= ctx[0]);
     ctx[1]++;
@@ -447,7 +447,8 @@ static node_pointer *insert_items(tree_file *file, node_pointer *root,
                                   int n)
 {
 
-    int errcode, i;
+    couchstore_error_t errcode;
+    int i;
     couchfile_modify_request rq;
     couchfile_modify_action *acts;
     node_pointer *nroot = NULL;
@@ -465,10 +466,10 @@ static node_pointer *insert_items(tree_file *file, node_pointer *root,
         arr2[i] = (i + 1) % 64;
 
         keys[i].size = sizeof(int);
-        keys[i].buf = (void *) &arr1[i];
+        keys[i].buf = (char *) &arr1[i];
 
         vals[i].size = sizeof(int);
-        vals[i].buf = (void *) &arr2[i];
+        vals[i].buf = (char *) &arr2[i];
 
         acts[i].type = ACTION_INSERT;
         acts[i].value.data = &vals[i];
@@ -550,7 +551,8 @@ static couchstore_error_t iter_btree(tree_file *file, node_pointer *root,
 
 void test_no_purge_items()
 {
-    int errcode, N;
+    couchstore_error_t errcode;
+    int N;
     int redval;
     int ctx[2];
     int purge_sum[2] = {0, 0};
@@ -597,7 +599,8 @@ cleanup:
 
 void test_all_purge_items()
 {
-    int errcode, N;
+    couchstore_error_t errcode;
+    int N;
     int redval;
     int purge_sum[2] = {0, 0};
     Db *db = NULL;
@@ -640,7 +643,8 @@ cleanup:
 
 void test_partial_purge_items()
 {
-    int errcode, N;
+    couchstore_error_t errcode;
+    int N;
     int exp_evenodd[2];
     int purge_count = 0;
     Db *db = NULL;
@@ -683,7 +687,8 @@ cleanup:
 
 void test_partial_purge_items2()
 {
-    int errcode, N;
+    couchstore_error_t errcode;
+    int N;
     Db *db = NULL;
     node_pointer *root = NULL, *newroot = NULL;
     int range_start, range_end;
@@ -730,7 +735,8 @@ cleanup:
 
 void test_partial_purge_with_stop()
 {
-    int errcode, N;
+    couchstore_error_t errcode;
+    int N;
     int exp_evenodd[2];
     int purge_count = 0;
     Db *db = NULL;
@@ -774,7 +780,8 @@ cleanup:
 
 void test_add_remove_purge()
 {
-    int errcode, N, i;
+    couchstore_error_t errcode;
+    int N, i;
     int exp_evenodd[2];
     int purge_count = 0;
     Db *db = NULL;
@@ -822,7 +829,7 @@ void test_add_remove_purge()
 
     for (i = 0; i < 6; i++) {
         keys[i].size  = sizeof(int);
-        keys[i].buf = (void *) &arr[i];
+        keys[i].buf = (char *) &arr[i];
         acts[i].key = &keys[i];
         acts[i].value.data = &keys[i];
     }
@@ -856,7 +863,8 @@ cleanup:
 
 void test_only_single_leafnode()
 {
-    int errcode, N;
+    couchstore_error_t errcode;
+    int N;
     int redval;
     int purge_sum[2] = {0,0};
     Db *db = NULL;

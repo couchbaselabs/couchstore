@@ -78,11 +78,11 @@ typedef struct {
 
 #define DOUBLE_FMT "%.15g"
 #define scan_stats(buf, sum, count, min, max, sumsqr) \
-        sscanf(buf, "{\"sum\":%lg,\"count\":%"SCNu64",\"min\":%lg,\"max\":%lg,\"sumsqr\":%lg}",\
+        sscanf(buf, "{\"sum\":%lg,\"count\":%" SCNu64 ",\"min\":%lg,\"max\":%lg,\"sumsqr\":%lg}",\
                &sum, &count, &min, &max, &sumsqr)
 
 #define sprint_stats(buf, sum, count, min, max, sumsqr) \
-        sprintf(buf, "{\"sum\":%g,\"count\":%"PRIu64",\"min\":%g,\"max\":%g,\"sumsqr\":%g}",\
+        sprintf(buf, "{\"sum\":%g,\"count\":%" PRIu64 ",\"min\":%g,\"max\":%g,\"sumsqr\":%g}",\
                 sum, count, min, max, sumsqr)
 
 static void free_key_excluding_elements(view_btree_key_t *key);
@@ -284,7 +284,7 @@ static couchstore_error_t builtin_count_reducer(const mapreduce_json_list_t *key
         }
     }
 
-    size = sprintf(red, "%"PRIu64, count);
+    size = sprintf(red, "%" PRIu64, count);
     cb_assert(size > 0);
     buf->buf = (char *) cb_malloc(size);
     if (buf->buf == NULL) {
@@ -487,20 +487,21 @@ view_reducer_ctx_t *make_view_reducer_ctx(const char *functions[],
                                           char **error_msg)
 {
     unsigned i;
-    reducer_private_t *priv = cb_calloc(1, sizeof(*priv));
-    view_reducer_ctx_t *ctx = cb_calloc(1, sizeof(*ctx));
+    reducer_private_t *priv = (reducer_private_t*)cb_calloc(1, sizeof(*priv));
+    view_reducer_ctx_t *ctx = (view_reducer_ctx_t*)cb_calloc(1, sizeof(*ctx));
 
     if (ctx == NULL || priv == NULL) {
         goto error;
     }
 
     priv->num_reducers = num_functions;
-    priv->reducers = cb_calloc(num_functions, sizeof(reducer_fn_t));
+    priv->reducers = (reducer_fn_t*)cb_calloc(num_functions, sizeof(reducer_fn_t));
     if (priv->reducers == NULL) {
         goto error;
     }
 
-    priv->reducer_contexts = cb_calloc(num_functions, sizeof(reducer_ctx_t));
+    priv->reducer_contexts = (reducer_ctx_t*)
+                             cb_calloc(num_functions, sizeof(reducer_ctx_t));
     if (priv->reducer_contexts == NULL) {
         goto error;
     }
@@ -610,7 +611,7 @@ static void add_error_message(view_reducer_ctx_t *red_ctx, int rereduce)
                error_msg = cb_strdup("function timeout");
                cb_assert(error_msg != NULL);
            } else {
-               error_msg = cb_malloc(64);
+               error_msg = (char*)cb_malloc(64);
                cb_assert(error_msg != NULL);
                sprintf(error_msg, "mapreduce error: %d", priv->mapreduce_error);
            }

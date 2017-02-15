@@ -134,7 +134,8 @@ static index_header_t *test_index_header_decoding_v1(const char *header_bin,
 
     cb_assert(sorted_list_size(header->replicas_on_transfer) == num_reps);
     for (ii = 0; ii < num_reps; ++ii) {
-        uint16_t *part_id = sorted_list_get(header->replicas_on_transfer,
+        uint16_t *part_id = (uint16_t*)
+                            sorted_list_get(header->replicas_on_transfer,
                                             &replicas_on_transfer[ii]);
         cb_assert(part_id != NULL);
         cb_assert(*part_id == replicas_on_transfer[ii]);
@@ -143,7 +144,8 @@ static index_header_t *test_index_header_decoding_v1(const char *header_bin,
     num_pending_active = sizeof(pending_active) / sizeof(pending_active[0]);
     cb_assert(sorted_list_size(header->pending_transition.active) == num_pending_active);
     for (ii = 0; ii < num_pending_active; ++ii) {
-        uint16_t *part_id = sorted_list_get(header->pending_transition.active,
+        uint16_t *part_id = (uint16_t*)
+                            sorted_list_get(header->pending_transition.active,
                                             &pending_active[ii]);
         cb_assert(part_id != NULL);
         cb_assert(*part_id == pending_active[ii]);
@@ -152,7 +154,8 @@ static index_header_t *test_index_header_decoding_v1(const char *header_bin,
     num_pending_passive = sizeof(pending_passive) / sizeof(pending_passive[0]);
     cb_assert(sorted_list_size(header->pending_transition.passive) == num_pending_passive);
     for (ii = 0; ii < num_pending_passive; ++ii) {
-        uint16_t *part_id = sorted_list_get(header->pending_transition.passive,
+        uint16_t *part_id = (uint16_t*)
+                            sorted_list_get(header->pending_transition.passive,
                                             &pending_passive[ii]);
         cb_assert(part_id != NULL);
         cb_assert(*part_id == pending_passive[ii]);
@@ -161,7 +164,8 @@ static index_header_t *test_index_header_decoding_v1(const char *header_bin,
     num_pending_unindexable = sizeof(pending_unindexable) / sizeof(pending_unindexable[0]);
     cb_assert(sorted_list_size(header->pending_transition.unindexable) == num_pending_unindexable);
     for (ii = 0; ii < num_pending_unindexable; ++ii) {
-        uint16_t *part_id = sorted_list_get(header->pending_transition.unindexable,
+        uint16_t *part_id = (uint16_t*)
+                            sorted_list_get(header->pending_transition.unindexable,
                                             &pending_unindexable[ii]);
         cb_assert(part_id != NULL);
         cb_assert(*part_id == pending_unindexable[ii]);
@@ -225,7 +229,7 @@ static index_header_t *test_index_header_decoding_v2(const char *header_bin,
         pseq = (part_seq_t *) sorted_list_get(header->seqs, &rs);
         cb_assert(pseq != NULL);
         cb_assert(pseq->part_id == jj);
-        cb_assert(pseq->seq == jj * jj);
+        cb_assert(pseq->seq == (uint64_t)jj * jj);
     }
 
     num_unindexable = sizeof(unindexable) / sizeof(unindexable[0]);
@@ -237,7 +241,7 @@ static index_header_t *test_index_header_decoding_v2(const char *header_bin,
         pseq = (part_seq_t *) sorted_list_get(header->unindexable_seqs, &rs);
         cb_assert(pseq != NULL);
         cb_assert(pseq->part_id == unindexable[ii]);
-        cb_assert(pseq->seq == unindexable[ii] * unindexable[ii]);
+        cb_assert(pseq->seq == (uint64_t)unindexable[ii] * unindexable[ii]);
     }
     cb_assert(header->id_btree_state->pointer == 123);
     cb_assert(header->id_btree_state->subtreesize == 567);
@@ -267,7 +271,8 @@ static index_header_t *test_index_header_decoding_v2(const char *header_bin,
 
     cb_assert(sorted_list_size(header->replicas_on_transfer) == num_reps);
     for (ii = 0; ii < num_reps; ++ii) {
-        uint16_t *part_id = sorted_list_get(header->replicas_on_transfer,
+        uint16_t *part_id = (uint16_t*)
+                            sorted_list_get(header->replicas_on_transfer,
                                             &replicas_on_transfer[ii]);
         cb_assert(part_id != NULL);
         cb_assert(*part_id == replicas_on_transfer[ii]);
@@ -276,7 +281,8 @@ static index_header_t *test_index_header_decoding_v2(const char *header_bin,
     num_pending_active = sizeof(pending_active) / sizeof(pending_active[0]);
     cb_assert(sorted_list_size(header->pending_transition.active) == num_pending_active);
     for (ii = 0; ii < num_pending_active; ++ii) {
-        uint16_t *part_id = sorted_list_get(header->pending_transition.active,
+        uint16_t *part_id = (uint16_t*)
+                            sorted_list_get(header->pending_transition.active,
                                             &pending_active[ii]);
         cb_assert(part_id != NULL);
         cb_assert(*part_id == pending_active[ii]);
@@ -285,7 +291,8 @@ static index_header_t *test_index_header_decoding_v2(const char *header_bin,
     num_pending_passive = sizeof(pending_passive) / sizeof(pending_passive[0]);
     cb_assert(sorted_list_size(header->pending_transition.passive) == num_pending_passive);
     for (ii = 0; ii < num_pending_passive; ++ii) {
-        uint16_t *part_id = sorted_list_get(header->pending_transition.passive,
+        uint16_t *part_id = (uint16_t*)
+                            sorted_list_get(header->pending_transition.passive,
                                             &pending_passive[ii]);
         cb_assert(part_id != NULL);
         cb_assert(*part_id == pending_passive[ii]);
@@ -294,7 +301,8 @@ static index_header_t *test_index_header_decoding_v2(const char *header_bin,
     num_pending_unindexable = sizeof(pending_unindexable) / sizeof(pending_unindexable[0]);
     cb_assert(sorted_list_size(header->pending_transition.unindexable) == num_pending_unindexable);
     for (ii = 0; ii < num_pending_unindexable; ++ii) {
-        uint16_t *part_id = sorted_list_get(header->pending_transition.unindexable,
+        uint16_t *part_id = (uint16_t*)
+                            sorted_list_get(header->pending_transition.unindexable,
                                             &pending_unindexable[ii]);
         cb_assert(part_id != NULL);
         cb_assert(*part_id == pending_unindexable[ii]);
@@ -311,7 +319,7 @@ static index_header_t *test_index_header_decoding_v2(const char *header_bin,
         cb_assert(memcmp(pver->failover_log[0].uuid, "auuid123", 8) == 0);
         cb_assert(pver->failover_log[0].seq == jj);
         cb_assert(memcmp(pver->failover_log[1].uuid, "another1", 8) == 0);
-        cb_assert(pver->failover_log[1].seq == jj * jj);
+        cb_assert(pver->failover_log[1].seq == (uint64_t)jj * jj);
     }
 
     return header;

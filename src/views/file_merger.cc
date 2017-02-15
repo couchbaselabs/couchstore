@@ -66,7 +66,7 @@ file_merger_error_t merge_spatial_kvs_ops_files(const char *source_files[],
 {
     file_sorter_error_t ret;
     view_file_merge_ctx_t ctx;
-    int i;
+    unsigned i;
 
     ctx.key_cmp_fun = spatial_merger_key_cmp;
     ctx.type = INCREMENTAL_UPDATE_SPATIAL_RECORD;

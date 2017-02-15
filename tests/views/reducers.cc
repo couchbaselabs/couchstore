@@ -13,7 +13,16 @@
 #define VIEW_KV_CHUNK_THRESHOLD (7 * 1024)
 #define VIEW_KP_CHUNK_THRESHOLD (6 * 1024)
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int view_btree_cmp(const sized_buf *key1, const sized_buf *key2);
+
+#ifdef __cplusplus
+}
+#endif
+
 static void free_node_list(nodelist *nl)
 {
     nodelist *tmp;
@@ -82,7 +91,7 @@ static void test_view_id_btree_reducer(void)
     size_t data_bin2_size = 0;
 
     key1.partition = 67;
-    key1.doc_id.buf = "doc_00000057";
+    key1.doc_id.buf = (char*)"doc_00000057";
     key1.doc_id.size = sizeof("doc_00000057") - 1;
     cb_assert(encode_view_id_btree_key(&key1, &key_bin1, &key_bin1_size) == COUCHSTORE_SUCCESS);
 
@@ -95,22 +104,22 @@ static void test_view_id_btree_reducer(void)
     data1.view_keys_map[0].num_keys = 2;
     data1.view_keys_map[0].json_keys = (sized_buf *) cb_malloc(sizeof(sized_buf) * 2);
     cb_assert(data1.view_keys_map[0].json_keys != NULL);
-    data1.view_keys_map[0].json_keys[0].buf = "-321";
+    data1.view_keys_map[0].json_keys[0].buf = (char*)"-321";
     data1.view_keys_map[0].json_keys[0].size = sizeof("-321") - 1;
-    data1.view_keys_map[0].json_keys[1].buf = "[123,\"foobar\"]";
+    data1.view_keys_map[0].json_keys[1].buf = (char*)"[123,\"foobar\"]";
     data1.view_keys_map[0].json_keys[1].size = sizeof("[123,\"foobar\"]") - 1;
 
     data1.view_keys_map[1].view_id = 1;
     data1.view_keys_map[1].num_keys = 1;
     data1.view_keys_map[1].json_keys = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
-    data1.view_keys_map[1].json_keys[0].buf = "[5,6,7]";
+    data1.view_keys_map[1].json_keys[0].buf = (char*)"[5,6,7]";
     data1.view_keys_map[1].json_keys[0].size = sizeof("[5,6,7]") - 1;
 
     cb_assert(encode_view_id_btree_value(&data1, &data_bin1, &data_bin1_size) == COUCHSTORE_SUCCESS);
     free_id_value(&data1);
 
     key2.partition = 57;
-    key2.doc_id.buf = "foobar";
+    key2.doc_id.buf = (char*)"foobar";
     key2.doc_id.size = sizeof("foobar") - 1;
     cb_assert(encode_view_id_btree_key(&key2, &key_bin2, &key_bin2_size) == COUCHSTORE_SUCCESS);
 
@@ -123,13 +132,13 @@ static void test_view_id_btree_reducer(void)
     data2.view_keys_map[0].num_keys = 1;
     data2.view_keys_map[0].json_keys = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     cb_assert(data2.view_keys_map[0].json_keys != NULL);
-    data2.view_keys_map[0].json_keys[0].buf = "\"abc\"";
+    data2.view_keys_map[0].json_keys[0].buf = (char*)"\"abc\"";
     data2.view_keys_map[0].json_keys[0].size = sizeof("\"abc\"") - 1;
 
     data2.view_keys_map[1].view_id = 1;
     data2.view_keys_map[1].num_keys = 1;
     data2.view_keys_map[1].json_keys = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
-    data2.view_keys_map[1].json_keys[0].buf = "\"qwerty\"";
+    data2.view_keys_map[1].json_keys[0].buf = (char*)"\"qwerty\"";
     data2.view_keys_map[1].json_keys[0].size = sizeof("\"qwerty\"") - 1;
 
     cb_assert(encode_view_id_btree_value(&data2, &data_bin2, &data_bin2_size) == COUCHSTORE_SUCCESS);
@@ -264,44 +273,44 @@ static void test_view_btree_sum_reducer(void)
     ctx = make_view_reducer_ctx(function_sources, 1, &error_msg);
     cb_assert(ctx != NULL);
 
-    key1.json_key.buf = "10";
+    key1.json_key.buf = (char*)"10";
     key1.json_key.size = sizeof("10") - 1;
-    key1.doc_id.buf = "doc_10";
+    key1.doc_id.buf = (char*)"doc_10";
     key1.doc_id.size = sizeof("doc_10") - 1;
     cb_assert(encode_view_btree_key(&key1, &key1_bin, &key1_bin_size) == COUCHSTORE_SUCCESS);
 
-    key2.json_key.buf = "11";
+    key2.json_key.buf = (char*)"11";
     key2.json_key.size = sizeof("11") - 1;
-    key2.doc_id.buf = "doc_11";
+    key2.doc_id.buf = (char*)"doc_11";
     key2.doc_id.size = sizeof("doc_11") - 1;
     cb_assert(encode_view_btree_key(&key2, &key2_bin, &key2_bin_size) == COUCHSTORE_SUCCESS);
 
-    key3.json_key.buf = "12";
+    key3.json_key.buf = (char*)"12";
     key3.json_key.size = sizeof("12") - 1;
-    key3.doc_id.buf = "doc_12";
+    key3.doc_id.buf = (char*)"doc_12";
     key3.doc_id.size = sizeof("doc_12") - 1;
     cb_assert(encode_view_btree_key(&key3, &key3_bin, &key3_bin_size) == COUCHSTORE_SUCCESS);
 
     value1.partition = 7;
     value1.num_values = 2;
     value1.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 2);
-    value1.values[0].buf = "100";
+    value1.values[0].buf = (char*)"100";
     value1.values[0].size = sizeof("100") - 1;
-    value1.values[1].buf = "1";
+    value1.values[1].buf = (char*)"1";
     value1.values[1].size = sizeof("1") - 1;
     cb_assert(encode_view_btree_value(&value1, &value1_bin, &value1_bin_size) == COUCHSTORE_SUCCESS);
 
     value2.partition = 666;
     value2.num_values = 1;
     value2.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
-    value2.values[0].buf = "1000";
+    value2.values[0].buf = (char*)"1000";
     value2.values[0].size = sizeof("1000") - 1;
     cb_assert(encode_view_btree_value(&value2, &value2_bin, &value2_bin_size) == COUCHSTORE_SUCCESS);
 
     value3.partition = 1023;
     value3.num_values = 1;
     value3.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
-    value3.values[0].buf = "5000.33";
+    value3.values[0].buf = (char*)"5000.33";
     value3.values[0].size = sizeof("5000.33") - 1;
     cb_assert(encode_view_btree_value(&value3, &value3_bin, &value3_bin_size) == COUCHSTORE_SUCCESS);
 
@@ -351,7 +360,7 @@ static void test_view_btree_sum_reducer(void)
 
     /* Test _sum reduce error */
 
-    value3.values[0].buf = "\"foobar\"";
+    value3.values[0].buf = (char*)"\"foobar\"";
     value3.values[0].size = sizeof("\"foobar\"") - 1;
     cb_free(value3_bin);
     cb_assert(encode_view_btree_value(&value3, &value3_bin, &value3_bin_size) == COUCHSTORE_SUCCESS);
@@ -372,7 +381,7 @@ static void test_view_btree_sum_reducer(void)
     reduction1.num_values = 1;
     reduction1.reduce_values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     cb_assert(reduction1.reduce_values != NULL);
-    reduction1.reduce_values[0].buf = "4444.11";
+    reduction1.reduce_values[0].buf = (char*)"4444.11";
     reduction1.reduce_values[0].size = sizeof("4444.11") - 1;
     cb_assert(encode_view_btree_reduction(&reduction1, reduction1_bin, &reduction1_bin_size) == COUCHSTORE_SUCCESS);
 
@@ -384,7 +393,7 @@ static void test_view_btree_sum_reducer(void)
     reduction2.num_values = 1;
     reduction2.reduce_values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     cb_assert(reduction2.reduce_values != NULL);
-    reduction2.reduce_values[0].buf = "-100";
+    reduction2.reduce_values[0].buf = (char*)"-100";
     reduction2.reduce_values[0].size = sizeof("-100") - 1;
     cb_assert(encode_view_btree_reduction(&reduction2, reduction2_bin, &reduction2_bin_size) == COUCHSTORE_SUCCESS);
 
@@ -428,7 +437,7 @@ static void test_view_btree_sum_reducer(void)
     free_view_btree_reduction(red);
     red = NULL;
 
-    reduction2.reduce_values[0].buf = "true";
+    reduction2.reduce_values[0].buf = (char*)"true";
     reduction2.reduce_values[0].size = sizeof("true") - 1;
     cb_assert(encode_view_btree_reduction(&reduction2, reduction2_bin, &reduction2_bin_size) == COUCHSTORE_SUCCESS);
 
@@ -495,44 +504,44 @@ static void test_view_btree_count_reducer(void)
     ctx = make_view_reducer_ctx(function_sources, 1, &error_msg);
     cb_assert(ctx != NULL);
 
-    key1.json_key.buf = "10";
+    key1.json_key.buf = (char*)"10";
     key1.json_key.size = sizeof("10") - 1;
-    key1.doc_id.buf = "doc_10";
+    key1.doc_id.buf = (char*)"doc_10";
     key1.doc_id.size = sizeof("doc_10") - 1;
     cb_assert(encode_view_btree_key(&key1, &key1_bin, &key1_bin_size) == COUCHSTORE_SUCCESS);
 
-    key2.json_key.buf = "11";
+    key2.json_key.buf = (char*)"11";
     key2.json_key.size = sizeof("11") - 1;
-    key2.doc_id.buf = "doc_11";
+    key2.doc_id.buf = (char*)"doc_11";
     key2.doc_id.size = sizeof("doc_11") - 1;
     cb_assert(encode_view_btree_key(&key2, &key2_bin, &key2_bin_size) == COUCHSTORE_SUCCESS);
 
-    key3.json_key.buf = "12";
+    key3.json_key.buf = (char*)"12";
     key3.json_key.size = sizeof("12") - 1;
-    key3.doc_id.buf = "doc_12";
+    key3.doc_id.buf = (char*)"doc_12";
     key3.doc_id.size = sizeof("doc_12") - 1;
     cb_assert(encode_view_btree_key(&key3, &key3_bin, &key3_bin_size) == COUCHSTORE_SUCCESS);
 
     value1.partition = 7;
     value1.num_values = 2;
     value1.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 2);
-    value1.values[0].buf = "100";
+    value1.values[0].buf = (char*)"100";
     value1.values[0].size = sizeof("100") - 1;
-    value1.values[1].buf = "1";
+    value1.values[1].buf = (char*)"1";
     value1.values[1].size = sizeof("1") - 1;
     cb_assert(encode_view_btree_value(&value1, &value1_bin, &value1_bin_size) == COUCHSTORE_SUCCESS);
 
     value2.partition = 666;
     value2.num_values = 1;
     value2.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
-    value2.values[0].buf = "1000";
+    value2.values[0].buf = (char*)"1000";
     value2.values[0].size = sizeof("1000") - 1;
     cb_assert(encode_view_btree_value(&value2, &value2_bin, &value2_bin_size) == COUCHSTORE_SUCCESS);
 
     value3.partition = 1023;
     value3.num_values = 1;
     value3.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
-    value3.values[0].buf = "5000.33";
+    value3.values[0].buf = (char*)"5000.33";
     value3.values[0].size = sizeof("5000.33") - 1;
     cb_assert(encode_view_btree_value(&value3, &value3_bin, &value3_bin_size) == COUCHSTORE_SUCCESS);
 
@@ -587,7 +596,7 @@ static void test_view_btree_count_reducer(void)
     reduction1.num_values = 1;
     reduction1.reduce_values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     cb_assert(reduction1.reduce_values != NULL);
-    reduction1.reduce_values[0].buf = "4444";
+    reduction1.reduce_values[0].buf = (char*)"4444";
     reduction1.reduce_values[0].size = sizeof("4444") - 1;
     cb_assert(encode_view_btree_reduction(&reduction1, reduction1_bin, &reduction1_bin_size) == COUCHSTORE_SUCCESS);
 
@@ -599,7 +608,7 @@ static void test_view_btree_count_reducer(void)
     reduction2.num_values = 1;
     reduction2.reduce_values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     cb_assert(reduction2.reduce_values != NULL);
-    reduction2.reduce_values[0].buf = "100";
+    reduction2.reduce_values[0].buf = (char*)"100";
     reduction2.reduce_values[0].size = sizeof("100") - 1;
     cb_assert(encode_view_btree_reduction(&reduction2, reduction2_bin, &reduction2_bin_size) == COUCHSTORE_SUCCESS);
 
@@ -703,44 +712,44 @@ static void test_view_btree_stats_reducer(void)
     ctx = make_view_reducer_ctx(function_sources, 1, &error_msg);
     cb_assert(ctx != NULL);
 
-    key1.json_key.buf = "10";
+    key1.json_key.buf = (char*)"10";
     key1.json_key.size = sizeof("10") - 1;
-    key1.doc_id.buf = "doc_10";
+    key1.doc_id.buf = (char*)"doc_10";
     key1.doc_id.size = sizeof("doc_10") - 1;
     cb_assert(encode_view_btree_key(&key1, &key1_bin, &key1_bin_size) == COUCHSTORE_SUCCESS);
 
-    key2.json_key.buf = "11";
+    key2.json_key.buf = (char*)"11";
     key2.json_key.size = sizeof("11") - 1;
-    key2.doc_id.buf = "doc_11";
+    key2.doc_id.buf = (char*)"doc_11";
     key2.doc_id.size = sizeof("doc_11") - 1;
     cb_assert(encode_view_btree_key(&key2, &key2_bin, &key2_bin_size) == COUCHSTORE_SUCCESS);
 
-    key3.json_key.buf = "12";
+    key3.json_key.buf = (char*)"12";
     key3.json_key.size = sizeof("12") - 1;
-    key3.doc_id.buf = "doc_12";
+    key3.doc_id.buf = (char*)"doc_12";
     key3.doc_id.size = sizeof("doc_12") - 1;
     cb_assert(encode_view_btree_key(&key3, &key3_bin, &key3_bin_size) == COUCHSTORE_SUCCESS);
 
     value1.partition = 7;
     value1.num_values = 2;
     value1.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 2);
-    value1.values[0].buf = "100";
+    value1.values[0].buf = (char*)"100";
     value1.values[0].size = sizeof("100") - 1;
-    value1.values[1].buf = "1";
+    value1.values[1].buf = (char*)"1";
     value1.values[1].size = sizeof("1") - 1;
     cb_assert(encode_view_btree_value(&value1, &value1_bin, &value1_bin_size) == COUCHSTORE_SUCCESS);
 
     value2.partition = 666;
     value2.num_values = 1;
     value2.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
-    value2.values[0].buf = "1000";
+    value2.values[0].buf = (char*)"1000";
     value2.values[0].size = sizeof("1000") - 1;
     cb_assert(encode_view_btree_value(&value2, &value2_bin, &value2_bin_size) == COUCHSTORE_SUCCESS);
 
     value3.partition = 1023;
     value3.num_values = 1;
     value3.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
-    value3.values[0].buf = "2000.50";
+    value3.values[0].buf = (char*)"2000.50";
     value3.values[0].size = sizeof("2000.50") - 1;
     cb_assert(encode_view_btree_value(&value3, &value3_bin, &value3_bin_size) == COUCHSTORE_SUCCESS);
 
@@ -790,7 +799,7 @@ static void test_view_btree_stats_reducer(void)
     red = NULL;
 
     /* Test _stats reduce error */
-    value3.values[0].buf = "\"foobar\"";
+    value3.values[0].buf = (char*)"\"foobar\"";
     value3.values[0].size = sizeof("\"foobar\"") - 1;
     cb_free(value3_bin);
     cb_assert(encode_view_btree_value(&value3, &value3_bin, &value3_bin_size) == COUCHSTORE_SUCCESS);
@@ -811,7 +820,8 @@ static void test_view_btree_stats_reducer(void)
     reduction1.num_values = 1;
     reduction1.reduce_values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     cb_assert(reduction1.reduce_values != NULL);
-    reduction1.reduce_values[0].buf = "{\"sum\":3101.5,\"count\":4,\"min\":1,\"max\":2000.5,\"sumsqr\":5}";
+    reduction1.reduce_values[0].buf =
+        (char*)"{\"sum\":3101.5,\"count\":4,\"min\":1,\"max\":2000.5,\"sumsqr\":5}";
     reduction1.reduce_values[0].size = strlen(reduction1.reduce_values[0].buf);
     cb_assert(encode_view_btree_reduction(&reduction1, reduction1_bin, &reduction1_bin_size) == COUCHSTORE_SUCCESS);
 
@@ -823,7 +833,8 @@ static void test_view_btree_stats_reducer(void)
     reduction2.num_values = 1;
     reduction2.reduce_values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     cb_assert(reduction2.reduce_values != NULL);
-    reduction2.reduce_values[0].buf = "{\"sum\":7101.6,\"count\":4,\"min\":3,\"max\":1000.5,\"sumsqr\":10}";
+    reduction2.reduce_values[0].buf =
+        (char*)"{\"sum\":7101.6,\"count\":4,\"min\":3,\"max\":1000.5,\"sumsqr\":10}";
     reduction2.reduce_values[0].size = strlen(reduction2.reduce_values[0].buf);
     cb_assert(encode_view_btree_reduction(&reduction2, reduction2_bin, &reduction2_bin_size) == COUCHSTORE_SUCCESS);
 
@@ -924,44 +935,44 @@ static void test_view_btree_js_reducer(void)
     ctx = make_view_reducer_ctx(function_sources, 1, &error_msg);
     cb_assert(ctx != NULL);
 
-    key1.json_key.buf = "10";
+    key1.json_key.buf = (char*)"10";
     key1.json_key.size = sizeof("10") - 1;
-    key1.doc_id.buf = "doc_10";
+    key1.doc_id.buf = (char*)"doc_10";
     key1.doc_id.size = sizeof("doc_10") - 1;
     cb_assert(encode_view_btree_key(&key1, &key1_bin, &key1_bin_size) == COUCHSTORE_SUCCESS);
 
-    key2.json_key.buf = "11";
+    key2.json_key.buf = (char*)"11";
     key2.json_key.size = sizeof("11") - 1;
-    key2.doc_id.buf = "doc_11";
+    key2.doc_id.buf = (char*)"doc_11";
     key2.doc_id.size = sizeof("doc_11") - 1;
     cb_assert(encode_view_btree_key(&key2, &key2_bin, &key2_bin_size) == COUCHSTORE_SUCCESS);
 
-    key3.json_key.buf = "12";
+    key3.json_key.buf = (char*)"12";
     key3.json_key.size = sizeof("12") - 1;
-    key3.doc_id.buf = "doc_12";
+    key3.doc_id.buf = (char*)"doc_12";
     key3.doc_id.size = sizeof("doc_12") - 1;
     cb_assert(encode_view_btree_key(&key3, &key3_bin, &key3_bin_size) == COUCHSTORE_SUCCESS);
 
     value1.partition = 7;
     value1.num_values = 2;
     value1.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 2);
-    value1.values[0].buf = "100";
+    value1.values[0].buf = (char*)"100";
     value1.values[0].size = sizeof("100") - 1;
-    value1.values[1].buf = "1";
+    value1.values[1].buf = (char*)"1";
     value1.values[1].size = sizeof("1") - 1;
     cb_assert(encode_view_btree_value(&value1, &value1_bin, &value1_bin_size) == COUCHSTORE_SUCCESS);
 
     value2.partition = 666;
     value2.num_values = 1;
     value2.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
-    value2.values[0].buf = "1000";
+    value2.values[0].buf = (char*)"1000";
     value2.values[0].size = sizeof("1000") - 1;
     cb_assert(encode_view_btree_value(&value2, &value2_bin, &value2_bin_size) == COUCHSTORE_SUCCESS);
 
     value3.partition = 1023;
     value3.num_values = 1;
     value3.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
-    value3.values[0].buf = "5000.33";
+    value3.values[0].buf = (char*)"5000.33";
     value3.values[0].size = sizeof("5000.33") - 1;
     cb_assert(encode_view_btree_value(&value3, &value3_bin, &value3_bin_size) == COUCHSTORE_SUCCESS);
 
@@ -1012,7 +1023,7 @@ static void test_view_btree_js_reducer(void)
     /* Test JS reduce error */
 
     cb_free(value3_bin);
-    value3.values[0].buf = "\"foobar\"";
+    value3.values[0].buf = (char*)"\"foobar\"";
     value3.values[0].size = sizeof("\"foobar\"") - 1;
     cb_assert(encode_view_btree_value(&value3, &value3_bin, &value3_bin_size) == COUCHSTORE_SUCCESS);
 
@@ -1032,7 +1043,7 @@ static void test_view_btree_js_reducer(void)
     reduction1.num_values = 1;
     reduction1.reduce_values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     cb_assert(reduction1.reduce_values != NULL);
-    reduction1.reduce_values[0].buf = "4444";
+    reduction1.reduce_values[0].buf = (char*)"4444";
     reduction1.reduce_values[0].size = sizeof("4444") - 1;
     cb_assert(encode_view_btree_reduction(&reduction1, reduction1_bin, &reduction1_bin_size) == COUCHSTORE_SUCCESS);
 
@@ -1044,7 +1055,7 @@ static void test_view_btree_js_reducer(void)
     reduction2.num_values = 1;
     reduction2.reduce_values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     cb_assert(reduction2.reduce_values != NULL);
-    reduction2.reduce_values[0].buf = "100";
+    reduction2.reduce_values[0].buf = (char*)"100";
     reduction2.reduce_values[0].size = sizeof("100") - 1;
     cb_assert(encode_view_btree_reduction(&reduction2, reduction2_bin, &reduction2_bin_size) == COUCHSTORE_SUCCESS);
 
@@ -1147,44 +1158,44 @@ static void test_view_btree_multiple_reducers(void)
     ctx = make_view_reducer_ctx(function_sources, 3, &error_msg);
     cb_assert(ctx != NULL);
 
-    key1.json_key.buf = "10";
+    key1.json_key.buf = (char*)"10";
     key1.json_key.size = sizeof("10") - 1;
-    key1.doc_id.buf = "doc_10";
+    key1.doc_id.buf = (char*)"doc_10";
     key1.doc_id.size = sizeof("doc_10") - 1;
     cb_assert(encode_view_btree_key(&key1, &key1_bin, &key1_bin_size) == COUCHSTORE_SUCCESS);
 
-    key2.json_key.buf = "11";
+    key2.json_key.buf = (char*)"11";
     key2.json_key.size = sizeof("11") - 1;
-    key2.doc_id.buf = "doc_11";
+    key2.doc_id.buf = (char*)"doc_11";
     key2.doc_id.size = sizeof("doc_11") - 1;
     cb_assert(encode_view_btree_key(&key2, &key2_bin, &key2_bin_size) == COUCHSTORE_SUCCESS);
 
-    key3.json_key.buf = "12";
+    key3.json_key.buf = (char*)"12";
     key3.json_key.size = sizeof("12") - 1;
-    key3.doc_id.buf = "doc_12";
+    key3.doc_id.buf = (char*)"doc_12";
     key3.doc_id.size = sizeof("doc_12") - 1;
     cb_assert(encode_view_btree_key(&key3, &key3_bin, &key3_bin_size) == COUCHSTORE_SUCCESS);
 
     value1.partition = 7;
     value1.num_values = 2;
     value1.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 2);
-    value1.values[0].buf = "100";
+    value1.values[0].buf = (char*)"100";
     value1.values[0].size = sizeof("100") - 1;
-    value1.values[1].buf = "1";
+    value1.values[1].buf = (char*)"1";
     value1.values[1].size = sizeof("1") - 1;
     cb_assert(encode_view_btree_value(&value1, &value1_bin, &value1_bin_size) == COUCHSTORE_SUCCESS);
 
     value2.partition = 666;
     value2.num_values = 1;
     value2.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
-    value2.values[0].buf = "1000";
+    value2.values[0].buf = (char*)"1000";
     value2.values[0].size = sizeof("1000") - 1;
     cb_assert(encode_view_btree_value(&value2, &value2_bin, &value2_bin_size) == COUCHSTORE_SUCCESS);
 
     value3.partition = 1023;
     value3.num_values = 1;
     value3.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
-    value3.values[0].buf = "5000.33";
+    value3.values[0].buf = (char*)"5000.33";
     value3.values[0].size = sizeof("5000.33") - 1;
     cb_assert(encode_view_btree_value(&value3, &value3_bin, &value3_bin_size) == COUCHSTORE_SUCCESS);
 
@@ -1239,7 +1250,7 @@ static void test_view_btree_multiple_reducers(void)
     /* Test JS reduce error */
 
     cb_free(value3_bin);
-    value3.values[0].buf = "\"foobar\"";
+    value3.values[0].buf = (char*)"\"foobar\"";
     value3.values[0].size = sizeof("\"foobar\"") - 1;
     cb_assert(encode_view_btree_value(&value3, &value3_bin, &value3_bin_size) == COUCHSTORE_SUCCESS);
 
@@ -1259,11 +1270,11 @@ static void test_view_btree_multiple_reducers(void)
     reduction1.num_values = 3;
     reduction1.reduce_values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 3);
     cb_assert(reduction1.reduce_values != NULL);
-    reduction1.reduce_values[0].buf = "4444";
+    reduction1.reduce_values[0].buf = (char*)"4444";
     reduction1.reduce_values[0].size = sizeof("4444") - 1;
-    reduction1.reduce_values[1].buf = "44";
+    reduction1.reduce_values[1].buf = (char*)"44";
     reduction1.reduce_values[1].size = sizeof("44") - 1;
-    reduction1.reduce_values[2].buf = "4000";
+    reduction1.reduce_values[2].buf = (char*)"4000";
     reduction1.reduce_values[2].size = sizeof("4000") - 1;
     cb_assert(encode_view_btree_reduction(&reduction1, reduction1_bin, &reduction1_bin_size) == COUCHSTORE_SUCCESS);
 
@@ -1275,11 +1286,11 @@ static void test_view_btree_multiple_reducers(void)
     reduction2.num_values = 3;
     reduction2.reduce_values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 3);
     cb_assert(reduction2.reduce_values != NULL);
-    reduction2.reduce_values[0].buf = "100";
+    reduction2.reduce_values[0].buf = (char*)"100";
     reduction2.reduce_values[0].size = sizeof("100") - 1;
-    reduction2.reduce_values[1].buf = "100";
+    reduction2.reduce_values[1].buf = (char*)"100";
     reduction2.reduce_values[1].size = sizeof("100") - 1;
-    reduction2.reduce_values[2].buf = "100";
+    reduction2.reduce_values[2].buf = (char*)"100";
     reduction2.reduce_values[2].size = sizeof("100") - 1;
     cb_assert(encode_view_btree_reduction(&reduction2, reduction2_bin, &reduction2_bin_size) == COUCHSTORE_SUCCESS);
 
@@ -1377,44 +1388,44 @@ static void test_view_btree_no_reducers(void)
     ctx = make_view_reducer_ctx(NULL, 0, &error_msg);
     cb_assert(ctx != NULL);
 
-    key1.json_key.buf = "10";
+    key1.json_key.buf = (char*)"10";
     key1.json_key.size = sizeof("10") - 1;
-    key1.doc_id.buf = "doc_10";
+    key1.doc_id.buf = (char*)"doc_10";
     key1.doc_id.size = sizeof("doc_10") - 1;
     cb_assert(encode_view_btree_key(&key1, &key1_bin, &key1_bin_size) == COUCHSTORE_SUCCESS);
 
-    key2.json_key.buf = "11";
+    key2.json_key.buf = (char*)"11";
     key2.json_key.size = sizeof("11") - 1;
-    key2.doc_id.buf = "doc_11";
+    key2.doc_id.buf = (char*)"doc_11";
     key2.doc_id.size = sizeof("doc_11") - 1;
     cb_assert(encode_view_btree_key(&key2, &key2_bin, &key2_bin_size) == COUCHSTORE_SUCCESS);
 
-    key3.json_key.buf = "12";
+    key3.json_key.buf = (char*)"12";
     key3.json_key.size = sizeof("12") - 1;
-    key3.doc_id.buf = "doc_12";
+    key3.doc_id.buf = (char*)"doc_12";
     key3.doc_id.size = sizeof("doc_12") - 1;
     cb_assert(encode_view_btree_key(&key3, &key3_bin, &key3_bin_size) == COUCHSTORE_SUCCESS);
 
     value1.partition = 7;
     value1.num_values = 2;
     value1.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 2);
-    value1.values[0].buf = "100";
+    value1.values[0].buf = (char*)"100";
     value1.values[0].size = sizeof("100") - 1;
-    value1.values[1].buf = "1";
+    value1.values[1].buf = (char*)"1";
     value1.values[1].size = sizeof("1") - 1;
     cb_assert(encode_view_btree_value(&value1, &value1_bin, &value1_bin_size) == COUCHSTORE_SUCCESS);
 
     value2.partition = 666;
     value2.num_values = 1;
     value2.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
-    value2.values[0].buf = "1000";
+    value2.values[0].buf = (char*)"1000";
     value2.values[0].size = sizeof("1000") - 1;
     cb_assert(encode_view_btree_value(&value2, &value2_bin, &value2_bin_size) == COUCHSTORE_SUCCESS);
 
     value3.partition = 1023;
     value3.num_values = 1;
     value3.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
-    value3.values[0].buf = "5000.33";
+    value3.values[0].buf = (char*)"5000.33";
     value3.values[0].size = sizeof("5000.33") - 1;
     cb_assert(encode_view_btree_value(&value3, &value3_bin, &value3_bin_size) == COUCHSTORE_SUCCESS);
 
@@ -1575,16 +1586,16 @@ static void test_view_btree_large_reducer(void)
     ctx = make_view_reducer_ctx(function_sources, 1, &error_msg);
     cb_assert(ctx != NULL);
 
-    key1.json_key.buf = "10";
+    key1.json_key.buf = (char*)"10";
     key1.json_key.size = sizeof("10") - 1;
-    key1.doc_id.buf = "doc_10";
+    key1.doc_id.buf = (char*)"doc_10";
     key1.doc_id.size = sizeof("doc_10") - 1;
     cb_assert(encode_view_btree_key(&key1, &key1_bin, &key1_bin_size)
         == COUCHSTORE_SUCCESS);
 
-    key2.json_key.buf = "11";
+    key2.json_key.buf = (char*)"11";
     key2.json_key.size = sizeof("11") - 1;
-    key2.doc_id.buf = "doc_11";
+    key2.doc_id.buf = (char*)"doc_11";
     key2.doc_id.size = sizeof("doc_11") - 1;
     cb_assert(encode_view_btree_key(&key2, &key2_bin, &key2_bin_size)
         == COUCHSTORE_SUCCESS);
@@ -1592,7 +1603,7 @@ static void test_view_btree_large_reducer(void)
     value1.partition = 7;
     value1.num_values = 1;
     value1.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
-    value1.values[0].buf = cb_malloc(6000);
+    value1.values[0].buf = (char*)cb_malloc(6000);
     value1.values[0].size = 6000;
     cb_assert(encode_view_btree_value(&value1, &value1_bin, &value1_bin_size)
         == COUCHSTORE_SUCCESS);
@@ -1600,7 +1611,7 @@ static void test_view_btree_large_reducer(void)
     value2.partition = 666;
     value2.num_values = 1;
     value2.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
-    value2.values[0].buf = cb_malloc(6000);
+    value2.values[0].buf = (char*)cb_malloc(6000);
     value2.values[0].size = 6000;
     cb_assert(encode_view_btree_value(&value2, &value2_bin, &value2_bin_size)
         == COUCHSTORE_SUCCESS);
@@ -1635,7 +1646,7 @@ static void test_view_btree_large_reducer(void)
     reduction1.num_values = 1;
     reduction1.reduce_values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     cb_assert(reduction1.reduce_values != NULL);
-    reduction1.reduce_values[0].buf = "100";
+    reduction1.reduce_values[0].buf = (char*)"100";
     reduction1.reduce_values[0].size = 3;
     cb_assert(encode_view_btree_reduction(&reduction1, reduction1_bin, &reduction1_bin_size)
         == COUCHSTORE_SUCCESS);
@@ -1648,7 +1659,7 @@ static void test_view_btree_large_reducer(void)
     reduction2.num_values = 1;
     reduction2.reduce_values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
     cb_assert(reduction2.reduce_values != NULL);
-    reduction2.reduce_values[0].buf = "100";
+    reduction2.reduce_values[0].buf = (char*)"100";
     reduction2.reduce_values[0].size = 3;
     cb_assert(encode_view_btree_reduction(&reduction2, reduction2_bin, &reduction2_bin_size)
         == COUCHSTORE_SUCCESS);
@@ -1679,10 +1690,8 @@ static void test_view_btree_large_reducer(void)
     couchfile_modify_result *mr;
     tree_file index_file;
 
-    compare_info cmp = {
-        .compare = view_btree_cmp
-    };
-    char *dst_file = "dst_file";
+    compare_info cmp = {view_btree_cmp};
+    const char *dst_file = "dst_file";
     cb_assert(transient_arena != NULL && persistent_arena != NULL);
     ret = tree_file_open(&index_file,
                          dst_file,

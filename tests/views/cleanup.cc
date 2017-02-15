@@ -46,7 +46,7 @@ static void test_view_id_btree_cleanup()
     data1.view_keys_map[0].view_id = 0;
     data1.view_keys_map[0].num_keys = 1;
     data1.view_keys_map[0].json_keys = (sized_buf *) cb_malloc(sizeof(sized_buf));
-    data1.view_keys_map[0].json_keys[0].buf = "100";
+    data1.view_keys_map[0].json_keys[0].buf = (char*)"100";
     data1.view_keys_map[0].json_keys[0].size = sizeof("100") - 1;
     cb_assert(encode_view_id_btree_value(&data1, &data_bin1, &data_bin1_size) == COUCHSTORE_SUCCESS);
     valbuf.buf = data_bin1;
@@ -114,9 +114,9 @@ static void test_view_btree_cleanup()
     value1.partition = 64;
     value1.num_values = 2;
     value1.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 2);
-    value1.values[0].buf = "100";
+    value1.values[0].buf = (char*)"100";
     value1.values[0].size = sizeof("100") - 1;
-    value1.values[1].buf = "1";
+    value1.values[1].buf = (char*)"1";
     value1.values[1].size = sizeof("1") - 1;
     cb_assert(encode_view_btree_value(&value1, &value_bin1, &value_bin1_size) == COUCHSTORE_SUCCESS);
 
@@ -142,7 +142,7 @@ static void test_view_btree_cleanup()
     reduction1.kv_count = 11;
     reduction1.num_values = 1;
     reduction1.reduce_values = (sized_buf *) cb_malloc(sizeof(sized_buf));
-    reduction1.reduce_values[0].buf = "value";
+    reduction1.reduce_values[0].buf = (char*)"value";
     reduction1.reduce_values[0].size = sizeof("value") - 1;
     memset(&reduction1.partitions_bitmap, 0, sizeof(reduction1.partitions_bitmap));
 
