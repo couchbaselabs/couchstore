@@ -20,7 +20,7 @@ couchstore_error_t tree_file_open(tree_file* file,
                                   int openflags,
                                   crc_mode_e crc_mode,
                                   FileOpsInterface* ops,
-                                  bool buffered)
+                                  tree_file_options file_options)
 {
     if(filename == nullptr || file == nullptr || ops == nullptr) {
         return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
@@ -31,14 +31,18 @@ couchstore_error_t tree_file_open(tree_file* file,
     memset(file, 0, sizeof(*file));
 
     file->crc_mode = crc_mode;
+    file->options = file_options;
 
     file->path = (const char *) cb_strdup(filename);
     error_unless(file->path, COUCHSTORE_ERROR_ALLOC_FAIL);
 
-    if (buffered) {
-        bool readOnly = (openflags == O_RDONLY);
+    if (file_options.buf_io_enabled) {
+        buffered_file_ops_params params((openflags == O_RDONLY),
+                                        file_options.buf_io_read_unit_size,
+                                        file_options.buf_io_read_buffers);
+
         file->ops = couch_get_buffered_file_ops(&file->lastError, ops,
-                                                &file->handle, readOnly);
+                                                &file->handle, params);
     } else {
         file->ops = ops;
         file->handle = file->ops->constructor(&file->lastError);

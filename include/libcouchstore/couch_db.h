@@ -34,7 +34,7 @@ extern "C" {
          * When excluded the latest file version is always used for new files.
          */
         COUCHSTORE_OPEN_WITH_LEGACY_CRC = 4,
-        /*
+        /**
          * Open the database file without using an IO buffer
          *
          * This prevents the FileOps that are used in from being
@@ -43,6 +43,17 @@ extern "C" {
          * primarily intended for testing purposes.
          */
         COUCHSTORE_OPEN_FLAG_UNBUFFERED = 8,
+        /**
+         * Customize IO buffer configurations.
+         *
+         * This specifies the capacity of a read buffer and its count.
+         * The first 4 bits are for the capacity, that will be calculated as:
+         *     1KB * 1 << (N-1)
+         * And the next 4 bits are for the count:
+         *     8 * 1 << (N-1)
+         * Note that all zeros represent the default setting.
+         */
+        COUCHSTORE_OPEN_WITH_CUSTOM_BUFFER = 0xff00,
     };
 
 

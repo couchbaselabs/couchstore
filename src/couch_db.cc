@@ -251,6 +251,34 @@ couchstore_error_t couchstore_commit(Db *db)
     return errcode;
 }
 
+static tree_file_options get_tree_file_options_from_flags(couchstore_open_flags flags)
+{
+    tree_file_options options;
+
+    if (flags & COUCHSTORE_OPEN_FLAG_UNBUFFERED) {
+        options.buf_io_enabled = false;
+    } else if (flags & COUCHSTORE_OPEN_WITH_CUSTOM_BUFFER) {
+        // Buffered IO with custom buffer settings.
+        //  * First 4 bits [15:12]: read buffer capacity
+        //  * Next  4 bits [11:08]: max read buffer count
+
+        uint32_t unit_index = (flags >> 12) & 0xf;
+        if (unit_index) {
+            // unit_index    1     2     3     4     ...   15
+            // unit size     1KB   2KB   4KB   8KB   ...   16MB
+            options.buf_io_read_unit_size = 1024 * (1 << (unit_index -1));
+        }
+        uint32_t count_index = (flags >> 8) & 0xf;
+        if (count_index) {
+            // count_index   1     2     3     4     ...   15
+            // # buffers     8     16    32    64    ...   128K
+            options.buf_io_read_buffers = 8 * (1 << (count_index-1));
+        }
+    }
+
+    return options;
+}
+
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_open_db(const char *filename,
                                       couchstore_open_flags flags,
@@ -269,7 +297,6 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     Db *db;
     int openflags;
-    bool buffered = true;
     cs_off_t pos;
 
     /* Sanity check input parameters */
@@ -292,13 +319,9 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
         openflags |= O_CREAT;
     }
 
-    if (flags & COUCHSTORE_OPEN_FLAG_UNBUFFERED) {
-        buffered = false;
-    }
-
     // open with CRC unknown, CRC will be selected when header is read/or not found.
     error_pass(tree_file_open(&db->file, filename, openflags, CRC_UNKNOWN, ops,
-                              buffered));
+                              get_tree_file_options_from_flags(flags)));
 
     pos = db->file.ops->goto_eof(&db->file.lastError, db->file.handle);
     db->file.pos = pos;

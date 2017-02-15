@@ -20,6 +20,11 @@
 #define COUCH_SNAPPY_THRESHOLD 64
 #define MAX_DB_HEADER_SIZE 1024    /* Conservative estimate; just for sanity check */
 
+// Default values for buffered IO
+#define MAX_READ_BUFFERS 16
+#define WRITE_BUFFER_CAPACITY (128*1024)
+#define READ_BUFFER_CAPACITY (4*1024)
+
 #ifdef WIN32
 #define PATH_MAX MAX_PATH
 #endif
@@ -37,6 +42,27 @@ enum {
 extern "C" {
 #endif
 
+    /* Configurations for an open file */
+    struct tree_file_options {
+        tree_file_options() :
+            buf_io_enabled(true),
+            buf_io_read_unit_size(READ_BUFFER_CAPACITY),
+            buf_io_read_buffers(MAX_READ_BUFFERS)
+            { }
+
+        // Flag indicating whether or not buffered IO is enabled.
+        bool buf_io_enabled;
+        // Read buffer capacity, if buffered IO is enabled.
+        // Set to zero for the default value.
+        uint32_t buf_io_read_unit_size;
+        // Max count of read buffers, if buffered IO is enabled.
+        // Set to zero for the default value.
+        uint32_t buf_io_read_buffers;
+
+        // Currently buffered IO is the only option.
+        // New attributes will be added later.
+    };
+
      /* Structure representing an open file; "superclass" of Db */
     typedef struct _treefile {
         uint64_t pos;
@@ -45,6 +71,7 @@ extern "C" {
         const char* path;
         couchstore_error_info_t lastError;
         crc_mode_e crc_mode;
+        tree_file_options options;
     } tree_file;
 
     typedef struct _nodepointer {
@@ -95,7 +122,7 @@ extern "C" {
                                       int openflags,
                                       crc_mode_e crc_mode,
                                       FileOpsInterface* ops,
-                                      bool buffered);
+                                      tree_file_options options);
     /** Closes a tree_file.
         @param file  Pointer to open tree_file. Does not free this pointer! */
     couchstore_error_t tree_file_close(tree_file* file);

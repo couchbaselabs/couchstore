@@ -497,7 +497,8 @@ couchstore_error_t open_view_group_file(const char *path,
         flags |= O_CREAT;
     }
 
-    ret = tree_file_open(file, path, flags, CRC32, file_ops, /*buffered*/ true);
+    ret = tree_file_open(file, path, flags, CRC32, file_ops,
+                         tree_file_options() /* Enable buffered IO by default. */);
 
     return ret;
 }

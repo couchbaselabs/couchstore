@@ -34,7 +34,8 @@ public:
     TestBufferedFileOps(FileOpsInterface* ops) : wrapped_ops(ops) {
     }
     couch_file_handle constructor(couchstore_error_info_t* errinfo) override {
-        return BufferedFileOps::constructor(errinfo, wrapped_ops.get(), false);
+        return BufferedFileOps::constructor(errinfo, wrapped_ops.get(),
+                                            buffered_file_ops_params());
     }
 
 protected:

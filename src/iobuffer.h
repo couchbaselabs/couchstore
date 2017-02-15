@@ -20,18 +20,35 @@
 
 #include <libcouchstore/couch_db.h>
 
+/* Buffered IO parameters */
+struct buffered_file_ops_params {
+    buffered_file_ops_params();
+    buffered_file_ops_params(const buffered_file_ops_params& src);
+    buffered_file_ops_params(const bool _read_only,
+                             const uint32_t _read_buffer_capacity,
+                             const uint32_t _max_read_buffers);
+
+    // Flag indicating whether or not the file is being opened as read only.
+    bool readOnly;
+    // Read buffer capacity.
+    uint32_t read_buffer_capacity;
+    // Max read buffer count.
+    uint32_t max_read_buffers;
+};
+
 /**
- * Constructs a set of file ops that buffer the I/O provided by an underlying set of raw ops.
+ * Constructs a set of file ops that buffer the I/O provided by an
+ * underlying set of raw ops.
+ *
  * @param raw_ops the file ops callbacks to use for the underlying I/O
  * @param handle on output, a constructed (but not opened) couch_file_handle
- * @param whether or not the file is being opened as read only
+ * @param params buffered IO parameters
  * @return the couch_file_ops to use, or NULL on failure
  */
-
 FileOpsInterface* couch_get_buffered_file_ops(couchstore_error_info_t *errinfo,
                                               FileOpsInterface* raw_ops,
                                               couch_file_handle* handle,
-                                              bool readOnly);
+                                              buffered_file_ops_params params);
 
 class BufferedFileOps : public FileOpsInterface {
 public:
@@ -60,7 +77,8 @@ public:
     void destructor(couch_file_handle handle) override;
 
     couch_file_handle constructor(couchstore_error_info_t *errinfo,
-                                  FileOpsInterface* raw_ops, bool readOnly);
+                                  FileOpsInterface* raw_ops,
+                                  buffered_file_ops_params params);
 };
 
 #endif // LIBCOUCHSTORE_IOBUFFER_H

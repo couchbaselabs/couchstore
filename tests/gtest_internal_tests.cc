@@ -77,6 +77,65 @@ TEST_F(CouchstoreInternalTest, commit_alignment) {
 }
 
 /**
+ * Test to check whether or not buffered IO configurations passed to
+ * open_db() API correctly set internal file options.
+ */
+TEST_F(CouchstoreInternalTest, buffered_io_options)
+{
+    const uint32_t docsInTest = 4;
+    Documents documents(docsInTest);
+    documents.setDoc(0, "doc1", "{\"test_doc_index\":1}");
+    documents.setDoc(1, "doc2", "{\"test_doc_index\":2}");
+    documents.setDoc(2, "doc3", "{\"test_doc_index\":3}");
+    documents.setDoc(3, "doc4", "{\"test_doc_index\":4}");
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_open_db(filePath.c_str(),
+                                 COUCHSTORE_OPEN_FLAG_CREATE, &db));
+
+    for (uint32_t ii = 0; ii < docsInTest; ii++) {
+         ASSERT_EQ(COUCHSTORE_SUCCESS,
+                   couchstore_save_document(db,
+                                            documents.getDoc(ii),
+                                            documents.getDocInfo(ii),
+                                            0));
+    }
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_commit(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
+    db = nullptr;
+
+    for (uint64_t flags = 0; flags <= 0xff; ++flags) {
+        uint32_t exp_unit_size = READ_BUFFER_CAPACITY;
+        uint32_t exp_buffers = MAX_READ_BUFFERS;
+
+        uint32_t unit_index = (flags >> 4) & 0xf;
+        if (unit_index) {
+            // unit_index    1     2     3     4     ...   15
+            // unit size     1KB   2KB   4KB   8KB   ...   16MB
+            exp_unit_size = 1024 * (1 << (unit_index -1));
+        }
+        uint32_t count_index = flags & 0xf;
+        if (count_index) {
+            // count_index   1     2     3     4     ...   15
+            // # buffers     8     16    32    64    ...   128K
+            exp_buffers = 8 * (1 << (count_index-1));
+        }
+
+        ASSERT_EQ(COUCHSTORE_SUCCESS,
+                  couchstore_open_db(filePath.c_str(), flags << 8, &db));
+
+        ASSERT_EQ(exp_buffers, db->file.options.buf_io_read_buffers);
+        ASSERT_EQ(exp_unit_size, db->file.options.buf_io_read_unit_size);
+
+        ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+        ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
+        db = nullptr;
+    }
+}
+
+/**
  * Tests whether the unbuffered file ops flag actually
  * prevents the buffered file operations from being used.
  */

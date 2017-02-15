@@ -29,10 +29,6 @@
 #endif
 
 
-#define MAX_READ_BUFFERS 16
-#define WRITE_BUFFER_CAPACITY (128*1024)
-#define READ_BUFFER_CAPACITY (4*1024)
-
 #ifdef min
 #undef min
 #endif
@@ -59,6 +55,7 @@ typedef struct buffered_file_handle {
     unsigned nbuffers;
     file_buffer* write_buffer;
     file_buffer* first_buffer;
+    buffered_file_ops_params params;
 } buffered_file_handle;
 
 
@@ -189,15 +186,15 @@ static couchstore_error_t load_buffer_from(couchstore_error_info_t *errinfo,
 
 
 static file_buffer* find_buffer(buffered_file_handle* h, cs_off_t offset) {
-    offset = offset - offset % READ_BUFFER_CAPACITY;
+    offset = offset - offset % h->params.read_buffer_capacity;
     // Find a buffer for this offset, or use the last one:
     file_buffer* buffer = h->first_buffer;
     while (buffer->offset != offset && buffer->next != NULL)
         buffer = buffer->next;
     if (buffer->offset != offset) {
-        if (h->nbuffers < MAX_READ_BUFFERS) {
+        if (h->nbuffers < h->params.max_read_buffers) {
             // Didn't find a matching one, but we can still create another:
-            file_buffer* buffer2 = new_buffer(h, READ_BUFFER_CAPACITY);
+            file_buffer* buffer2 = new_buffer(h, h->params.read_buffer_capacity);
             if (buffer2) {
                 buffer = buffer2;
                 ++h->nbuffers;
@@ -221,8 +218,30 @@ static file_buffer* find_buffer(buffered_file_handle* h, cs_off_t offset) {
 }
 
 
-//////// FILE API:
+//////// PARAMS:
 
+buffered_file_ops_params::buffered_file_ops_params() :
+    readOnly(false),
+    read_buffer_capacity(READ_BUFFER_CAPACITY),
+    max_read_buffers(MAX_READ_BUFFERS)
+{ }
+
+buffered_file_ops_params::buffered_file_ops_params(const buffered_file_ops_params& src) :
+    readOnly(src.readOnly),
+    read_buffer_capacity(src.read_buffer_capacity),
+    max_read_buffers(src.max_read_buffers)
+{ }
+
+buffered_file_ops_params::buffered_file_ops_params(const bool _read_only,
+                                                   const uint32_t _read_buffer_capacity,
+                                                   const uint32_t _max_read_buffers) :
+    readOnly(_read_only),
+    read_buffer_capacity(_read_buffer_capacity),
+    max_read_buffers(_max_read_buffers)
+{ }
+
+
+//////// FILE API:
 
 void BufferedFileOps::destructor(couch_file_handle handle)
 {
@@ -243,15 +262,17 @@ void BufferedFileOps::destructor(couch_file_handle handle)
 
 couch_file_handle BufferedFileOps::constructor(couchstore_error_info_t* errinfo,
                                                FileOpsInterface* raw_ops,
-                                               bool readOnly)
+                                               buffered_file_ops_params params)
 {
     buffered_file_handle *h = static_cast<buffered_file_handle*>(cb_malloc(sizeof(buffered_file_handle)));
     if (h) {
         h->raw_ops = raw_ops;
         h->raw_ops_handle = raw_ops->constructor(errinfo);
         h->nbuffers = 1;
-        h->write_buffer = new_buffer(h, readOnly ? 0 : WRITE_BUFFER_CAPACITY);
-        h->first_buffer = new_buffer(h, READ_BUFFER_CAPACITY);
+        h->params = params;
+
+        h->write_buffer = new_buffer(h, h->params.readOnly ? 0 : WRITE_BUFFER_CAPACITY);
+        h->first_buffer = new_buffer(h, h->params.read_buffer_capacity);
 
         if (!h->write_buffer || !h->first_buffer) {
             destructor(reinterpret_cast<couch_file_handle>(h));
@@ -263,7 +284,8 @@ couch_file_handle BufferedFileOps::constructor(couchstore_error_info_t* errinfo,
 
 couch_file_handle BufferedFileOps::constructor(couchstore_error_info_t* errinfo)
 {
-    return constructor(errinfo, couchstore_get_default_file_ops(), false);
+    return constructor(errinfo, couchstore_get_default_file_ops(),
+                       buffered_file_ops_params());
 }
 
 couchstore_error_t BufferedFileOps::open(couchstore_error_info_t* errinfo,
@@ -317,7 +339,7 @@ ssize_t BufferedFileOps::pread(couchstore_error_info_t* errinfo,
                 }
             } else*/ {
                 // Move the buffer to cover the remainder of the data to be read.
-                cs_off_t block_start = offset - (offset % READ_BUFFER_CAPACITY);
+                cs_off_t block_start = offset - (offset % h->params.read_buffer_capacity);
                 err = load_buffer_from(errinfo, buffer, block_start, (size_t)(offset + nbyte - block_start));
                 if (err < 0) {
                     return err;
@@ -421,9 +443,9 @@ static BufferedFileOps ops;
 FileOpsInterface* couch_get_buffered_file_ops(couchstore_error_info_t* errinfo,
                                               FileOpsInterface* raw_ops,
                                               couch_file_handle* handle,
-                                              bool readOnly)
+                                              buffered_file_ops_params params)
 {
-    *handle = ops.constructor(errinfo, raw_ops, readOnly);
+    *handle = ops.constructor(errinfo, raw_ops, params);
 
     if (*handle) {
         return &ops;
@@ -431,3 +453,4 @@ FileOpsInterface* couch_get_buffered_file_ops(couchstore_error_info_t* errinfo,
         return NULL;
     }
 }
+
