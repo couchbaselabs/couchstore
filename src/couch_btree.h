@@ -8,7 +8,10 @@
 extern "C" {
 #endif
 
-#define DB_CHUNK_THRESHOLD 1279
+// B+tree KV (leaf) node size limit.
+#define DB_KV_CHUNK_THRESHOLD 1279
+// B+tree KP (intermediate) node size limit.
+#define DB_KP_CHUNK_THRESHOLD 1279
 #define MAX_REDUCTION_SIZE ((1 << 16) - 1)
 
     typedef int (*compare_callback)(const sized_buf *k1, const sized_buf *k2);

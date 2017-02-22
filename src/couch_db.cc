@@ -1211,8 +1211,8 @@ couchstore_error_t couchstore_save_local_document(Db *db, LocalDoc *lDoc)
     rq.purge_kp = NULL;
     rq.purge_kv = NULL;
     rq.compacting = 0;
-    rq.kv_chunk_threshold = DB_CHUNK_THRESHOLD;
-    rq.kp_chunk_threshold = DB_CHUNK_THRESHOLD;
+    rq.kv_chunk_threshold = DB_KV_CHUNK_THRESHOLD;
+    rq.kp_chunk_threshold = DB_KP_CHUNK_THRESHOLD;
 
     nroot = modify_btree(&rq, db->header.local_docs_root, &errcode);
     if (errcode == COUCHSTORE_SUCCESS && nroot != db->header.local_docs_root) {

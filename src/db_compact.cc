@@ -252,7 +252,7 @@ static couchstore_error_t compact_seq_tree(Db* source, Db* target, compact_ctx *
 
     ctx->target_mr = new_btree_modres(ctx->persistent_arena, ctx->transient_arena, &target->file,
                                       &seqcmp, by_seq_reduce, by_seq_rereduce, NULL,
-                                      DB_CHUNK_THRESHOLD, DB_CHUNK_THRESHOLD);
+                                      DB_KV_CHUNK_THRESHOLD, DB_KP_CHUNK_THRESHOLD);
     if (ctx->target_mr == NULL) {
         error_pass(COUCHSTORE_ERROR_ALLOC_FAIL);
     }
@@ -304,8 +304,8 @@ static couchstore_error_t compact_localdocs_tree(Db* source, Db* target, compact
     sized_buf *low_key_list = &low_key;
 
     ctx->target_mr = new_btree_modres(ctx->persistent_arena, NULL, &target->file,
-                                      &idcmp, NULL, NULL, NULL, DB_CHUNK_THRESHOLD,
-                                      DB_CHUNK_THRESHOLD);
+                                      &idcmp, NULL, NULL, NULL, DB_KV_CHUNK_THRESHOLD,
+                                      DB_KP_CHUNK_THRESHOLD);
     if (ctx->target_mr == NULL) {
         error_pass(COUCHSTORE_ERROR_ALLOC_FAIL);
     }
