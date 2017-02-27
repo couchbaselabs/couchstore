@@ -505,7 +505,7 @@ static couchfile_modify_request purge_request(tree_file *file, reduce_fn reduce,
                                                           purge_kv_fn purge_kv,
                                                           void *purge_ctx)
 {
-    couchfile_modify_request rq;
+    couchfile_modify_request rq{};
 
     rq.cmp.compare = int_cmp;
     rq.file = file;
