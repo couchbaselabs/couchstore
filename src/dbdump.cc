@@ -40,6 +40,7 @@ static bool oneKey = false;
 static bool dumpBody = true;
 static bool decodeVbucket = true;
 static bool decodeIndex = false;
+static bool decodeNamespace = false;
 static sized_buf dumpKey;
 
 typedef struct {
@@ -151,6 +152,32 @@ static void print_datatype_as_json(const std::string& datatype) {
     printf("],");
 }
 
+static const char* getNamespaceString(char ns) {
+    switch (ns) {
+    case 0:
+        return "default";
+    case 1:
+        return "collections";
+    case 2:
+        return "system";
+    default:
+        return "unknown";
+    }
+}
+
+static void printDocId(const char* prefix, const sized_buf* sb) {
+    if (decodeNamespace && sb->size > 0) {
+        // Byte 0 is namespace
+        printf("%s(%s) %.*s\n",
+               prefix,
+               getNamespaceString(sb->buf[0]),
+               (int)sb->size - 1,
+               sb->buf + 1);
+    } else {
+        printf("%s%.*s\n", prefix, (int)sb->size, sb->buf);
+    }
+}
+
 static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
 {
     int *count = (int *) ctx;
@@ -168,11 +195,9 @@ static int foldprint(Db *db, DocInfo *docinfo, void *ctx)
     } else {
         if (mode == DumpBySequence) {
             printf("Doc seq: %" PRIu64 "\n", docinfo->db_seq);
-            printf("     id: ");
-            printsb(&docinfo->id);
+            printDocId("     id: ", &docinfo->id);
         } else {
-            printf("  Doc ID: ");
-            printsb(&docinfo->id);
+            printDocId("  Doc ID: ", &docinfo->id);
             if (docinfo->db_seq > 0) {
                 printf("     seq: %" PRIu64 "\n", docinfo->db_seq);
             }
@@ -673,6 +698,7 @@ static void usage(void) {
     printf("    --byid       sort output by document ID\n");
     printf("    --byseq      sort output by document sequence number (default)\n");
     printf("    --json       dump data as JSON objects (one per line)\n");
+    printf("    --namespace  decode namespaces\n");
     printf("\nAlternate modes:\n");
     printf("    --tree       show file b-tree structure instead of data\n");
     printf("    --local      dump local documents\n");
@@ -706,6 +732,8 @@ int main(int argc, char **argv)
             dumpHex = true;
         } else if (strcmp(argv[ii], "--no-body") == 0) {
             dumpBody = false;
+        } else if (strcmp(argv[ii], "--namespace") == 0) {
+            decodeNamespace = true;
         } else if (strcmp(argv[ii], "--key") == 0) {
             if (argc < (ii + 1)) {
                 usage();
