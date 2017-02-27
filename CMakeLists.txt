@@ -18,6 +18,7 @@ INCLUDE_DIRECTORIES(BEFORE ${CMAKE_INSTALL_PREFIX}/include
                            ${CMAKE_CURRENT_SOURCE_DIR}/src
                            ${CMAKE_CURRENT_BINARY_DIR}
                            ${CMAKE_CURRENT_SOURCE_DIR}
+                           ${BOOST_INCLUDE_DIR}
                            ${Platform_SOURCE_DIR}/include)
 
 IF (LUA_FOUND)
@@ -44,23 +45,47 @@ ELSE(WIN32)
   SET(COUCHSTORE_FILE_OPS "src/os.cc")
 ENDIF(WIN32)
 
-SET(COUCHSTORE_SOURCES src/arena.cc src/bitfield.cc src/btree_modify.cc
-            src/btree_read.cc src/couch_db.cc src/couch_file_read.cc
-            src/couch_file_write.cc src/couch_save.cc src/crc32.cc
-            src/db_compact.cc src/file_merger.cc src/file_name_utils.c
-            src/file_sorter.cc src/iobuffer.cc src/llmsort.cc
-            src/mergesort.cc src/node_types.cc src/reduces.cc
-            src/strerror.cc src/tree_writer.cc
-            src/util.cc src/views/bitmap.c src/views/collate_json.c
-            src/views/file_merger.cc src/views/file_sorter.cc
-            src/views/index_header.cc src/views/keys.cc
-            src/views/mapreduce/mapreduce.cc
-            src/views/mapreduce/mapreduce_c.cc src/views/reducers.cc
-            src/views/reductions.cc src/views/sorted_list.c
-            src/views/spatial.cc src/views/spatial_modify.cc
-            src/views/util.cc src/views/values.cc
-            src/views/view_group.cc src/views/purgers.cc
-            src/views/compaction.cc src/quicksort.c ${COUCHSTORE_FILE_OPS})
+SET(COUCHSTORE_SOURCES src/arena.cc
+                       src/bitfield.cc
+                       src/btree_modify.cc
+                       src/btree_read.cc
+                       src/couch_db.cc
+                       src/couch_file_read.cc
+                       src/couch_file_write.cc
+                       src/couch_save.cc
+                       src/crc32.cc
+                       src/db_compact.cc
+                       src/file_merger.cc
+                       src/file_name_utils.c
+                       src/file_sorter.cc
+                       src/iobuffer.cc
+                       src/llmsort.cc
+                       src/mergesort.cc
+                       src/node_types.cc
+                       src/reduces.cc
+                       src/strerror.cc
+                       src/tree_writer.cc
+                       src/util.cc
+                       src/views/bitmap.c
+                       src/views/collate_json.c
+                       src/views/file_merger.cc
+                       src/views/file_sorter.cc
+                       src/views/index_header.cc
+                       src/views/keys.cc
+                       src/views/mapreduce/mapreduce.cc
+                       src/views/mapreduce/mapreduce_c.cc
+                       src/views/reducers.cc
+                       src/views/reductions.cc
+                       src/views/sorted_list.c
+                       src/views/spatial.cc
+                       src/views/spatial_modify.cc
+                       src/views/util.cc
+                       src/views/values.cc
+                       src/views/view_group.cc
+                       src/views/purgers.cc
+                       src/views/compaction.cc
+                       src/quicksort.c
+                       ${COUCHSTORE_FILE_OPS})
 SET(COUCHSTORE_LIBRARIES ${V8_LIBRARIES} ${ICU_LIBRARIES} ${SNAPPY_LIBRARIES} platform)
 
 SET(COUCHSTORE_GTEST_LIBRARIES gtest gtest_main gmock)
@@ -271,10 +296,10 @@ TARGET_INCLUDE_DIRECTORIES(couchstore_wrapped_fileops_test_framework
         ${COUCHSTORE_GTEST_INCLUDES})
 
 ADD_EXECUTABLE(couchstore_wrapped_fileops_test
-        src/iobuffer.cc
-        tests/wrapped_fileops_test.cc
-        $<TARGET_OBJECTS:couchstore_wrapped_fileops_test_framework>
-        )
+               src/iobuffer.cc
+               tests/wrapped_fileops_test.cc
+               $<TARGET_OBJECTS:couchstore_wrapped_fileops_test_framework>
+               )
 SET_TARGET_PROPERTIES(couchstore_wrapped_fileops_test PROPERTIES
         COMPILE_FLAGS "-DLIBCOUCHSTORE_NO_VISIBILITY=1 -DTESTAPP=1")
 TARGET_LINK_LIBRARIES(couchstore_wrapped_fileops_test ${COUCHSTORE_GTEST_LIBRARIES} platform)

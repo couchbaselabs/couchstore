@@ -82,12 +82,14 @@ TEST_F(CouchstoreInternalTest, commit_alignment) {
  */
 TEST_F(CouchstoreInternalTest, buffered_io_options)
 {
-    const uint32_t docsInTest = 4;
+    const uint32_t docsInTest = 100;
+    std::string key_str, value_str;
     Documents documents(docsInTest);
-    documents.setDoc(0, "doc1", "{\"test_doc_index\":1}");
-    documents.setDoc(1, "doc2", "{\"test_doc_index\":2}");
-    documents.setDoc(2, "doc3", "{\"test_doc_index\":3}");
-    documents.setDoc(3, "doc4", "{\"test_doc_index\":4}");
+    for (uint32_t ii = 0; ii < docsInTest; ii++) {
+        key_str = "doc" + std::to_string(ii);
+        value_str = "{\"test_doc_index\":" + std::to_string(ii) + "}";
+        documents.setDoc(ii, key_str, value_str);
+    }
 
     ASSERT_EQ(COUCHSTORE_SUCCESS,
               couchstore_open_db(filePath.c_str(),
@@ -128,6 +130,24 @@ TEST_F(CouchstoreInternalTest, buffered_io_options)
 
         ASSERT_EQ(exp_buffers, db->file.options.buf_io_read_buffers);
         ASSERT_EQ(exp_unit_size, db->file.options.buf_io_read_unit_size);
+
+        { // Check if reading docs works correctly with given buffer settings.
+            documents.resetCounters();
+            std::vector<sized_buf> buf(docsInTest);
+            for (uint32_t ii = 0; ii < docsInTest; ++ii) {
+                buf[ii] = documents.getDoc(ii)->id;
+            }
+            SCOPED_TRACE("save_docs - doc by id (bulk)");
+            ASSERT_EQ(COUCHSTORE_SUCCESS,
+                      couchstore_docinfos_by_id(db,
+                                                &buf[0],
+                                                docsInTest,
+                                                0,
+                                                &Documents::docIterCheckCallback,
+                                                &documents));
+            EXPECT_EQ(docsInTest, documents.getCallbacks());
+            EXPECT_EQ(0, documents.getDeleted());
+        }
 
         ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
         ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));

@@ -19,7 +19,15 @@
 #include "iobuffer.h"
 #include "internal.h"
 
+#include <algorithm>
+#include <boost/intrusive/list.hpp>
+#include <memory>
+#include <new>
+#include <unordered_map>
+#include <vector>
+
 #include <platform/cb_malloc.h>
+#include <platform/make_unique.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -28,65 +36,157 @@
 #include <stdio.h>
 #endif
 
+struct buffered_file_handle;
+struct file_buffer : public boost::intrusive::list_base_hook<> {
+    file_buffer(buffered_file_handle* _owner, size_t _capacity)
+        : owner(_owner),
+          capacity(_capacity),
+          length(0),
+          // Setting initial offset to 0 may cause problem
+          // as there can be an actual buffer corresponding
+          // to offset 0.
+          offset(static_cast<cs_off_t>(-1)),
+          dirty(0) {
+        bytes.resize(_capacity);
+    }
 
-#ifdef min
-#undef min
-#endif
+    uint8_t* getRawPtr() {
+        return &bytes[0];
+    }
 
-static inline ssize_t min(ssize_t a, ssize_t b) {return a < b ? a : b;}
-
-
-typedef struct file_buffer {
-    struct file_buffer* prev;
-    struct file_buffer* next;
+    // Hook for intrusive list.
+    boost::intrusive::list_member_hook<> _lru_hook;
+    // File handle that owns this buffer instance.
     struct buffered_file_handle *owner;
+    // Buffer capacity.
     size_t capacity;
+    // Length of data written.
     size_t length;
+    // Starting offset of buffer.
     cs_off_t offset;
+    // Flag indicating whether or not this buffer contains dirty data.
     uint8_t dirty;
-    uint8_t bytes[1];
-} file_buffer;
+    // Data array.
+    std::vector<uint8_t> bytes;
+};
 
+using UniqueFileBufferPtr = std::unique_ptr<file_buffer>;
+
+using ListMember =
+        boost::intrusive::member_hook< file_buffer,
+                                       boost::intrusive::list_member_hook<>,
+                                       &file_buffer::_lru_hook >;
+
+using FileBufferList = boost::intrusive::list<file_buffer, ListMember>;
+using FileBufferMap = std::unordered_map<size_t, UniqueFileBufferPtr>;
+
+class ReadBufferManager;
 
 // How I interpret a couch_file_handle:
-typedef struct buffered_file_handle {
+struct buffered_file_handle {
     FileOpsInterface* raw_ops;
     couch_file_handle raw_ops_handle;
     unsigned nbuffers;
-    file_buffer* write_buffer;
-    file_buffer* first_buffer;
+    UniqueFileBufferPtr write_buffer;
+    ReadBufferManager *read_buffer_mgr;
     buffered_file_ops_params params;
-} buffered_file_handle;
+};
 
-
-static file_buffer* new_buffer(buffered_file_handle* owner, size_t capacity) {
-    file_buffer *buf = static_cast<file_buffer*>(cb_malloc(sizeof(file_buffer) + capacity));
-    if (buf) {
-        buf->prev = buf->next = NULL;
-        buf->owner = owner;
-        buf->capacity = capacity;
-        buf->length = 0;
-        buf->offset = 0;
-        buf->dirty = 0;
+/**
+ * Class for management of LRU list and hash index for read buffers.
+ * All buffer instances are tracked by using shared pointers.
+ */
+class ReadBufferManager {
+public:
+    ReadBufferManager() : nBuffers(0) {
     }
-#if LOG_BUFFER
-    fprintf(stderr, "BUFFER: %p <- new_buffer(%zu)\n", buf, capacity);
-#endif
-    return buf;
-}
 
-static void free_buffer(file_buffer* buf) {
+    ~ReadBufferManager() {
+        // Note: all elements in intrusive list MUST be unlinked
+        //       before they are freed (unless it will internally
+        //       invoke an assertion failure).
+        auto itr = readLRU.begin();
+        while (itr != readLRU.end()) {
+            itr = readLRU.erase(itr);
+        }
+    }
+
+    file_buffer* findBuffer(buffered_file_handle* h, cs_off_t offset) {
+        // Align offset.
+        offset = offset - offset % h->params.read_buffer_capacity;
+
+        // Find a buffer for this offset,
+        // OR use the last one in LRU list.
+        file_buffer* buffer = nullptr;
+        auto itr_map = readMap.find(offset);
+        if (itr_map != readMap.end()) {
+            // Matching buffer exists.
+            // Move it to the front of LRU, and return.
+            buffer = itr_map->second.get();
+            readLRU.splice(readLRU.begin(), readLRU, readLRU.iterator_to(*buffer));
+            return buffer;
+        }
+
+        // ==== Otherwise: not found.
+
+        if (nBuffers < h->params.max_read_buffers) {
+            // We can still create another buffer.
+            UniqueFileBufferPtr buffer_unique;
+            buffer_unique = std::make_unique<file_buffer>(
+                    h, h->params.read_buffer_capacity);
+            buffer = buffer_unique.get();
+            ++nBuffers;
+            readMap.insert( std::make_pair(buffer->offset,
+                                           std::move(buffer_unique)) );
+            // Locate it at the front of LRU, and return.
+            readLRU.push_front(*buffer);
+            return buffer;
+        }
+
+        // We cannot create a new one.
+        // Recycle the last buffer in the LRU list.
+        auto itr_list = readLRU.rbegin();
+        buffer = &(*itr_list);
 #if LOG_BUFFER
-    fprintf(stderr, "BUFFER: %p freed\n", buf);
+        fprintf(stderr, "BUFFER: %p recycled, from %zd to %zd\n",
+                buffer, buffer->offset, offset);
 #endif
-    cb_free(buf);
-}
+        // Move the buffer to the front of LRU.
+        readLRU.splice(readLRU.begin(), readLRU, itr_list.base());
+        return buffer;
+    }
+
+    void relocateBuffer(cs_off_t old_offset, cs_off_t new_offset) {
+        auto itr = readMap.find(old_offset);
+        if (itr == readMap.end()) {
+            return;
+        }
+
+        UniqueFileBufferPtr tmp = std::move(itr->second);
+        readMap.erase(itr);
+        tmp->offset = new_offset;
+        tmp->length = 0;
+        readMap.insert( std::make_pair(new_offset, std::move(tmp)) );
+    }
+
+private:
+    // LRU list for buffers.
+    FileBufferList readLRU;
+    // Map from offset to buffer instance.
+    FileBufferMap readMap;
+    // Number of buffers allocated.
+    size_t nBuffers;
+};
+
 
 //////// BUFFER WRITES:
 
 
 // Write as many bytes as possible into the buffer, returning the count
-static size_t write_to_buffer(file_buffer* buf, const void *bytes, size_t nbyte, cs_off_t offset)
+static size_t write_to_buffer(file_buffer* buf,
+                              const void *bytes,
+                              size_t nbyte,
+                              cs_off_t offset)
 {
     if (buf->length == 0) {
         // If buffer is empty, align it to start at the current offset:
@@ -96,9 +196,9 @@ static size_t write_to_buffer(file_buffer* buf, const void *bytes, size_t nbyte,
         return 0;
     }
     size_t offset_in_buffer = (size_t)(offset - buf->offset);
-    size_t buffer_nbyte = min(buf->capacity - offset_in_buffer, nbyte);
+    size_t buffer_nbyte = std::min(buf->capacity - offset_in_buffer, nbyte);
 
-    memcpy(buf->bytes + offset_in_buffer, bytes, buffer_nbyte);
+    memcpy(buf->getRawPtr() + offset_in_buffer, bytes, buffer_nbyte);
     buf->dirty = 1;
     offset_in_buffer += buffer_nbyte;
     if (offset_in_buffer > buf->length)
@@ -114,7 +214,7 @@ static couchstore_error_t flush_buffer(couchstore_error_info_t *errinfo,
         ssize_t raw_written;
         raw_written = buf->owner->raw_ops->pwrite(errinfo,
                                                   buf->owner->raw_ops_handle,
-                                                  buf->bytes,
+                                                  buf->getRawPtr(),
                                                   buf->length,
                                                   buf->offset);
 #if LOG_BUFFER
@@ -125,7 +225,7 @@ static couchstore_error_t flush_buffer(couchstore_error_info_t *errinfo,
             return (couchstore_error_t) raw_written;
         buf->length -= raw_written;
         buf->offset += raw_written;
-        memmove(buf->bytes, buf->bytes + raw_written, buf->length);
+        memmove(buf->getRawPtr(), buf->getRawPtr() + raw_written, buf->length);
     }
     buf->dirty = 0;
     return COUCHSTORE_SUCCESS;
@@ -135,14 +235,17 @@ static couchstore_error_t flush_buffer(couchstore_error_info_t *errinfo,
 //////// BUFFER READS:
 
 
-static size_t read_from_buffer(file_buffer* buf, void *bytes, size_t nbyte, cs_off_t offset) {
+static size_t read_from_buffer(file_buffer* buf,
+                               void *bytes,
+                               size_t nbyte,
+                               cs_off_t offset) {
     if (offset < buf->offset || offset >= buf->offset + (cs_off_t)buf->length) {
         return 0;
     }
     size_t offset_in_buffer = (size_t)(offset - buf->offset);
-    size_t buffer_nbyte = min(buf->length - offset_in_buffer, nbyte);
+    size_t buffer_nbyte = std::min(buf->length - offset_in_buffer, nbyte);
 
-    memcpy(bytes, buf->bytes + offset_in_buffer, buffer_nbyte);
+    memcpy(bytes, buf->getRawPtr() + offset_in_buffer, buffer_nbyte);
     return buffer_nbyte;
 }
 
@@ -168,53 +271,18 @@ static couchstore_error_t load_buffer_from(couchstore_error_info_t *errinfo,
     // Read data to extend the buffer to its capacity (if possible):
     ssize_t bytes_read = buf->owner->raw_ops->pread(errinfo,
                                                     buf->owner->raw_ops_handle,
-                                                    buf->bytes + buf->length,
+                                                    buf->getRawPtr() + buf->length,
                                                     buf->capacity - buf->length,
                                                     buf->offset + buf->length);
 #if LOG_BUFFER
-    fprintf(stderr, "BUFFER: %p loaded %zd bytes from %zd\n", buf, bytes_read, offset + buf->length);
+    fprintf(stderr, "BUFFER: %p loaded %zd bytes from %zd\n",
+            buf, bytes_read, offset + buf->length);
 #endif
     if (bytes_read < 0) {
         return (couchstore_error_t) bytes_read;
     }
     buf->length += bytes_read;
     return COUCHSTORE_SUCCESS;
-}
-
-
-//////// BUFFER MANAGEMENT:
-
-
-static file_buffer* find_buffer(buffered_file_handle* h, cs_off_t offset) {
-    offset = offset - offset % h->params.read_buffer_capacity;
-    // Find a buffer for this offset, or use the last one:
-    file_buffer* buffer = h->first_buffer;
-    while (buffer->offset != offset && buffer->next != NULL)
-        buffer = buffer->next;
-    if (buffer->offset != offset) {
-        if (h->nbuffers < h->params.max_read_buffers) {
-            // Didn't find a matching one, but we can still create another:
-            file_buffer* buffer2 = new_buffer(h, h->params.read_buffer_capacity);
-            if (buffer2) {
-                buffer = buffer2;
-                ++h->nbuffers;
-            }
-        } else {
-#if LOG_BUFFER
-            fprintf(stderr, "BUFFER: %p recycled, from %zd to %zd\n", buffer, buffer->offset, offset);
-#endif
-        }
-    }
-    if (buffer != h->first_buffer) {
-        // Move the buffer to the start of the list:
-        if (buffer->prev) buffer->prev->next = buffer->next;
-        if (buffer->next) buffer->next->prev = buffer->prev;
-        buffer->prev = NULL;
-        h->first_buffer->prev = buffer;
-        buffer->next = h->first_buffer;
-        h->first_buffer = buffer;
-    }
-    return buffer;
 }
 
 
@@ -251,32 +319,28 @@ void BufferedFileOps::destructor(couch_file_handle handle)
     }
     h->raw_ops->destructor(h->raw_ops_handle);
 
-    free_buffer(h->write_buffer);
-    file_buffer* buffer, *next;
-    for (buffer = h->first_buffer; buffer; buffer = next) {
-        next = buffer->next;
-        free_buffer(buffer);
-    }
-    cb_free(h);
+    delete h->read_buffer_mgr;
+    delete h;
 }
 
 couch_file_handle BufferedFileOps::constructor(couchstore_error_info_t* errinfo,
                                                FileOpsInterface* raw_ops,
                                                buffered_file_ops_params params)
 {
-    buffered_file_handle *h = static_cast<buffered_file_handle*>(cb_malloc(sizeof(buffered_file_handle)));
+    buffered_file_handle *h = new buffered_file_handle();
     if (h) {
         h->raw_ops = raw_ops;
         h->raw_ops_handle = raw_ops->constructor(errinfo);
         h->nbuffers = 1;
         h->params = params;
 
-        h->write_buffer = new_buffer(h, h->params.readOnly ? 0 : WRITE_BUFFER_CAPACITY);
-        h->first_buffer = new_buffer(h, h->params.read_buffer_capacity);
-
-        if (!h->write_buffer || !h->first_buffer) {
+        try {
+            h->write_buffer = std::make_unique<file_buffer>(
+                    h, h->params.readOnly ? 0 : WRITE_BUFFER_CAPACITY);
+            h->read_buffer_mgr = new ReadBufferManager();
+        } catch (const std::bad_alloc&) {
             destructor(reinterpret_cast<couch_file_handle>(h));
-            h = NULL;
+            return NULL;
         }
     }
     return (couch_file_handle) h;
@@ -304,7 +368,7 @@ couchstore_error_t BufferedFileOps::close(couchstore_error_info_t* errinfo,
     if (!h) {
         return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
     }
-    flush_buffer(errinfo, h->write_buffer);
+    flush_buffer(errinfo, h->write_buffer.get());
     return h->raw_ops->close(errinfo, h->raw_ops_handle);
 }
 
@@ -319,35 +383,34 @@ ssize_t BufferedFileOps::pread(couchstore_error_info_t* errinfo,
 #endif
     buffered_file_handle *h = (buffered_file_handle*)handle;
     // Flush the write buffer before trying to read anything:
-    couchstore_error_t err = flush_buffer(errinfo, h->write_buffer);
+    couchstore_error_t err = flush_buffer(errinfo, h->write_buffer.get());
     if (err < 0) {
         return err;
     }
 
     ssize_t total_read = 0;
     while (nbyte > 0) {
-        file_buffer* buffer = find_buffer(h, offset);
+        file_buffer* buffer = h->read_buffer_mgr->findBuffer(h, offset);
 
         // Read as much as we can from the current buffer:
         ssize_t nbyte_read = read_from_buffer(buffer, buf, nbyte, offset);
         if (nbyte_read == 0) {
-            /*if (nbyte > buffer->capacity) {
-                // Remainder won't fit in a single buffer, so just read it directly:
-                nbyte_read = h->raw_ops->pread(h->raw_ops_handle, buf, nbyte, offset);
-                if (nbyte_read < 0) {
-                    return nbyte_read;
-                }
-            } else*/ {
-                // Move the buffer to cover the remainder of the data to be read.
-                cs_off_t block_start = offset - (offset % h->params.read_buffer_capacity);
-                err = load_buffer_from(errinfo, buffer, block_start, (size_t)(offset + nbyte - block_start));
-                if (err < 0) {
-                    return err;
-                }
-                nbyte_read = read_from_buffer(buffer, buf, nbyte, offset);
-                if (nbyte_read == 0)
-                    break;  // must be at EOF
+            // 'nbyte_read==0' means that the returned buffer contains
+            // data for other offset and needs to be recycled.
+
+            // Move the buffer to cover the remainder of the data to be read.
+            cs_off_t block_start = offset -
+                                   (offset % h->params.read_buffer_capacity);
+            h->read_buffer_mgr->relocateBuffer(buffer->offset, block_start);
+            err = load_buffer_from(errinfo, buffer, block_start,
+                                   (size_t)(offset + nbyte - block_start));
+            if (err < 0) {
+                return err;
             }
+
+            nbyte_read = read_from_buffer(buffer, buf, nbyte, offset);
+            if (nbyte_read == 0)
+                break;  // must be at EOF
         }
         buf = (char*)buf + nbyte_read;
         nbyte -= nbyte_read;
@@ -371,7 +434,7 @@ ssize_t BufferedFileOps::pwrite(couchstore_error_info_t* errinfo,
     }
 
     buffered_file_handle *h = (buffered_file_handle*)handle;
-    file_buffer* buffer = h->write_buffer;
+    file_buffer* buffer = h->write_buffer.get();
 
     // Write data to the current buffer:
     size_t nbyte_written = write_to_buffer(buffer, buf, nbyte, offset);
@@ -421,7 +484,7 @@ couchstore_error_t BufferedFileOps::sync(couchstore_error_info_t* errinfo,
                                          couch_file_handle handle)
 {
     buffered_file_handle *h = (buffered_file_handle*)handle;
-    couchstore_error_t err = flush_buffer(errinfo, h->write_buffer);
+    couchstore_error_t err = flush_buffer(errinfo, h->write_buffer.get());
     if (err == COUCHSTORE_SUCCESS) {
         err = h->raw_ops->sync(errinfo, h->raw_ops_handle);
     }
