@@ -17,13 +17,16 @@
 #pragma once
 
 #include "config.h"
-
-#include <gtest/gtest.h>
-#include "gmock/gmock.h"
-#include <libcouchstore/couch_db.h>
-#include <string>
 #include "test_fileops.h"
 #include "documents.h"
+
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+#include <libcouchstore/couch_db.h>
+#include <libcouchstore/couch_latency.h>
+
+#include <string>
+#include <vector>
 
 /*
     CouchstoreTest
@@ -35,13 +38,15 @@
 class CouchstoreTest : public ::testing::Test {
 protected:
     CouchstoreTest();
-    CouchstoreTest(const std::string& _filePath);
+    CouchstoreTest(const std::string& _filePath,
+                   const bool _display_latency_info = false);
 
     virtual ~CouchstoreTest();
     void clean_up();
 
     Db* db;
     std::string filePath;
+    bool displayLatencyInfo;
 };
 
 /*
@@ -89,6 +94,23 @@ protected:
     ::testing::NiceMock<MockOps> ops;
     DocInfo* info;
     Doc* doc;
+};
+
+/**
+ * Multi-threaded test.
+ */
+class CouchstoreMTTest
+    : public ::testing::Test,
+      public ::testing::WithParamInterface<std::tuple<bool, size_t> > {
+protected:
+    CouchstoreMTTest();
+    CouchstoreMTTest(const std::string& _filePath);
+
+    void TearDown();
+
+    size_t numThreads;
+    std::vector<Db*> dbs;
+    std::string filePath;
 };
 
 /**

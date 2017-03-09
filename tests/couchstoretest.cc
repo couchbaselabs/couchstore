@@ -19,13 +19,48 @@
 #include <libcouchstore/couch_db.h>
 #include <src/internal.h>
 
+/**
+ * Callback function for latency info.
+ * This is a simple example how to get latency info.
+ */
+int couchstore_test_latency_callback(
+        const char* stat_name,
+        Histogram<CouchLatencyMicroSec> *latencies,
+        const CouchLatencyMicroSec elapsed_time,
+        void *ctx)
+{
+    (void)ctx;
+    size_t total = latencies->total();
+    std::cout << stat_name;
+    std::cout << ": " << total << " calls, ";
+    std::cout << "avg " << (elapsed_time / total);
+    std::cout << " us" << std::endl;
+    std::stringstream ss;
+    for (auto& itr_hist : *latencies) {
+        if (itr_hist->count()) {
+            ss << "  ";
+            ss << itr_hist->start() << " us";
+            ss << " -- ";
+            ss << itr_hist->end() << " us";
+            ss << ": ";
+            ss << itr_hist->count();
+            ss << std::endl;
+        }
+    }
+    std::cout << ss.str();
+    return 0;
+}
+
 CouchstoreTest::CouchstoreTest()
     : CouchstoreTest("testfile.couch"){
 }
 
-CouchstoreTest::CouchstoreTest(const std::string& _filePath)
+CouchstoreTest::CouchstoreTest(const std::string& _filePath,
+                               const bool _display_latency_info)
     : db(nullptr),
-      filePath(_filePath) {
+      filePath(_filePath),
+      displayLatencyInfo(_display_latency_info) {
+    couchstore_latency_collector_start();
 }
 
 /**
@@ -47,6 +82,15 @@ void CouchstoreTest::clean_up() {
         couchstore_free_db(db);
         db = nullptr;
     }
+
+    if (displayLatencyInfo) {
+        couchstore_latency_dump_options options;
+        couchstore_get_latency_info(couchstore_test_latency_callback,
+                                    options,
+                                    nullptr);
+    }
+    couchstore_latency_collector_stop();
+
     remove(filePath.c_str());
 }
 
@@ -92,3 +136,27 @@ LocalDoc CouchstoreInternalTest::create_local_doc(std::string& id,
     doc.deleted = 0;
     return doc;
 }
+
+CouchstoreMTTest::CouchstoreMTTest()
+    : CouchstoreMTTest("testfile_mt.couch") {
+}
+
+CouchstoreMTTest::CouchstoreMTTest(const std::string& _filePath)
+    : numThreads(std::get<1>(GetParam())),
+      dbs(numThreads),
+      filePath(_filePath) {
+}
+
+void CouchstoreMTTest::TearDown() {
+    for (size_t ii=0; ii<numThreads; ++ii) {
+        std::string actual_file_path = filePath + std::to_string(ii);
+        remove(actual_file_path.c_str());
+
+        if (dbs[ii]) {
+            couchstore_close_file(dbs[ii]);
+            couchstore_free_db(dbs[ii]);
+            dbs[ii] = nullptr;
+        }
+    }
+}
+

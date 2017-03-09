@@ -52,6 +52,7 @@ SET(COUCHSTORE_SOURCES src/arena.cc
                        src/couch_db.cc
                        src/couch_file_read.cc
                        src/couch_file_write.cc
+                       src/couch_latency.cc
                        src/couch_save.cc
                        src/crc32.cc
                        src/db_compact.cc

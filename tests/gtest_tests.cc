@@ -11,11 +11,13 @@
 #include "node_types.h"
 #include "reduces.h"
 
-#include <cstdint>
 #include <gtest/gtest.h>
 #include <libcouchstore/couch_db.h>
+
+#include <cstdint>
 #include <limits>
 #include <random>
+#include <thread>
 
 static void test_raw_08(uint8_t value)
 {
@@ -874,6 +876,127 @@ TEST_F(CouchstoreTest, crc_upgrade2) {
     ASSERT_EQ(0, remove(target.c_str()));
 }
 
+// Parameters for MT_save_worker.
+struct MT_save_args {
+    size_t worker_id;
+    Db* db;
+    std::string file_path_prefix;
+};
+
+// Worker thread for MT_save test.
+void MT_save_worker(void* voidargs) {
+    MT_save_args *args = static_cast<MT_save_args*>(voidargs);
+    std::string file_path = args->file_path_prefix
+                            + std::to_string(args->worker_id);
+    remove(file_path.c_str());
+
+    const uint32_t docsInTest = 100;
+    std::string key_str, value_str;
+    Documents documents(docsInTest);
+
+    for (uint32_t ii = 0; ii < docsInTest; ii++) {
+        key_str = "doc" + std::to_string(ii);
+        value_str = "{\"test_doc_index\":" + std::to_string(ii) + "}";
+        documents.setDoc(ii, key_str, value_str);
+    }
+
+    // Save docs.
+    couchstore_open_db(file_path.c_str(),
+                       COUCHSTORE_OPEN_FLAG_CREATE, &args->db);
+
+    for (uint32_t ii = 0; ii < docsInTest; ii++) {
+        couchstore_save_document(args->db,
+                                 documents.getDoc(ii),
+                                 documents.getDocInfo(ii),
+                                 0);
+    }
+
+    couchstore_commit(args->db);
+    couchstore_close_file(args->db);
+    couchstore_free_db(args->db);
+
+    // Check docs.
+    couchstore_open_db(file_path.c_str(),
+                       COUCHSTORE_OPEN_FLAG_CREATE, &args->db);
+
+    documents.resetCounters();
+    std::vector<sized_buf> buf(docsInTest);
+    for (uint32_t ii = 0; ii < docsInTest; ++ii) {
+        buf[ii] = documents.getDoc(ii)->id;
+    }
+    couchstore_docinfos_by_id(args->db,
+                              &buf[0],
+                              docsInTest,
+                              0,
+                              &Documents::docIterCheckCallback,
+                              &documents);
+    couchstore_close_file(args->db);
+    couchstore_free_db(args->db);
+}
+
+// Context for callback function of latency collector.
+struct MT_save_callback_ctx {
+    // Number of threads.
+    size_t num_threads;
+};
+
+int MT_save_callback(const char* stat_name,
+                     Histogram<CouchLatencyMicroSec> *latencies,
+                     const CouchLatencyMicroSec elapsed_time,
+                     void *ctx) {
+    struct MT_save_callback_ctx *actual_ctx =
+            static_cast<MT_save_callback_ctx*>(ctx);
+    uint64_t count_total = 0;
+    for (auto& itr_hist : *latencies) {
+        count_total += itr_hist->count();
+    }
+
+    // # calls of all APIs should be
+    // the multiplication of # threads.
+    EXPECT_EQ(0, count_total % actual_ctx->num_threads);
+
+    return 0;
+}
+
+// Multi-threaded document saving and loading test.
+// Check if latency collector registers latency timer
+// for each API correctly, under the racing condition.
+TEST_P(CouchstoreMTTest, MT_save)
+{
+    const size_t numRepeat = 4;
+    const bool enable_collector = std::get<0>(GetParam());
+    for (size_t rpt = 0; rpt < numRepeat; ++rpt) {
+        if (enable_collector) {
+            couchstore_latency_collector_start();
+        }
+
+        std::vector<std::thread> t_handles(numThreads);
+        std::vector<MT_save_args> args(numThreads);
+
+        for (size_t ii = 0; ii < numThreads; ++ii) {
+            args[ii].worker_id = ii;
+            args[ii].db = dbs[ii];
+            args[ii].file_path_prefix = filePath;
+            t_handles[ii] = std::thread(MT_save_worker, &args[ii]);
+        }
+
+        for (size_t ii = 0; ii < numThreads; ++ii) {
+            t_handles[ii].join();
+            // 'dbs[ii]' is already closed at the end of above thread.
+            dbs[ii] = nullptr;
+        }
+
+        if (enable_collector) {
+            couchstore_latency_dump_options options;
+            MT_save_callback_ctx ctx = {numThreads};
+            couchstore_get_latency_info(MT_save_callback,
+                                        options,
+                                        &ctx);
+            couchstore_latency_collector_stop();
+        }
+    }
+}
+
 INSTANTIATE_TEST_CASE_P(DocTest,
                         CouchstoreDoctest,
                         ::testing::Combine(::testing::Bool(), ::testing::Values(4, 69, 666, 4090)),
@@ -883,6 +1006,20 @@ INSTANTIATE_TEST_CASE_P(DocTest,
                                 << "x" << std::get<1>(info.param);
                             return fmt.str();
                         });
+
+INSTANTIATE_TEST_CASE_P(
+        MTLatencyCollectTest,
+        CouchstoreMTTest,
+        ::testing::Combine(::testing::Values(true, false),
+                           ::testing::Values(8)),
+        [] (const ::testing::TestParamInfo<std::tuple<bool, size_t>>& info) {
+            std::stringstream fmt;
+            fmt << "collector_"
+                << ((std::get<0>(info.param))?"enabled":"disabled")
+                << "_" << std::get<1>(info.param);
+            return fmt.str();
+        });
+
 
 int main(int argc, char ** argv)
 {

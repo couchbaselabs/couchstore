@@ -8,6 +8,7 @@
 #include "tree_writer.h"
 #include "node_types.h"
 #include "util.h"
+#include "couch_latency_internal.h"
 
 #include <platform/cb_malloc.h>
 #include <stdlib.h>
@@ -38,6 +39,8 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
                                             void* hook_ctx,
                                             FileOpsInterface* ops)
 {
+    COLLECT_LATENCY();
+
     Db* target = NULL;
     char tmpFile[PATH_MAX]; // keep this on the stack for duration of the call
     couchstore_error_t errcode;

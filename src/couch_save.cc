@@ -12,6 +12,9 @@
 #include "reduces.h"
 #include "couch_btree.h"
 
+#include "couch_latency_internal.h"
+
+
 #define SEQ_INDEX_RAW_VALUE_SIZE(doc_info) \
     (sizeof(raw_seq_index_value) + (doc_info).id.size + (doc_info).rev_meta.size)
 
@@ -332,6 +335,8 @@ couchstore_error_t couchstore_save_documents(Db *db,
                                              unsigned numdocs,
                                              couchstore_save_options options)
 {
+    COLLECT_LATENCY();
+
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     unsigned ii;
     sized_buf *seqklist, *idklist, *seqvlist, *idvlist;

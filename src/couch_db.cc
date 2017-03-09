@@ -14,6 +14,8 @@
 #include "reduces.h"
 #include "util.h"
 
+#include "couch_latency_internal.h"
+
 #define ROOT_BASE_SIZE 12
 #define HEADER_BASE_SIZE 25
 
@@ -238,6 +240,8 @@ couchstore_error_t precommit(Db *db)
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_commit(Db *db)
 {
+    COLLECT_LATENCY();
+
     couchstore_error_t errcode = precommit(db);
 
     if (errcode == COUCHSTORE_SUCCESS) {
@@ -294,6 +298,8 @@ couchstore_error_t couchstore_open_db_ex(const char *filename,
                                          FileOpsInterface* ops,
                                          Db **pDb)
 {
+    COLLECT_LATENCY();
+
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     Db *db;
     int openflags;
@@ -377,6 +383,8 @@ cleanup:
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_close_file(Db* db)
 {
+    COLLECT_LATENCY();
+
     if(db->dropped) {
         return COUCHSTORE_SUCCESS;
     }
@@ -388,6 +396,8 @@ couchstore_error_t couchstore_close_file(Db* db)
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_rewind_db_header(Db *db)
 {
+    COLLECT_LATENCY();
+
     couchstore_error_t errcode;
     error_unless(!db->dropped, COUCHSTORE_ERROR_FILE_CLOSED);
     // free current header guts
@@ -415,6 +425,8 @@ cleanup:
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_free_db(Db* db)
 {
+    COLLECT_LATENCY();
+
     if(!db) {
         return COUCHSTORE_SUCCESS;
     }
@@ -625,6 +637,8 @@ couchstore_error_t couchstore_docinfo_by_id(Db *db,
                                             size_t idlen,
                                             DocInfo **pInfo)
 {
+    COLLECT_LATENCY();
+
     sized_buf key;
     sized_buf *keylist = &key;
     couchfile_lookup_request rq;
@@ -662,6 +676,8 @@ couchstore_error_t couchstore_docinfo_by_sequence(Db *db,
                                                   uint64_t sequence,
                                                   DocInfo **pInfo)
 {
+    COLLECT_LATENCY();
+
     sized_buf key;
     sized_buf *keylist = &key;
     couchfile_lookup_request rq;
@@ -701,6 +717,8 @@ couchstore_error_t couchstore_open_doc_with_docinfo(Db *db,
                                                     Doc **pDoc,
                                                     couchstore_open_options options)
 {
+    COLLECT_LATENCY();
+
     couchstore_error_t errcode;
 
     *pDoc = NULL;
@@ -728,6 +746,8 @@ couchstore_error_t couchstore_open_document(Db *db,
                                             Doc **pDoc,
                                             couchstore_open_options options)
 {
+    COLLECT_LATENCY();
+
     couchstore_error_t errcode;
     DocInfo *info;
     error_unless(!db->dropped, COUCHSTORE_ERROR_FILE_CLOSED);
@@ -821,6 +841,8 @@ couchstore_error_t couchstore_changes_since(Db *db,
                                             couchstore_changes_callback_fn callback,
                                             void *ctx)
 {
+    COLLECT_LATENCY();
+
     char since_termbuf[6];
     sized_buf since_term;
     sized_buf *keylist = &since_term;
@@ -858,6 +880,8 @@ couchstore_error_t couchstore_all_docs(Db *db,
                                        couchstore_changes_callback_fn callback,
                                        void *ctx)
 {
+    COLLECT_LATENCY();
+
     sized_buf startKey = {NULL, 0};
     sized_buf *keylist = &startKey;
     lookup_context cbctx = {db, options, callback, ctx, 1, 0, NULL};
@@ -970,6 +994,8 @@ couchstore_error_t couchstore_walk_id_tree(Db *db,
                                            couchstore_walk_tree_callback_fn callback,
                                            void *ctx)
 {
+    COLLECT_LATENCY();
+
     return couchstore_walk_tree(db, 1, db->header.by_id_root, startDocID,
                                 options, ebin_cmp, callback, ctx);
 }
@@ -981,6 +1007,8 @@ couchstore_error_t couchstore_walk_seq_tree(Db *db,
                                            couchstore_walk_tree_callback_fn callback,
                                            void *ctx)
 {
+    COLLECT_LATENCY();
+
     raw_48 start_termbuf;
     encode_raw48(startSequence, &start_termbuf);
     sized_buf start_term = {(char*)&start_termbuf, 6};
@@ -1068,6 +1096,8 @@ couchstore_error_t couchstore_docinfos_by_id(Db *db,
                                              couchstore_changes_callback_fn callback,
                                              void *ctx)
 {
+    COLLECT_LATENCY();
+
     return iterate_docinfos(db, ids, numDocs,
                             db->header.by_id_root, id_ptr_cmp, ebin_cmp,
                             callback,
@@ -1083,6 +1113,8 @@ couchstore_error_t couchstore_docinfos_by_sequence(Db *db,
                                                    couchstore_changes_callback_fn callback,
                                                    void *ctx)
 {
+    COLLECT_LATENCY();
+
     // Create the array of keys:
     sized_buf *keylist = static_cast<sized_buf*>(cb_malloc(numDocs * sizeof(sized_buf)));
     raw_by_seq_key *keyvalues = static_cast<raw_by_seq_key*>(cb_malloc(numDocs * sizeof(raw_by_seq_key)));
@@ -1351,6 +1383,8 @@ couchstore_error_t couchstore_changes_count(Db* db,
                                             uint64_t min_seq,
                                             uint64_t max_seq,
                                             uint64_t *count) {
+    COLLECT_LATENCY();
+
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
     raw_48 leftkr, rightkr;
     sized_buf leftk, rightk;
