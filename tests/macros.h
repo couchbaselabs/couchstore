@@ -24,13 +24,16 @@
         }                                                   \
     }  while (0)
 
-#define try(C)                                                      \
-    do {                                                            \
-        if((errcode = (C)) < 0) {                                   \
-            fprintf(stderr, "Couchstore error `%s' at %s:%d\r\n",   \
-            couchstore_strerror((couchstore_error_t)errcode), __FILE__, __LINE__);      \
-            goto cleanup;                                           \
-        }                                                           \
+#define try_to(C)                                                     \
+    do {                                                              \
+        if ((errcode = (C)) < 0) {                                    \
+            fprintf(stderr,                                           \
+                    "Couchstore error `%s' at %s:%d\r\n",             \
+                    couchstore_strerror((couchstore_error_t)errcode), \
+                    __FILE__,                                         \
+                    __LINE__);                                        \
+            goto cleanup;                                             \
+        }                                                             \
     } while (0)
 
 #define error_unless(C, E)                                  \

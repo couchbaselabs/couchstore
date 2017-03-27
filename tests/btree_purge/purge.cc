@@ -565,7 +565,7 @@ void test_no_purge_items()
     ctx[0] = N;
     ctx[1] = 1;
     remove(testpurgefile);
-    try(couchstore_open_db(testpurgefile, COUCHSTORE_OPEN_FLAG_CREATE, &db));
+    try_to(couchstore_open_db(testpurgefile, COUCHSTORE_OPEN_FLAG_CREATE, &db));
     root = insert_items(&db->file, NULL, count_reduce, count_rereduce, N);
     cb_assert(root != NULL);
 
@@ -584,7 +584,7 @@ void test_no_purge_items()
     cb_assert(redval == N);
     fprintf(stderr, "Reduce value after guided purge equals N\n");
 
-    try(iter_btree(&db->file, newroot, &ctx, check_vals_callback));
+    try_to(iter_btree(&db->file, newroot, &ctx, check_vals_callback));
     fprintf(stderr, "Btree has same values after guided purge\n");
 
 cleanup:
@@ -610,7 +610,7 @@ void test_all_purge_items()
 
     N = 211341;
     remove(testpurgefile);
-    try(couchstore_open_db(testpurgefile, COUCHSTORE_OPEN_FLAG_CREATE, &db));
+    try_to(couchstore_open_db(testpurgefile, COUCHSTORE_OPEN_FLAG_CREATE, &db));
     root = insert_items(&db->file, NULL, count_reduce, count_rereduce, N);
     cb_assert(root != NULL);
 
@@ -657,7 +657,7 @@ void test_partial_purge_items()
     exp_evenodd[1] = N / 2 + N % 2;
 
     remove(testpurgefile);
-    try(couchstore_open_db(testpurgefile, COUCHSTORE_OPEN_FLAG_CREATE, &db));
+    try_to(couchstore_open_db(testpurgefile, COUCHSTORE_OPEN_FLAG_CREATE, &db));
     root = insert_items(&db->file, NULL, evenodd_reduce, evenodd_rereduce, N);
     cb_assert(root != NULL);
 
@@ -674,7 +674,7 @@ void test_partial_purge_items()
     cb_assert(red_intval(newroot, 0) == exp_evenodd[0] && red_intval(newroot, 1) == 0);
     fprintf(stderr, "Reduce value after guided purge equals {NumEven, 0}\n");
 
-    try(iter_btree(&db->file, newroot, NULL, check_odd_callback));
+    try_to(iter_btree(&db->file, newroot, NULL, check_odd_callback));
     fprintf(stderr, "Btree has no odd values after guided purge\n");
 
 cleanup:
@@ -698,7 +698,7 @@ void test_partial_purge_items2()
 
     N = 320000;
     remove(testpurgefile);
-    try(couchstore_open_db(testpurgefile, COUCHSTORE_OPEN_FLAG_CREATE, &db));
+    try_to(couchstore_open_db(testpurgefile, COUCHSTORE_OPEN_FLAG_CREATE, &db));
     root = insert_items(&db->file, NULL, uniq_reduce, uniq_rereduce, N);
     cb_assert(root != NULL);
 
@@ -722,7 +722,8 @@ void test_partial_purge_items2()
     cb_assert(red_intval(newroot, 0) == N / 2 && range_start == 0 && range_end == 31);
     fprintf(stderr, "Reduce value after guided purge equals {0, 31}\n");
 
-    try(iter_btree(&db->file, newroot, &iter_context, check_skiprange_callback));
+    try_to(iter_btree(
+            &db->file, newroot, &iter_context, check_skiprange_callback));
     fprintf(stderr, "Btree has only values within the range {0, 31} and keys are sorted\n");
 
 cleanup:
@@ -749,7 +750,7 @@ void test_partial_purge_with_stop()
     exp_evenodd[1] = N / 2 + N % 2;
 
     remove(testpurgefile);
-    try(couchstore_open_db(testpurgefile, COUCHSTORE_OPEN_FLAG_CREATE, &db));
+    try_to(couchstore_open_db(testpurgefile, COUCHSTORE_OPEN_FLAG_CREATE, &db));
     root = insert_items(&db->file, NULL, evenodd_reduce, evenodd_rereduce, N);
     cb_assert(root != NULL);
 
@@ -767,7 +768,7 @@ void test_partial_purge_with_stop()
     cb_assert(red_intval(newroot, 1) == (exp_evenodd[1] - 4));
     fprintf(stderr, "Reduce value after guided purge equals {NumEven, NumOdd-4}\n");
 
-    try(iter_btree(&db->file, newroot, NULL, check_odd_stop_callback));
+    try_to(iter_btree(&db->file, newroot, NULL, check_odd_stop_callback));
     fprintf(stderr, "Btree does not contain first 4 odd values after guided purge\n");
 
 cleanup:
@@ -797,7 +798,7 @@ void test_add_remove_purge()
     exp_evenodd[1] = N / 2 + N % 2;
 
     remove(testpurgefile);
-    try(couchstore_open_db(testpurgefile, COUCHSTORE_OPEN_FLAG_CREATE, &db));
+    try_to(couchstore_open_db(testpurgefile, COUCHSTORE_OPEN_FLAG_CREATE, &db));
     root = insert_items(&db->file, NULL, evenodd_reduce, evenodd_rereduce, N);
     cb_assert(root != NULL);
 
@@ -846,7 +847,7 @@ void test_add_remove_purge()
     cb_assert(red_intval(newroot, 0) == (exp_evenodd[0] - 2) && red_intval(newroot, 1) == 0);
     fprintf(stderr, "Btree reduce value equals - {NumEven-2, 0}\n");
 
-    try(iter_btree(&db->file, newroot, NULL, check_odd2_callback));
+    try_to(iter_btree(&db->file, newroot, NULL, check_odd2_callback));
     fprintf(stderr, "Btree has no odd values after guided purge\n");
     fprintf(stderr, "Keys 4,10,200000 are not in tree after guided purge\n");
 
@@ -874,7 +875,7 @@ void test_only_single_leafnode()
     fprintf(stderr, "\nExecuting test_only_single_leafnode...\n");
     N = 2;
     remove(testpurgefile);
-    try(couchstore_open_db(testpurgefile, COUCHSTORE_OPEN_FLAG_CREATE, &db));
+    try_to(couchstore_open_db(testpurgefile, COUCHSTORE_OPEN_FLAG_CREATE, &db));
     root = insert_items(&db->file, NULL, count_reduce, count_rereduce, N);
     cb_assert(root != NULL);
 
