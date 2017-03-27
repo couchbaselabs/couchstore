@@ -190,10 +190,10 @@ class DocumentInfo(object):
             raise Exception("Contents unknown")
         info = self._asStruct()
         docptr = ctypes.pointer(DocStruct())
-        _lib.couchstore_open_doc_with_docinfo(self.store,
-                                              ctypes.byref(info),
-                                              ctypes.byref(docptr),
-                                              ctypes.c_uint64(options))
+        _check(_lib.couchstore_open_doc_with_docinfo(self.store,
+                                                     ctypes.byref(info),
+                                                     ctypes.byref(docptr),
+                                                     ctypes.c_uint64(options)))
         contents = str(docptr.contents.data)
         _lib.couchstore_free_document(docptr)
         return contents
