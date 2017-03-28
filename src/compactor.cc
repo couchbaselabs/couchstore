@@ -17,22 +17,16 @@ static void usage(const char* prog) {
 }
 
 typedef struct {
-    uint64_t purge_before_ts;
-    uint64_t purge_before_seq;
-    uint64_t max_purged_seq;
-} time_purge_ctx;
-
-typedef struct {
     raw_64 cas;
     raw_32 expiry;
     raw_32 flags;
 } CouchbaseRevMeta;
 
-static int time_purge_hook(Db* target, DocInfo* info, void* ctx_p) {
+static int time_purge_hook(Db* target, DocInfo* info, sized_buf, void* ctx_p) {
     time_purge_ctx* ctx = (time_purge_ctx*) ctx_p;
 
-    /* Compaction finished */
-    if(info == NULL) {
+    if (info == nullptr) {
+        /* Compaction finished */
         target->header.purge_seq = ctx->max_purged_seq;
         return COUCHSTORE_SUCCESS;
     }

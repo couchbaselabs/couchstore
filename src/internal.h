@@ -33,6 +33,12 @@
 #define PATH_MAX 1024
 #endif
 
+typedef struct {
+    uint64_t purge_before_ts;
+    uint64_t purge_before_seq;
+    uint64_t max_purged_seq;
+} time_purge_ctx;
+
 #ifdef __cplusplus
 extern "C" {
 #endif

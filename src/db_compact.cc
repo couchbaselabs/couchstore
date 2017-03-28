@@ -11,8 +11,9 @@
 #include "couch_latency_internal.h"
 
 #include <platform/cb_malloc.h>
-#include <stdlib.h>
+#include <stdexcept>
 #include <stdio.h>
+#include <stdlib.h>
 
 typedef struct compact_ctx {
     TreeWriter* tree_writer;
@@ -90,7 +91,11 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
         error_pass(compact_localdocs_tree(source, target, &ctx));
     }
     if(ctx.hook != NULL) {
-        error_pass(static_cast<couchstore_error_t>(ctx.hook(ctx.target, NULL, ctx.hook_ctx)));
+        error_pass(
+            static_cast<couchstore_error_t>(ctx.hook(ctx.target,
+                                                     nullptr, // docinfo
+                                                     {},
+                                                     ctx.hook_ctx)));
     }
     error_pass(couchstore_commit(target));
 cleanup:
@@ -193,16 +198,37 @@ static couchstore_error_t compact_seq_fetchcb(couchfile_lookup_request *rq,
         return COUCHSTORE_SUCCESS;
     }
 
-    if(ctx->hook) {
+    sized_buf item;
+    item.buf = nullptr;
+    item.size = 0xffffff;
+
+    if (ctx->hook) {
         error_pass(by_seq_read_docinfo(&info, k, v));
-        int hook_action = ctx->hook(ctx->target, info, ctx->hook_ctx);
-        switch(hook_action) {
-            case COUCHSTORE_COMPACT_KEEP_ITEM:
-                break;
-            case COUCHSTORE_COMPACT_DROP_ITEM:
-                goto cleanup;
-            default:
-                error_pass(static_cast<couchstore_error_t>(hook_action));
+        /* If the hook returns with the client requiring the whole body,
+         * then the whole body is read from disk and the hook is called
+         * again
+         */
+        int hook_action = ctx->hook(ctx->target, info, item, ctx->hook_ctx);
+        if (hook_action == COUCHSTORE_COMPACT_NEED_BODY) {
+            int size = pread_bin(rq->file, bp, &item.buf);
+            if (size < 0) {
+                return static_cast<couchstore_error_t>(size);
+            }
+            item.size = size_t(size);
+            hook_action = ctx->hook(ctx->target, info, item, ctx->hook_ctx);
+        }
+
+        switch (hook_action) {
+        case COUCHSTORE_COMPACT_NEED_BODY:
+            throw std::logic_error(
+                "compact_seq_fetchcb: COUCHSTORE_COMPACT_NEED_BODY should not be returned "
+                "if the body was provided");
+        case COUCHSTORE_COMPACT_KEEP_ITEM:
+            break;
+        case COUCHSTORE_COMPACT_DROP_ITEM:
+            goto cleanup;
+        default:
+            error_pass(static_cast<couchstore_error_t>(hook_action));
         }
     }
 
@@ -210,14 +236,14 @@ static couchstore_error_t compact_seq_fetchcb(couchfile_lookup_request *rq,
         cs_off_t new_bp = 0;
         // Copy the document from the old db file to the new one:
         size_t new_size = 0;
-        sized_buf item;
-        item.buf = NULL;
 
-        int itemsize = pread_bin(rq->file, bp, &item.buf);
-        if (itemsize < 0) {
-            return static_cast<couchstore_error_t>(itemsize);
+        if (item.buf == nullptr) {
+            int size = pread_bin(rq->file, bp, &item.buf);
+            if (size < 0) {
+                return static_cast<couchstore_error_t>(size);
+            }
+            item.size = size_t(size);
         }
-        item.size = itemsize;
 
         if (ctx->dhook) {
             ret_val = ctx->dhook(&info, &item);
@@ -227,7 +253,6 @@ static couchstore_error_t compact_seq_fetchcb(couchfile_lookup_request *rq,
 
         bpWithDeleted = (bpWithDeleted & BP_DELETED_FLAG) | new_bp;  //Preserve high bit
         encode_raw48(bpWithDeleted, &rawSeq->bp);
-        cb_free(item.buf);
         error_pass(static_cast<couchstore_error_t>(err));
     }
 
@@ -236,7 +261,9 @@ static couchstore_error_t compact_seq_fetchcb(couchfile_lookup_request *rq,
     } else {
         error_pass(output_seqtree_item(k, v, NULL, ctx));
     }
+
 cleanup:
+    cb_free(item.buf);
     couchstore_free_docinfo(info);
     return errcode;
 }

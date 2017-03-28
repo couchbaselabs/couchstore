@@ -8,6 +8,7 @@
 #include "couchstoretest.h"
 #include "couchstoredoctest.h"
 #include "documents.h"
+#include "internal.h"
 #include "node_types.h"
 #include "reduces.h"
 
@@ -18,6 +19,8 @@
 #include <limits>
 #include <random>
 #include <thread>
+
+using ::testing::_;
 
 static void test_raw_08(uint8_t value)
 {
@@ -1018,6 +1021,70 @@ TEST_F(CouchstoreTest, mb23697) {
     EXPECT_EQ(static_cast<size_t>(0), doc->data.size);
     couchstore_free_docinfo(ir);
     couchstore_free_document(doc);
+}
+
+static int time_purge_hook_impl(Db* target, DocInfo* info, sized_buf item) {
+    if (item.buf == nullptr) {
+        return COUCHSTORE_COMPACT_NEED_BODY;
+    }
+
+    return COUCHSTORE_SUCCESS;
+}
+
+class CompactionHookInterface {
+    public:
+        virtual int time_purge_hook(Db* target, DocInfo* info, sized_buf item) = 0;
+};
+
+class CompactionHook : CompactionHookInterface {
+    public:
+        virtual int time_purge_hook(Db* target, DocInfo* info, sized_buf item) {
+            return time_purge_hook_impl(target, info, item);
+        }
+};
+
+class MockTimePurgeHook : CompactionHook {
+    public:
+        MOCK_METHOD3(time_purge_hook, int(Db* target, DocInfo* info, sized_buf item));
+};
+
+int mockTimePurgeHook(Db* target, DocInfo* info, sized_buf item, void* ctx_p) {
+    auto* ctx = reinterpret_cast<MockTimePurgeHook*>(ctx_p);
+    return ctx->time_purge_hook(target, info, item);
+}
+
+/* Test to check that the compaction will send the full body in case the
+ * client requests the same
+ */
+TEST_F(CouchstoreTest, compact_need_body) {
+    Documents documents(1);
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_open_db(filePath.c_str(),
+              COUCHSTORE_OPEN_FLAG_CREATE, &db));
+    documents.setDoc(0, "key", "value");
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_save_document(db,
+                                                           documents.getDoc(0),
+                                                           documents.getDocInfo(0),
+                                                           0));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_commit(db));
+
+    MockTimePurgeHook tph;
+    std::string target("compacted.couch");
+    EXPECT_CALL(tph, time_purge_hook(_,_,_)).Times(3)
+                                            .WillOnce(testing::Return(COUCHSTORE_COMPACT_NEED_BODY))
+                                            .WillOnce(testing::Return(COUCHSTORE_SUCCESS))
+                                            .WillOnce(testing::Return(COUCHSTORE_SUCCESS));
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_compact_db_ex(db,
+                                                           target.c_str(),
+                                                           0,
+                                                           mockTimePurgeHook,
+                                                           nullptr,
+                                                           &tph,
+                                                           couchstore_get_default_file_ops()));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
+    db = nullptr;
+    ASSERT_EQ(0, remove(target.c_str()));
 }
 
 INSTANTIATE_TEST_CASE_P(DocTest,

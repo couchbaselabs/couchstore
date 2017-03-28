@@ -679,11 +679,17 @@ extern "C" {
      */
     enum {
         COUCHSTORE_COMPACT_KEEP_ITEM = 0,
-        COUCHSTORE_COMPACT_DROP_ITEM = 1
+        COUCHSTORE_COMPACT_DROP_ITEM = 1,
+        // The compact hook might need to see the full body to determine
+        // if it should keep or drop the body. By default the body is
+        // _not_ being read (as we expect that "keep" would be the common
+        // path).
+        COUCHSTORE_COMPACT_NEED_BODY = 2
     };
 
     typedef int (*couchstore_compact_hook)(Db* target,
                                            DocInfo *docinfo,
+                                           sized_buf item, // is {nullptr, 0}
                                            void *ctx);
 
     typedef int (*couchstore_docinfo_hook)(DocInfo **docinfo,
