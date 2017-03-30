@@ -145,7 +145,8 @@ TEST_F(CouchstoreInternalTest, buffered_io_options)
                                                 0,
                                                 &Documents::docIterCheckCallback,
                                                 &documents));
-            EXPECT_EQ(docsInTest, documents.getCallbacks());
+            EXPECT_EQ(static_cast<int>(docsInTest),
+                      documents.getCallbacks());
             EXPECT_EQ(0, documents.getDeleted());
         }
 

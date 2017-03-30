@@ -88,7 +88,7 @@ WrappedOpsTest<T>::~WrappedOpsTest() {
 template <class T>
 void WrappedOpsTest<T>::populate(size_t length) {
     std::vector<char> inp(length, 'H');
-    ASSERT_EQ(length,
+    ASSERT_EQ(static_cast<ssize_t>(length),
               ops.pwrite(&this->errinfo, this->handle, &inp.front(), length, 0));
 }
 
