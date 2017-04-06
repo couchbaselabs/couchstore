@@ -997,6 +997,29 @@ TEST_P(CouchstoreMTTest, MT_save)
     }
 }
 
+/* Test to check that retrieving an item with value of zero length
+ * doesn't result in a memory leak
+ */
+TEST_F(CouchstoreTest, mb23697) {
+    DocInfo* ir = nullptr;
+    Doc* doc = nullptr;
+
+    Documents documents(1);
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_open_db(filePath.c_str(),
+              COUCHSTORE_OPEN_FLAG_CREATE, &db));
+    documents.setDoc(0, "test", "");
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_save_document(db,
+                                                           documents.getDoc(0),
+                                                           documents.getDocInfo(0),
+                                                           0));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_docinfo_by_id(db, "test", 4, &ir));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_open_doc_with_docinfo(db, ir, &doc,
+                                                      DECOMPRESS_DOC_BODIES));
+    EXPECT_EQ(0, doc->data.size);
+    couchstore_free_docinfo(ir);
+    couchstore_free_document(doc);
+}
+
 INSTANTIATE_TEST_CASE_P(DocTest,
                         CouchstoreDoctest,
                         ::testing::Combine(::testing::Bool(), ::testing::Values(4, 69, 666, 4090)),

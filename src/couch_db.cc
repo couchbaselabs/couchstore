@@ -594,6 +594,7 @@ static couchstore_error_t bp_to_doc(Doc **pDoc, Db *db, cs_off_t bp, couchstore_
     if (bodylen == 0) { //Empty doc
         (*pDoc)->data.buf = NULL;
         (*pDoc)->data.size = 0;
+        cb_free(docbody);
         return COUCHSTORE_SUCCESS;
     }
 
