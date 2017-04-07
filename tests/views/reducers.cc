@@ -1603,7 +1603,7 @@ static void test_view_btree_large_reducer(void)
     value1.partition = 7;
     value1.num_values = 1;
     value1.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
-    value1.values[0].buf = (char*)cb_malloc(6000);
+    value1.values[0].buf = (char*)cb_calloc(6000, sizeof(char));
     value1.values[0].size = 6000;
     cb_assert(encode_view_btree_value(&value1, &value1_bin, &value1_bin_size)
         == COUCHSTORE_SUCCESS);
@@ -1611,7 +1611,7 @@ static void test_view_btree_large_reducer(void)
     value2.partition = 666;
     value2.num_values = 1;
     value2.values = (sized_buf *) cb_malloc(sizeof(sized_buf) * 1);
-    value2.values[0].buf = (char*)cb_malloc(6000);
+    value2.values[0].buf = (char*)cb_calloc(6000, sizeof(char));
     value2.values[0].size = 6000;
     cb_assert(encode_view_btree_value(&value2, &value2_bin, &value2_bin_size)
         == COUCHSTORE_SUCCESS);
