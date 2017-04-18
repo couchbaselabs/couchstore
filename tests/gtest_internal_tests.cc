@@ -156,6 +156,117 @@ TEST_F(CouchstoreInternalTest, buffered_io_options)
     }
 }
 
+struct corrupted_btree_node_cb_param {
+    corrupted_btree_node_cb_param() : last_doc_bp(0), num_called(0) {
+    }
+
+    void reset() {
+        last_doc_bp = 0;
+        num_called = 0;
+    }
+
+    uint64_t last_doc_bp;
+    size_t num_called;
+};
+
+int corrupted_btree_node_cb(Db *db, DocInfo *info, void *ctx) {
+    corrupted_btree_node_cb_param* param =
+            reinterpret_cast<corrupted_btree_node_cb_param*>(ctx);
+    if (param->last_doc_bp < info->bp) {
+        param->last_doc_bp = info->bp;
+    }
+    param->num_called++;
+    return 0;
+}
+
+/**
+ * Test to check whether or not B+tree corrupted node is well tolerated.
+ */
+TEST_F(CouchstoreInternalTest, corrupted_btree_node)
+{
+    remove(filePath.c_str());
+
+    const uint32_t docsInTest = 100;
+    std::string key_str, value_str;
+    Documents documents(docsInTest);
+
+    for (uint32_t ii = 0; ii < docsInTest; ii++) {
+        key_str = "doc" + std::to_string(ii);
+        value_str = "test_doc_body:" + std::to_string(ii);
+        documents.setDoc(ii, key_str, value_str);
+    }
+
+    // Save docs.
+    ASSERT_EQ(COUCHSTORE_SUCCESS, open_db(COUCHSTORE_OPEN_FLAG_CREATE));
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_save_documents(db, documents.getDocs(),
+                                        documents.getDocInfos(),
+                                        docsInTest, 0));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_commit(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
+
+    // Check docs.
+    ASSERT_EQ(COUCHSTORE_SUCCESS, open_db(COUCHSTORE_OPEN_FLAG_CREATE));
+    documents.resetCounters();
+    std::vector<sized_buf> buf(docsInTest);
+    for (uint32_t ii = 0; ii < docsInTest; ++ii) {
+        buf[ii] = documents.getDoc(ii)->id;
+    }
+    corrupted_btree_node_cb_param param;
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_docinfos_by_id(db,
+                                        &buf[0],
+                                        docsInTest,
+                                        0,
+                                        corrupted_btree_node_cb,
+                                        &param));
+    ASSERT_EQ(docsInTest, param.num_called);
+
+    couchstore_error_info_t errinfo;
+    // Inject corruption into one of B+tree nodes
+    // (located at right next to the last doc).
+    db->file.ops->pwrite(&errinfo, db->file.handle,
+                         "corruption", 10, param.last_doc_bp+32);
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS, open_db(COUCHSTORE_OPEN_FLAG_CREATE));
+    param.reset();
+    // Should fail.
+    ASSERT_NE(COUCHSTORE_SUCCESS,
+              couchstore_docinfos_by_id(db,
+                                        &buf[0],
+                                        docsInTest,
+                                        0,
+                                        corrupted_btree_node_cb,
+                                        &param));
+    // Without TOLERATE flag: should not retrieve any docs.
+    ASSERT_EQ(static_cast<size_t>(0), param.num_called);
+
+    param.reset();
+    // Should fail.
+    ASSERT_NE(COUCHSTORE_SUCCESS,
+              couchstore_docinfos_by_id(db,
+                                        &buf[0],
+                                        docsInTest,
+                                        COUCHSTORE_TOLERATE_CORRUPTION,
+                                        corrupted_btree_node_cb,
+                                        &param));
+
+    // With TOLERATE flag: should retrieve some docs,
+    // the number should be: '0 < # docs < docsInTest'.
+    ASSERT_LT(static_cast<size_t>(0), param.num_called);
+    ASSERT_GT(docsInTest, param.num_called);
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
+
+    db = nullptr;
+}
+
+
 /**
  * Tests whether the unbuffered file ops flag actually
  * prevents the buffered file operations from being used.

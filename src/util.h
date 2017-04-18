@@ -35,19 +35,35 @@ cs_off_t align_to_next_block(cs_off_t offset);
    /* Sets errcode to the result of C, and jumps to the cleanup: label if it's nonzero. */
 #ifdef DEBUG
     void report_error(couchstore_error_t, const char* file, int line);
-    #define error_pass(C) \
-        do { \
-            if((errcode = (C)) < 0) { \
+    #define error_pass(C)                                  \
+        do {                                               \
+            if ((errcode = (C)) < 0) {                     \
                 report_error(errcode, __FILE__, __LINE__); \
-                goto cleanup; \
-            } \
+                goto cleanup;                              \
+            }                                              \
+        } while (0)
+
+    // Set errcode on error, without termination.
+    #define error_tolerate(C)                              \
+        do {                                               \
+            if ((C) < 0) {                                 \
+                errcode = (C);                             \
+                report_error(errcode, __FILE__, __LINE__); \
+            }                                              \
         } while (0)
 #else
-    #define error_pass(C) \
-        do { \
-            if((errcode = (C)) < 0) { \
-                goto cleanup; \
-            } \
+    #define error_pass(C)              \
+        do {                           \
+            if ((errcode = (C)) < 0) { \
+                goto cleanup;          \
+            }                          \
+        } while (0)
+
+    #define error_tolerate(C)  \
+        do {                   \
+            if ((C) < 0) {     \
+                errcode = (C); \
+            }                  \
         } while (0)
 #endif
 

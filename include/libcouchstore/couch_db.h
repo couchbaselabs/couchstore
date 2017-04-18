@@ -404,7 +404,12 @@ extern "C" {
         /**
          * Send only non-deleted items.
          */
-        COUCHSTORE_NO_DELETES = 4
+        COUCHSTORE_NO_DELETES = 4,
+        /**
+         * If set, corrupted B+tree node will be tolerated to retrieve
+         * docs in the DB file as many as possible.
+         */
+        COUCHSTORE_TOLERATE_CORRUPTION = 8
     };
 
     /**

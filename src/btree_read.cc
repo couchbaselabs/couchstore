@@ -67,7 +67,15 @@ static couchstore_error_t btree_lookup_inner(couchfile_lookup_request *rq,
                 }
 
                 pointer = decode_raw48(raw->pointer);
-                error_pass(btree_lookup_inner(rq, pointer, current, last_item));
+
+                couchstore_error_t errcode_local =
+                        btree_lookup_inner(rq, pointer, current, last_item);
+                if (rq->tolerate_corruption) {
+                    error_tolerate(errcode_local);
+                } else {
+                    error_pass(errcode_local);
+                }
+
                 if (!rq->in_fold) {
                     current = last_item;
                 }

@@ -24,25 +24,45 @@ extern "C" {
 
     /* Lookup */
 
-    typedef struct couchfile_lookup_request {
+    struct couchfile_lookup_request {
+        couchfile_lookup_request()
+            : cmp({nullptr}),
+              file(nullptr),
+              num_keys(0),
+              fold(0),
+              in_fold(0),
+              tolerate_corruption(0),
+              keys(nullptr),
+              callback_ctx(nullptr),
+              fetch_callback(nullptr),
+              node_callback(nullptr) {
+        }
+
         compare_info cmp;
         tree_file *file;
         int num_keys;
-        /* If nonzero, calls fetch_callback for all keys between and including key 0 and key 1
-           in the keys array, or all keys after key 0 if it contains only one key.
-           GIVE KEYS SORTED. */
+        /**
+         * If nonzero, calls fetch_callback for all keys between and
+         * including key 0 and key 1 in the keys array, or all keys after
+         * key 0 if it contains only one key.
+         * GIVE KEYS SORTED.
+         */
         int fold;
-        /*  v-- Flag used during lookup, do not set. */
+        //  v-- Flag used during lookup, do not set.
         int in_fold;
+        // If nonzero, continue to traverse tree skipping corrupted node.
+        int tolerate_corruption;
         sized_buf **keys;
         void *callback_ctx;
-        couchstore_error_t (*fetch_callback) (struct couchfile_lookup_request *rq,
-					      const sized_buf *k,
-					      const sized_buf *v);
-        couchstore_error_t (*node_callback) (struct couchfile_lookup_request *rq,
-                                             uint64_t subtreeSize,
-                                             const sized_buf *reduce_value);
-    } couchfile_lookup_request;
+        couchstore_error_t (*fetch_callback) (
+                struct couchfile_lookup_request *rq,
+                const sized_buf *k,
+                const sized_buf *v);
+        couchstore_error_t (*node_callback) (
+                struct couchfile_lookup_request *rq,
+                uint64_t subtreeSize,
+                const sized_buf *reduce_value);
+    } ;
 
     couchstore_error_t btree_lookup(couchfile_lookup_request *rq,
                                     uint64_t root_pointer);

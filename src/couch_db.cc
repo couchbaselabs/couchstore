@@ -868,6 +868,7 @@ couchstore_error_t couchstore_changes_since(Db *db,
     rq.fetch_callback = lookup_callback;
     rq.node_callback = NULL;
     rq.fold = 1;
+    rq.tolerate_corruption = (options & COUCHSTORE_TOLERATE_CORRUPTION) != 0;
 
     errcode = btree_lookup(&rq, db->header.by_seq_root->pointer);
 cleanup:
@@ -906,6 +907,7 @@ couchstore_error_t couchstore_all_docs(Db *db,
     rq.fetch_callback = lookup_callback;
     rq.node_callback = NULL;
     rq.fold = 1;
+    rq.tolerate_corruption = (options & COUCHSTORE_TOLERATE_CORRUPTION) != 0;
 
     errcode = btree_lookup(&rq, db->header.by_id_root->pointer);
 cleanup:
@@ -981,6 +983,7 @@ couchstore_error_t couchstore_walk_tree(Db *db,
         rq.fetch_callback = lookup_callback;
         rq.node_callback = walk_node_callback;
         rq.fold = 1;
+        rq.tolerate_corruption = (options & COUCHSTORE_TOLERATE_CORRUPTION) != 0;
 
         error_pass(btree_lookup(&rq, root->pointer));
     }
@@ -1041,6 +1044,7 @@ static couchstore_error_t iterate_docinfos(Db *db,
                                            int (*key_compare)(const sized_buf *k1, const sized_buf *k2),
                                            couchstore_changes_callback_fn callback,
                                            int fold,
+                                           int tolerate_corruption,
                                            void *ctx)
 {
     couchstore_error_t errcode = COUCHSTORE_SUCCESS;
@@ -1080,6 +1084,7 @@ static couchstore_error_t iterate_docinfos(Db *db,
         rq.fetch_callback = lookup_callback;
         rq.node_callback = NULL;
         rq.fold = fold;
+        rq.tolerate_corruption = tolerate_corruption;
 
         // Go!
         error_pass(btree_lookup(&rq, tree->pointer));
@@ -1103,6 +1108,7 @@ couchstore_error_t couchstore_docinfos_by_id(Db *db,
                             db->header.by_id_root, id_ptr_cmp, ebin_cmp,
                             callback,
                             (options & RANGES) != 0,
+                            (options & COUCHSTORE_TOLERATE_CORRUPTION) != 0,
                             ctx);
 }
 
@@ -1133,6 +1139,7 @@ couchstore_error_t couchstore_docinfos_by_sequence(Db *db,
                                 db->header.by_seq_root, seq_ptr_cmp, seq_cmp,
                                 callback,
                                 (options & RANGES) != 0,
+                                (options & COUCHSTORE_TOLERATE_CORRUPTION) != 0,
                                 ctx));
 cleanup:
     cb_free(keylist);
