@@ -953,7 +953,7 @@ int MT_save_callback(const char* stat_name,
 
     // # calls of all APIs should be
     // the multiplication of # threads.
-    EXPECT_EQ(0, count_total % actual_ctx->num_threads);
+    EXPECT_EQ(static_cast<size_t>(0), count_total % actual_ctx->num_threads);
 
     return 0;
 }
@@ -1015,7 +1015,7 @@ TEST_F(CouchstoreTest, mb23697) {
     ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_docinfo_by_id(db, "test", 4, &ir));
     ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_open_doc_with_docinfo(db, ir, &doc,
                                                       DECOMPRESS_DOC_BODIES));
-    EXPECT_EQ(0, doc->data.size);
+    EXPECT_EQ(static_cast<size_t>(0), doc->data.size);
     couchstore_free_docinfo(ir);
     couchstore_free_document(doc);
 }
