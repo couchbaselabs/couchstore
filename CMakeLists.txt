@@ -100,6 +100,9 @@ ADD_EXECUTABLE(couch_dbdump src/dbdump.cc ${COUCHSTORE_SOURCES})
 SET_TARGET_PROPERTIES(couch_dbdump PROPERTIES COMPILE_FLAGS "-DLIBCOUCHSTORE_NO_VISIBILITY=1")
 TARGET_LINK_LIBRARIES(couch_dbdump ${COUCHSTORE_LIBRARIES} xattr)
 
+ADD_EXECUTABLE(couch_dbck src/dbck.cc)
+TARGET_LINK_LIBRARIES(couch_dbck couchstore platform)
+
 ADD_EXECUTABLE(couch_dbinfo src/dbinfo.cc)
 TARGET_LINK_LIBRARIES(couch_dbinfo couchstore platform)
 
@@ -145,6 +148,7 @@ ENDIF (APPLE)
 
 INSTALL(TARGETS couch_dbdump
                 couch_dbinfo
+                couch_dbck
                 couch_compact
                 couch_view_file_merger
                 couch_view_index_builder

@@ -349,6 +349,134 @@ TEST_F(CouchstoreInternalTest, corrupted_btree_node)
     db = nullptr;
 }
 
+/**
+ * Test for couch_dbck tool.
+ */
+TEST_F(CouchstoreInternalTest, couch_dbck)
+{
+    remove(filePath.c_str());
+
+    const uint32_t docsInTest = 100;
+    std::string key_str, value_str;
+    Documents documents(docsInTest);
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS, open_db(COUCHSTORE_OPEN_FLAG_CREATE));
+
+    // Save docs (1st commit).
+    for (uint32_t ii = 0; ii < docsInTest; ii++) {
+        key_str = "doc" + std::to_string(ii);
+        value_str = "test_doc_body:" + std::to_string(ii);
+        documents.setDoc(ii, key_str, value_str);
+    }
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_save_documents(db, documents.getDocs(),
+                                        documents.getDocInfos(),
+                                        docsInTest, 0));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_commit(db));
+
+    // Save docs (2nd commit).
+    for (uint32_t ii = 0; ii < docsInTest; ii++) {
+        key_str = "doc" + std::to_string(ii);
+        value_str = "test_doc_body_ver2:" + std::to_string(ii);
+        documents.setDoc(ii, key_str, value_str);
+    }
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_save_documents(db, documents.getDocs(),
+                                        documents.getDocInfos(),
+                                        docsInTest, 0));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_commit(db));
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
+
+    // Check docs.
+    ASSERT_EQ(COUCHSTORE_SUCCESS, open_db(COUCHSTORE_OPEN_FLAG_CREATE));
+    documents.resetCounters();
+    std::vector<sized_buf> buf(docsInTest);
+    for (uint32_t ii = 0; ii < docsInTest; ++ii) {
+        buf[ii] = documents.getDoc(ii)->id;
+    }
+    corrupted_btree_node_cb_param param;
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_docinfos_by_id(db,
+                                        &buf[0],
+                                        docsInTest,
+                                        0,
+                                        corrupted_btree_node_cb,
+                                        &param));
+    ASSERT_EQ(docsInTest, param.num_called);
+
+    couchstore_error_info_t errinfo;
+    // Inject corruption into one of seq-tree nodes
+    // (located at next to id-tree root).
+    db->file.ops->pwrite(&errinfo, db->file.handle,
+                         "corruption", 10, db->header.by_id_root->pointer+200);
+
+    // Inject corruption into the last doc.
+    db->file.ops->pwrite(&errinfo, db->file.handle,
+                         "corruption", 10, param.last_doc_bp);
+
+    // Close and reopen.
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, open_db(COUCHSTORE_OPEN_FLAG_CREATE));
+
+    std::vector<uint64_t> seq_nums(docsInTest);
+    for (uint32_t ii = 0; ii < docsInTest; ++ii) {
+        seq_nums[ii] = docsInTest + ii + 1;
+    }
+
+    // Should fail.
+    param.reset();
+    ASSERT_NE(COUCHSTORE_SUCCESS,
+              couchstore_docinfos_by_sequence(
+                      db,
+                      &seq_nums[0],
+                      docsInTest,
+                      COUCHSTORE_TOLERATE_CORRUPTION,
+                      corrupted_btree_node_cb,
+                      &param));
+    // Some docs should be lost.
+    ASSERT_GT(docsInTest, param.num_called);
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
+
+    std::string cmd;
+#ifdef _MSC_VER
+    cmd = "couch_dbck --stale ";
+#else
+    cmd = "./couch_dbck --stale ";
+#endif
+    cmd += filePath;
+    ASSERT_EQ(0, system(cmd.c_str()));
+
+    // Open recovered file.
+    std::string recovered_file = filePath + ".recovered";
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_open_db(recovered_file.c_str(),
+                                 COUCHSTORE_OPEN_FLAG_RDONLY, &db));
+
+    // All docs should be retrieved.
+    param.reset();
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_docinfos_by_id(db,
+                                        &buf[0],
+                                        docsInTest,
+                                        0,
+                                        corrupted_btree_node_cb,
+                                        &param));
+    ASSERT_EQ(docsInTest, param.num_called);
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
+
+    remove(recovered_file.c_str());
+
+    db = nullptr;
+}
 
 /**
  * Tests whether the unbuffered file ops flag actually

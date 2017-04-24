@@ -45,6 +45,8 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
     Db* target = NULL;
     char tmpFile[PATH_MAX]; // keep this on the stack for duration of the call
     couchstore_error_t errcode;
+    // Local error code for seq-tree scan.
+    couchstore_error_t scan_err = COUCHSTORE_SUCCESS;
     compact_ctx ctx = {NULL, new_arena(0), new_arena(0), NULL, NULL, hook, dhook, hook_ctx, 0};
     ctx.flags = flags;
     couchstore_open_flags open_flags = COUCHSTORE_OPEN_FLAG_CREATE;
@@ -80,7 +82,11 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
         strcpy(tmpFile, target_filename);
         strcat(tmpFile, ".btree-tmp_0");
         error_pass(TreeWriterOpen(tmpFile, ebin_cmp, by_id_reduce, by_id_rereduce, NULL, &ctx.tree_writer));
-        error_pass(compact_seq_tree(source, target, &ctx));
+        scan_err = compact_seq_tree(source, target, &ctx);
+        if (!(flags & COUCHSTORE_COMPACT_RECOVERY_MODE)) {
+            // Normal mode: 'compact_seq_tree()' should succeed.
+            error_pass(scan_err);
+        } // Recovery mode: we can tolerate corruptions.
         error_pass(TreeWriterSort(ctx.tree_writer));
         error_pass(TreeWriterWrite(ctx.tree_writer, &target->file, &target->header.by_id_root));
         TreeWriterFree(ctx.tree_writer);
@@ -108,6 +114,10 @@ cleanup:
         if (errcode != COUCHSTORE_SUCCESS) {
             remove(target_filename);
         }
+    }
+
+    if (errcode == COUCHSTORE_SUCCESS) {
+        return scan_err;
     }
     return errcode;
 }
@@ -293,16 +303,21 @@ static couchstore_error_t compact_seq_tree(Db* source, Db* target, compact_ctx *
     srcfold.keys = &low_key_list;
     srcfold.fold = 1;
     srcfold.in_fold = 1;
+    srcfold.tolerate_corruption =
+            (ctx->flags & COUCHSTORE_COMPACT_RECOVERY_MODE) != 0;
     srcfold.callback_ctx = ctx;
     srcfold.fetch_callback = compact_seq_fetchcb;
     srcfold.node_callback = NULL;
 
     errcode = btree_lookup(&srcfold, source->header.by_seq_root->pointer);
-    if (errcode == COUCHSTORE_SUCCESS) {
+    if (errcode == COUCHSTORE_SUCCESS || srcfold.tolerate_corruption) {
         if(target->header.by_seq_root != nullptr) {
             cb_free(target->header.by_seq_root);
         }
-        target->header.by_seq_root = complete_new_btree(ctx->target_mr, &errcode);
+        couchstore_error_t errcode_local;
+        target->header.by_seq_root =
+                complete_new_btree(ctx->target_mr, &errcode_local);
+        error_tolerate(errcode_local);
     }
 cleanup:
     arena_free_all(ctx->persistent_arena);

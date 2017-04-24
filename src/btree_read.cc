@@ -104,11 +104,20 @@ static couchstore_error_t btree_lookup_inner(couchfile_lookup_request *rq,
             }
 
             if (cmp_val >= 0) {
+                couchstore_error_t errcode_local = errcode;
                 if (cmp_val == 0 || rq->in_fold) { // Found
-                    error_pass(rq->fetch_callback(rq, &cmp_key, &val_buf));
+                    errcode_local = rq->fetch_callback(rq, &cmp_key, &val_buf);
                 } else {
-                    error_pass(rq->fetch_callback(rq, rq->keys[current], NULL));
+                    errcode_local = rq->fetch_callback(
+                            rq, rq->keys[current], NULL);
                 }
+
+                if (rq->tolerate_corruption) {
+                    error_tolerate(errcode_local);
+                } else {
+                    error_pass(errcode_local);
+                }
+
                 if (!rq->in_fold) {
                     ++current;
                     next_key = cmp_val == 0;

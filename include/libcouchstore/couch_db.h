@@ -654,7 +654,7 @@ extern "C" {
          */
         COUCHSTORE_COMPACT_FLAG_UPGRADE_DB = 2,
 
-        /*
+        /**
          * Open the target database file without using an IO buffer
          *
          * This prevents the FileOps that are used in from being
@@ -662,7 +662,14 @@ extern "C" {
          * *usually* result in performance degradation and is
          * primarily intended for testing purposes.
          */
-         COUCHSTORE_COMPACT_FLAG_UNBUFFERED = 4,
+        COUCHSTORE_COMPACT_FLAG_UNBUFFERED = 4,
+
+        /**
+         * This flag internally turns on 'error toleration' mode,
+         * so as to migrate as many KV pairs as possible to the new
+         * file, without aborting the task in the middle of compaction.
+         */
+        COUCHSTORE_COMPACT_RECOVERY_MODE = 8,
     };
 
     /**
