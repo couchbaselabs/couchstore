@@ -406,8 +406,8 @@ extern "C" {
          */
         COUCHSTORE_NO_DELETES = 4,
         /**
-         * If set, corrupted B+tree node will be tolerated to retrieve
-         * docs in the DB file as many as possible.
+         * If set, corrupted B+tree nodes or documents will be tolerated
+         * to collect as much data as possible.
          */
         COUCHSTORE_TOLERATE_CORRUPTION = 8
     };

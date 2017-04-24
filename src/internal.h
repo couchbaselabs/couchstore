@@ -33,11 +33,6 @@
 #define PATH_MAX 1024
 #endif
 
-enum {
-    /** Additional couchstore_docinfos_options flag */
-    COUCHSTORE_INCLUDE_CORRUPT_DOCS = 0x40000000
-};
-
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -795,7 +795,8 @@ static couchstore_error_t lookup_callback(couchfile_lookup_request *rq,
     } else {
         errcode = by_seq_read_docinfo(&docinfo, k, v);
     }
-    if (errcode == COUCHSTORE_ERROR_CORRUPT && (context->options & COUCHSTORE_INCLUDE_CORRUPT_DOCS)) {
+    if (errcode == COUCHSTORE_ERROR_CORRUPT &&
+        (context->options & COUCHSTORE_TOLERATE_CORRUPTION)) {
         // Invoke callback even if doc info is corrupted/unreadable, if magic flag is set
         docinfo = static_cast<DocInfo*>(cb_calloc(sizeof(DocInfo), 1));
         docinfo->id = *k;

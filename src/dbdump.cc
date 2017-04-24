@@ -488,34 +488,38 @@ static int process_vbucket_file(const char *file, int *total)
     }
 
     switch (mode) {
-        case DumpBySequence:
-            if (dumpTree) {
-                errcode = couchstore_walk_seq_tree(db, 0, COUCHSTORE_INCLUDE_CORRUPT_DOCS,
-                                                   visit_node, &count);
-            } else {
-                errcode = couchstore_changes_since(db, 0, COUCHSTORE_INCLUDE_CORRUPT_DOCS,
-                                                   foldprint, &count);
+    case DumpBySequence:
+        if (dumpTree) {
+            errcode = couchstore_walk_seq_tree(
+                    db, 0, COUCHSTORE_TOLERATE_CORRUPTION,
+                    visit_node, &count);
+        } else {
+            errcode = couchstore_changes_since(
+                    db, 0, COUCHSTORE_TOLERATE_CORRUPTION,
+                    foldprint, &count);
+        }
+        break;
+    case DumpByID:
+        if (dumpTree) {
+            errcode = couchstore_walk_id_tree(
+                    db, NULL, COUCHSTORE_TOLERATE_CORRUPTION,
+                    visit_node, &count);
+        } else if (oneKey) {
+            DocInfo* info;
+            errcode = couchstore_docinfo_by_id(db, dumpKey.buf, dumpKey.size, &info);
+            if (errcode == COUCHSTORE_SUCCESS) {
+                foldprint(db, info, &count);
+                couchstore_free_docinfo(info);
             }
-            break;
-        case DumpByID:
-            if (dumpTree) {
-                errcode = couchstore_walk_id_tree(db, NULL, COUCHSTORE_INCLUDE_CORRUPT_DOCS,
-                                                  visit_node, &count);
-            } else if (oneKey) {
-                DocInfo* info;
-                errcode = couchstore_docinfo_by_id(db, dumpKey.buf, dumpKey.size, &info);
-                if (errcode == COUCHSTORE_SUCCESS) {
-                    foldprint(db, info, &count);
-                    couchstore_free_docinfo(info);
-                }
-            } else {
-                errcode = couchstore_all_docs(db, NULL, COUCHSTORE_INCLUDE_CORRUPT_DOCS,
-                                              foldprint, &count);
-            }
-            break;
-        case DumpLocals:
-            errcode = couchstore_print_local_docs(db, &count);
-            break;
+        } else {
+            errcode = couchstore_all_docs(
+                    db, NULL, COUCHSTORE_TOLERATE_CORRUPTION,
+                    foldprint, &count);
+        }
+        break;
+    case DumpLocals:
+        errcode = couchstore_print_local_docs(db, &count);
+        break;
     }
     couchstore_close_file(db);
     couchstore_free_db(db);
