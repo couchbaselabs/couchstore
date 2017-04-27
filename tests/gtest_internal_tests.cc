@@ -33,6 +33,89 @@
 
 using namespace testing;
 
+/** corrupt_header Corrupt the trailing header to make sure we go back
+ * to a good header.
+ */
+TEST_F(CouchstoreInternalTest, corrupt_header) {
+    couchstore_error_info_t errinfo;
+    DocInfo* out_info;
+    cs_off_t pos;
+    ssize_t written;
+
+    /* create database and load 1 doc */
+    ASSERT_EQ(COUCHSTORE_SUCCESS, open_db(COUCHSTORE_OPEN_FLAG_CREATE));
+    Documents documents(1);
+    documents.setDoc(0, "doc1", "oops");
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_save_documents(
+                      db, documents.getDocs(), documents.getDocInfos(), 1, 0));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_commit(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
+    db = nullptr;
+
+    /* make sure the doc is loaded */
+    ASSERT_EQ(COUCHSTORE_SUCCESS, open_db(0));
+    EXPECT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_docinfo_by_id(db,
+                                       documents.getDoc(0)->id.buf,
+                                       documents.getDoc(0)->id.size,
+                                       &out_info));
+    Documents::checkCallback(db, out_info, &documents);
+    couchstore_free_docinfo(out_info);
+    out_info = nullptr;
+
+    /* update the doc */
+    documents.resetCounters();
+    documents.setDoc(0, "doc1", "yikes");
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_save_documents(
+                      db, documents.getDocs(), documents.getDocInfos(), 1, 0));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_commit(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
+    db = nullptr;
+
+    /* verify the doc changed */
+    ASSERT_EQ(COUCHSTORE_SUCCESS, open_db(0));
+    EXPECT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_docinfo_by_id(db,
+                                       documents.getDoc(0)->id.buf,
+                                       documents.getDoc(0)->id.size,
+                                       &out_info));
+    Documents::checkCallback(db, out_info, &documents);
+    couchstore_free_docinfo(out_info);
+    out_info = nullptr;
+
+    /* corrupt the header block */
+    pos = db->file.ops->goto_eof(&errinfo, db->file.handle);
+    written = db->file.ops->pwrite(
+            &errinfo, db->file.handle, "deadbeef", 8, pos - 8);
+    ASSERT_EQ(written, 8);
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              db->file.ops->sync(&db->file.lastError, db->file.handle));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
+    db = nullptr;
+
+    /* verify that the last version was invalidated and we went back to
+     * the 1st version
+     */
+    ASSERT_EQ(COUCHSTORE_SUCCESS, open_db(0));
+    documents.resetCounters();
+    documents.setDoc(0, "doc1", "oops");
+    EXPECT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_docinfo_by_id(db,
+                                       documents.getDoc(0)->id.buf,
+                                       documents.getDoc(0)->id.size,
+                                       &out_info));
+    Documents::checkCallback(db, out_info, &documents);
+    couchstore_free_docinfo(out_info);
+    out_info = nullptr;
+
+    clean_up();
+}
+
 /**
  * The commit alignment test checks that the file size following
  * these situations are all the same:
