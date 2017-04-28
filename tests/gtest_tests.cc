@@ -1087,6 +1087,140 @@ TEST_F(CouchstoreTest, compact_need_body) {
     ASSERT_EQ(0, remove(target.c_str()));
 }
 
+/** verify couchstore_changes_count() returns correct values
+ *
+ * couchstore_changes_count() will return the # of unique documents
+ * that have been inserted between 2 sequence #s. The sequence # will
+ * increase for updated and deleted documents but the count of original
+ * documents between the 2 sequence #'s remains the same
+ */
+TEST_F(CouchstoreTest, test_changes_count) {
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_open_db(
+                      filePath.c_str(), COUCHSTORE_OPEN_FLAG_CREATE, &db));
+
+    /**
+     * add some documents to the database and make sure the count =
+     * the number of documents added
+     */
+    const int ndocs = 5; // use a value at least >= 5
+    Documents documents(ndocs);
+    const std::string ori_doc = "{\"test_doc\":\"original\"}";
+
+    for (int ii = 0; ii < ndocs; ++ii) {
+        std::string key = "doc" + std::to_string(ii);
+        documents.setDoc(ii, key, ori_doc);
+    }
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_save_documents(db,
+                                        documents.getDocs(),
+                                        documents.getDocInfos(),
+                                        ndocs,
+                                        0));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_commit(db));
+
+    /**
+     * count from the first seq # of the first doc added until the end
+     */
+    uint64_t count;
+    uint64_t start_seq = documents.getDocInfo(0)->db_seq;
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_changes_count(
+                      db, start_seq, db->header.update_seq, &count));
+    ASSERT_EQ(count, ndocs);
+
+    /**
+     * update a few docs... count should stay the same
+     */
+    documents.resetCounters();
+
+    std::string upd_doc = "{\"test_doc\":\"updated\"}";
+    documents.setDoc(0, "doc0", upd_doc);
+    documents.setDoc(1, "doc3", upd_doc);
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_save_documents(
+                      db, documents.getDocs(), documents.getDocInfos(), 2, 0));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_commit(db));
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_changes_count(
+                      db, start_seq, db->header.update_seq, &count));
+    ASSERT_EQ(count, ndocs);
+
+    /**
+     * delete a few docs... count should stay the same
+     */
+    ASSERT_EQ(
+            COUCHSTORE_SUCCESS,
+            couchstore_save_documents(db, NULL, documents.getDocInfos(), 2, 0));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_commit(db));
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_changes_count(
+                      db, start_seq, db->header.update_seq, &count));
+    ASSERT_EQ(count, ndocs);
+
+    /**
+     * add some more documents
+     */
+    documents.resetCounters();
+    for (int ii = 0; ii < ndocs; ++ii) {
+        std::string key = "doc" + std::to_string(ii + ndocs);
+        documents.setDoc(ii, key, ori_doc);
+    }
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_save_documents(db,
+                                        documents.getDocs(),
+                                        documents.getDocInfos(),
+                                        ndocs,
+                                        0));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_commit(db));
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_changes_count(
+                      db, start_seq, db->header.update_seq, &count));
+    ASSERT_EQ(count, ndocs + ndocs);
+
+    /**
+     * we updated the first doc in the sequence which moved its seq #
+     * so there are still 10 changed docs between the sequence #'s
+     */
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_changes_count(
+                      db, start_seq + 1, db->header.update_seq, &count));
+    ASSERT_EQ(count, ndocs + ndocs);
+
+    /**
+     * the 2nd doc was untouched so if we ask for changed docs
+     * past it, we should get total - 1
+     */
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_changes_count(
+                      db, start_seq + 2, db->header.update_seq, &count));
+    ASSERT_EQ(count, ndocs + ndocs - 1);
+
+    /* don't include the last document */
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_changes_count(
+                      db, start_seq, db->header.update_seq - 1, &count));
+    ASSERT_EQ(count, ndocs + ndocs - 1);
+
+    DbInfo info;
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_db_info(db, &info));
+
+    /* deleted 2 docs */
+    EXPECT_EQ(ndocs + ndocs - 2, info.doc_count);
+    EXPECT_EQ(2, info.deleted_count);
+
+    /* ndocs + ndocs + 2 updates + 2 deletes */
+    EXPECT_EQ(ndocs + ndocs + 2 + 2, info.last_sequence);
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
+    db = nullptr;
+}
+
+
 INSTANTIATE_TEST_CASE_P(DocTest,
                         CouchstoreDoctest,
                         ::testing::Combine(::testing::Bool(), ::testing::Values(4, 69, 666, 4090)),
@@ -1096,6 +1230,8 @@ INSTANTIATE_TEST_CASE_P(DocTest,
                                 << "x" << std::get<1>(info.param);
                             return fmt.str();
                         });
+
+
 
 INSTANTIATE_TEST_CASE_P(
         MTLatencyCollectTest,
