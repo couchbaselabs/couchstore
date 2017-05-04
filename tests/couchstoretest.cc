@@ -61,6 +61,7 @@ CouchstoreTest::CouchstoreTest(const std::string& _filePath,
       filePath(_filePath),
       displayLatencyInfo(_display_latency_info) {
     couchstore_latency_collector_start();
+    remove(filePath.c_str());
 }
 
 /**
@@ -99,6 +100,7 @@ CouchstoreInternalTest::CouchstoreInternalTest()
           compactPath("testfile_internal.couch.compact"),
           documents(Documents(0)),
           ops(create_default_file_ops()) {
+    remove(compactPath.c_str());
 }
 
 CouchstoreInternalTest::~CouchstoreInternalTest() {
