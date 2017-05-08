@@ -1087,6 +1087,7 @@ TEST_F(CouchstoreTest, compact_need_body) {
     ASSERT_EQ(0, remove(target.c_str()));
 }
 
+
 /** verify couchstore_changes_count() returns correct values
  *
  * couchstore_changes_count() will return the # of unique documents
@@ -1215,6 +1216,65 @@ TEST_F(CouchstoreTest, test_changes_count) {
     /* ndocs + ndocs + 2 updates + 2 deletes */
     EXPECT_EQ(ndocs + ndocs + 2 + 2, info.last_sequence);
 
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
+    db = nullptr;
+}
+
+/**
+ * verify that couchstore_set_purge_seq() sets the purge_seq and retains
+ * that value if the file is closed and reopened.
+ */
+TEST_F(CouchstoreTest, test_set_purge_seq) {
+    const int ndocs = 100; // use a value at least >= 5
+    Documents documents(ndocs);
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_open_db(
+                      filePath.c_str(), COUCHSTORE_OPEN_FLAG_CREATE, &db));
+
+    for (int ii = 0; ii < ndocs; ++ii) {
+        std::string key = "doc" + std::to_string(ii);
+        std::string doc = "{\"test_doc\":\"original\"}";
+        documents.setDoc(ii, key, doc);
+    }
+    ASSERT_EQ(COUCHSTORE_SUCCESS,
+              couchstore_save_documents(db,
+                                        documents.getDocs(),
+                                        documents.getDocInfos(),
+                                        ndocs,
+                                        0));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_commit(db));
+
+    DbInfo info1;
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_db_info(db, &info1));
+
+    /**
+     * verify the purge_seq is 0
+     */
+    ASSERT_EQ(0, info1.purge_seq);
+
+    /**
+     * set the purge_seq to 1/2 of the last_sequence
+     */
+    uint64_t pseq = info1.last_sequence / 2;
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_set_purge_seq(db, pseq));
+
+    /**
+     * commit and close the file
+     */
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_commit(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
+    db = nullptr;
+
+    /**
+     * reopen the file and verify the purge_seq is set to the correct value
+     */
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_open_db(filePath.c_str(), 0, &db));
+    DbInfo info2;
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_db_info(db, &info2));
+    ASSERT_EQ(info2.purge_seq, pseq);
     ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
     ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
     db = nullptr;
