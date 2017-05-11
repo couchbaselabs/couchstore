@@ -280,6 +280,23 @@ static tree_file_options get_tree_file_options_from_flags(couchstore_open_flags 
         }
     }
 
+    // Set default value first.
+    options.kp_nodesize = DB_KP_CHUNK_THRESHOLD;
+    options.kv_nodesize = DB_KV_CHUNK_THRESHOLD;
+    if (flags & COUCHSTORE_OPEN_WITH_CUSTOM_NODESIZE) {
+        // B+tree custom node size settings.
+        //  * First 4 bits [19:16]: KP node size
+        //  * Next  4 bits [15:12]: KV node size
+        uint32_t kp_flag = (flags >> 20) & 0xf;
+        if (kp_flag) {
+            options.kp_nodesize = kp_flag * 1024;
+        }
+        uint32_t kv_flag = (flags >> 16) & 0xf;
+        if (kv_flag) {
+            options.kv_nodesize = kv_flag * 1024;
+        }
+    }
+
     return options;
 }
 
@@ -1275,8 +1292,8 @@ couchstore_error_t couchstore_save_local_document(Db *db, LocalDoc *lDoc)
     rq.purge_kp = NULL;
     rq.purge_kv = NULL;
     rq.compacting = 0;
-    rq.kv_chunk_threshold = DB_KV_CHUNK_THRESHOLD;
-    rq.kp_chunk_threshold = DB_KP_CHUNK_THRESHOLD;
+    rq.kv_chunk_threshold = db->file.options.kv_nodesize;
+    rq.kp_chunk_threshold = db->file.options.kp_nodesize;
 
     nroot = modify_btree(&rq, db->header.local_docs_root, &errcode);
     if (errcode == COUCHSTORE_SUCCESS && nroot != db->header.local_docs_root) {

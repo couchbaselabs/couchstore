@@ -54,6 +54,17 @@ extern "C" {
          * Note that all zeros represent the default setting.
          */
         COUCHSTORE_OPEN_WITH_CUSTOM_BUFFER = 0xff00,
+        /**
+         * Customize B+tree node size.
+         *
+         * This specifies the size of B+tree node.
+         * The first 4 bits represents the size of key-pointer
+         * (i.e., intermediate) nodes in KB, and the next 4 bits denotes
+         * the size of key-value (i.e., leaf) nodes in KB.
+         * Note that all zeros represent the default setting,
+         * 1279 (0x4ff) bytes.
+         */
+        COUCHSTORE_OPEN_WITH_CUSTOM_NODESIZE = 0xff0000,
     };
 
 

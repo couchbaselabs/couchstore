@@ -143,8 +143,8 @@ couchstore_error_t TreeWriterWrite(TreeWriter* writer,
                                  writer->reduce,
                                  writer->rereduce,
                                  writer->user_reduce_ctx,
-                                 DB_KV_CHUNK_THRESHOLD,
-                                 DB_KP_CHUNK_THRESHOLD);
+                                 treefile->options.kv_nodesize,
+                                 treefile->options.kp_nodesize);
     if (target_mr == NULL) {
         error_pass(COUCHSTORE_ERROR_ALLOC_FAIL);
     }

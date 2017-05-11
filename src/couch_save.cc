@@ -221,8 +221,8 @@ static couchstore_error_t update_indexes(Db *db,
     idrq.enable_purging = false;
     idrq.purge_kp = NULL;
     idrq.purge_kv = NULL;
-    idrq.kv_chunk_threshold = DB_KV_CHUNK_THRESHOLD;
-    idrq.kp_chunk_threshold = DB_KP_CHUNK_THRESHOLD;
+    idrq.kv_chunk_threshold = db->file.options.kv_nodesize;
+    idrq.kp_chunk_threshold = db->file.options.kp_nodesize;
 
     new_id_root = modify_btree(&idrq, db->header.by_id_root, &err);
     error_pass(err);
@@ -249,8 +249,8 @@ static couchstore_error_t update_indexes(Db *db,
     seqrq.enable_purging = false;
     seqrq.purge_kp = NULL;
     seqrq.purge_kv = NULL;
-    seqrq.kv_chunk_threshold = DB_KV_CHUNK_THRESHOLD;
-    seqrq.kp_chunk_threshold = DB_KP_CHUNK_THRESHOLD;
+    seqrq.kv_chunk_threshold = db->file.options.kv_nodesize;
+    seqrq.kp_chunk_threshold = db->file.options.kp_nodesize;
 
     new_seq_root = modify_btree(&seqrq, db->header.by_seq_root, &errcode);
     if (errcode != COUCHSTORE_SUCCESS) {

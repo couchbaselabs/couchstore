@@ -59,9 +59,10 @@ extern "C" {
         // Max count of read buffers, if buffered IO is enabled.
         // Set to zero for the default value.
         uint32_t buf_io_read_buffers;
-
-        // Currently buffered IO is the only option.
-        // New attributes will be added later.
+        // Threshold of key-pointer (intermediate) node size.
+        uint32_t kp_nodesize;
+        // Threshold of key-value (leaf) node size.
+        uint32_t kv_nodesize;
     };
 
      /* Structure representing an open file; "superclass" of Db */

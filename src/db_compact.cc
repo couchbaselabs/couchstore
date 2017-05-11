@@ -65,6 +65,16 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
         open_flags |= COUCHSTORE_OPEN_FLAG_UNBUFFERED;
     }
 
+    // Transfer current B+tree node settings to new file.
+    if (source->file.options.kp_nodesize) {
+        uint32_t kp_flag = source->file.options.kp_nodesize / 1024;
+        open_flags |= (kp_flag << 20);
+    }
+    if (source->file.options.kv_nodesize) {
+        uint32_t kv_flag = source->file.options.kv_nodesize / 1024;
+        open_flags |= (kv_flag << 16);
+    }
+
     error_pass(couchstore_open_db_ex(target_filename, open_flags, ops, &target));
 
     ctx.target = target;
@@ -290,9 +300,15 @@ static couchstore_error_t compact_seq_tree(Db* source, Db* target, compact_ctx *
     low_key.size = 6;
     sized_buf *low_key_list = &low_key;
 
-    ctx->target_mr = new_btree_modres(ctx->persistent_arena, ctx->transient_arena, &target->file,
-                                      &seqcmp, by_seq_reduce, by_seq_rereduce, NULL,
-                                      DB_KV_CHUNK_THRESHOLD, DB_KP_CHUNK_THRESHOLD);
+    ctx->target_mr = new_btree_modres(ctx->persistent_arena,
+                                      ctx->transient_arena,
+                                      &target->file,
+                                      &seqcmp,
+                                      by_seq_reduce,
+                                      by_seq_rereduce,
+                                      NULL,
+                                      source->file.options.kv_nodesize,
+                                      source->file.options.kp_nodesize);
     if (ctx->target_mr == NULL) {
         error_pass(COUCHSTORE_ERROR_ALLOC_FAIL);
     }
@@ -349,8 +365,9 @@ static couchstore_error_t compact_localdocs_tree(Db* source, Db* target, compact
     sized_buf *low_key_list = &low_key;
 
     ctx->target_mr = new_btree_modres(ctx->persistent_arena, NULL, &target->file,
-                                      &idcmp, NULL, NULL, NULL, DB_KV_CHUNK_THRESHOLD,
-                                      DB_KP_CHUNK_THRESHOLD);
+                                      &idcmp, NULL, NULL, NULL,
+                                      source->file.options.kv_nodesize,
+                                      source->file.options.kp_nodesize);
     if (ctx->target_mr == NULL) {
         error_pass(COUCHSTORE_ERROR_ALLOC_FAIL);
     }

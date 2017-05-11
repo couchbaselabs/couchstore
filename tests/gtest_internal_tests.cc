@@ -29,6 +29,13 @@
 #include "documents.h"
 
 #include <libcouchstore/couch_db.h>
+
+/**
+ * Note: below internal Couchstore header files should be located
+ *       at the end of all above includes. Otherwise it causes
+ *       compilation failure (in file_ops.h) on Windows.
+ */
+#include "src/couch_btree.h"
 #include "src/internal.h"
 
 using namespace testing;
@@ -168,6 +175,74 @@ TEST_F(CouchstoreInternalTest, buffered_io_options)
     const uint32_t docsInTest = 100;
     std::string key_str, value_str;
     Documents documents(docsInTest);
+    documents.generateDocs();
+
+    for (uint64_t flags = 0; flags <= 0xff; ++flags) {
+        uint32_t exp_kp_nodesize = DB_KP_CHUNK_THRESHOLD;
+        uint32_t exp_kv_nodesize = DB_KV_CHUNK_THRESHOLD;
+
+        uint32_t kp_flag = (flags >> 4) & 0xf;
+        if (kp_flag) {
+            exp_kp_nodesize = kp_flag * 1024;
+        }
+        uint32_t kv_flag = flags & 0xf;
+        if (kv_flag) {
+            exp_kv_nodesize = kv_flag * 1024;
+        }
+
+        ASSERT_EQ(COUCHSTORE_SUCCESS,
+                  couchstore_open_db(
+                        filePath.c_str(),
+                        (flags << 16) | COUCHSTORE_OPEN_FLAG_CREATE,
+                        &db));
+
+        ASSERT_EQ(exp_kp_nodesize, db->file.options.kp_nodesize);
+        ASSERT_EQ(exp_kv_nodesize, db->file.options.kv_nodesize);
+
+        for (uint32_t ii = 0; ii < docsInTest; ii++) {
+             ASSERT_EQ(COUCHSTORE_SUCCESS,
+                       couchstore_save_document(db,
+                                                documents.getDoc(ii),
+                                                documents.getDocInfo(ii),
+                                                0));
+        }
+        ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_commit(db));
+
+        { // Check if reading docs works correctly with given node settings.
+            documents.resetCounters();
+            std::vector<sized_buf> buf(docsInTest);
+            for (uint32_t ii = 0; ii < docsInTest; ++ii) {
+                buf[ii] = documents.getDoc(ii)->id;
+            }
+            SCOPED_TRACE("save_docs - doc by id (bulk)");
+            ASSERT_EQ(COUCHSTORE_SUCCESS,
+                      couchstore_docinfos_by_id(db,
+                                                &buf[0],
+                                                docsInTest,
+                                                0,
+                                                &Documents::docIterCheckCallback,
+                                                &documents));
+            EXPECT_EQ(static_cast<int>(docsInTest),
+                      documents.getCallbacks());
+            EXPECT_EQ(0, documents.getDeleted());
+        }
+        ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+        ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
+        db = nullptr;
+
+        remove(filePath.c_str());
+    }
+}
+
+/**
+ * Test to check whether or not custom B+tree node size passed to
+ * open_db() API correctly set internal file options.
+ */
+TEST_F(CouchstoreInternalTest, custom_btree_node_size)
+{
+    const uint32_t docsInTest = 100;
+    std::string key_str, value_str;
+    Documents documents(docsInTest);
     for (uint32_t ii = 0; ii < docsInTest; ii++) {
         key_str = "doc" + std::to_string(ii);
         value_str = "{\"test_doc_index\":" + std::to_string(ii) + "}";
@@ -238,6 +313,7 @@ TEST_F(CouchstoreInternalTest, buffered_io_options)
         db = nullptr;
     }
 }
+
 
 struct corrupted_btree_node_cb_param {
     corrupted_btree_node_cb_param() : last_doc_bp(0), num_called(0) {
