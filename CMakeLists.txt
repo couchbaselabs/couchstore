@@ -26,8 +26,8 @@ IF (LUA_FOUND)
 ENDIF (LUA_FOUND)
 
 INCLUDE_DIRECTORIES(AFTER
-                    ${Memcached_SOURCE_DIR}/include
-                    ${Memcached_BINARY_DIR}/include)
+                    ${KVEngineAPI_SOURCE_DIR}
+                    ${KVEngineAPI_BINARY_DIR})
 
 INCLUDE_DIRECTORIES(AFTER ${ICU_INCLUDE_DIR}
                           ${V8_INCLUDE_DIR}
@@ -96,7 +96,12 @@ ADD_LIBRARY(couchstore SHARED ${COUCHSTORE_SOURCES})
 SET_TARGET_PROPERTIES(couchstore PROPERTIES COMPILE_FLAGS "-DLIBCOUCHSTORE_INTERNAL=1 -DLIBMAPREDUCE_INTERNAL=1")
 TARGET_LINK_LIBRARIES(couchstore ${COUCHSTORE_LIBRARIES})
 
-ADD_EXECUTABLE(couch_dbdump src/dbdump.cc ${COUCHSTORE_SOURCES})
+ADD_EXECUTABLE(couch_dbdump
+               src/dbdump.cc
+               ${COUCHSTORE_SOURCES}
+               ${KVEngineAPI_BINARY_DIR}/xattr/visibility.h)
+
+ADD_DEPENDENCIES(couch_dbdump xattr)
 SET_TARGET_PROPERTIES(couch_dbdump PROPERTIES COMPILE_FLAGS "-DLIBCOUCHSTORE_NO_VISIBILITY=1")
 TARGET_LINK_LIBRARIES(couch_dbdump ${COUCHSTORE_LIBRARIES} xattr)
 
