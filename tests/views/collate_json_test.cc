@@ -9,7 +9,7 @@
 #include <platform/cb_malloc.h>
 #include <string.h>
 #include <stdio.h>
-
+#include <unicode/uclean.h>
 
 static int collateStrs(const char* str1, const char* str2, CollateJSONMode mode)
 {
@@ -163,4 +163,7 @@ void test_collate_json(void)
     TestCollateNestedArrays();
     TestCollateUnicodeStrings();
     fprintf(stderr, "OK\n");
+
+    /* Invoke cleanup to release all the resources held by ICU */
+    u_cleanup();
 }

@@ -12,7 +12,9 @@
 #include <libcouchstore/couch_common.h>
 #include <libcouchstore/visibility.h>
 #include <stdlib.h>
-
+#include <unicode/ucol.h>
+#include <unicode/ucasemap.h>
+#include <unicode/ucnv.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,6 +25,20 @@ typedef enum CollateJSONMode {
     kCollateJSON_Raw,     /* CouchDB's "raw" collation rules */
     kCollateJSON_ASCII    /* Like Unicode except strings are compared as binary UTF-8 */
 } CollateJSONMode;
+
+/* Custom deleter for UCollator */
+typedef struct UCollDeleter {
+    void operator() (UCollator* coll) {
+        ucol_close(coll);
+    }
+} UCollDeleter;
+
+/* Custom deleter for UConverter */
+typedef struct UConvDeleter {
+    void operator() (UConverter* cnv) {
+        ucnv_close(cnv);
+    }
+} UConvDeleter;
 
 
 /**

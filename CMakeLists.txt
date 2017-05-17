@@ -68,7 +68,7 @@ SET(COUCHSTORE_SOURCES src/arena.cc
                        src/tree_writer.cc
                        src/util.cc
                        src/views/bitmap.c
-                       src/views/collate_json.c
+                       src/views/collate_json.cc
                        src/views/file_merger.cc
                        src/views/file_sorter.cc
                        src/views/index_header.cc

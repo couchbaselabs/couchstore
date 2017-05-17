@@ -6,17 +6,13 @@
 
 #include "collate_json.h"
 #include <ctype.h>
-#include <platform/cb_malloc.h>
+#include <memory>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <platform/cbassert.h>
-#include <unicode/ucol.h>
-#include <unicode/ucasemap.h>
-#include <unicode/ucnv.h>
-
 
 static int cmp(int n1, int n2)
 {
@@ -178,7 +174,7 @@ static const char* createStringFromJSON(const char** in, size_t *length, bool *f
     *freeWhenDone = false;
     if (escapes > 0) {
         *length -= escapes;
-        buf = cb_malloc(*length);
+        buf = new char[*length];
         dst = buf;
         for (str = start; (c = *str) != '"'; ++str) {
             if (c == '\\')
@@ -193,17 +189,16 @@ static const char* createStringFromJSON(const char** in, size_t *length, bool *f
     return start;
 }
 
-
 static int compareUnicodeSlow(const char* str1, size_t len1,
                               const char* str2, size_t len2)
 {
-    static UCollator* coll = NULL;
+    static std::unique_ptr<UCollator, UCollDeleter> coll;
     UCharIterator iterA, iterB;
     int result;
 
     UErrorCode status = U_ZERO_ERROR;
     if (!coll) {
-        coll = ucol_open("", &status);
+        coll.reset(ucol_open("", &status));
         if (U_FAILURE(status)) {
             fprintf(stderr, "CouchStore CollateJSON: Couldn't initialize ICU (%d)\n", (int)status);
             return -1;
@@ -213,7 +208,7 @@ static int compareUnicodeSlow(const char* str1, size_t len1,
     uiter_setUTF8(&iterA, str1, (int)len1);
     uiter_setUTF8(&iterB, str2, (int)len2);
 
-    result = ucol_strcollIter(coll, &iterA, &iterB, &status);
+    result = ucol_strcollIter(coll.get(), &iterA, &iterB, &status);
 
     if (U_FAILURE(status)) {
         fprintf(stderr, "CouchStore CollateJSON: ICU error %d\n", (int)status);
@@ -229,18 +224,17 @@ static int compareUnicodeSlow(const char* str1, size_t len1,
     return 0;
 }
 
-
 static int convertUTF8toUChar(const char *src, UChar *dst, int len)
 {
-    static UConverter *c;
+    static std::unique_ptr<UConverter, UConvDeleter> cnv;
     UErrorCode status;
     UChar *p = dst;
     const char *s = src;
 
-    if (!c) {
+    if (!cnv) {
         status = U_ZERO_ERROR;
-        c = ucnv_open("UTF-8", &status);
-        if (!c) {
+        cnv.reset(ucnv_open("UTF-8", &status));
+        if (!cnv) {
             fprintf(stderr, "CouchStore CollateJSON: Couldn't initialize ICU (%d)\n", (int)status);
             abort();
         }
@@ -260,7 +254,7 @@ static int convertUTF8toUChar(const char *src, UChar *dst, int len)
 
 icu_conv:
     status = U_ZERO_ERROR;
-    ucnv_toUnicode(c, &p, p + len, &s, s + len, NULL, TRUE, &status);
+    ucnv_toUnicode(cnv.get(), &p, p + len, &s, s + len, NULL, TRUE, &status);
 
     if (U_FAILURE(status)) {
         return -1;
@@ -272,7 +266,7 @@ icu_conv:
 static int compareUnicode(const char* str1, size_t len1,
                           const char* str2, size_t len2)
 {
-    static UCollator* coll = NULL;
+    static std::unique_ptr<UCollator, UCollDeleter> coll;
     UChar *b1;
     UChar *b2;
     int ret1, ret2;
@@ -288,7 +282,7 @@ static int compareUnicode(const char* str1, size_t len1,
 
     UErrorCode status = U_ZERO_ERROR;
     if (!coll) {
-        coll = ucol_open("", &status);
+        coll.reset(ucol_open("", &status));
         if (U_FAILURE(status)) {
             fprintf(stderr, "CouchStore CollateJSON: Couldn't initialize ICU (%d)\n", (int)status);
             return -1;
@@ -299,11 +293,11 @@ static int compareUnicode(const char* str1, size_t len1,
         return compareUnicodeSlow(str1, len1, str2, len2);
     }
 
-    b1 = cb_malloc(len1 * sizeof(UChar));
-    b2 = cb_malloc(len2 * sizeof(UChar));
+    b1 = new UChar[len1 * sizeof(UChar)];
+    b2 = new UChar[len2 * sizeof(UChar)];
     if (b1 == NULL || b2 == NULL) {
-        cb_free(b1);
-        cb_free(b2);
+        delete[] b1;
+        delete[] b2;
         fprintf(stderr, "CouchStore CollateJSON: Couldn't allocate memory\n");
         return -2;
     }
@@ -313,14 +307,14 @@ static int compareUnicode(const char* str1, size_t len1,
 
     if (ret1 < 0 || ret2 < 0) {
         /* something went wrong with utf8->utf32 conversion */
-        cb_free(b1);
-        cb_free(b2);
+        delete[] b1;
+        delete[] b2;
         return compareUnicodeSlow(str1, len1, str2, len2);
     }
 
-    result = ucol_strcoll(coll, b1, ret1, b2, ret2);
-    cb_free(b1);
-    cb_free(b2);
+    result = ucol_strcoll(coll.get(), b1, ret1, b2, ret2);
+    delete[] b1;
+    delete[] b2;
 
     if (result < 0) {
         return -1;
@@ -343,10 +337,10 @@ static int compareStringsUnicode(const char** in1, const char** in2)
     int result = compareUnicode(str1, len1, str2, len2);
 
     if (free1) {
-        cb_free((char*)str1);
+        delete[] str1;
     }
     if (free2) {
-        cb_free((char*)str2);
+        delete[] str2;
     }
     return result;
 }
@@ -363,7 +357,7 @@ static double readNumber(const char* start, const char* end, char** endOfNumber)
 
     cb_assert(end > start);
     len = end - start;
-    str = (len < sizeof(buf)) ? buf : cb_malloc(len + 1);
+    str = (len < sizeof(buf)) ? buf : new char[len + 1];
     if (!str)
         return 0.0;
     memcpy(str, start, len);
@@ -372,7 +366,7 @@ static double readNumber(const char* start, const char* end, char** endOfNumber)
     result = strtod(str, &endInStr);
     *endOfNumber = (char*)start + (endInStr - str);
     if (len >= sizeof(buf))
-        cb_free(str);
+        delete[] str;
     return result;
 }
 
