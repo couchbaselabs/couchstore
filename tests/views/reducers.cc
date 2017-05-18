@@ -669,7 +669,7 @@ static void test_view_btree_stats_reducer(void)
     view_reducer_ctx_t *ctx = NULL;
     const char *function_sources[] = { "_stats" };
     int i;
-#ifdef _MSC_VER
+#if (_MSC_VER > 1 && _MSC_VER < 1900)
     const char *expected_reduction =
         "{\"sum\":3101.5,\"count\":4,\"min\":1,\"max\":2000.5,\"sumsqr\":5.012e+006}";
 #else
