@@ -78,6 +78,7 @@ extern "C" {
         size_t size;                /**< Data size in bytes */
     } DocInfo;
 
+#define DOC_INITIALIZER { {0, 0}, {0, 0} }
 #define DOC_INFO_INITIALIZER { {0, 0}, 0, 0, {0, 0}, 0, 0, 0, 0 }
 
     /** Contents of a 'local' (unreplicated) document. */

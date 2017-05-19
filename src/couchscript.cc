@@ -293,7 +293,7 @@ extern "C" {
             return 1;
         }
 
-        Doc doc;
+        Doc doc = DOC_INITIALIZER;
         DocInfo docinfo = DOC_INFO_INITIALIZER;
 
         doc.id.buf = const_cast<char *>(luaL_checklstring(ls, 2, &doc.id.size));
