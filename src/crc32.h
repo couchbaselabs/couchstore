@@ -56,3 +56,11 @@ int perform_integrity_check(const uint8_t* buf,
                             uint32_t checksum,
                             crc_mode_e mode);
 
+/*
+    client_hash_crc32 returns a hash which is the same as a couchbase client
+    would e.g. when determining the vbucket from a key, this function would
+    match the client's mapping.
+
+    This hashes the key into 'hash', then does ((~hash) >> 16) & 0x7fff;
+*/
+uint32_t client_hash_crc32(const uint8_t* key, size_t key_length);

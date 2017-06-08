@@ -129,6 +129,10 @@ TARGET_LINK_LIBRARIES(couch_view_index_updater couchstore)
 ADD_EXECUTABLE(couch_view_group_compactor src/views/bin/couch_view_group_compactor.cc src/views/bin/util.c)
 TARGET_LINK_LIBRARIES(couch_view_group_compactor couchstore)
 
+ADD_EXECUTABLE(couch_create src/couch_create.cc src/crc32.cc)
+TARGET_LINK_LIBRARIES(couch_create couchstore platform)
+
+
 IF (INSTALL_HEADER_FILES)
    INSTALL(FILES
            include/libcouchstore/couch_db.h
