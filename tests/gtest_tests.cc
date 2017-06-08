@@ -367,7 +367,7 @@ TEST_F(CouchstoreTest, local_docs)
     db = nullptr;
     ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_open_db(filePath.c_str(), 0, &db));
     ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_open_local_document(db, "_local/testlocal", 16, &lDocRead));
-    ASSERT_TRUE(lDocRead != nullptr);
+    ASSERT_NE(nullptr, lDocRead);
     EXPECT_EQ(13ull, lDocRead->json.size);
 
     EXPECT_EQ(0, memcmp(lDocRead->json.buf, "{\"test\":true}", 13));

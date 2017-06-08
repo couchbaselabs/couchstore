@@ -104,7 +104,7 @@ static couchstore_error_t btree_lookup_inner(couchfile_lookup_request *rq,
             }
 
             if (cmp_val >= 0) {
-                couchstore_error_t errcode_local = errcode;
+                couchstore_error_t errcode_local;
                 if (cmp_val == 0 || rq->in_fold) { // Found
                     errcode_local = rq->fetch_callback(rq, &cmp_key, &val_buf);
                 } else {

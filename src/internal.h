@@ -48,7 +48,9 @@ extern "C" {
         tree_file_options() :
             buf_io_enabled(true),
             buf_io_read_unit_size(READ_BUFFER_CAPACITY),
-            buf_io_read_buffers(MAX_READ_BUFFERS)
+            buf_io_read_buffers(MAX_READ_BUFFERS),
+            kp_nodesize(0),
+            kv_nodesize(0)
             { }
 
         // Flag indicating whether or not buffered IO is enabled.
