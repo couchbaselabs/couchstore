@@ -232,6 +232,7 @@ static couchstore_error_t compact_seq_fetchcb(couchfile_lookup_request *rq,
         if (hook_action == COUCHSTORE_COMPACT_NEED_BODY) {
             int size = pread_bin(rq->file, bp, &item.buf);
             if (size < 0) {
+                couchstore_free_docinfo(info);
                 return static_cast<couchstore_error_t>(size);
             }
             item.size = size_t(size);
@@ -260,6 +261,7 @@ static couchstore_error_t compact_seq_fetchcb(couchfile_lookup_request *rq,
         if (item.buf == nullptr) {
             int size = pread_bin(rq->file, bp, &item.buf);
             if (size < 0) {
+                couchstore_free_docinfo(info);
                 return static_cast<couchstore_error_t>(size);
             }
             item.size = size_t(size);
