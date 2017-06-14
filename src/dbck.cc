@@ -235,6 +235,7 @@ static int rewind_hook(Db *db,
                                  (DocInfo*)doc_info,
                                  COUCHSTORE_SEQUENCE_AS_IS);
         param->num_docs_recovered++;
+        couchstore_free_document(cur_doc);
     } else {
         couchstore_free_docinfo(doc_info_dst);
     }
