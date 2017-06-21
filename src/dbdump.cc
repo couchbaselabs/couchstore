@@ -41,6 +41,7 @@ static bool dumpBody = true;
 static bool decodeVbucket = true;
 static bool decodeIndex = false;
 static bool decodeNamespace = false;
+static bool iterateHeaders = false;
 static sized_buf dumpKey;
 
 typedef struct {
@@ -487,6 +488,7 @@ static int process_vbucket_file(const char *file, int *total)
         printf("Dumping \"%s\":\n", file);
     }
 
+next_header:
     switch (mode) {
     case DumpBySequence:
         if (dumpTree) {
@@ -521,8 +523,15 @@ static int process_vbucket_file(const char *file, int *total)
         errcode = couchstore_print_local_docs(db, &count);
         break;
     }
-    couchstore_close_file(db);
-    couchstore_free_db(db);
+    if (iterateHeaders) {
+        if (couchstore_rewind_db_header(db) == COUCHSTORE_SUCCESS) {
+            printf("\n");
+            goto next_header;
+        }
+    } else { /* rewind_db_header does its own cleanup on failure */
+        couchstore_close_file(db);
+        couchstore_free_db(db);
+    }
 
     if (errcode < 0) {
         fprintf(stderr, "Failed to dump database \"%s\": %s\n",
@@ -703,6 +712,7 @@ static void usage(void) {
     printf("    --byseq      sort output by document sequence number (default)\n");
     printf("    --json       dump data as JSON objects (one per line)\n");
     printf("    --namespace  decode namespaces\n");
+    printf("    --iterate-headers  Iterate through all headers\n");
     printf("\nAlternate modes:\n");
     printf("    --tree       show file b-tree structure instead of data\n");
     printf("    --local      dump local documents\n");
@@ -751,6 +761,8 @@ int main(int argc, char **argv)
             ii++;
         } else if (strcmp(argv[ii], "--local") == 0) {
             mode = DumpLocals;
+        } else if (strcmp(argv[ii], "--iterate-headers") == 0) {
+            iterateHeaders = true;
         } else {
             usage();
         }
