@@ -458,9 +458,9 @@ int main(int argc, char **argv)
     int errcode = recover_file(options);
 
     if (errcode == 0) {
-        exit(EXIT_SUCCESS);
+        return EXIT_SUCCESS;
     } else {
-        exit(EXIT_FAILURE);
+        return EXIT_FAILURE;
     }
 }
 
