@@ -20,6 +20,9 @@
 
 #include <stdint.h>
 #include <sys/types.h>
+
+#include <platform/platform.h>
+
 #include "couch_common.h"
 
     /**
