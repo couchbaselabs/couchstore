@@ -75,6 +75,21 @@ public:
                               cs_off_t len,
                               couchstore_file_advice_t advice) override;
     void destructor(couch_file_handle handle) override;
+
+private:
+    // State of a single file handle, as returned by open().
+    struct File {
+        File(HANDLE fh = INVALID_HANDLE_VALUE) : fh(fh) {
+        }
+
+        /// File handle to operate on.
+        HANDLE fh;
+    };
+
+    static File* to_file(couch_file_handle handle)
+    {
+        return reinterpret_cast<File*>(handle);
+    }
 };
 
 ssize_t WindowsFileOps::pread(couchstore_error_info_t* errinfo,
@@ -87,14 +102,14 @@ ssize_t WindowsFileOps::pread(couchstore_error_info_t* errinfo,
     fprintf(stderr, "PREAD  %8llx -- %8llx  (%6.1f kbytes)\n", offset,
             offset+nbyte, nbyte/1024.0);
 #endif
-    HANDLE file = handle_to_win(handle);
+    auto* file = to_file(handle);
     BOOL rv;
     DWORD bytesread;
     OVERLAPPED winoffs;
     memset(&winoffs, 0, sizeof(winoffs));
     winoffs.Offset = offset & 0xFFFFFFFF;
     winoffs.OffsetHigh = (offset >> 32) & 0x7FFFFFFF;
-    rv = ReadFile(file, buf, nbyte, &bytesread, &winoffs);
+    rv = ReadFile(file->fh, buf, nbyte, &bytesread, &winoffs);
     if(!rv) {
         save_windows_error(errinfo);
         return (ssize_t) COUCHSTORE_ERROR_READ;
@@ -112,14 +127,14 @@ ssize_t WindowsFileOps::pwrite(couchstore_error_info_t *errinfo,
     fprintf(stderr, "PWRITE %8llx -- %8llx  (%6.1f kbytes)\n", offset,
             offset+nbyte, nbyte/1024.0);
 #endif
-    HANDLE file = handle_to_win(handle);
+    auto* file = to_file(handle);
     BOOL rv;
     DWORD byteswritten;
     OVERLAPPED winoffs;
     memset(&winoffs, 0, sizeof(winoffs));
     winoffs.Offset = offset & 0xFFFFFFFF;
     winoffs.OffsetHigh = (offset >> 32) & 0x7FFFFFFF;
-    rv = WriteFile(file, buf, nbyte, &byteswritten, &winoffs);
+    rv = WriteFile(file->fh, buf, nbyte, &byteswritten, &winoffs);
     if(!rv) {
         save_windows_error(errinfo);
         return (ssize_t) COUCHSTORE_ERROR_WRITE;
@@ -132,6 +147,13 @@ couchstore_error_t WindowsFileOps::open(couchstore_error_info_t *errinfo,
                                         const char* path,
                                         int oflag)
 {
+    auto* file = to_file(*handle);
+    if (file) {
+        cb_assert(file->fh == INVALID_HANDLE_VALUE);
+        delete file;
+        *handle = nullptr;
+    }
+
     int creationflag = OPEN_EXISTING;
     if(oflag & O_CREAT) {
         creationflag = OPEN_ALWAYS;
@@ -150,15 +172,16 @@ couchstore_error_t WindowsFileOps::open(couchstore_error_info_t *errinfo,
         return COUCHSTORE_ERROR_OPEN_FILE;
     }
     /* Tell the caller about the new handle (file descriptor) */
-    *handle = win_to_handle(os_handle);
+    file = new File(os_handle);
+    *handle = reinterpret_cast<couch_file_handle>(file);
     return COUCHSTORE_SUCCESS;
 }
 
 couchstore_error_t WindowsFileOps::close(couchstore_error_info_t* errinfo,
                                          couch_file_handle handle)
 {
-    HANDLE file = handle_to_win(handle);
-    if(!CloseHandle(handle)) {
+    auto* file = to_file(handle);
+    if(!CloseHandle(file->fh)) {
         save_windows_error(errinfo);
         return COUCHSTORE_ERROR_FILE_CLOSE;
     }
@@ -168,9 +191,9 @@ couchstore_error_t WindowsFileOps::close(couchstore_error_info_t* errinfo,
 cs_off_t WindowsFileOps::goto_eof(couchstore_error_info_t* errinfo,
                                   couch_file_handle handle)
 {
-    HANDLE file = handle_to_win(handle);
+    auto* file = to_file(handle);
     LARGE_INTEGER size;
-    if(!GetFileSizeEx(file, &size)) {
+    if(!GetFileSizeEx(file->fh, &size)) {
         save_windows_error(errinfo);
         return (cs_off_t) COUCHSTORE_ERROR_READ;
     }
@@ -181,9 +204,9 @@ cs_off_t WindowsFileOps::goto_eof(couchstore_error_info_t* errinfo,
 couchstore_error_t WindowsFileOps::sync(couchstore_error_info_t* errinfo,
                                         couch_file_handle handle)
 {
-    HANDLE file = handle_to_win(handle);
+    auto* file = to_file(handle);
 
-    if (!FlushFileBuffers(file)) {
+    if (!FlushFileBuffers(file->fh)) {
         save_windows_error(errinfo);
         return COUCHSTORE_ERROR_WRITE;
     }
@@ -196,13 +219,13 @@ couch_file_handle WindowsFileOps::constructor(couchstore_error_info_t* errinfo)
 
     /*  We don't have a file descriptor till couch_open runs,
         so return an invalid value for now. */
-    return win_to_handle(INVALID_HANDLE_VALUE);
+    return reinterpret_cast<couch_file_handle>(new File());
 }
 
 void WindowsFileOps::destructor(couch_file_handle handle)
 {
-    /* nothing to do here */
-    (void)handle;
+    auto* file = to_file(handle);
+    delete file;
 }
 
 couchstore_error_t WindowsFileOps::advise(couchstore_error_info_t* errinfo,
