@@ -33,16 +33,6 @@ static void save_errno(couchstore_error_info_t *errinfo) {
     }
 }
 
-static int handle_to_fd(couch_file_handle handle)
-{
-    return (int)(intptr_t)handle;
-}
-
-static couch_file_handle fd_to_handle(int fd)
-{
-    return (couch_file_handle)(intptr_t)fd;
-}
-
 class PosixFileOps : public FileOpsInterface {
 public:
     PosixFileOps() {}
@@ -68,6 +58,21 @@ public:
                               cs_off_t len,
                               couchstore_file_advice_t advice) override;
     void destructor(couch_file_handle handle) override;
+
+private:
+    // State of a single file handle, as returned by open().
+    struct File {
+        File(int fd = -1) : fd(fd) {
+        }
+
+        /// File descriptor to operate on.
+        int fd;
+    };
+
+    static File* to_file(couch_file_handle handle)
+    {
+        return reinterpret_cast<File*>(handle);
+    }
 };
 
 ssize_t PosixFileOps::pread(couchstore_error_info_t* errinfo,
@@ -80,10 +85,10 @@ ssize_t PosixFileOps::pread(couchstore_error_info_t* errinfo,
     fprintf(stderr, "PREAD  %8llx -- %8llx  (%6.1f kbytes)\n", offset,
             offset+nbyte, nbyte/1024.0);
 #endif
-    int fd = handle_to_fd(handle);
+    auto* file = to_file(handle);
     ssize_t rv;
     do {
-        rv = ::pread(fd, buf, nbyte, offset);
+        rv = ::pread(file->fd, buf, nbyte, offset);
     } while (rv == -1 && errno == EINTR);
 
     if (rv < 0) {
@@ -103,10 +108,10 @@ ssize_t PosixFileOps::pwrite(couchstore_error_info_t* errinfo,
     fprintf(stderr, "PWRITE %8llx -- %8llx  (%6.1f kbytes)\n", offset,
             offset+nbyte, nbyte/1024.0);
 #endif
-    int fd = handle_to_fd(handle);
+    auto* file = to_file(handle);
     ssize_t rv;
     do {
-        rv = ::pwrite(fd, buf, nbyte, offset);
+        rv = ::pwrite(file->fd, buf, nbyte, offset);
     } while (rv == -1 && errno == EINTR);
 
     if (rv < 0) {
@@ -121,6 +126,13 @@ couchstore_error_t PosixFileOps::open(couchstore_error_info_t* errinfo,
                                       const char* path,
                                       int oflag)
 {
+    auto* file = to_file(*handle);
+    if (file) {
+        cb_assert(file->fd == -1);
+        delete file;
+        *handle = nullptr;
+    }
+
     int fd;
     do {
         fd = ::open(path, oflag | O_LARGEFILE, 0666);
@@ -135,35 +147,37 @@ couchstore_error_t PosixFileOps::open(couchstore_error_info_t* errinfo,
         }
     }
     /* Tell the caller about the new handle (file descriptor) */
-    *handle = fd_to_handle(fd);
+    file = new File(fd);
+    *handle = reinterpret_cast<couch_file_handle>(file);
     return COUCHSTORE_SUCCESS;
 }
 
 couchstore_error_t PosixFileOps::close(couchstore_error_info_t* errinfo,
                                        couch_file_handle handle)
 {
-    int fd = handle_to_fd(handle);
+    auto* file = to_file(handle);
     int rv = 0;
     couchstore_error_t error = COUCHSTORE_SUCCESS;
 
-    if (fd != -1) {
+    if (file->fd != -1) {
         do {
-            cb_assert(fd >= 3);
-            rv = ::close(fd);
+            cb_assert(file->fd >= 3);
+            rv = ::close(file->fd);
         } while (rv == -1 && errno == EINTR);
     }
     if (rv < 0) {
         save_errno(errinfo);
         error = COUCHSTORE_ERROR_FILE_CLOSE;
     }
+    file->fd = -1;
     return error;
 }
 
 cs_off_t PosixFileOps::goto_eof(couchstore_error_info_t* errinfo,
                                 couch_file_handle handle)
 {
-    int fd = handle_to_fd(handle);
-    cs_off_t rv = lseek(fd, 0, SEEK_END);
+    auto* file = to_file(handle);
+    cs_off_t rv = lseek(file->fd, 0, SEEK_END);
     if (rv < 0) {
         save_errno(errinfo);
         rv = static_cast<cs_off_t>(COUCHSTORE_ERROR_READ);
@@ -175,13 +189,13 @@ cs_off_t PosixFileOps::goto_eof(couchstore_error_info_t* errinfo,
 couchstore_error_t PosixFileOps::sync(couchstore_error_info_t* errinfo,
                                       couch_file_handle handle)
 {
-    int fd = handle_to_fd(handle);
+    auto* file = to_file(handle);
     int rv;
     do {
 #ifdef __FreeBSD__
-        rv = fsync(fd);
+        rv = fsync(file->fd);
 #else
-        rv = fdatasync(fd);
+        rv = fdatasync(file->fd);
 #endif
     } while (rv == -1 && errno == EINTR);
 
@@ -196,17 +210,12 @@ couchstore_error_t PosixFileOps::sync(couchstore_error_info_t* errinfo,
 couch_file_handle PosixFileOps::constructor(couchstore_error_info_t* errinfo)
 {
     (void)errinfo;
-    /*
-    ** We don't have a file descriptor till couch_open runs, so return
-    ** an invalid value for now.
-    */
-    return fd_to_handle(-1);
+    return reinterpret_cast<couch_file_handle>(new File());
 }
 
-void PosixFileOps::destructor(couch_file_handle handle)
-{
-    /* nothing to do here */
-    (void)handle;
+void PosixFileOps::destructor(couch_file_handle handle) {
+    auto* file = to_file(handle);
+    delete file;
 }
 
 couchstore_error_t PosixFileOps::advise(couchstore_error_info_t* errinfo,
@@ -216,8 +225,8 @@ couchstore_error_t PosixFileOps::advise(couchstore_error_info_t* errinfo,
                                         couchstore_file_advice_t advice)
 {
 #ifdef POSIX_FADV_NORMAL
-    int fd = handle_to_fd(handle);
-    int error = posix_fadvise(fd, offset, len, (int) advice);
+    auto* file = to_file(handle);
+    int error = posix_fadvise(file->fd, offset, len, (int) advice);
     if (error != 0) {
         save_errno(errinfo);
     }
