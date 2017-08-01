@@ -290,8 +290,8 @@ static tree_file_options get_tree_file_options_from_flags(couchstore_open_flags 
     options.kv_nodesize = DB_KV_CHUNK_THRESHOLD;
     if (flags & COUCHSTORE_OPEN_WITH_CUSTOM_NODESIZE) {
         // B+tree custom node size settings.
-        //  * First 4 bits [19:16]: KP node size
-        //  * Next  4 bits [15:12]: KV node size
+        //  * First 4 bits [23:20]: KP node size
+        //  * Next  4 bits [19:16]: KV node size
         uint32_t kp_flag = (flags >> 20) & 0xf;
         if (kp_flag) {
             options.kp_nodesize = kp_flag * 1024;
@@ -300,6 +300,13 @@ static tree_file_options get_tree_file_options_from_flags(couchstore_open_flags 
         if (kv_flag) {
             options.kv_nodesize = kv_flag * 1024;
         }
+    }
+
+    if (flags & COUCHSTORE_OPEN_WITH_PERIODIC_SYNC) {
+        // Automatic sync() every N bytes written.
+        //  * 5 bits [28-24]: power-of-2 * 1kB
+        uint64_t sync_flag = (flags >> 24) & 0x1f;
+        options.periodic_sync_bytes = uint64_t(1024) << (sync_flag - 1);
     }
 
     return options;

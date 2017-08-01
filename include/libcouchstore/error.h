@@ -30,6 +30,7 @@ extern "C" {
         COUCHSTORE_ERROR_FILE_CLOSED = -15,
         COUCHSTORE_ERROR_DB_NO_LONGER_VALID = -16,
         COUCHSTORE_ERROR_FILE_CLOSE = -17,
+        COUCHSTORE_ERROR_NOT_SUPPORTED = -18,
     } couchstore_error_t;
 
 #ifdef __cplusplus

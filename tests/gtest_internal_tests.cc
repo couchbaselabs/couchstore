@@ -555,6 +555,73 @@ TEST_F(CouchstoreInternalTest, couch_dbck)
 }
 
 /**
+ * Tests for automatic periodic sync() functionality.
+ *
+ * TODO: Currently just the argument parsing and calling to enable sync via
+ * set_period_sync() is tested; no testing is performed of /if/ the extra
+ * sync() calls are made as the Mock FileOps operates "in front" of the real
+ * Posix/Windows file ops, and hence when those classes make extra sync
+ * calls they are not recorded by the Mock. Ideally we'd have a way of mocking
+ * the low-level fdatasync() method.
+ */
+class CouchstorePeriodicSyncTest : public CouchstoreInternalTest {
+};
+
+/**
+ * Test that default behaviour is off.
+ */
+TEST_F(CouchstorePeriodicSyncTest, Off)
+{
+    EXPECT_CALL(ops, set_periodic_sync(_, _)).Times(0);
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS, open_db(COUCHSTORE_OPEN_FLAG_CREATE));
+    EXPECT_EQ(0, db->file.options.periodic_sync_bytes);
+
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_close_file(db));
+    ASSERT_EQ(COUCHSTORE_SUCCESS, couchstore_free_db(db));
+    db = nullptr;
+
+    remove(filePath.c_str());
+}
+
+/**
+ * Test that periodic sync can enabled (to 1KB).
+ */
+TEST_F(CouchstorePeriodicSyncTest, Enable1KB)
+{
+    EXPECT_CALL(ops, set_periodic_sync(_, 1024)).Times(1);
+
+    couchstore_open_flags flags = (1 << 24) | COUCHSTORE_OPEN_FLAG_CREATE;
+    ASSERT_EQ(COUCHSTORE_SUCCESS, open_db(flags));
+    EXPECT_EQ(1024, db->file.options.periodic_sync_bytes);
+}
+
+/**
+ * Test that periodic sync can enabled (to 1MB).
+ */
+TEST_F(CouchstorePeriodicSyncTest, Enable1MB)
+{
+    EXPECT_CALL(ops, set_periodic_sync(_, 1024 * 1024)).Times(1);
+
+    couchstore_open_flags flags = (11 << 24) | COUCHSTORE_OPEN_FLAG_CREATE;
+    ASSERT_EQ(COUCHSTORE_SUCCESS, open_db(flags));
+    EXPECT_EQ(1024 * 1024, db->file.options.periodic_sync_bytes);
+}
+
+/**
+ * Test that periodic sync can enabled (to maximum of 1TB)
+ */
+TEST_F(CouchstorePeriodicSyncTest, EnableMaximum)
+{
+    EXPECT_CALL(ops, set_periodic_sync(_, 1024ull * 1024 * 1024 * 1024))
+            .Times(1);
+
+    couchstore_open_flags flags = (0x1f << 24) | COUCHSTORE_OPEN_FLAG_CREATE;
+    ASSERT_EQ(COUCHSTORE_SUCCESS, open_db(flags));
+    EXPECT_EQ(1024ull * 1024 * 1024 * 1024, db->file.options.periodic_sync_bytes);
+}
+
+/**
  * Tests whether the unbuffered file ops flag actually
  * prevents the buffered file operations from being used.
  */

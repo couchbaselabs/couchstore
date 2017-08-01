@@ -65,6 +65,24 @@ extern "C" {
          * 1279 (0x4ff) bytes.
          */
         COUCHSTORE_OPEN_WITH_CUSTOM_NODESIZE = 0xff0000,
+
+        /**
+         * Enable periodic sync().
+         *
+         * Automatically perform a sync() call after every N bytes written.
+         *
+         * When writing large amounts of data (e.g during compaction), read
+         * latency can be adversely affected if a single sync() is made at the
+         * end of writing all the data; as the IO subsystem has a large amount
+         * of outstanding writes to flush to disk. By issuing periodic syncs
+         * the affect on read latency can be signifcantly reduced.
+         *
+         * Encoded as a power-of-2 KB value, ranging from 1KB .. 1TB (5 bits):
+         *     1KB * << (N-1)
+         *
+         * A value of N=0 specifies that automatic fsync is disabled.
+         */
+        COUCHSTORE_OPEN_WITH_PERIODIC_SYNC = 0x1f000000,
     };
 
 
@@ -681,6 +699,20 @@ extern "C" {
          * file, without aborting the task in the middle of compaction.
          */
         COUCHSTORE_COMPACT_RECOVERY_MODE = 8,
+
+        /**
+         * Currently unused flag bits.
+         */
+        COUCHSTORE_COMPACT_UNUSED = 0xfffff0,
+
+        /**
+         * Enable periodic sync().
+         *
+         * Automatically perform a sync() call after every N bytes written.
+         * Same encoding as COUCHSTORE_OPEN_WITH_PERIODIC_SYNC - see
+         * couchstore_open_flags for details.
+         */
+        COUCHSTORE_COMPACT_WITH_PERIODIC_SYNC = 0x1f000000,
     };
 
     /**

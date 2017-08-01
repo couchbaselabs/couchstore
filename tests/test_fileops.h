@@ -47,6 +47,9 @@ public:
                                           const char* path, int oflag));
     MOCK_METHOD2(close, couchstore_error_t(couchstore_error_info_t* errinfo,
                                            couch_file_handle handle));
+    MOCK_METHOD2(set_periodic_sync,
+                 couchstore_error_t(couch_file_handle handle,
+                                    uint64_t period_bytes));
     MOCK_METHOD5(pread, ssize_t(couchstore_error_info_t* errinfo,
                                 couch_file_handle handle, void* buf,
                                 size_t nbytes, cs_off_t offset));

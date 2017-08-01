@@ -43,6 +43,8 @@ public:
                             int oflag) override;
     couchstore_error_t close(couchstore_error_info_t* errinfo,
                              couch_file_handle handle) override;
+    couchstore_error_t set_periodic_sync(couch_file_handle handle,
+                                         uint64_t period_bytes) override;
     ssize_t pread(couchstore_error_info_t* errinfo,
                   couch_file_handle handle, void* buf, size_t nbytes,
                   cs_off_t offset) override;
@@ -67,6 +69,13 @@ private:
 
         /// File descriptor to operate on.
         int fd;
+
+        // If non-zero, specifies that sync() should automatically be called after
+        // every N bytes are written.
+        uint64_t periodic_sync_bytes = 0;
+
+        // Count of how many bytes have been written since the last sync().
+        uint64_t bytes_written_since_last_sync = 0;
     };
 
     static File* to_file(couch_file_handle handle)
@@ -118,6 +127,17 @@ ssize_t PosixFileOps::pwrite(couchstore_error_info_t* errinfo,
         save_errno(errinfo);
         return (ssize_t) COUCHSTORE_ERROR_WRITE;
     }
+
+    file->bytes_written_since_last_sync += rv;
+    if ((file->periodic_sync_bytes > 0) &&
+        (file->bytes_written_since_last_sync >= file->periodic_sync_bytes)) {
+        couchstore_error_t sync_rv = sync(errinfo, handle);
+        file->bytes_written_since_last_sync = 0;
+        if (sync_rv != COUCHSTORE_SUCCESS) {
+            return sync_rv;
+        }
+    }
+
     return rv;
 }
 
@@ -171,6 +191,13 @@ couchstore_error_t PosixFileOps::close(couchstore_error_info_t* errinfo,
     }
     file->fd = -1;
     return error;
+}
+
+couchstore_error_t PosixFileOps::set_periodic_sync(couch_file_handle handle,
+                                                   uint64_t period_bytes) {
+    auto* file = to_file(handle);
+    file->periodic_sync_bytes = period_bytes;
+    return COUCHSTORE_SUCCESS;
 }
 
 cs_off_t PosixFileOps::goto_eof(couchstore_error_info_t* errinfo,

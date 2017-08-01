@@ -65,6 +65,16 @@ couchstore_error_t couchstore_compact_db_ex(Db* source, const char* target_filen
         open_flags |= COUCHSTORE_OPEN_FLAG_UNBUFFERED;
     }
 
+    if (flags & COUCHSTORE_COMPACT_WITH_PERIODIC_SYNC) {
+        static_assert(uint64_t(COUCHSTORE_OPEN_WITH_PERIODIC_SYNC) ==
+                      uint64_t(COUCHSTORE_COMPACT_WITH_PERIODIC_SYNC),
+                      "COUCHSTORE_OPEN_WITH_PERIODIC_SYNC and "
+                      "COUCHSTORE_COMPACT_WITH_PERIODIC_SYNC should have the same"
+                      "encoding");
+
+        open_flags |= (flags & COUCHSTORE_OPEN_WITH_PERIODIC_SYNC);
+    }
+
     // Transfer current B+tree node settings to new file.
     if (source->file.options.kp_nodesize) {
         uint32_t kp_flag = source->file.options.kp_nodesize / 1024;
