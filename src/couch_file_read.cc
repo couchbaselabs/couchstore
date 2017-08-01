@@ -53,6 +53,11 @@ couchstore_error_t tree_file_open(tree_file* file,
     error_pass(file->ops->open(&file->lastError, &file->handle,
                                filename, openflags));
 
+    if (file->options.periodic_sync_bytes != 0) {
+        error_pass(file->ops->set_periodic_sync(
+                file->handle, file->options.periodic_sync_bytes));
+    }
+
 cleanup:
     if (errcode != COUCHSTORE_SUCCESS) {
         cb_free((char *) file->path);

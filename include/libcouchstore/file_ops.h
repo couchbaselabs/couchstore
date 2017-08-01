@@ -93,6 +93,23 @@ public:
                                      couch_file_handle handle) = 0;
 
     /**
+     * Specify that sync() should automatically be called after every N bytes
+     * of data written.
+     * Optional - defaults to COUCHSTORE_ERROR_NOT_SUPPORTED.
+     *
+     * @param handle file handle to set periodic sync for.
+     * @param period_bytes Perform a sync() call after the specified number of
+     *        bytes have been written. Specify 0 to disabled automatic sync().
+     * @return COUCHSTORE_SUCCESS upon success, or
+     *         COUCHSTORE_ERROR_NOT_SUPPORTED if automatic syncing not supported.
+     */
+    virtual couchstore_error_t set_periodic_sync(
+            couch_file_handle handle,
+            uint64_t period_bytes) {
+        return COUCHSTORE_ERROR_NOT_SUPPORTED;
+    }
+
+    /**
      * Read a chunk of data from a given offset in the file.
      *
      * @param handle file handle to read from

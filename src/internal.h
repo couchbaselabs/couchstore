@@ -50,7 +50,8 @@ extern "C" {
             buf_io_read_unit_size(READ_BUFFER_CAPACITY),
             buf_io_read_buffers(MAX_READ_BUFFERS),
             kp_nodesize(0),
-            kv_nodesize(0)
+            kv_nodesize(0),
+            periodic_sync_bytes(0)
             { }
 
         // Flag indicating whether or not buffered IO is enabled.
@@ -65,6 +66,9 @@ extern "C" {
         uint32_t kp_nodesize;
         // Threshold of key-value (leaf) node size.
         uint32_t kv_nodesize;
+        // Automatically issue an sync() operation after every N bytes written.
+        // 0 means don't automatically sync.
+        uint64_t periodic_sync_bytes;
     };
 
      /* Structure representing an open file; "superclass" of Db */

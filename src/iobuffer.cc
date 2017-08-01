@@ -372,6 +372,14 @@ couchstore_error_t BufferedFileOps::close(couchstore_error_info_t* errinfo,
     return h->raw_ops->close(errinfo, h->raw_ops_handle);
 }
 
+couchstore_error_t BufferedFileOps::set_periodic_sync(couch_file_handle handle,
+                                                      uint64_t period_bytes) {
+    // Delegate to underlying file ops, given they perform the real disk
+    // writes.
+    buffered_file_handle *h = (buffered_file_handle*)handle;
+    return h->raw_ops->set_periodic_sync(h->raw_ops_handle, period_bytes);
+}
+
 ssize_t BufferedFileOps::pread(couchstore_error_info_t* errinfo,
                                couch_file_handle handle,
                                void *buf,
@@ -516,4 +524,3 @@ FileOpsInterface* couch_get_buffered_file_ops(couchstore_error_info_t* errinfo,
         return NULL;
     }
 }
-
