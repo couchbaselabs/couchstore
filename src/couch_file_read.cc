@@ -165,6 +165,7 @@ int pread_header(tree_file *file,
         return COUCHSTORE_ERROR_INVALID_ARGUMENTS;
     }
 
+    ScopedFileTag tag(file->ops, file->handle, FileTag::FileHeader);
     return pread_bin_internal(file, pos + 1, ret_ptr, max_header_size);
 }
 

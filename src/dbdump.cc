@@ -23,13 +23,15 @@
 #include "views/util.h"
 #include "views/index_header.h"
 #include "views/view_group.h"
+#include "tracking_file_ops.h"
 
 #define MAX_HEADER_SIZE (64 * 1024)
 
 typedef enum {
     DumpBySequence,
     DumpByID,
-    DumpLocals
+    DumpLocals,
+    DumpFileMap,
 } DumpMode;
 
 static DumpMode mode = DumpBySequence;
@@ -405,6 +407,34 @@ static int visit_node(Db *db,
     return 0;
 }
 
+/// Visitor function for filemap mode - just trigger a read of the document
+/// so the FileMap ops can record where they reside on disk.
+static int filemap_visit(Db* db,
+                         int depth,
+                         const DocInfo* docinfo,
+                         uint64_t subtreeSize,
+                         const sized_buf* reduceValue,
+                         void* ctx) {
+    if (docinfo == nullptr) {
+        // Tree node.
+        return 0;
+    }
+    Doc* doc = nullptr;
+    ScopedFileTag tag(db->file.ops, db->file.handle, FileTag::Document);
+    couchstore_open_doc_with_docinfo(db, docinfo, &doc, DECOMPRESS_DOC_BODIES);
+    couchstore_free_document(doc);
+    return 0;
+}
+
+static int noop_visit(Db* db,
+                      int depth,
+                      const DocInfo* docinfo,
+                      uint64_t subtreeSize,
+                      const sized_buf* reduceValue,
+                      void* ctx) {
+    return 0;
+}
+
 static couchstore_error_t local_doc_print(couchfile_lookup_request *rq,
                                           const sized_buf *k,
                                           const sized_buf *v)
@@ -437,8 +467,19 @@ static couchstore_error_t local_doc_print(couchfile_lookup_request *rq,
     return COUCHSTORE_SUCCESS;
 }
 
-static couchstore_error_t couchstore_print_local_docs(Db *db, int *count)
-{
+static couchstore_error_t local_doc_ignore(couchfile_lookup_request* rq,
+                                           const sized_buf* k,
+                                           const sized_buf* v) {
+    return COUCHSTORE_SUCCESS;
+}
+
+typedef couchstore_error_t (*fetch_callback_fn)(
+        struct couchfile_lookup_request* rq,
+        const sized_buf* k,
+        const sized_buf* v);
+
+static couchstore_error_t couchstore_print_local_docs(
+        Db* db, fetch_callback_fn fetch_cb, int* count) {
     sized_buf key;
     sized_buf *keylist = &key;
     couchfile_lookup_request rq;
@@ -460,7 +501,7 @@ static couchstore_error_t couchstore_print_local_docs(Db *db, int *count)
     rq.num_keys = 1;
     rq.keys = &keylist;
     rq.callback_ctx = count;
-    rq.fetch_callback = local_doc_print;
+    rq.fetch_callback = fetch_cb;
     rq.node_callback = NULL;
     rq.fold = 1;
 
@@ -479,7 +520,15 @@ static int process_vbucket_file(const char *file, int *total)
     couchstore_error_t errcode;
     int count = 0;
 
-    errcode = couchstore_open_db(file, COUCHSTORE_OPEN_FLAG_RDONLY, &db);
+    TrackingFileOps* trackingFileOps = nullptr;
+    couchstore_open_flags flags = COUCHSTORE_OPEN_FLAG_RDONLY;
+    if (mode == DumpFileMap) {
+        flags |= COUCHSTORE_OPEN_FLAG_UNBUFFERED;
+        trackingFileOps = new TrackingFileOps();
+        errcode = couchstore_open_db_ex(file, flags, trackingFileOps, &db);
+    } else {
+        errcode = couchstore_open_db(file, flags, &db);
+    }
     if (errcode != COUCHSTORE_SUCCESS) {
         fprintf(stderr, "Failed to open \"%s\": %s\n",
                 file, couchstore_strerror(errcode));
@@ -520,7 +569,32 @@ next_header:
         }
         break;
     case DumpLocals:
-        errcode = couchstore_print_local_docs(db, &count);
+        errcode = couchstore_print_local_docs(db, local_doc_print, &count);
+        break;
+
+    case DumpFileMap:
+        // Visit all three indexes in the file. Note we don't actually need to
+        // do anything in the callback; the map is built up using a custom
+        // FileOps class and annotations in couchstore itself to tag the
+        // different structures.
+        cb_assert(trackingFileOps != nullptr);
+        trackingFileOps->setTree(db->file.handle,
+                                 TrackingFileOps::Tree::Sequence);
+        couchstore_walk_seq_tree(
+                db, 0, COUCHSTORE_TOLERATE_CORRUPTION, filemap_visit, &count);
+
+        // Note for the ID tree we specify a different (noop) callback; as we
+        // don't want or need to read the document bodies again.
+        trackingFileOps->setTree(db->file.handle, TrackingFileOps::Tree::Id);
+        couchstore_walk_id_tree(
+                db, NULL, COUCHSTORE_TOLERATE_CORRUPTION, noop_visit, &count);
+
+        trackingFileOps->setTree(db->file.handle, TrackingFileOps::Tree::Local);
+        int dummy = 0;
+        couchstore_print_local_docs(db, local_doc_ignore, &dummy);
+
+        // Mark that we are now on old headers
+        trackingFileOps->setHistoricData(db->file.handle, true);
         break;
     }
     if (iterateHeaders) {
@@ -716,6 +790,7 @@ static void usage(void) {
     printf("\nAlternate modes:\n");
     printf("    --tree       show file b-tree structure instead of data\n");
     printf("    --local      dump local documents\n");
+    printf("    --map        dump block map \n");
     exit(EXIT_FAILURE);
 }
 
@@ -761,6 +836,8 @@ int main(int argc, char **argv)
             ii++;
         } else if (strcmp(argv[ii], "--local") == 0) {
             mode = DumpLocals;
+        } else if (strcmp(argv[ii], "--map") == 0) {
+            mode = DumpFileMap;
         } else if (strcmp(argv[ii], "--iterate-headers") == 0) {
             iterateHeaders = true;
         } else {

@@ -37,7 +37,10 @@ static couchstore_error_t btree_lookup_inner(couchfile_lookup_request *rq,
 
     char *nodebuf = NULL;
 
-    nodebuflen = pread_compressed(rq->file, diskpos, &nodebuf);
+    {
+        ScopedFileTag tag(rq->file->ops, rq->file->handle, FileTag::BTree);
+        nodebuflen = pread_compressed(rq->file, diskpos, &nodebuf);
+    }
     error_unless(nodebuflen >= 0, (static_cast<couchstore_error_t>(nodebuflen)));  // if negative, it's an error code
 
     if (nodebuf[0] == 0) { //KP Node

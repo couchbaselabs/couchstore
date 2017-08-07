@@ -98,6 +98,7 @@ TARGET_LINK_LIBRARIES(couchstore ${COUCHSTORE_LIBRARIES})
 
 ADD_EXECUTABLE(couch_dbdump
                src/dbdump.cc
+               src/tracking_file_ops.cc
                ${COUCHSTORE_SOURCES}
                ${KVEngineAPI_BINARY_DIR}/xattr/visibility.h)
 

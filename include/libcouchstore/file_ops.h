@@ -153,12 +153,34 @@ public:
                                       couchstore_file_advice_t advice) = 0;
 
     /**
+     * Inform the file handlers the type of subsequent accesses.
+     */
+    virtual void tag(couch_file_handle handle, FileTag tag) {
+    }
+
+    /**
      * Called as part of shutting down the db instance this instance was
      * passed to. A hook to for releasing allocated resources
      *
      * @param handle file handle to be released
      */
     virtual void destructor(couch_file_handle handle) = 0;
+};
+
+class ScopedFileTag {
+public:
+    ScopedFileTag(FileOpsInterface* ops, couch_file_handle handle, FileTag tag)
+        : ops(ops), handle(handle) {
+        ops->tag(handle, tag);
+    }
+
+    ~ScopedFileTag() {
+        ops->tag(handle, FileTag::Unknown);
+    }
+
+private:
+    FileOpsInterface* ops;
+    couch_file_handle handle;
 };
 
 #else

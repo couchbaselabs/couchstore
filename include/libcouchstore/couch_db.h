@@ -340,7 +340,7 @@ extern "C" {
      */
     LIBCOUCHSTORE_API
     couchstore_error_t couchstore_open_doc_with_docinfo(Db *db,
-                                                        DocInfo *docinfo,
+                                                        const DocInfo *docinfo,
                                                         Doc **pDoc,
                                                         couchstore_open_options options);
 

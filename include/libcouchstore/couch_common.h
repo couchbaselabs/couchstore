@@ -53,6 +53,17 @@ extern "C" {
 #endif
     } couchstore_file_advice_t;
 
+#ifdef __cplusplus
+    /// Different types of data contained in a couchstore file.
+    enum class FileTag : uint8_t {
+        Empty, // Ignore this access; speculative (e.g. searching for header).
+        FileHeader, // File header.
+        BTree, // Generic B-Tree
+        Document, // User document data.
+        Unknown, // Valid access, but unknown what for.
+    };
+#endif // __cplusplus
+
     /** A generic data blob. Nothing is implied about ownership of the block pointed to. */
     typedef struct _sized_buf {
         char *buf;

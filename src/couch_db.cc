@@ -50,8 +50,13 @@ static couchstore_error_t find_header_at_pos(Db *db, cs_off_t pos)
         char *buf;
     } header_buf = { NULL };
     uint8_t buf[2];
-    ssize_t readsize = db->file.ops->pread(&db->file.lastError, db->file.handle,
-                                           buf, 2, pos);
+    ssize_t readsize;
+    {
+        // Speculative read looking for header, mark as Empty.
+        ScopedFileTag tag(db->file.ops, db->file.handle, FileTag::Empty);
+        readsize = db->file.ops->pread(
+                &db->file.lastError, db->file.handle, buf, 2, pos);
+    }
     error_unless(readsize == 2, COUCHSTORE_ERROR_READ);
     if (buf[0] == 0) {
         return COUCHSTORE_ERROR_NO_HEADER;
@@ -731,7 +736,7 @@ cleanup:
 
 LIBCOUCHSTORE_API
 couchstore_error_t couchstore_open_doc_with_docinfo(Db *db,
-                                                    DocInfo *docinfo,
+                                                    const DocInfo *docinfo,
                                                     Doc **pDoc,
                                                     couchstore_open_options options)
 {
