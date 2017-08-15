@@ -76,6 +76,8 @@ public:
                               couch_file_handle handle, cs_off_t offset,
                               cs_off_t len,
                               couchstore_file_advice_t advice) override;
+    FHStats* get_stats(couch_file_handle handle) override;
+
     void destructor(couch_file_handle handle) override;
 
     couch_file_handle constructor(couchstore_error_info_t *errinfo,

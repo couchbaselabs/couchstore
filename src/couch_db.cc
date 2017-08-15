@@ -482,6 +482,11 @@ const char* couchstore_get_db_filename(Db *db) {
     return db->file.path;
 }
 
+LIBCOUCHSTORE_API
+FileOpsInterface::FHStats* couchstore_get_db_filestats(Db* db) {
+    return db->file.ops->get_stats(db->file.handle);
+}
+
 DocInfo* couchstore_alloc_docinfo(const sized_buf *id, const sized_buf *rev_meta) {
     size_t size = sizeof(DocInfo);
     if (id) {

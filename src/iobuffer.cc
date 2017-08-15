@@ -509,6 +509,13 @@ couchstore_error_t BufferedFileOps::advise(couchstore_error_info_t* errinfo,
     return h->raw_ops->advise(errinfo, h->raw_ops_handle, offs, len, adv);
 }
 
+FileOpsInterface::FHStats* BufferedFileOps::get_stats(
+        couch_file_handle handle) {
+    // Not implemeted ourselves, just forward to wrapped ops.
+    buffered_file_handle* h = (buffered_file_handle*)handle;
+    return h->raw_ops->get_stats(h->raw_ops_handle);
+}
+
 static BufferedFileOps ops;
 
 FileOpsInterface* couch_get_buffered_file_ops(couchstore_error_info_t* errinfo,

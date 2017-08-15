@@ -50,6 +50,27 @@
 class FileOpsInterface {
 public:
     /**
+     * An interface to query statistical information about a specific file
+     * handle.
+     */
+    class FHStats {
+    public:
+        virtual ~FHStats() = default;
+
+        /**
+         * Return the number of read() calls performed on this file handle
+         * since it was created.
+         */
+        virtual size_t getReadCount() = 0;
+
+        /**
+         * Return the number of write() calls performed on this file handle
+         * since it was created.
+         */
+        virtual size_t getWriteCount() = 0;
+    };
+
+    /**
      * Virtual destructor used for optional cleanup
      */
     virtual ~FileOpsInterface() {}
@@ -173,6 +194,15 @@ public:
      * Inform the file handlers the type of subsequent accesses.
      */
     virtual void tag(couch_file_handle handle, FileTag tag) {
+    }
+
+    /**
+     * Request stats associated with this file handle.
+     * Optional; subclasses may not support per-fileHandle stats; in which case
+     * nullptr is returned.
+     */
+    virtual FHStats* get_stats(couch_file_handle handle) {
+        return nullptr;
     }
 
     /**
