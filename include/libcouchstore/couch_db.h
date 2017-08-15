@@ -190,6 +190,18 @@ extern "C" {
     LIBCOUCHSTORE_API
     const char* couchstore_get_db_filename(Db *db);
 
+#ifdef __cplusplus
+    /**
+     * Return file handle statistics of the database's underlying file handle.
+     *
+     * @return A non-null pointer to a FileStats instance if the
+     *         database's file ops support file statistics, otherwise
+     *         returns nullptr.
+     */
+    LIBCOUCHSTORE_API
+    FileOpsInterface::FHStats* couchstore_get_db_filestats(Db* db);
+#endif
+
     /**
      * Get the position in the file of the mostly recently written
      * database header.
