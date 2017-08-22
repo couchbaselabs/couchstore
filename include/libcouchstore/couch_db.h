@@ -85,6 +85,15 @@ extern "C" {
         COUCHSTORE_OPEN_WITH_PERIODIC_SYNC = 0x1f000000,
     };
 
+    /**
+     * Encode a periodic sync specified in bytes to the correct
+     * couchstore_open_flags encoding.
+     * @param fsync period in bytes
+     * @return encoded open_flags value, ranging from 1KB to 1TB. Rounded down
+     *         to nearest power-of-2.
+     */
+    LIBCOUCHSTORE_API
+    couchstore_open_flags couchstore_encode_periodic_sync_flags(uint64_t bytes);
 
     /**
      * Open a database.
