@@ -313,6 +313,20 @@ static tree_file_options get_tree_file_options_from_flags(couchstore_open_flags 
 }
 
 LIBCOUCHSTORE_API
+couchstore_open_flags couchstore_encode_periodic_sync_flags(uint64_t bytes) {
+    // Convert to encoding supported by couchstore_open_flags - KB power-of-2
+    // value.
+    // Round up to whole kilobyte units.
+    const uint64_t kilobytes = (bytes + 1023) / 1024;
+    // Calculate the shift amount (what is the log2 power)
+    uint64_t shiftAmount = std::log2(kilobytes);
+    // Saturate if the user specified more than the encodable amount.
+    shiftAmount = std::min(shiftAmount, uint64_t(30));
+    // Finally, encode in couchstore_open flags
+    return ((shiftAmount + 1)) << 24;
+}
+
+LIBCOUCHSTORE_API
 couchstore_error_t couchstore_open_db(const char *filename,
                                       couchstore_open_flags flags,
                                       Db **pDb)
