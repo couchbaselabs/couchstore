@@ -195,8 +195,10 @@ static Local<String> createUtf8String(Isolate *isolate, const char *str,
 static void doInitContext(mapreduce_ctx_t *ctx)
 {
     Isolate::CreateParams createParams;
+    std::unique_ptr<ArrayBuffer::Allocator> allocator(
+      ArrayBuffer::Allocator::NewDefaultAllocator());
     createParams.array_buffer_allocator =
-      ArrayBuffer::Allocator::NewDefaultAllocator();
+      allocator.get();
     ctx->isolate = Isolate::New(createParams);
     Locker locker(ctx->isolate);
     Isolate::Scope isolate_scope(ctx->isolate);
