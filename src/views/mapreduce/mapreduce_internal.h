@@ -47,6 +47,7 @@ typedef std::vector< v8::Persistent<v8::Function>* >   function_vector_t;
 typedef struct {
     v8::Persistent<v8::Context> jsContext;
     v8::Isolate                 *isolate;
+    v8::ArrayBuffer::Allocator  *bufAllocator;
     function_vector_t           *functions;
     kv_list_int_t               *kvs;
     std::atomic<time_t>         taskStartTime;

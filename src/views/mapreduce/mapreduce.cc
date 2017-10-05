@@ -176,7 +176,7 @@ void destroyContext(mapreduce_ctx_t *ctx)
     }
 
     ctx->isolate->Dispose();
-
+    delete ctx->bufAllocator;
 }
 
 static Local<String> createUtf8String(Isolate *isolate, const char *str)
@@ -194,11 +194,9 @@ static Local<String> createUtf8String(Isolate *isolate, const char *str,
 
 static void doInitContext(mapreduce_ctx_t *ctx)
 {
+    ctx->bufAllocator = ArrayBuffer::Allocator::NewDefaultAllocator();
     Isolate::CreateParams createParams;
-    std::unique_ptr<ArrayBuffer::Allocator> allocator(
-      ArrayBuffer::Allocator::NewDefaultAllocator());
-    createParams.array_buffer_allocator =
-      allocator.get();
+    createParams.array_buffer_allocator = ctx->bufAllocator;
     ctx->isolate = Isolate::New(createParams);
     Locker locker(ctx->isolate);
     Isolate::Scope isolate_scope(ctx->isolate);
