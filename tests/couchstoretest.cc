@@ -23,12 +23,10 @@
  * Callback function for latency info.
  * This is a simple example how to get latency info.
  */
-int couchstore_test_latency_callback(
-        const char* stat_name,
-        Histogram<CouchLatencyMicroSec> *latencies,
-        const CouchLatencyMicroSec elapsed_time,
-        void *ctx)
-{
+int couchstore_test_latency_callback(const char* stat_name,
+                                     CouchLatencyHisto* latencies,
+                                     const CouchLatencyMicroSecRep elapsed_time,
+                                     void* ctx) {
     (void)ctx;
     size_t total = latencies->total();
     std::cout << stat_name;

@@ -944,9 +944,9 @@ struct MT_save_callback_ctx {
 };
 
 int MT_save_callback(const char* stat_name,
-                     Histogram<CouchLatencyMicroSec> *latencies,
-                     const CouchLatencyMicroSec elapsed_time,
-                     void *ctx) {
+                     CouchLatencyHisto* latencies,
+                     const CouchLatencyMicroSecRep elapsed_time,
+                     void* ctx) {
     struct MT_save_callback_ctx *actual_ctx =
             static_cast<MT_save_callback_ctx*>(ctx);
     uint64_t count_total = 0;

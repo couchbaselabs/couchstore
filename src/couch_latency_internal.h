@@ -36,7 +36,7 @@ struct CouchLatencyItem {
 
     void add(CouchLatencyMicroSec val) {
         latencies.add(val);
-        latencySum.fetch_add(val);
+        latencySum.fetch_add(val.count());
     }
 
     bool isRegistered() const {
@@ -59,9 +59,9 @@ struct CouchLatencyItem {
     // Name of latency stat.
     const std::string statName;
     // Histogram for latency values (in microseconds).
-    Histogram<CouchLatencyMicroSec> latencies;
+    CouchLatencyHisto latencies;
     // Sum of all latencies, to calculate average value.
-    Couchbase::RelaxedAtomic<CouchLatencyMicroSec> latencySum;
+    Couchbase::RelaxedAtomic<CouchLatencyMicroSecRep> latencySum;
     // Flag that indicates whether or not this instance is
     // registered to the singleton CouchLatency instance.
     Couchbase::RelaxedAtomic<bool> registered;

@@ -23,8 +23,9 @@
 #include <platform/histogram.h>
 #include <platform/processclock.h>
 
-using CouchLatencyMicroSec =
-        std::make_unsigned<ProcessClock::duration::rep>::type;
+using CouchLatencyHisto = MicrosecondHistogram;
+using CouchLatencyMicroSec = UnsignedMicroseconds;
+using CouchLatencyMicroSecRep = UnsignedMicroseconds::rep;
 
 /**
  * Begin to collect Couchstore API latency.
@@ -44,9 +45,9 @@ void couchstore_latency_collector_start();
  */
 using couchstore_latency_callback_fn =
         std::function<int(const char*,
-                          Histogram<CouchLatencyMicroSec> *latencies,
-                          const CouchLatencyMicroSec elapsed_time,
-                          void *ctx)>;
+                          CouchLatencyHisto* latencies,
+                          const CouchLatencyMicroSecRep elapsed_time,
+                          void* ctx)>;
 
 /**
  * Latency info dump options.
