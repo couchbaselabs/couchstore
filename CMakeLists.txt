@@ -21,6 +21,8 @@ INCLUDE_DIRECTORIES(BEFORE ${CMAKE_INSTALL_PREFIX}/include
                            ${BOOST_INCLUDE_DIR}
                            ${Platform_SOURCE_DIR}/include)
 
+INCLUDE_DIRECTORIES(AFTER ${gsl_lite_SOURCE_DIR}/include)
+
 IF (LUA_FOUND)
    INCLUDE_DIRECTORIES(AFTER {LUA_INCLUDE_DIR})
 ENDIF (LUA_FOUND)
@@ -30,8 +32,7 @@ INCLUDE_DIRECTORIES(AFTER
                     ${KVEngineAPI_BINARY_DIR})
 
 INCLUDE_DIRECTORIES(AFTER ${ICU_INCLUDE_DIR}
-                          ${V8_INCLUDE_DIR}
-                          ${SNAPPY_INCLUDE_DIR})
+                          ${V8_INCLUDE_DIR})
 
 CHECK_INCLUDE_FILES("netinet/in.h" HAVE_NETINET_IN_H)
 CHECK_INCLUDE_FILES("inttypes.h" HAVE_INTTYPES_H)
@@ -87,7 +88,7 @@ SET(COUCHSTORE_SOURCES src/arena.cc
                        src/views/compaction.cc
                        src/quicksort.c
                        ${COUCHSTORE_FILE_OPS})
-SET(COUCHSTORE_LIBRARIES ${V8_LIBRARIES} ${ICU_LIBRARIES} ${SNAPPY_LIBRARIES} platform)
+SET(COUCHSTORE_LIBRARIES ${V8_LIBRARIES} ${ICU_LIBRARIES} cbcompress platform)
 
 SET(COUCHSTORE_GTEST_LIBRARIES gtest gtest_main gmock)
 SET(COUCHSTORE_GTEST_INCLUDES ${gtest_SOURCE_DIR}/include ${gmock_SOURCE_DIR}/include)

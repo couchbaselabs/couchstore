@@ -6,8 +6,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <sys/types.h>
-#include <snappy.h>
 #include <libcouchstore/couch_db.h>
+#include <platform/compress.h>
 
 #include "internal.h"
 #include "crc32.h"
@@ -124,21 +124,26 @@ int db_write_buf(tree_file *file, const sized_buf *buf, cs_off_t *pos, size_t *d
     return 0;
 }
 
-couchstore_error_t db_write_buf_compressed(tree_file *file, const sized_buf *buf, cs_off_t *pos, size_t *disk_size)
+couchstore_error_t db_write_buf_compressed(tree_file *file,
+                                           const sized_buf *buf,
+                                           cs_off_t *pos,
+                                           size_t *disk_size)
 {
-    couchstore_error_t errcode = COUCHSTORE_SUCCESS;
-    sized_buf to_write;
-    size_t max_size = snappy::MaxCompressedLength(buf->size);
+    cb::compression::Buffer buffer;
+    try {
+        using cb::compression::Algorithm;
+        if (!cb::compression::deflate(Algorithm::Snappy,
+                                      {buf->buf, buf->size},
+                                      buffer)) {
+            return COUCHSTORE_ERROR_CORRUPT;
+        }
+    } catch (const std::bad_alloc&) {
+        return COUCHSTORE_ERROR_ALLOC_FAIL;
+    }
 
-    char* compressbuf = static_cast<char *>(cb_malloc(max_size));
-    to_write.buf = compressbuf;
-    to_write.size = max_size;
-    error_unless(to_write.buf, COUCHSTORE_ERROR_ALLOC_FAIL);
+    sized_buf to_write{};
+    to_write.buf = buffer.data();
+    to_write.size = buffer.size();
 
-    snappy::RawCompress(buf->buf, buf->size, to_write.buf, &to_write.size);
-
-    error_pass(static_cast<couchstore_error_t>(db_write_buf(file, &to_write, pos, disk_size)));
-cleanup:
-    cb_free(compressbuf);
-    return errcode;
+    return static_cast<couchstore_error_t>(db_write_buf(file, &to_write, pos, disk_size));
 }

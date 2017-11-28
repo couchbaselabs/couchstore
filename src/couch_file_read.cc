@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <snappy.h>
+#include <platform/compress.h>
 
 #include "internal.h"
 #include "iobuffer.h"
@@ -14,6 +14,7 @@
 #include "crc32.h"
 #include "util.h"
 
+#include <gsl/gsl>
 
 couchstore_error_t tree_file_open(tree_file* file,
                                   const char *filename,
@@ -177,34 +178,34 @@ int pread_header(tree_file *file,
 int pread_compressed(tree_file *file, cs_off_t pos, char **ret_ptr)
 {
     char *compressed_buf;
-    char *new_buf;
     int len = pread_bin_internal(file, pos, &compressed_buf, 0);
     if (len < 0) {
         return len;
     }
-    size_t uncompressed_len;
 
-    if (!snappy::GetUncompressedLength(compressed_buf, len, &uncompressed_len)) {
-        //should be compressed but snappy doesn't see it as valid.
-        cb_free(compressed_buf);
-        return COUCHSTORE_ERROR_CORRUPT;
-    }
+    auto allocator = cb::compression::Allocator{
+        cb::compression::Allocator::Mode::Malloc};
 
-    new_buf = static_cast<char *>(cb_malloc(uncompressed_len));
-    if (!new_buf) {
+    cb::compression::Buffer buffer(allocator);
+    try {
+        using cb::compression::Algorithm;
+
+        if (!cb::compression::inflate(Algorithm::Snappy,
+                                      {compressed_buf, size_t(len)},
+                                      buffer)) {
+            cb_free(compressed_buf);
+            return COUCHSTORE_ERROR_CORRUPT;
+        }
+    } catch (const std::bad_alloc&) {
         cb_free(compressed_buf);
         return COUCHSTORE_ERROR_ALLOC_FAIL;
     }
 
-    if (!snappy::RawUncompress(compressed_buf, len, new_buf)) {
-        cb_free(compressed_buf);
-        cb_free(new_buf);
-        return COUCHSTORE_ERROR_CORRUPT;
-    }
-
     cb_free(compressed_buf);
-    *ret_ptr = new_buf;
-    return static_cast<int>(uncompressed_len);
+
+    len = gsl::narrow_cast<int>(buffer.size());
+    *ret_ptr = buffer.release();
+    return len;
 }
 
 int pread_bin(tree_file *file, cs_off_t pos, char **ret_ptr)
