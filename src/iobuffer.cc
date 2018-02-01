@@ -31,8 +31,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define LOG_BUFFER 0 && defined(DEBUG)
-#if LOG_BUFFER
+// Uncomment to enable debug logging of buffer operations.
+// #define LOG_BUFFER 1
+#if defined(LOG_BUFFER)
 #include <stdio.h>
 #endif
 
@@ -147,7 +148,7 @@ public:
         // Recycle the last buffer in the LRU list.
         auto itr_list = readLRU.rbegin();
         buffer = &(*itr_list);
-#if LOG_BUFFER
+#if defined(LOG_BUFFER)
         fprintf(stderr, "BUFFER: %p recycled, from %zd to %zd\n",
                 buffer, buffer->offset, offset);
 #endif
@@ -217,7 +218,7 @@ static couchstore_error_t flush_buffer(couchstore_error_info_t *errinfo,
                                                   buf->getRawPtr(),
                                                   buf->length,
                                                   buf->offset);
-#if LOG_BUFFER
+#if defined(LOG_BUFFER)
         fprintf(stderr, "BUFFER: %p flush %zd bytes at %zd --> %zd\n",
                 buf, buf->length, buf->offset, raw_written);
 #endif
@@ -274,7 +275,7 @@ static couchstore_error_t load_buffer_from(couchstore_error_info_t *errinfo,
                                                     buf->getRawPtr() + buf->length,
                                                     buf->capacity - buf->length,
                                                     buf->offset + buf->length);
-#if LOG_BUFFER
+#if defined(LOG_BUFFER)
     fprintf(stderr, "BUFFER: %p loaded %zd bytes from %zd\n",
             buf, bytes_read, offset + buf->length);
 #endif
@@ -386,7 +387,7 @@ ssize_t BufferedFileOps::pread(couchstore_error_info_t* errinfo,
                                size_t nbyte,
                                cs_off_t offset)
 {
-#if LOG_BUFFER
+#if defined(LOG_BUFFER)
     //fprintf(stderr, "r");
 #endif
     buffered_file_handle *h = (buffered_file_handle*)handle;
@@ -434,7 +435,7 @@ ssize_t BufferedFileOps::pwrite(couchstore_error_info_t* errinfo,
                                 size_t nbyte,
                                 cs_off_t offset)
 {
-#if LOG_BUFFER
+#if defined(LOG_BUFFER)
     //fprintf(stderr, "w");
 #endif
     if (nbyte == 0) {
@@ -467,7 +468,7 @@ ssize_t BufferedFileOps::pwrite(couchstore_error_info_t* errinfo,
         } else {
             written = h->raw_ops->pwrite(errinfo, h->raw_ops_handle, buf,
                                          nbyte, offset);
-#if LOG_BUFFER
+#if defined(LOG_BUFFER)
             fprintf(stderr, "BUFFER: passthru %zd bytes at %zd --> %zd\n",
                     nbyte, offset, written);
 #endif
