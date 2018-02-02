@@ -379,3 +379,33 @@ void test_expand_mbb()
     expand_mbb(&mbb_struct_a, &mbb_struct_b);
     cb_assert(is_double_array_equal(mbb_struct_a.mbb, expected2_mbb, 6));
 }
+
+void test_view_spatial_reduce()
+{
+    sized_mbb_t original_mbb, expander_mbb;
+
+    original_mbb.num = expander_mbb.num = 6;
+    double mbb1[] = {60, 60, 115, 115, 1, 6};
+    double mbb2[] = {63, 63, 1506, 1506, 1, 6};
+    original_mbb.mbb = mbb1;
+    original_mbb.num = expander_mbb.num = 6;
+    expander_mbb.mbb = mbb2;
+
+    nodelist root, child;
+    char encoded1[128], encoded2[128], dst[128];
+    size_t size;
+
+    encode_spatial_key(&original_mbb, (char *)&encoded1, sizeof(encoded1));
+    encode_spatial_key(&expander_mbb, (char *)&encoded2, sizeof(encoded2));
+
+    root.key.buf = encoded1;
+    child.key.buf = encoded2;
+
+    root.next = &child;
+    child.next = NULL;
+
+    fprintf(stderr, "Running view_spatial_reduce test\n");
+    view_spatial_reduce(dst, &size, &root, 2, NULL);
+
+}
+

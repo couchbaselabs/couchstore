@@ -47,5 +47,6 @@ void test_set_bit_sized(void);
 void test_encode_spatial_key(void);
 void test_decode_spatial_key(void);
 void test_expand_mbb(void);
+void test_view_spatial_reduce(void);
 
 #endif

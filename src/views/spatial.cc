@@ -25,6 +25,8 @@
 #include "../bitfield.h"
 #include "../couch_btree.h"
 #include <platform/cbassert.h>
+#include <vector>
+#include <algorithm>
 
 
 #define BYTE_PER_COORD sizeof(uint32_t)
@@ -34,9 +36,6 @@
 #define CHUNK_INDEX(map, size, bit) (size - 1 - ((bit) / CHUNK_BITS))
 #define MAP_CHUNK(map, size, bit)   (map)[CHUNK_INDEX(map, size, bit)]
 #define CHUNK_OFFSET(bit)           ((bit) % CHUNK_BITS)
-
-#define MIN(a, b) (a) < (b) ? a : b
-#define MAX(a, b) (a) > (b) ? a : b
 
 
 STATIC couchstore_error_t encode_spatial_key(const sized_mbb_t *mbb,
@@ -257,18 +256,27 @@ STATIC couchstore_error_t encode_spatial_key(const sized_mbb_t *mbb,
 
 /* Expands the `original` MBB with the `expander` */
 STATIC couchstore_error_t expand_mbb(sized_mbb_t *original,
-                                     sized_mbb_t *expander) {
-    int i;
+                                     sized_mbb_t *expander)
+{
+    uint16_t i;
 
     cb_assert(original->num == expander->num);
 
+    // For aligned access
+    // Copy original->mbb and expander->mbb into their aligned containers
+    std::vector<double> alignedOrig(original->mbb, original->mbb + original->num);
+    std::vector<double> alignedExp(expander->mbb, expander->mbb + expander->num);
+
     for (i = 0; i < original->num; ++i) {
         if (i % 2 == 0) {
-            original->mbb[i] = MIN(original->mbb[i], expander->mbb[i]);
+            alignedOrig[i] = std::min(alignedOrig[i], alignedExp[i]);
         } else {
-            original->mbb[i] = MAX(original->mbb[i], expander->mbb[i]);
+            alignedOrig[i] = std::max(alignedOrig[i], alignedExp[i]);
         }
     }
+
+    // Copy back the calculated bounding box back to original->mbb
+    std::copy(alignedOrig.begin(), alignedOrig.end(), original->mbb);
 
     return COUCHSTORE_SUCCESS;
 }
